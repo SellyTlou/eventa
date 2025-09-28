@@ -1,0 +1,1 @@
+{"version":3,"sources":["features.js"],"names":[],"mappings":";;;;AAAA;;AACA;;AACA;;AACA","sourcesContent":["import React, { useState, useEffect } from \"react\";\r\nimport \"../App.css\";\r\nimport \"../responce.css\";\r\nimport { Navbar, Footer, Login } from \"./components\";\r\n\r\n"],"file":"features.dev.js"}

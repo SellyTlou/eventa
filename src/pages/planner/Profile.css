@@ -1,0 +1,126 @@
+/* Profile-specific (scoped) styles to avoid App.css collisions */
+
+.profile-page {
+  background: #f8fafc;
+  min-height: 80vh;
+}
+
+/* Card overrides scoped to profile */
+.profile-page .profile-card {
+  border: none;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(205, 180, 109, 0.08);
+  border-radius: 15px;
+}
+
+/* Headings */
+.profile-page .profile-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #cdb46d;
+  margin-bottom: 1rem;
+}
+
+/* Tabs */
+.profile-page .profile-nav-tabs {
+  border-bottom: 2px solid #cdb46d;
+  margin-bottom: 1.5rem;
+}
+.profile-page .profile-tab-link {
+  color: #cdb46d;
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  padding: 10px 18px;
+}
+.profile-page .profile-tab-link.active,
+.profile-page .profile-tab-link:focus {
+  color: #5aa340;
+  border-bottom: 2.5px solid #5aa340;
+}
+
+/* Form labels & controls (scoped) */
+.profile-page .profile-form-label {
+  color: #5aa340;
+  font-weight: 500;
+}
+.profile-page .profile-form-control {
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 1rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.profile-page .profile-form-control:focus {
+  border-color: #cdb46d;
+  box-shadow: 0 0 0 2px rgba(205, 180, 109, 0.12);
+}
+
+/* Buttons */
+.profile-page .profile-btn-primary {
+  background: linear-gradient(135deg, #cdb46d, #75CC54);
+  border: none;
+  border-radius: 30px;
+  font-weight: 600;
+  padding: 10px 28px;
+  color: #111;
+}
+.profile-page .profile-btn-secondary {
+  background: #5aa340;
+  color: #fff;
+  border: none;
+  border-radius: 30px;
+  font-weight: 600;
+  padding: 8px 20px;
+}
+
+/* Avatar */
+.profile-page .profile-avatar {
+  border: 3px solid #cdb46d;
+  box-shadow: 0 2px 8px rgba(205, 180, 109, 0.12);
+}
+.profile-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.edit-avatar-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #007bff;
+  border: none;
+  border-radius: 50%;
+  padding: 5px 8px;
+  cursor: pointer;
+  display: none;
+  font-size: 14px;
+  color: #fff;
+}
+.profile-avatar-wrapper:hover .edit-avatar-btn {
+  display: block;
+}
+
+/* Plan item */
+.profile-page .profile-plan-item {
+  border: 1.5px solid #e5e7eb !important;
+  background: #f8fafc;
+  color: #111;
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+  .profile-page .row.align-items-center {
+    flex-direction: column;
+    text-align: center;
+  }
+  .profile-page .col-8,
+  .profile-page .col-4 {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+  .profile-page .profile-avatar {
+    margin: 0 auto 1rem;
+    display: block;
+  }
+}

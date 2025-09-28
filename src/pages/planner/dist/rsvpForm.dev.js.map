@@ -1,0 +1,1 @@
+{"version":3,"sources":["rsvpForm.js"],"names":["InvitationPage"],"mappings":";;;;AAAA;;AACA;;;;;;AAGA,IAAMA,cAAc,GAAG,SAAjBA,cAAiB,GAAM;AAC7B;AACC,CAFD","sourcesContent":["import React, { useState } from \"react\";\r\nimport \"./main.css\";\r\n\r\n\r\nconst InvitationPage = () => {\r\nreturn\r\n}"],"file":"rsvpForm.dev.js"}

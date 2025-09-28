@@ -1,0 +1,349 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import "./main.css";
+import "../../App.css";
+import { LoginNav } from "../components";
+
+const EventsDashboard = () => {
+    const [events, setEvents] = useState([]);
+    const [filteredEvents, setFilteredEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMoreEvents, setHasMoreEvents] = useState(true);
+    const [filters, setFilters] = useState({
+        dateRange: "all",
+        sortBy: "latest"
+    });
+    const [rsvpStats, setRsvpStats] = useState({}); // Holds RSVP counts per event
+    const [deletingEventId, setDeletingEventId] = useState(null); // Track which event is being deleted
+
+    const itemsPerPage = 6;
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (!storedUser) {
+            setLoading(false);
+            return;
+        }
+
+        const user = JSON.parse(storedUser);
+
+        const fetchEvents = async () => {
+            try {
+                setLoading(true);
+                const formData = new FormData();
+                formData.append("function", "getUserEvents");
+                formData.append("userID", user.user_id);
+
+                const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && Array.isArray(data.events)) {
+                    const uniqueEvents = [];
+
+                    data.events.forEach((event) => {
+                        const alreadyExists = uniqueEvents.some((e) => e.event_id === event.event_id);
+                        if (!alreadyExists) uniqueEvents.push(event);
+                    });
+
+                    setEvents(uniqueEvents);
+                    setFilteredEvents(uniqueEvents);
+                    setHasMoreEvents(uniqueEvents.length > itemsPerPage);
+
+                    // Fetch RSVP stats
+                    fetchRSVPStatsForEvents(uniqueEvents);
+                }
+            } catch (error) {
+                console.error("Failed to fetch events:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+    }, []);
+
+
+    const fetchRSVPStatsForEvents = async (eventsArray) => {
+        const stats = {};
+
+        await Promise.all(eventsArray.map(async (event) => {
+            try {
+                const formData = new FormData();
+                formData.append("function", "getRSVPResponses");
+                formData.append("event_id", event.event_id);
+
+                const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && Array.isArray(data.responses)) {
+                    const uniqueEmails = new Set();
+                    const uniqueResponses = data.responses.filter(r => {
+                        if (uniqueEmails.has(r.email)) return false;
+                        uniqueEmails.add(r.email);
+                        return true;
+                    });
+
+                    stats[event.event_id] = {
+                        yes: uniqueResponses.filter(r => r.attending.toLowerCase() === "yes").length || 0,
+                        no: uniqueResponses.filter(r => r.attending.toLowerCase() === "no").length || 0,
+                        maybe: uniqueResponses.filter(r => r.attending.toLowerCase() === "maybe").length || 0
+                    };
+                } else {
+                    stats[event.event_id] = { yes: 0, no: 0, maybe: 0 };
+                }
+            } catch (err) {
+                console.error("Failed to fetch RSVP stats for event:", event.event_id, err);
+                stats[event.event_id] = { yes: 0, no: 0, maybe: 0 };
+            }
+        }));
+
+        setRsvpStats(stats);
+    };
+
+   
+    const deleteEvent = async (eventId, eventName) => {
+        // Confirm before deleting
+        if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        setDeletingEventId(eventId);
+
+        try {
+            const formData = new FormData();
+            formData.append("function", "deleteEvent");
+            formData.append("event_id", eventId);
+
+            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                
+                const updatedEvents = events.filter(event => event.event_id !== eventId);
+                setEvents(updatedEvents);
+                setFilteredEvents(updatedEvents);
+
+               
+                alert("Event deleted successfully!");
+            } else {
+                alert("Failed to delete event. Please try again.");
+            }
+        } catch (error) {
+            console.error("Failed to delete event:", error);
+            alert("An error occurred while deleting the event.");
+        } finally {
+            setDeletingEventId(null);
+        }
+    };
+
+    useEffect(() => {
+        let result = [...events];
+
+        if (filters.dateRange !== "all") {
+            const today = new Date();
+            result = result.filter(event => {
+                const eventDate = new Date(event.event_date || event.created_at);
+
+                switch (filters.dateRange) {
+                    case "today":
+                        return eventDate.toDateString() === today.toDateString();
+                    case "week":
+                        const oneWeekAgo = new Date();
+                        oneWeekAgo.setDate(today.getDate() - 7);
+                        return eventDate >= oneWeekAgo;
+                    case "month":
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(today.getMonth() - 1);
+                        return eventDate >= oneMonthAgo;
+                    case "upcoming":
+                        return eventDate >= today;
+                    case "past":
+                        return eventDate < today;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        result.sort((a, b) => {
+            const dateA = new Date(a.event_date || a.created_at);
+            const dateB = new Date(b.event_date || b.created_at);
+
+            return filters.sortBy === "latest"
+                ? dateB - dateA
+                : dateA - dateB;
+        });
+
+        setFilteredEvents(result);
+        setCurrentPage(1);
+    }, [filters, events]);
+
+    const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
+    const canLoadMore = filteredEvents.length > displayedEvents.length;
+
+    const loadMoreEvents = () => setCurrentPage(prevPage => prevPage + 1);
+    const handleFilterChange = (filterType, value) => setFilters(prev => ({ ...prev, [filterType]: value }));
+    const handleEventClick = (eventId) => navigate(`/eventManagement?event_id=${eventId}`);
+    const createEvent = () => window.location.href = "/activeEventDetails";
+
+    if (loading) {
+        return (
+            <>
+                <LoginNav />
+                <div className="loading-container">
+                    <div className="spinner-border text-info" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <div className="loading-text">Loading your events...</div>
+                </div>
+            </>
+        );
+    }
+
+    return (
+        <>
+            <LoginNav />
+            <section className="eventsDashboard">
+                <div className="container">
+                    <h1 className="dashboard-title">My Events Dashboard</h1>
+                    <p className="dashboard-subtitle">Manage and track your events</p>
+
+                    <div className="dashboard-filters">
+                        <div className="filter-group">
+                            <label>Date Range:</label>
+                            <select
+                                value={filters.dateRange}
+                                onChange={(e) => handleFilterChange("dateRange", e.target.value)}
+                                className="filter-select"
+                            >
+                                <option value="all">All Dates</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="upcoming">Upcoming</option>
+                                <option value="past">Past Events</option>
+                            </select>
+                        </div>
+
+                        <div className="filter-group">
+                            <label>Sort By:</label>
+                            <select
+                                value={filters.sortBy}
+                                onChange={(e) => handleFilterChange("sortBy", e.target.value)}
+                                className="filter-select"
+                            >
+                                <option value="latest">Latest First</option>
+                                <option value="oldest">Oldest First</option>
+                            </select>
+                        </div>
+
+                        <div className="filter-results">
+                            Showing {displayedEvents.length} of {filteredEvents.length} events
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <div className="row">
+                        {displayedEvents.length > 0 ? (
+                            displayedEvents.map((event) => (
+                                <div
+                                    className="cardConatiner"
+                                    key={event.event_id}
+                                    style={{ cursor: 'pointer', position: 'relative' }}
+                                >
+                                    {/* Delete button */}
+                                    <button
+                                        className="delete-event-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); 
+                                            deleteEvent(event.event_id, event.event_name);
+                                        }}
+                                        disabled={deletingEventId === event.event_id}
+                                        title="Delete event"
+                                    >
+                                        {deletingEventId === event.event_id ? (
+                                            <div className="spinner-border spinner-border-sm" role="status">
+                                                <span className="visually-hidden">Deleting...</span>
+                                            </div>
+                                        ) : (
+                                            <i className="bi bi-trash"></i>
+                                        )}
+                                    </button>
+
+                                    <div className="card" onClick={() => handleEventClick(event.event_id)}>
+                                        <img
+                                            src={event.event_image || "#"}
+                                            className="card-img-top"
+                                            alt={event.event_name}
+                                            onError={(e) => {
+                                                e.target.src = "#";
+                                                e.target.style.background = "linear-gradient(45deg, #667eea 0%, #764ba2 100%)";
+                                                e.target.style.display = "flex";
+                                                e.target.style.alignItems = "center";
+                                                e.target.style.justifyContent = "center";
+                                                e.target.style.color = "white";
+                                                e.target.style.fontSize = "18px";
+                                                e.target.style.fontWeight = "bold";
+                                            }}
+                                        />
+                                        <div className="card-body">
+                                            <div className="row">
+                                                <div className="item">
+                                                    <p>Attending</p>
+                                                    <span>{rsvpStats[event.event_id]?.yes ?? 0}</span>
+                                                </div>
+                                                <div className="item">
+                                                    <p>Not Attending</p>
+                                                    <span>{rsvpStats[event.event_id]?.no ?? 0}</span>
+                                                </div>
+                                                <div className="item">
+                                                    <p>Maybe</p>
+                                                    <span>{rsvpStats[event.event_id]?.maybe ?? 0}</span>
+                                                </div>
+                                            </div>
+                                            <h5 className="eventName">{event.event_name}</h5>
+                                            <div className="event-date">
+                                                {event.event_start_date && event.event_end_date
+                                                    ? `${new Date(event.event_start_date).toLocaleDateString()} - ${new Date(event.event_end_date).toLocaleDateString()}`
+                                                    : 'Date not set'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="no-events-message">
+                                <h3>No events found</h3>
+                                <p>You haven't created any events yet or no events match your filters.</p>
+                                <button className="create-event-btn" onClick={createEvent}>Create Your First Event</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {canLoadMore && (
+                        <div className="pagination-container">
+                            <button className="load-more-btn" onClick={loadMoreEvents}>Load More Events</button>
+                        </div>
+                    )}
+                </div>
+            </section>
+        </>
+    );
+};
+
+export default EventsDashboard;

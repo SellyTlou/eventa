@@ -1,0 +1,557 @@
+/* rsvp.css */
+:root {
+    --primary-color: #8a4fff;
+    --secondary-color: #ff6b6b;
+    --accent-color: #4ecdc4;
+    --background-dark: rgba(26, 26, 46, 0.85);
+    --form-background: rgba(255, 255, 255, 0.95);
+    --text-color: #2d3436;
+    --text-light: #ffffff;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --success-color: #00b894;
+    --error-color: #ff7675;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+}
+
+.rsvp_form__container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-position: center;
+    background-size: cover;
+    position: relative;
+    padding: 2rem;
+    color: var(--text-light);
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background-dark);
+    z-index: 1;
+}
+
+.content-wrapper {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.invitation_card {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #6a11cb 100%);
+    border-radius: 1.5rem;
+    padding: 2.5rem;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.invitation_header {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.decoration {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+.top-left {
+    top: -20px;
+    left: -20px;
+}
+
+.top-right {
+    top: -20px;
+    right: -20px;
+}
+
+.invitation_card__eventName {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.invitation_card__subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+}
+
+.invitation_details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    font-size: 1.1rem;
+}
+
+.detail-item i {
+    color: var(--accent-color);
+    font-size: 1.2rem;
+}
+
+.invitation_message {
+    font-style: italic;
+    opacity: 0.9;
+    line-height: 1.6;
+}
+
+.rsvp_form_wrapper {
+    background: var(--form-background);
+    border-radius: 1.5rem;
+    padding: 2.5rem;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    animation: formSlideUp 0.8s ease-out;
+}
+
+.rsvp_form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.rsvp_form__title {
+    font-size: 2.2rem;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.rsvp_form__group {
+    display: flex;
+    flex-direction: column;
+}
+
+.rsvp_form__label {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.rsvp_form__input,
+.rsvp_form__textarea {
+    width: 100%;
+    padding: 1rem 1.2rem;
+    border: 2px solid var(--border-color);
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.rsvp_form__input:focus,
+.rsvp_form__textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(138, 79, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.rsvp_form__group--radio {
+    display: flex;
+    flex-direction: column;
+}
+
+.rsvp_form__radio_options {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.8rem 1.2rem;
+    border: 2px solid var(--border-color);
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.8);
+    position: relative;
+    color: #999;
+}
+
+.radio-option input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.radio-custom {
+    height: 20px;
+    width: 20px;
+    background-color: #fff;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    display: inline-block;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.radio-option input:checked~.radio-custom {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.radio-option input:checked~.radio-custom::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+}
+
+.radio-option.selected {
+    border-color: var(--primary-color);
+    background: rgba(138, 79, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.radio-label {
+    font-weight: 500;
+}
+
+.rsvp_form__guests_section {
+    border-top: 2px dashed var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.rsvp_form__guests_title {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.rsvp_form__guest_group {
+    background: rgba(138, 79, 255, 0.05);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 2px dashed var(--border-color);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.rsvp_form__guest_group:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.rsvp_form__guest_title {
+    font-size: 1.2rem;
+    color: var(--secondary-color);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.rsvp_form__add_guest,
+.rsvp_form__remove_guest {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0.8rem 1.2rem;
+    border-radius: 0.75rem;
+}
+
+.rsvp_form__add_guest {
+    color: var(--primary-color);
+    background: rgba(138, 79, 255, 0.1);
+}
+
+.rsvp_form__add_guest:hover {
+    background: rgba(138, 79, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.rsvp_form__remove_guest {
+    color: var(--error-color);
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 118, 117, 0.1);
+}
+
+.rsvp_form__remove_guest:hover {
+    background: rgba(255, 118, 117, 0.2);
+}
+
+.rsvp_form__textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.rsvp_form__button {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #6a11cb 100%);
+    color: white;
+    padding: 1.2rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    box-shadow: 0 4px 15px rgba(138, 79, 255, 0.3);
+}
+
+.rsvp_form__button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(138, 79, 255, 0.4);
+}
+
+.rsvp_form__button--disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.rsvp_form__button--disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.rsvp_form__error {
+    color: var(--error-color);
+    text-align: center;
+    margin-top: 1rem;
+    font-weight: 500;
+    padding: 1rem;
+    background: rgba(255, 118, 117, 0.1);
+    border-radius: 0.75rem;
+    border-left: 4px solid var(--error-color);
+}
+
+@keyframes formSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .rsvp_form__container {
+        padding: 1rem;
+    }
+
+    .content-wrapper {
+        gap: 1.5rem;
+    }
+
+    .invitation_card,
+    .rsvp_form_wrapper {
+        padding: 1.5rem;
+        border-radius: 1rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .rsvp_form__radio_options {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .invitation_card__eventName {
+        font-size: 2rem;
+    }
+
+    .rsvp_form__title {
+        font-size: 1.8rem;
+    }
+}
+/* Loading styles */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: var(--text-light);
+    z-index: 2;
+    position: relative;
+}
+
+.loading-text {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+}
+
+/* Image styles */
+.invitation_image {
+    width: 70%;
+   max-height:70%;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.no-image-placeholder {
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #f5f5f5;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    color: #999;
+}
+
+.no-image-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+/* Add these styles to your rsvp.css file */
+
+.guest-counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.counter-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.counter-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--primary-color);
+    background: white;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.counter-btn:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+.counter-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #ccc;
+    color: #ccc;
+}
+
+.guest-count {
+    font-size: 1.5rem;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+    color: var(--primary-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .counter-controls {
+        gap: 0.8rem;
+    }
+
+    .counter-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+
+    .guest-count {
+        font-size: 1.3rem;
+    }
+}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .invitation_image {
+        max-height: 200px;
+    }
+
+    .no-image-placeholder {
+        height: 150px;
+    }
+}

@@ -1,0 +1,58 @@
+export const packages = {
+    Basic: {
+        id: "basic",
+        name: "Basic",
+        maxGuest: 50,
+        maxEvents: 5,
+        price: 0,
+        features: [
+            "Access to basic templates",
+            "Create and send invitations",  
+            "RSVP tracking",
+            "Event management tools"
+        ]
+    },
+    Free: {
+        id: "free",
+        name: "Free",
+        maxGuest: 50,
+        maxEvents: 1,
+        price: 0,
+        features: [
+            "Access to basic templates",
+            "Create and send invitations",
+            "RSVP tracking",
+            "Event management tools"
+        ]
+    },
+    Premium: {
+        id: "premium",
+        name: "Premium",
+        maxGuest: 200,
+        maxEvents: 20,
+        price: 49.99,
+        features: [
+            "All Basic features",
+            "Access to premium templates",
+            "Custom branding options",
+            "Priority support", 
+            "Advanced RSVP analytics"
+        ]
+    },
+    Enterprise: {
+        id: "enterprise",
+        name: "Enterprise",
+        maxGuest: 1000,
+        maxEvents: 100,
+        price: 99.99,
+        features: [
+            "All Premium features",
+            "Dedicated account manager",
+            "Custom integrations",
+            "Unlimited events",
+            "Team collaboration tools"  
+        ]
+    }
+};
+
+
