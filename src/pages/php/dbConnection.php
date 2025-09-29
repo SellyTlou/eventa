@@ -1,22 +1,18 @@
 <?php
-
-
 class Database {
 
-    private $host = "localhost";
-    private $user = "root";
-    private $pass = "";
-    private $dbname = "eventa";
+    private $host = "sql12.freesqldatabase.com";
+    private $user = "sql12800637";
+    private $pass = "ZHvsXpIw61";
+    private $dbname = "sql12800637";
+    private $port = 3306;
 
     private $pdo;
 
     public function __construct() {
         try {
-            $this->pdo = new PDO(
-                "mysql:host={$this->host};dbname={$this->dbname};charset=utf8",
-                $this->user,
-                $this->pass
-            );
+            $dsn = "mysql:host={$this->host};port={$this->port};dbname={$this->dbname};charset=utf8";
+            $this->pdo = new PDO($dsn, $this->user, $this->pass);
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
             http_response_code(500);
@@ -29,5 +25,3 @@ class Database {
         return $this->pdo;
     }
 }
-
-?>
