@@ -60,7 +60,7 @@ function Sales() {
                 <section className="features-page">
                     <div className="container">
                         <div className="section-header text-center">
-                            <h2>The EVENTA difference.</h2>
+                            <h2>The Evenda difference.</h2>
                             <p>
                                 We offer a powerful suite of integrated event management tools that showcase your event and brand.
                             </p>
@@ -72,7 +72,7 @@ function Sales() {
                                 </div>
                                 <h4>Powerful Features</h4>
                                 <p>
-                                    EVENTA offers comprehensive, flexible tools to plan, manage, and analyze your events.
+                                    EVENDA offers comprehensive, flexible tools to plan, manage, and analyze your events.
                                 </p>
                                 <button className="btn btn-view-more">Get started</button>
                             </div>
@@ -82,7 +82,7 @@ function Sales() {
                                 </div>
                                 <h4>Branded Event Experience</h4>
                                 <p>
-                                    EVENTA helps you design on-brand registrations, pages, and communications.
+                                    evenda helps you design on-brand registrations, pages, and communications.
                                 </p>
                                 <button className="btn btn-view-more">Get started</button>
                             </div>

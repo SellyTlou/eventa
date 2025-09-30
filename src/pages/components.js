@@ -215,8 +215,8 @@ export function Footer() {
                     <div className='col-lg-4'>
                         <img src="/images/logo.png" alt="Eventa Logo" className="footer-logo img-fluid mb-3" />
                         <p className="about-description">
-                            Eventa is the smarter way to plan and manage your events. Whether it's a wedding, birthday, corporate gathering,
-                            or casual hangout, Eventa makes it simple to create invitations, track RSVPs, and keep guests engaged — all in one place.
+                            Evenda is the smarter way to plan and manage your events. Whether it's a wedding, birthday, corporate gathering,
+                            or casual hangout, Evenda makes it simple to create invitations, track RSVPs, and keep guests engaged — all in one place.
                         </p>
                     </div>
                     <div className="col-lg-2">
@@ -239,7 +239,7 @@ export function Footer() {
                         </div>
                         <div className="contact-item">
                             <a href="mailto:info@eventa.co.za">
-                                <i className="bi bi-envelope-fill"></i> info@eventa.co.za
+                                <i className="bi bi-envelope-fill"></i> info@evenda.co.za
                             </a>
                         </div>
                         <div className="contact-item">
@@ -263,7 +263,7 @@ export function Footer() {
             </div>
             <div className="row bottom-footer-row">
                 <div className="col text-center">
-                    <p className="mb-0">© 2025 Eventa. All rights reserved.</p>
+                    <p className="mb-0">© 2025 Evenda. All rights reserved.</p>
                 </div>
             </div>
         </footer>
@@ -360,9 +360,11 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        lastname: '',
         password: '',
         confirmPassword: ''
     });
+    const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
@@ -377,8 +379,9 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     };
 
     const handleSubmit = async (e) => {
+        setLoading(true);
         e.preventDefault();
-
+        const API_URL = process.env.REACT_APP_API_URL;
         const formDataToSend = new FormData();
 
         if (isLogin) {
@@ -392,12 +395,13 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             }
             formDataToSend.append("function", "register");
             formDataToSend.append("name", formData.name);
+            formDataToSend.append("lastname", formData.lastname);
             formDataToSend.append("email", formData.email);
             formDataToSend.append("password", formData.password);
         }
 
         try {
-            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formDataToSend
             });
@@ -407,19 +411,19 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
             if (result.success) {
                 if (isLogin) {
-                    alert(result.message);
+                    
                     localStorage.setItem("user", JSON.stringify(result.user));
 
-                    const isAdmin = result.user.role === "admin" || 
-                                  (result.user.roles && result.user.roles.includes("admin"));
-                    
+                    const isAdmin = result.user.role === "admin" ||
+                        (result.user.roles && result.user.roles.includes("admin"));
+
                     if (isAdmin) {
                         navigate("/adminDashboard");
                     } else {
                         navigate("/eventsDashboard");
                     }
-                    
-                    onClose(); 
+
+                    onClose();
                 } else {
                     alert("Account created! Please login.");
                     setIsLogin(true);
@@ -430,6 +434,8 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         } catch (error) {
             console.error("Error:", error);
             alert("Server error, please try again later.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -443,6 +449,19 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         });
     };
 
+    if (loading) {
+            return (
+                <>
+                    <div className="loading-container">
+                        <div className="spinner-border text-info" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <div className="loading-text">Loading your events...</div>
+                    </div>
+                </>
+            );
+        }
+
     return (
         <div className="login-popup-overlay" onClick={onClose}>
             <div className="login-popup-content" onClick={e => e.stopPropagation()}>
@@ -453,13 +472,14 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 <div className="login-header">
                     <img src="/images/logo.png" alt="Eventa Logo" className="login-logo" />
                     <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-                    <p>{isLogin ? 'Sign in to your Eventa account' : 'Join Eventa to start planning your events'}</p>
+                    <p>{isLogin ? 'Sign in to your Evenda account' : 'Join Evenda to start planning your events'}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="login-form">
                     {!isLogin && (
+
                         <div className="form-group">
-                            <label htmlFor="name">Full Name</label>
+                            <label htmlFor="name">Firstname</label>
                             <input
                                 type="text"
                                 id="name"
@@ -467,11 +487,25 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 value={formData.name}
                                 onChange={handleInputChange}
                                 required={!isLogin}
-                                placeholder="Enter your full name"
+                                placeholder="Enter your Firstname"
+                            />
+                        </div>
+
+                    )}
+                    {!isLogin && (
+                        <div className="form-group">
+                            <label htmlFor="email">Lastname</label>
+                            <input
+                                type="text"
+                                id="lastname"
+                                name="lastname"
+                                value={formData.lastname}
+                                onChange={handleInputChange}
+                                required={!isLogin}
+                                placeholder="Enter your Lastname"
                             />
                         </div>
                     )}
-
                     <div className="form-group">
                         <label htmlFor="email">Email Address</label>
                         <input
@@ -500,6 +534,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     </div>
 
                     {!isLogin && (
+
                         <div className="form-group">
                             <label htmlFor="confirmPassword">Confirm Password</label>
                             <input
@@ -557,7 +592,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 export async function logOut() {
     try {
         const user = JSON.parse(localStorage.getItem("user"));
-
+        const API_URL = process.env.REACT_APP_API_URL;
         if (!user || !user.user_id) {
             console.warn("No user logged in");
             return;
@@ -567,7 +602,7 @@ export async function logOut() {
         formData.append("function", "logout");
         formData.append("user_id", user.user_id);
 
-        const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+        const response = await fetch(`${API_URL}/query.php`, {
             method: "POST",
             body: formData
         });
@@ -576,7 +611,7 @@ export async function logOut() {
         console.log("Logout response:", result);
 
         if (result.success) {
-          
+
             localStorage.removeItem("user");
 
             window.location.href = "/";

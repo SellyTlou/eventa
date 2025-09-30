@@ -691,6 +691,9 @@ Event Dashboard page
     background: white;
     border-bottom: 1px solid #e0e0e0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top:0;
+    z-index: 12;
 }
 
 .dashboard-header h1 {
@@ -948,7 +951,6 @@ Event Dashboard page
  Event Management Page 
  --------------------------------------*/
 
-/* Reuse styles from Dashboard.css and add new ones */
 .invitation-content {
     padding: 2rem;
     background: #f8f9fa;
@@ -1149,11 +1151,9 @@ Event Dashboard page
     border-top: 2px solid white;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-}
-
-/********************
-Manage my EVent page
-8********************/
+}/********************
+Manage my Event page
+********************/
 .manage-my-event-content {
     overflow: hidden;
     padding: 30px;
@@ -1161,68 +1161,349 @@ Manage my EVent page
     position: relative;
 }
 
-.manage-my-event-content .eventDetails {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+/* Section Title */
+.manage-my-event-content .section-title {
+    color: #2c3e50;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    text-align: center;
+    font-weight: 700;
+}
+
+/* Details Grid */
+.manage-my-event-content .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
     margin-bottom: 30px;
 }
 
-.manage-my-event-content .eventDetails h2 {
-    color: #333;
-    margin-bottom: 15px;
-    font-size: 1.8rem;
-}
-
-.manage-my-event-content .eventDetails p {
-    color: #666;
-    margin-bottom: 10px;
-    line-height: 1.5;
-}
-
-.manage-my-event-content .event-form {
+/* Details Cards */
+.manage-my-event-content .details-card {
     background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    padding: 0;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.manage-my-event-content .event-form h2 {
-    color: #333;
+.manage-my-event-content .details-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Card Header */
+.manage-my-event-content .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.manage-my-event-content .card-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.manage-my-event-content .edit-icon {
+    cursor: pointer;
+    font-size: 1.2rem;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.manage-my-event-content .edit-icon:hover {
+    opacity: 1;
+}
+
+/* Card Content */
+.manage-my-event-content .card-content {
+    padding: 25px;
+}
+
+/* Event Details */
+.manage-my-event-content .detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 20px;
-    font-size: 1.5rem;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-.manage-my-event-content .event-form label {
-    display: block;
-    margin-bottom: 15px;
+.manage-my-event-content .detail-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.manage-my-event-content .detail-label {
+    font-weight: 600;
+    color: #555;
+    min-width: 120px;
+}
+
+.manage-my-event-content .detail-value {
+    color: #333;
+    text-align: right;
+    flex: 1;
+}
+
+.manage-my-event-content .description-text {
+    line-height: 1.5;
+    color: #666;
+}
+
+/* Guests Progress */
+.manage-my-event-content .guests-progress {
+    margin-top: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.manage-my-event-content .progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
     font-weight: 600;
     color: #555;
 }
 
-.manage-my-event-content .event-form input {
+.manage-my-event-content .progress-bar {
     width: 100%;
-    padding: 12px;
-    border: 2px solid #e0e0e0;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.manage-my-event-content .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+/* Current Plan Card */
+.manage-my-event-content .current-plan-card {
+    border: 3px solid transparent;
+}
+
+.manage-my-event-content .current-plan-card.unavailable {
+    border-color: #dc3545;
+}
+
+.manage-my-event-content .plan-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.manage-my-event-content .plan-badge.available {
+    background: #d4edda;
+    color: #155724;
+}
+
+.manage-my-event-content .plan-badge.unavailable {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.manage-my-event-content .plan-main-info {
+    text-align: center;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.manage-my-event-content .plan-name {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+    font-weight: 700;
+}
+
+.manage-my-event-content .plan-price {
+    font-size: 1.4rem;
+    color: #667eea;
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Plan Features */
+.manage-my-event-content .plan-features {
+    margin-bottom: 25px;
+}
+
+.manage-my-event-content .feature-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.manage-my-event-content .feature-item:hover {
+    background: #e9ecef;
+}
+
+.manage-my-event-content .feature-icon {
+    font-size: 1.5rem;
+    margin-right: 15px;
+    width: 40px;
+    text-align: center;
+}
+
+.manage-my-event-content .feature-details {
+    flex: 1;
+}
+
+.manage-my-event-content .feature-label {
+    display: block;
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.manage-my-event-content .feature-value {
+    display: block;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.manage-my-event-content .feature-value.zero-events {
+    color: #dc3545;
+}
+
+/* Upgrade Alert */
+.manage-my-event-content .upgrade-alert {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+}
+
+.manage-my-event-content .alert-icon {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+.manage-my-event-content .upgrade-alert p {
+    margin: 0;
+    color: #856404;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Plan Footer */
+.manage-my-event-content .plan-footer {
+    text-align: center;
+}
+
+.manage-my-event-content .renewal-date {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.manage-my-event-content .upgrade-btn {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 12px 24px;
     border-radius: 8px;
-    font-size: 16px;
-    margin-top: 8px;
-    transition: border-color 0.3s ease;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
 }
 
-.manage-my-event-content .event-form input:focus {
-    outline: none;
-    border-color: #007bff;
+.manage-my-event-content .upgrade-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
 }
 
+/* Publish Button */
+.manage-my-event-content .publish-event-btn {
+    position: relative;
+    display: block;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.manage-my-event-content .publish-event-btn:hover:not(.disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.manage-my-event-content .publish-event-btn.disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.manage-my-event-content .publish-event-btn.disabled:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-10px);
+}
+
+.manage-my-event-content .tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-5px);
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.manage-my-event-content .tooltip:after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+
+/* Package Slider */
 .manage-my-event-content .package-slider {
     position: relative;
     background: white;
     padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
 }
 
 .manage-my-event-content .package-cards {
@@ -1412,11 +1693,185 @@ Manage my EVent page
     box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
 }
 
+/* Event Details Section */
+.manage-my-event-content .eventDetails-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+.manage-my-event-content .guest-limit-section {
+    margin-top: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.manage-my-event-content .guest-limit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.manage-my-event-content .guest-limit-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+}
+
+.manage-my-event-content .guest-limit-display {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.manage-my-event-content .guest-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.manage-my-event-content .guest-max {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.manage-my-event-content .guest-limit-slider {
+    position: relative;
+    width: 100%;
+    height: 12px;
+    background: #e9ecef;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+.manage-my-event-content .guest-limit-progress {
+    position: absolute;
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    transition: width 0.1s ease;
+}
+
+.manage-my-event-content .guest-limit-handle {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 50%;
+    margin-right: -10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.manage-my-event-content .guest-limit-slider:hover .guest-limit-handle {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.manage-my-event-content .guest-limit-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.manage-my-event-content .guest-limit-input label {
+    font-weight: 500;
+    color: #555;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.manage-my-event-content .guest-limit-input input {
+    width: 80px;
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    transition: border-color 0.3s ease;
+}
+
+.manage-my-event-content .guest-limit-input input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.manage-my-event-content .guest-limit-info {
+    text-align: center;
+}
+
+.manage-my-event-content .guest-limit-info small {
+    color: #666;
+    font-size: 0.8rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+    .manage-my-event-content .guest-limit-input {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .manage-my-event-content .guest-limit-input input {
+        width: 100%;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .manage-my-event-content .details-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
     .manage-my-event-content {
-        margin-left: 0;
         padding: 20px;
+    }
+
+    .manage-my-event-content .section-title {
+        font-size: 1.6rem;
+    }
+
+    .manage-my-event-content .card-header {
+        padding: 15px 20px;
+    }
+
+    .manage-my-event-content .card-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .manage-my-event-content .card-content {
+        padding: 20px;
+    }
+
+    .manage-my-event-content .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .manage-my-event-content .detail-value {
+        text-align: left;
+        margin-top: 5px;
+    }
+
+    .manage-my-event-content .plan-name {
+        font-size: 1.5rem;
+    }
+
+    .manage-my-event-content .plan-price {
+        font-size: 1.2rem;
     }
 
     .manage-my-event-content .package-card {
@@ -1425,6 +1880,31 @@ Manage my EVent page
 
     .manage-my-event-content .slide-btn {
         display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .manage-my-event-content {
+        padding: 15px;
+    }
+
+    .manage-my-event-content .section-title {
+        font-size: 1.4rem;
+    }
+
+    .manage-my-event-content .feature-item {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .manage-my-event-content .feature-icon {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .manage-my-event-content .publish-event-btn {
+        padding: 12px 30px;
+        font-size: 1rem;
     }
 }
 
@@ -1549,8 +2029,7 @@ Package Payment Page
     font-size: 20px;
 }
 
-/* Payment Popup Styles */
-.payment-popup-overlay {
+.packagePayment-content .payment-popup-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -1563,7 +2042,7 @@ Package Payment Page
     z-index: 1000;
 }
 
-.payment-popup {
+.packagePayment-content .payment-popup {
     background: white;
     padding: 30px;
     border-radius: 12px;
@@ -1575,7 +2054,7 @@ Package Payment Page
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-.close-popup {
+.packagePayment-content .close-popup {
     position: absolute;
     top: 15px;
     right: 15px;
@@ -1591,20 +2070,20 @@ Package Payment Page
     justify-content: center;
 }
 
-.close-popup:hover {
+.packagePayment-content .close-popup:hover {
     color: #333;
     background: #f5f5f5;
     border-radius: 50%;
 }
 
-.payment-popup h3 {
+.packagePayment-content .payment-popup h3 {
     color: #333;
     margin-bottom: 20px;
     text-align: center;
     font-size: 1.4rem;
 }
 
-.payment-summary {
+.packagePayment-content .payment-summary {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
@@ -1612,40 +2091,39 @@ Package Payment Page
     text-align: center;
 }
 
-.payment-summary p {
+.packagePayment-content .payment-summary p {
     margin: 5px 0;
     color: #555;
 }
 
-/* Payment Form Styles */
-.payment-form {
+.packagePayment-content .payment-form {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
 
-.form-group {
+.packagePayment-content .form-group {
     display: flex;
     flex-direction: column;
 }
 
-.form-row {
+.packagePayment-content .form-row {
     display: flex;
     gap: 15px;
 }
 
-.form-row .form-group {
+.packagePayment-content .form-row .form-group {
     flex: 1;
 }
 
-.payment-form label {
+.packagePayment-content .payment-form label {
     font-weight: 600;
     color: #555;
     margin-bottom: 5px;
     font-size: 0.9rem;
 }
 
-.payment-form input {
+.packagePayment-content .payment-form input {
     padding: 12px;
     border: 2px solid #e0e0e0;
     border-radius: 6px;
@@ -1653,12 +2131,12 @@ Package Payment Page
     transition: border-color 0.3s ease;
 }
 
-.payment-form input:focus {
+.packagePayment-content .payment-form input:focus {
     outline: none;
     border-color: #007bff;
 }
 
-.submit-payment-btn {
+.packagePayment-content .submit-payment-btn {
     background: linear-gradient(135deg, #28a745, #20c997);
     color: white;
     border: none;
@@ -1671,28 +2149,27 @@ Package Payment Page
     transition: all 0.3s ease;
 }
 
-.submit-payment-btn:hover {
+.packagePayment-content .submit-payment-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
 }
 
-.submit-payment-btn:active {
+.packagePayment-content .submit-payment-btn:active {
     transform: translateY(0);
 }
 
-/* Bank Transfer & EFT Styles */
-.bank-transfer-info,
-.eft-info {
+.packagePayment-content .bank-transfer-info,
+.packagePayment-content .eft-info {
     text-align: center;
 }
 
-.bank-transfer-info h4,
-.eft-info h4 {
+.packagePayment-content .bank-transfer-info h4,
+.packagePayment-content .eft-info h4 {
     color: #333;
     margin-bottom: 15px;
 }
 
-.bank-details {
+.packagePayment-content .bank-details {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
@@ -1700,27 +2177,26 @@ Package Payment Page
     text-align: left;
 }
 
-.bank-details p {
+.packagePayment-content .bank-details p {
     margin: 8px 0;
     color: #555;
     font-size: 0.9rem;
 }
 
-.payment-info {
+.packagePayment-content .payment-info {
     color: #666;
     font-size: 0.9rem;
     line-height: 1.4;
     margin-bottom: 20px;
 }
 
-/* Payment Option Active State */
-.paymentOption.active {
+.packagePayment-content .paymentOption.active {
     border-color: #007bff;
     background: #007bff;
     color: white;
 }
 
-.paymentOption.active i {
+.packagePayment-content .paymentOption.active i {
     color: white;
 }
 
@@ -1766,6 +2242,6 @@ Package Payment Page
     }
 }
 
-.payment-popup {
+.packagePayment-content .payment-popup {
     animation: popupFadeIn 0.3s ease-out;
 }

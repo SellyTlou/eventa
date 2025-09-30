@@ -32,11 +32,12 @@ const EventsDashboard = () => {
         const fetchEvents = async () => {
             try {
                 setLoading(true);
+                const API_URL = process.env.REACT_APP_API_URL;
                 const formData = new FormData();
                 formData.append("function", "getUserEvents");
                 formData.append("userID", user.user_id);
 
-                const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+                const response = await fetch(`${API_URL}/query.php`, {
                     method: "POST",
                     body: formData
                 });
@@ -74,11 +75,12 @@ const EventsDashboard = () => {
 
         await Promise.all(eventsArray.map(async (event) => {
             try {
+                const API_URL = process.env.REACT_APP_API_URL;
                 const formData = new FormData();
                 formData.append("function", "getRSVPResponses");
                 formData.append("event_id", event.event_id);
 
-                const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+                const response = await fetch(`${API_URL}/query.php`, {
                     method: "POST",
                     body: formData
                 });
@@ -110,7 +112,7 @@ const EventsDashboard = () => {
         setRsvpStats(stats);
     };
 
-   
+
     const deleteEvent = async (eventId, eventName) => {
         // Confirm before deleting
         if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
@@ -120,11 +122,12 @@ const EventsDashboard = () => {
         setDeletingEventId(eventId);
 
         try {
+            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
             formData.append("function", "deleteEvent");
             formData.append("event_id", eventId);
 
-            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData
             });
@@ -132,12 +135,12 @@ const EventsDashboard = () => {
             const data = await response.json();
 
             if (data.success) {
-                
+
                 const updatedEvents = events.filter(event => event.event_id !== eventId);
                 setEvents(updatedEvents);
                 setFilteredEvents(updatedEvents);
 
-               
+
                 alert("Event deleted successfully!");
             } else {
                 alert("Failed to delete event. Please try again.");
@@ -198,7 +201,7 @@ const EventsDashboard = () => {
     const loadMoreEvents = () => setCurrentPage(prevPage => prevPage + 1);
     const handleFilterChange = (filterType, value) => setFilters(prev => ({ ...prev, [filterType]: value }));
     const handleEventClick = (eventId) => navigate(`/eventManagement?event_id=${eventId}`);
-    const createEvent = () => window.location.href = "/activeEventDetails";
+    const createEvent = () => navigate("/activeEventDetails");
 
     if (loading) {
         return (
@@ -270,7 +273,7 @@ const EventsDashboard = () => {
                                     <button
                                         className="delete-event-btn"
                                         onClick={(e) => {
-                                            e.stopPropagation(); 
+                                            e.stopPropagation();
                                             deleteEvent(event.event_id, event.event_name);
                                         }}
                                         disabled={deletingEventId === event.event_id}

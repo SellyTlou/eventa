@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import { useNavigate } from "react-router-dom";
 import { useSearchParams } from 'react-router-dom';
+import { logOut } from "../components";
 
 
 const InvitationPage = () => {
@@ -15,15 +16,33 @@ const InvitationPage = () => {
     const navigate = useNavigate();
     const [event_id, setEventId] = useState("");
     const [searchParams] = useSearchParams();
-
+    const [eventStatus, setEventStatus] = useState("");
+    const dropdownRef = useRef(null);
+    const [user, setUser] = useState(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
 
     useEffect(() => {
         const id = searchParams.get("event_id");
-        if (id) {
+        const storedUser = localStorage.getItem("user");
+        if (id && storedUser) {
+            setUser(JSON.parse(storedUser));
             setEventId(id);
+            fetchEventStatusByID(id);
         }
+
+
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
     }, [searchParams]);
-   
+
     const invitationLink = "";
 
     // Validate email format
@@ -32,7 +51,7 @@ const InvitationPage = () => {
         return emailRegex.test(email);
     };
 
-   
+
     const goToHome = () => {
         navigate("/eventsDashboard");
     };
@@ -46,7 +65,40 @@ const InvitationPage = () => {
         navigate(`/manage_my_event?event_id=${event_id}`);
     };
 
-   
+    const fetchEventStatusByID = async (eventId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getEventStatusByID");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            console.log("Event Status data:", data);
+            if (data.success && data.status) {
+
+                if (data.status.published === "0") {
+                    setEventStatus("Unpublished");
+                } else if (data.status.published === "1") {
+                    setEventStatus("Published");
+                } else {
+                    setEventStatus("Unknown");
+                }
+
+
+            } else {
+                return "unknown";
+            }
+        } catch (err) {
+            console.error("Failed to fetch event status:", err);
+            return "unknown";
+        }
+    }
+
     const addEmail = () => {
         if (!emailInput.trim()) return;
 
@@ -96,13 +148,14 @@ const InvitationPage = () => {
         setEmailError("");
 
         const fetchEventName = async () => {
-            if (!event_id) return "Eventa Event";
+            if (!event_id) return "Evenda Event";
             try {
+                const API_URL = process.env.REACT_APP_API_URL;
                 const fd = new FormData();
                 fd.append("function", "getEventById");
                 fd.append("event_id", event_id);
 
-                const resp = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+                const resp = await fetch(`${API_URL}/query.php`, {
                     method: "POST",
                     body: fd
                 });
@@ -119,7 +172,7 @@ const InvitationPage = () => {
             } catch (err) {
                 console.warn("Failed to fetch event name:", err);
             }
-            return "Eventa Event";
+            return "Evenda Event";
         };
 
         // build basic guests array from emails (you can adjust name fallback)
@@ -133,36 +186,33 @@ const InvitationPage = () => {
         let successCount = 0;
         const failures = [];
 
-        // send invites sequentially (safer for debugging). For speed use Promise.all later.
         for (const guest of guestsArr) {
             try {
                 const fd = new FormData();
                 fd.append("email", guest.email);
                 fd.append("name", guest.name);
                 fd.append("event", event_id);
+                const API_URL = process.env.REACT_APP_API_URL;
 
-                const resp = await fetch("http://localhost/eventa/src/pages/php/send_invite.php", {
+                const resp = await fetch(`${API_URL}/query.php/send_invite.php`, {
                     method: "POST",
                     body: fd,
                 });
 
-                const text = await resp.text(); // always read text first
-                // try to parse JSON; if it fails, treat as error and include raw text
+                const text = await resp.text();
                 let parsed;
                 try {
                     parsed = JSON.parse(text);
                 } catch (parseErr) {
-                    // Non-JSON response (HTML or error) — collect it for debugging
                     failures.push({
                         guest: guest.email,
                         reason: "Non-JSON response from server",
-                        raw: text.slice(0, 500) // keep first 500 chars
+                        raw: text.slice(0, 500)
                     });
                     console.error("Non-JSON response for", guest.email, text);
                     continue;
                 }
 
-                // if parsed JSON exists, expect { success: true/false, message: "..." }
                 if (parsed && parsed.success) {
                     successCount++;
                 } else {
@@ -198,9 +248,9 @@ const InvitationPage = () => {
             setEmailList(emailList.filter(e => failedEmails.includes(e)));
         }
     };
-
-   
-
+    const toggleDropdown = () => {
+        setDropdownOpen(prev => !prev);
+    };
     const copyLink = () => {
         navigator.clipboard.writeText(invitationLink)
             .then(() => {
@@ -216,29 +266,40 @@ const InvitationPage = () => {
     return (
         <div className="dashboard-container">
             <div className="dashboard-header">
-                <h1>Eventa</h1>
+                <h1>Evenda</h1>
                 <div className="header-tabs">
+
                     <button
-                        className={activeTab === "overview" ? "active" : ""}
-                        onClick={() => setActiveTab("overview")}
+                        className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"
+                            }`}
                     >
-                        Overview
+                        {eventStatus}
                     </button>
-                    <button
-                        className={activeTab === "unpublished" ? "active" : ""}
-                        onClick={() => setActiveTab("unpublished")}
+
+
+                    <div
+                        ref={dropdownRef}
+                        className={`profile-container ${dropdownOpen ? "open" : ""}`}
+                        onClick={toggleDropdown}
                     >
-                        Unpublished
-                    </button>
-                    <button
-                        className={activeTab === "preview" ? "active" : ""}
-                        onClick={() => setActiveTab("preview")}
-                    >
-                        Preview Event
-                    </button>
-                    <button className="upgrade-btn">
-                        UPGRADE
-                    </button>
+                        <i className="bi bi-person-circle"></i>
+                        <span>{user ? user.name : "Guest"}</span>
+                        <i className="bi bi-chevron-bar-down"></i>
+
+                        {dropdownOpen && (
+                            <div className="dropdown-menu show">
+                                <button className="dropdown-item">
+                                    <i className="bi bi-person"></i>Profile
+                                </button>
+                                <button className="dropdown-item">
+                                    <i className="bi bi-gear"></i>Settings
+                                </button>
+                                <button className="dropdown-item" onClick={logOut}>
+                                    <i className="bi bi-box-arrow-right"></i>Logout
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

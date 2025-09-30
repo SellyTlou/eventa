@@ -85,9 +85,9 @@ const PackagePayment = () => {
             const formData = new FormData();
             formData.append("function", "getEventStatusByID");
             formData.append("event_id", eventId);
+            const API_URL = process.env.REACT_APP_API_URL;
 
-            const response = await fetch(
-                "http://localhost/eventa/src/pages/php/query.php",
+            const response = await fetch(`${API_URL}/query.php`,
                 { method: "POST", body: formData }
             );
             if (!response.ok) throw new Error("Network response was not ok");
@@ -273,8 +273,8 @@ const PackagePayment = () => {
             <div className="bank-transfer-info">
                 <h4>Bank Transfer Instructions</h4>
                 <div className="bank-details">
-                    <p><strong>Bank Name:</strong> Eventa Bank</p>
-                    <p><strong>Account Holder:</strong> Eventa Pty Ltd</p>
+                    <p><strong>Bank Name:</strong> evenda Bank</p>
+                    <p><strong>Account Holder:</strong> evenda Pty Ltd</p>
                     <p><strong>Account Number:</strong> 1234 5678 9012</p>
                     <p><strong>Branch Code:</strong> 123456</p>
                     <p><strong>Reference:</strong> {user?.name} - {selectedPackage?.name}</p>
@@ -303,7 +303,7 @@ const PackagePayment = () => {
                 <h4>EFT Payment Instructions</h4>
                 <div className="bank-details">
                     <p><strong>Bank:</strong> Standard Bank</p>
-                    <p><strong>Account Name:</strong> Eventa Solutions</p>
+                    <p><strong>Account Name:</strong> Evenda Solutions</p>
                     <p><strong>Account Number:</strong> 9876 5432 1098</p>
                     <p><strong>Branch Code:</strong> 051001</p>
                     <p><strong>Reference:</strong> {user?.id}-{selectedPackage?.id}</p>
@@ -368,7 +368,7 @@ const PackagePayment = () => {
     return (
         <div className="dashboard-container">
             <div className="dashboard-header">
-                <h1>Eventa</h1>
+                <h1>evenda</h1>
                 <div className="header-tabs">
                     <button className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"}`}>
                         {eventStatus}
@@ -417,7 +417,7 @@ const PackagePayment = () => {
                 </button>
                 <div className="header">
                     <h2>Complete Your Payment</h2>
-                    <p>Secure and fast checkout powered by Eventa</p>
+                    <p>Secure and fast checkout powered by evenda</p>
                     <hr />
                 </div>
 

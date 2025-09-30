@@ -159,18 +159,18 @@ function Index() {
                     <div className="container">
                         <div className="row">
                             <div className="col-lg-6 text-content">
-                                <h1>Eventa — Where Every Event Begins.</h1>
+                                <h1>evenda — Where Every Event Begins.</h1>
                                 <p>
-                                    Eventa is the smarter way to plan and manage your events.
+                                    evenda is the smarter way to plan and manage your events.
                                     Whether it's a wedding, birthday, corporate gathering, or
-                                    casual hangout, Eventa makes it simple to create invitations,
+                                    casual hangout, evenda makes it simple to create invitations,
                                     track RSVPs, and keep guests engaged — all in one place.
                                 </p>
                             </div>
                             <div className="col-lg-6 image-content">
                                 <img
                                     src="/images/homeheader.png"
-                                    alt="Eventa Homepage"
+                                    alt="evenda Homepage"
                                     className="img-fluid"
                                 />
                             </div>
@@ -243,7 +243,7 @@ function Index() {
                             <h2>Comprehensive Event Management</h2>
                             <p>
                                 From guest lists and invitations to seating charts and
-                                reminders, Eventa has all the tools you need to plan and
+                                reminders, evenda has all the tools you need to plan and
                                 execute a flawless event. Our intuitive platform makes it
                                 easy to stay organized and keep track of every detail.
                             </p>

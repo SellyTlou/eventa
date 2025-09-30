@@ -56,9 +56,9 @@ try {
     $eventDate = $event['event_start_date'];
     $eventLocation = $event['event_location'];
   
-    
+
     // Create RSVP link
-   $rsvpLink = "http://localhost:3000/rsvpForm?event_id=" . urlencode($eventId);
+$rsvpLink = "https://eventa.xo.je/rsvpForm?event_id=" . urlencode($eventId);
    //$rsvpLink = "https://7e1cc2b50ec8.ngrok-free.app/rsvpForm?event_id=" . urlencode($eventId);
     
     // Create PHPMailer instance

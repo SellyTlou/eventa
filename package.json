@@ -2,6 +2,7 @@
   "name": "eventa",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@fontsource/lora": "^5.2.6",
     "@fontsource/open-sans": "^5.2.6",

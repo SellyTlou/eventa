@@ -279,7 +279,7 @@ function ActiveEventDetails() {
                             )}
                             {step2SubStep === 3 && (
                                 <>
-                                    <p className="step-subtitle">Customize your Eventa URL link</p>
+                                    <p className="step-subtitle">Customize your Evenda URL link</p>
                                     <div className="form-group-event">
                                         <input
                                             type="text"
@@ -292,7 +292,7 @@ function ActiveEventDetails() {
                                         <div className="url-preview">
                                             <span className="url-preview-prefix">https://</span>
                                             <span className="url-preview-value">{eventUrl || "myevent"}</span>
-                                            <span className="url-preview-prefix">.eventa.com</span>
+                                            <span className="url-preview-prefix">evenda.com</span>
                                         </div>
                                         <p className="text-muted small mt-1">
                                             This is the link you'll give to your guests so they can RSVP to your event.
@@ -316,7 +316,7 @@ function ActiveEventDetails() {
                                 <p><strong>Name:</strong> {eventName}</p>
                                 <p><strong>When:</strong> {eventStartDate} {eventStartTime} to {eventEndDate} {eventEndTime}</p>
                                 <p><strong>Where:</strong> {eventLocation || "Not specified"}</p>
-                                <p><strong>URL:</strong> https://{eventUrl || "myevent"}.eventa.com</p>
+                                <p><strong>URL:</strong> https://{eventUrl || "myevent"}.evenda.com</p>
                             </div>
                         </div>
                     )}

@@ -1635,6 +1635,7 @@ export default function PostcardEditor() {
     const templateId = searchParams.get("template");
     const category = searchParams.get("category");
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
 
     // Get templates for the given category
     const categoryTemplates = templates[category] || [];
@@ -1876,11 +1877,13 @@ export default function PostcardEditor() {
 
     const saveEventToDatabase = async (imageData) => {
         try {
+            setLoading(true);
             const user = JSON.parse(localStorage.getItem("user"));
             const eventData = getEventDataFromStorage();
 
             if (!user || !eventData) {
                 alert("User or event data not found. Please try again.");
+                                setLoading(false);
                 return false;
             }
 
@@ -1903,7 +1906,7 @@ export default function PostcardEditor() {
                 bgConfig
             }));
 
-            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+            const response = await fetch("https://eventa.xo.je/api/query.php", {
                 method: "POST",
                 body: formData,
             });
@@ -1921,7 +1924,9 @@ export default function PostcardEditor() {
             console.error("Error saving event:", error);
             alert("Error saving event. Please try again.");
             return false;
-        }
+        }finally {
+                setLoading(false);
+            }
     };
 
     const downloadImage = async () => {
@@ -1961,6 +1966,7 @@ export default function PostcardEditor() {
             }
         }, 100);
     };
+
     const goToEventDashboard = () => {
         navigate("/eventsDashboard");
     };
@@ -2086,6 +2092,18 @@ export default function PostcardEditor() {
         }
     }, [])
 
+    if (loading) {
+            return (
+                <>
+                    <div className="loading-container">
+                        <div className="spinner-border text-info" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <div className="loading-text">Saving your event..-</div>
+                    </div>
+                </>
+            );
+        }
     return (
         <div className="editor-container">
             {/* Left Sidebar */}

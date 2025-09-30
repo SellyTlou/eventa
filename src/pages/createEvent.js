@@ -122,7 +122,7 @@ function CreateEvent() {
         formData.append("email", email.trim());
         formData.append("password", password);
 
-        const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+        const response = await fetch("https://eventa.xo.je/api/query.php", {
           method: "POST",
           body: formData,
         });
@@ -328,7 +328,7 @@ function CreateEvent() {
               {step2SubStep === 3 && (
                 <>
                   <h2 className="step-title">Event URL</h2>
-                  <p className="step-subtitle">Customize your Eventa URL link</p>
+                  <p className="step-subtitle">Customize your Evenda URL link</p>
                   <div className="form-group-event">
                     <input
                       type="text"
@@ -341,7 +341,7 @@ function CreateEvent() {
                     <div className="url-preview">
                       <span className="url-preview-prefix">https://</span>
                       <span className="url-preview-value">{eventUrl || "myevent"}</span>
-                      <span className="url-preview-prefix">.eventa.com</span>
+                      <span className="url-preview-prefix">.evenda.com</span>
                     </div>
                     <p className="text-muted small mt-1">
                       This is the link you'll give to your guests so they can RSVP to your event.

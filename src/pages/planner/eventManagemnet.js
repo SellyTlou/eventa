@@ -51,12 +51,13 @@ const RSVPResponses = () => {
 
     const fetchRSVPResponses = async (eventId) => {
         setLoading(true);
+        const API_URL = process.env.REACT_APP_API_URL;
         try {
             const formData = new FormData();
             formData.append("function", "getRSVPResponses");
             formData.append("event_id", eventId);
 
-            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });
@@ -93,11 +94,12 @@ const RSVPResponses = () => {
 
     const fetchEventStatusByID = async (eventId) => {
         try {
+            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
             formData.append("function", "getEventStatusByID");
             formData.append("event_id", eventId);
 
-            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });
@@ -158,7 +160,7 @@ const RSVPResponses = () => {
     return (
         <div className="dashboard-container">
             <div className="dashboard-header">
-                <h1>Eventa</h1>
+                <h1>Evenda</h1>
                 <div className="header-tabs">
                     
                     <button
