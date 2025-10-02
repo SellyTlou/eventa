@@ -12,12 +12,15 @@ const EventsDashboard = () => {
     const [hasMoreEvents, setHasMoreEvents] = useState(true);
     const [filters, setFilters] = useState({
         dateRange: "all",
-        sortBy: "latest"
+        sortBy: "latest",
+        status: "all"
     });
-    const [rsvpStats, setRsvpStats] = useState({}); // Holds RSVP counts per event
-    const [deletingEventId, setDeletingEventId] = useState(null); // Track which event is being deleted
+    const [rsvpStats, setRsvpStats] = useState({});
+    const [deletingEventId, setDeletingEventId] = useState(null);
+    const [activeTab, setActiveTab] = useState("all");
 
-    const itemsPerPage = 6;
+    const itemsPerPage = 6; // Show 6 cards initially (2 rows of 3)
+    const cardsPerRow = 3; // 3 cards per row
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -56,7 +59,6 @@ const EventsDashboard = () => {
                     setFilteredEvents(uniqueEvents);
                     setHasMoreEvents(uniqueEvents.length > itemsPerPage);
 
-                    // Fetch RSVP stats
                     fetchRSVPStatsForEvents(uniqueEvents);
                 }
             } catch (error) {
@@ -68,7 +70,6 @@ const EventsDashboard = () => {
 
         fetchEvents();
     }, []);
-
 
     const fetchRSVPStatsForEvents = async (eventsArray) => {
         const stats = {};
@@ -112,9 +113,7 @@ const EventsDashboard = () => {
         setRsvpStats(stats);
     };
 
-
     const deleteEvent = async (eventId, eventName) => {
-        // Confirm before deleting
         if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
             return;
         }
@@ -135,12 +134,10 @@ const EventsDashboard = () => {
             const data = await response.json();
 
             if (data.success) {
-
                 const updatedEvents = events.filter(event => event.event_id !== eventId);
                 setEvents(updatedEvents);
                 setFilteredEvents(updatedEvents);
-
-
+                setHasMoreEvents(updatedEvents.length > currentPage * itemsPerPage);
                 alert("Event deleted successfully!");
             } else {
                 alert("Failed to delete event. Please try again.");
@@ -153,9 +150,19 @@ const EventsDashboard = () => {
         }
     };
 
+    // Filter events based on active tab and filters
     useEffect(() => {
         let result = [...events];
 
+        // Filter by status tab
+        if (activeTab !== "all") {
+            result = result.filter(event => {
+                const isPublished = event.is_published || event.status === 'published';
+                return activeTab === "published" ? isPublished : !isPublished;
+            });
+        }
+
+        // Filter by date range
         if (filters.dateRange !== "all") {
             const today = new Date();
             result = result.filter(event => {
@@ -182,6 +189,7 @@ const EventsDashboard = () => {
             });
         }
 
+        // Sort events
         result.sort((a, b) => {
             const dateA = new Date(a.event_date || a.created_at);
             const dateB = new Date(b.event_date || b.created_at);
@@ -192,23 +200,31 @@ const EventsDashboard = () => {
         });
 
         setFilteredEvents(result);
-        setCurrentPage(1);
-    }, [filters, events]);
+        setCurrentPage(1); 
+        setHasMoreEvents(result.length > itemsPerPage); 
+    }, [filters, events, activeTab]);
 
+    
     const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
     const canLoadMore = filteredEvents.length > displayedEvents.length;
 
-    const loadMoreEvents = () => setCurrentPage(prevPage => prevPage + 1);
+    const loadMoreEvents = () => {
+        setCurrentPage(prevPage => prevPage + 1);
+    };
+
     const handleFilterChange = (filterType, value) => setFilters(prev => ({ ...prev, [filterType]: value }));
-    const handleEventClick = (eventId) => navigate(`/eventManagement?event_id=${eventId}`);
+    const handleEventClick = (eventId) => navigate(`/manage_my_event?event_id=${eventId}`);
     const createEvent = () => navigate("/activeEventDetails");
+
+    const publishedEventsCount = events.filter(event => event.is_published || event.status === 'published').length;
+    const unpublishedEventsCount = events.filter(event => !(event.is_published || event.status === 'published')).length;
 
     if (loading) {
         return (
             <>
                 <LoginNav />
                 <div className="loading-container">
-                    <div className="spinner-border text-info" role="status">
+                    <div className="spinner-border text-primary" role="status">
                         <span className="visually-hidden">Loading...</span>
                     </div>
                     <div className="loading-text">Loading your events...</div>
@@ -222,8 +238,38 @@ const EventsDashboard = () => {
             <LoginNav />
             <section className="eventsDashboard">
                 <div className="container">
-                    <h1 className="dashboard-title">My Events Dashboard</h1>
-                    <p className="dashboard-subtitle">Manage and track your events</p>
+                    <div className="dashboard-header">
+                        <div className="header-content">
+                            <h1 className="dashboard-title">My Events Dashboard</h1>
+                            <p className="dashboard-subtitle">Manage and track your events</p>
+                        </div>
+                        <button className="create-event-btn-main" onClick={createEvent}>
+                            <i className="bi bi-plus-circle"></i>
+                            Create New Event
+                        </button>
+                    </div>
+
+                    {/* Status Tabs */}
+                    <div className="events-tabs">
+                        <button
+                            className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
+                            onClick={() => setActiveTab("all")}
+                        >
+                            All Events <span className="tab-count">{events.length}</span>
+                        </button>
+                        <button
+                            className={`tab-btn ${activeTab === "published" ? "active" : ""}`}
+                            onClick={() => setActiveTab("published")}
+                        >
+                            Published <span className="tab-count">{publishedEventsCount}</span>
+                        </button>
+                        <button
+                            className={`tab-btn ${activeTab === "unpublished" ? "active" : ""}`}
+                            onClick={() => setActiveTab("unpublished")}
+                        >
+                            Unpublished <span className="tab-count">{unpublishedEventsCount}</span>
+                        </button>
+                    </div>
 
                     <div className="dashboard-filters">
                         <div className="filter-group">
@@ -259,88 +305,121 @@ const EventsDashboard = () => {
                         </div>
                     </div>
 
-                    <hr />
-
-                    <div className="row">
+                    <div className="events-grid">
                         {displayedEvents.length > 0 ? (
-                            displayedEvents.map((event) => (
-                                <div
-                                    className="cardConatiner"
-                                    key={event.event_id}
-                                    style={{ cursor: 'pointer', position: 'relative' }}
-                                >
-                                    {/* Delete button */}
-                                    <button
-                                        className="delete-event-btn"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteEvent(event.event_id, event.event_name);
-                                        }}
-                                        disabled={deletingEventId === event.event_id}
-                                        title="Delete event"
+                            displayedEvents.map((event) => {
+                                const isPublished = event.is_published || event.status === 'published';
+                                return (
+                                    <div
+                                        className="event-card-container"
+                                        key={event.event_id}
                                     >
-                                        {deletingEventId === event.event_id ? (
-                                            <div className="spinner-border spinner-border-sm" role="status">
-                                                <span className="visually-hidden">Deleting...</span>
-                                            </div>
-                                        ) : (
-                                            <i className="bi bi-trash"></i>
-                                        )}
-                                    </button>
+                                        {/* Status Badge */}
+                                        <div className={`event-status-badge ${isPublished ? 'published' : 'unpublished'}`}>
+                                            {isPublished ? (
+                                                <><i className="bi bi-check-circle"></i> Published</>
+                                            ) : (
+                                                <><i className="bi bi-clock"></i> Unpublished</>
+                                            )}
+                                        </div>
 
-                                    <div className="card" onClick={() => handleEventClick(event.event_id)}>
-                                        <img
-                                            src={event.event_image || "#"}
-                                            className="card-img-top"
-                                            alt={event.event_name}
-                                            onError={(e) => {
-                                                e.target.src = "#";
-                                                e.target.style.background = "linear-gradient(45deg, #667eea 0%, #764ba2 100%)";
-                                                e.target.style.display = "flex";
-                                                e.target.style.alignItems = "center";
-                                                e.target.style.justifyContent = "center";
-                                                e.target.style.color = "white";
-                                                e.target.style.fontSize = "18px";
-                                                e.target.style.fontWeight = "bold";
+                                        {/* Delete button */}
+                                        <button
+                                            className="delete-event-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteEvent(event.event_id, event.event_name);
                                             }}
-                                        />
-                                        <div className="card-body">
-                                            <div className="row">
-                                                <div className="item">
-                                                    <p>Attending</p>
-                                                    <span>{rsvpStats[event.event_id]?.yes ?? 0}</span>
+                                            disabled={deletingEventId === event.event_id}
+                                            title="Delete event"
+                                        >
+                                            {deletingEventId === event.event_id ? (
+                                                <div className="spinner-border spinner-border-sm" role="status">
+                                                    <span className="visually-hidden">Deleting...</span>
                                                 </div>
-                                                <div className="item">
-                                                    <p>Not Attending</p>
-                                                    <span>{rsvpStats[event.event_id]?.no ?? 0}</span>
-                                                </div>
-                                                <div className="item">
-                                                    <p>Maybe</p>
-                                                    <span>{rsvpStats[event.event_id]?.maybe ?? 0}</span>
+                                            ) : (
+                                                <i className="bi bi-trash"></i>
+                                            )}
+                                        </button>
+
+                                        <div className="event-card" onClick={() => handleEventClick(event.event_id)}>
+                                            <div className="event-image">
+                                                <img
+                                                    src={event.event_image || "#"}
+                                                    alt={event.event_name}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                                <div className="event-image-placeholder">
+                                                    <i className="bi bi-calendar-event"></i>
+                                                    <span>{event.event_name}</span>
                                                 </div>
                                             </div>
-                                            <h5 className="eventName">{event.event_name}</h5>
-                                            <div className="event-date">
-                                                {event.event_start_date && event.event_end_date
-                                                    ? `${new Date(event.event_start_date).toLocaleDateString()} - ${new Date(event.event_end_date).toLocaleDateString()}`
-                                                    : 'Date not set'}
+
+                                            <div className="event-content">
+                                                <h3 className="event-title">{event.event_name}</h3>
+
+                                                <div className="event-date">
+                                                    <i className="bi bi-calendar"></i>
+                                                    {event.event_start_date && event.event_end_date
+                                                        ? `${new Date(event.event_start_date).toLocaleDateString()} - ${new Date(event.event_end_date).toLocaleDateString()}`
+                                                        : 'Date not set'}
+                                                </div>
+
+                                                <div className="rsvp-stats">
+                                                    <div className="stat-item attending">
+                                                        <div className="stat-value">{rsvpStats[event.event_id]?.yes ?? 0}</div>
+                                                        <div className="stat-label">Attending</div>
+                                                    </div>
+                                                    <div className="stat-item maybe">
+                                                        <div className="stat-value">{rsvpStats[event.event_id]?.maybe ?? 0}</div>
+                                                        <div className="stat-label">Maybe</div>
+                                                    </div>
+                                                    <div className="stat-item not-attending">
+                                                        <div className="stat-value">{rsvpStats[event.event_id]?.no ?? 0}</div>
+                                                        <div className="stat-label">Can't Attend</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="event-actions">
+                                                    <button
+                                                        className={`manage-btn ${isPublished ? 'published' : 'unpublished'}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEventClick(event.event_id);
+                                                        }}
+                                                    >
+                                                        {isPublished ? 'Manage Event' : 'Complete Setup'}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="no-events-message">
+                                <div className="no-events-icon">
+                                    <i className="bi bi-calendar-x"></i>
+                                </div>
                                 <h3>No events found</h3>
                                 <p>You haven't created any events yet or no events match your filters.</p>
-                                <button className="create-event-btn" onClick={createEvent}>Create Your First Event</button>
+                                <button className="create-event-btn" onClick={createEvent}>
+                                    <i className="bi bi-plus-circle"></i>
+                                    Create Your First Event
+                                </button>
                             </div>
                         )}
                     </div>
 
                     {canLoadMore && (
                         <div className="pagination-container">
-                            <button className="load-more-btn" onClick={loadMoreEvents}>Load More Events</button>
+                            <button className="load-more-btn" onClick={loadMoreEvents}>
+                                Load More Events ({filteredEvents.length - displayedEvents.length} remaining)
+                                <i className="bi bi-arrow-down"></i>
+                            </button>
                         </div>
                     )}
                 </div>

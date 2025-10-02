@@ -110,7 +110,6 @@ const Manage_my_event = () => {
         }
     };
 
-    // Fetch package details from packages table
     const fetchPackageDetails = async (packageId, userPackageData) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -365,14 +364,20 @@ const Manage_my_event = () => {
 
 
     const handlePublishEvent = () => {
+        if (guestLimit === 0) {
+            alert("Please select a guest limit greater than 0.");
+            return;
+        }
+
         if (currentPlan && currentPlan.hasPackage && currentPlan.available_events > 0) {
-            updateEventStatus();
+           // updateEventStatus();
             updateEventUsedCount();
-            alert("Event published successfully!");
+           // alert("Event published successfully!");
         } else {
             alert("No available events left in your plan or no active package. Please upgrade your package.");
         }
     };
+
 
     const updateEventStatus = async () => {
         try {
@@ -381,6 +386,7 @@ const Manage_my_event = () => {
             formData.append("function", "updateEventStatus");
             formData.append("event_id", event_id);
             formData.append("published", 1);
+            formData.append("guest_limit", guestLimit);
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -388,9 +394,10 @@ const Manage_my_event = () => {
             });
 
             const data = await response.json();
+            console.log(data);
             if (data.success) {
                 setEventStatus("Published");
-                console.log("Event status updated to published");
+                alert("Event status updated to published");
             }
         } catch (err) {
             console.error("Error updating event status:", err);
@@ -412,6 +419,7 @@ const Manage_my_event = () => {
             });
 
             const data = await response.json();
+            console.log(data);
             if (data.success) {
                 console.log("Event used count updated and package assigned to event");
                 fetchUserPackage(user.user_id);
@@ -478,7 +486,6 @@ const Manage_my_event = () => {
         }
     };
 
-    // Render current plan card based on package status
     const renderCurrentPlanCard = () => {
         if (!currentPlan) {
             return (
@@ -739,8 +746,8 @@ const Manage_my_event = () => {
                             <button className="close-popup" onClick={closePopup}>×</button>
                             <h2>{selectedPackage.name} Package</h2>
                             <div className="package-details">
-                                <p><strong>Max Guests:</strong> {selectedPackage.maxGuest === Infinity ? "Unlimited" : selectedPackage.maxGuest}</p>
-                                <p><strong>Max Events:</strong> {selectedPackage.maxEvents === Infinity ? "Unlimited" : selectedPackage.maxEvents}</p>
+                                <p><strong>Max Guests:</strong> {selectedPackage.max_guests === Infinity ? "Unlimited" : selectedPackage.max_guests}</p>
+                                <p><strong>Max Events:</strong> {selectedPackage.max_events === Infinity ? "Unlimited" : selectedPackage.max_events}</p>
                                 <p><strong>Price:</strong> {selectedPackage.price === 0 ? "Free" : `R${selectedPackage.price}`}</p>
                                 <div className="features-list">
                                     <h4>Features:</h4>
@@ -752,7 +759,7 @@ const Manage_my_event = () => {
                                 </div>
                             </div>
                             <button className="choose-package-btn" onClick={handleChoosePackage}>
-                                Choose {selectedPackage.name} Package
+                                Choose {selectedPackage.id} Package
                             </button>
                         </div>
                     </div>

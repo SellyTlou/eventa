@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut } from "../components";
-import { packages } from "./packages"; // Import the packages
 
 const PackagePayment = () => {
     const dropdownRef = useRef(null);
@@ -12,63 +11,74 @@ const PackagePayment = () => {
     const [searchParams] = useSearchParams();
     const [event_id, setEventId] = useState("");
     const [eventStatus, setEventStatus] = useState("");
-    const [selectedPackage, setSelectedPackage] = useState(null);
+    const [selectedPackage, setSelectedPackage] = useState([]);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
     const [showPaymentPopup, setShowPaymentPopup] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const vatRate = 0.15; // 15% VAT
+    const vatRate = 0.15;
 
     useEffect(() => {
         const initializePage = async () => {
             setLoading(true);
 
-            // Get parameters from URL
             const id = searchParams.get("event_id");
             const packageId = searchParams.get("package_id");
             const userId = searchParams.get("user_id");
 
             console.log("URL Parameters:", { id, packageId, userId });
 
-            if (id) {
-                setEventId(id);
-                await fetchEventStatusByID(id);
+            if (!userId) {
+                setLoading(false);
+                alert("User ID not found");
+                navigate("/");
+                return;
             }
 
-            // Get user from localStorage
+            if (!id) {
+                setLoading(false);
+                alert("Event ID not found");
+                navigate("/eventsDashboard");
+                return;
+            }
+
+            setEventId(id);
+
+            if (!packageId) {
+                setLoading(false);
+                alert("Package ID not found ");
+                navigate("/eventsDashboard");
+                return;
+            }
+
+            try {
+                await fetchEventStatusByID(id);
+                await getPackageById(packageId);
+            } catch (error) {
+                console.error("Failed to fetch event status:", error);
+                setLoading(false);
+                navigate("/eventsDashboard");
+                return;
+            }
+
             const storedUser = localStorage.getItem("user");
             if (storedUser) {
                 const userData = JSON.parse(storedUser);
                 setUser(userData);
-                console.log("User found:", userData);
-            }
-
-            // Get package details
-            if (packageId) {
-                // Find package by ID in the imported packages object
-                const packageKey = Object.keys(packages).find(key =>
-                    packages[key].id === packageId
-                );
-
-                if (packageKey && packages[packageKey]) {
-                    setSelectedPackage(packages[packageKey]);
-                    console.log("Package found:", packages[packageKey]);
-                } else {
-                    console.error("Package not found for ID:", packageId);
-                    // Fallback to first available package
-                    const firstPackage = Object.values(packages)[0];
-                    setSelectedPackage(firstPackage);
-                }
             } else {
-                // If no package_id provided, use Free package as default
-                setSelectedPackage(packages.Free);
+                console.error("User not found in localStorage");
+                setLoading(false);
+                navigate("/eventsDashboard");
+                return;
             }
+
+
 
             setLoading(false);
         };
 
         initializePage();
-    }, [searchParams]);
+    }, [searchParams, navigate]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -109,6 +119,34 @@ const PackagePayment = () => {
         }
     };
 
+    const getPackageById = async (packageId) => {
+        try {
+            const formData = new FormData();
+            formData.append("function", "getPackgaeById");
+            formData.append("package_id", packageId);
+            const API_URL = process.env.REACT_APP_API_URL;
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+            if (data.success && data.package) {
+                setSelectedPackage({
+                    ...data.package,
+                    price: Number(data.package.price) || 0
+                });
+            }
+        } catch (err) {
+            console.error("Failed to fetch package:", err);
+            setSelectedPackage(null);
+        }
+    };
+
+
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
     const goToHome = () => navigate("/eventsDashboard");
@@ -122,13 +160,12 @@ const PackagePayment = () => {
         navigate(-1);
     };
 
-    // Calculate payment details
     const calculatePaymentDetails = () => {
         if (!selectedPackage) return null;
 
         const basePrice = selectedPackage.price || 0;
         const vatAmount = basePrice * vatRate;
-        const serviceFee = basePrice > 0 ? 5.0 : 0; // Only charge service fee for paid packages
+        const serviceFee = basePrice > 0 ? 5.0 : 0;
         const totalAmount = basePrice + vatAmount + serviceFee;
 
         return {
@@ -147,21 +184,14 @@ const PackagePayment = () => {
     };
 
     const handlePaymentSubmit = (paymentData) => {
-        // Here you would typically send the payment data to your backend
-        console.log("Payment submitted:", {
-            package: selectedPackage,
-            method: selectedPaymentMethod,
-            paymentData,
-            user: user,
-            event_id: event_id
-        });
 
-        // Simulate payment processing
-        alert(`Payment processed successfully for ${selectedPackage.name} package!`);
+
         setShowPaymentPopup(false);
+        if (updateUserPackage()) {
+           navigate(`/manage_my_event?event_id=${event_id}`);
 
-        // Redirect to success page or back to event management
-        navigate(`/eventManagement?event_id=${event_id}`);
+       }
+
     };
 
     const closePopup = () => {
@@ -169,7 +199,6 @@ const PackagePayment = () => {
         setSelectedPaymentMethod("");
     };
 
-    // Credit Card Form Component
     const CreditCardForm = ({ onSubmit }) => {
         const [cardData, setCardData] = useState({
             cardNumber: "",
@@ -235,7 +264,6 @@ const PackagePayment = () => {
         );
     };
 
-    // PayPal Form Component
     const PayPalForm = ({ onSubmit }) => {
         const [email, setEmail] = useState("");
 
@@ -262,7 +290,6 @@ const PackagePayment = () => {
         );
     };
 
-    // Bank Transfer Form Component
     const BankTransferForm = ({ onSubmit }) => {
         const handleSubmit = (e) => {
             e.preventDefault();
@@ -291,11 +318,11 @@ const PackagePayment = () => {
         );
     };
 
-    // EFT Form Component (Common in South Africa)
     const EFTForm = ({ onSubmit }) => {
         const handleSubmit = (e) => {
             e.preventDefault();
             onSubmit({});
+
         };
 
         return (
@@ -319,7 +346,6 @@ const PackagePayment = () => {
         );
     };
 
-    // Render appropriate payment form based on selection
     const renderPaymentForm = () => {
         switch (selectedPaymentMethod) {
             case 'credit-card':
@@ -335,16 +361,47 @@ const PackagePayment = () => {
         }
     };
 
+    const updateUserPackage = async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "updateUserPackage");
+            formData.append("user_id", user?.user_id); 
+            formData.append("package_id", selectedPackage?.package_id);
+            formData.append("events_limit", selectedPackage?.max_events);
+
+            console.log("Submitting package update:", {
+                user_id: user?.user_id,
+                package_id: selectedPackage?.package_id,
+                events_limit: selectedPackage?.max_events
+            });
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+            const results = await response.json();
+            console.log(results);
+            if (results.success) {
+                alert("Package updated successfully after EFT!");
+            } else {
+                alert("Failed to update package.");
+            }
+        } catch (err) {
+            console.error("Error updating package:", err);
+            alert("Error updating package. Please try again.");
+        }
+    };
+
+
     if (loading) {
         return (
-            <div className="dashboard-container">
-                <div className="packagePayment-content container">
-                    <div className="loading-message">
-                        <p>Loading package details...</p>
-                        <button onClick={handleBack} className="btn-event btn-event-back">
-                            Back to Packages
-                        </button>
-                    </div>
+
+            <div className="loading-container">
+                <div className="loading-overlay">
+                    <div className="loading-spinner"></div>
+                    <p className="loading-text">Loading package details...</p>
                 </div>
             </div>
         );
@@ -352,14 +409,13 @@ const PackagePayment = () => {
 
     if (!selectedPackage) {
         return (
-            <div className="dashboard-container">
-                <div className="packagePayment-content container">
-                    <div className="error-message">
-                        <p>Package not found. Please select a valid package.</p>
-                        <button onClick={handleBack} className="btn-event btn-event-back">
-                            Back to Packages
-                        </button>
-                    </div>
+            <div className="loading-container">
+                <div className="loading-overlay">
+                    <div className="loading-spinner"></div>
+                    <p>Package not found. Please select a valid package.</p>
+                    <button onClick={handleBack} className="btn-event btn-event-back">
+                        Back to Packages
+                    </button>
                 </div>
             </div>
         );
@@ -425,14 +481,17 @@ const PackagePayment = () => {
                     <div className="paymentInfo">
                         <h3 className="packageName">{selectedPackage.name} Plan</h3>
                         <div className="package-features">
-                            <p>Max Guests: {selectedPackage.maxGuest}</p>
-                            <p>Max Events: {selectedPackage.maxEvents}</p>
+                            <p>Max Guests: {selectedPackage.max_guests}</p>
+                            <p>Max Events: {selectedPackage.max_events}</p>
                         </div>
 
                         <div className="item">
                             <p className="planCost">Plan Cost</p>
-                            <span className="costAmount">R{selectedPackage.price.toFixed(2)}</span>
+                            <span className="costAmount">
+                                R{Number(selectedPackage?.price || 0).toFixed(2)}
+                            </span>
                         </div>
+
 
                         {selectedPackage.price > 0 && (
                             <>

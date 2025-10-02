@@ -30,7 +30,6 @@ const InvitationPage = () => {
             fetchEventStatusByID(id);
         }
 
-
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setDropdownOpen(false);
@@ -50,7 +49,6 @@ const InvitationPage = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     };
-
 
     const goToHome = () => {
         navigate("/eventsDashboard");
@@ -80,7 +78,6 @@ const InvitationPage = () => {
             const data = await response.json();
             console.log("Event Status data:", data);
             if (data.success && data.status) {
-
                 if (data.status.published === "0") {
                     setEventStatus("Unpublished");
                 } else if (data.status.published === "1") {
@@ -88,8 +85,6 @@ const InvitationPage = () => {
                 } else {
                     setEventStatus("Unknown");
                 }
-
-
             } else {
                 return "unknown";
             }
@@ -248,9 +243,11 @@ const InvitationPage = () => {
             setEmailList(emailList.filter(e => failedEmails.includes(e)));
         }
     };
+
     const toggleDropdown = () => {
         setDropdownOpen(prev => !prev);
     };
+
     const copyLink = () => {
         navigator.clipboard.writeText(invitationLink)
             .then(() => {
@@ -263,20 +260,18 @@ const InvitationPage = () => {
             });
     };
 
+    const handlePublishNow = () => {
+        navigate(`/manage_my_event?event_id=${event_id}`);
+    };
+
     return (
         <div className="dashboard-container">
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-
-                    <button
-                        className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"
-                            }`}
-                    >
+                    <button className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"}`}>
                         {eventStatus}
                     </button>
-
-
                     <div
                         ref={dropdownRef}
                         className={`profile-container ${dropdownOpen ? "open" : ""}`}
@@ -285,7 +280,6 @@ const InvitationPage = () => {
                         <i className="bi bi-person-circle"></i>
                         <span>{user ? user.name : "Guest"}</span>
                         <i className="bi bi-chevron-bar-down"></i>
-
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
                                 <button className="dropdown-item">
@@ -315,137 +309,171 @@ const InvitationPage = () => {
             </div>
 
             <div className="invitation-content">
-                <div className="content-header">
-                    <h2>Send Invitations</h2>
-                    <p>Invite guests to your event via email or shareable link</p>
-                </div>
+                {/* Overlay for unpublished events */}
+                {eventStatus === "Unpublished" && (
+                    <div className="unpublished-overlay">
+                        <div className="overlay-content">
+                            <div className="overlay-icon">📧</div>
+                            <h3>Publish Your Event to Send Invitations</h3>
+                            <p>You need to publish your event before you can send invitations to guests.</p>
+                            <button
+                                className="publish-now-btn"
+                                onClick={handlePublishNow}
+                            >
+                                Publish Event Now
+                            </button>
+                        </div>
+                    </div>
+                )}
 
-                <div className="invitation-cards">
-                    {/* Email Invitation Card */}
-                    <div className="invitation-card">
-                        <div className="card-header">
-                            <h3>Email Invitations</h3>
-                            <div className="email-icon">✉️</div>
+                <div className={`content-container ${eventStatus === "Unpublished" ? "disabled" : ""}`}>
+                    <div className="content-header">
+                        <h2>Send Invitations</h2>
+                        <p>Invite guests to your event via email or shareable link</p>
+                    </div>
+
+                    <div className="invitation-cards">
+                        {/* Email Invitation Card */}
+                        <div className="invitation-card">
+                            <div className="card-header">
+                                <h3>Email Invitations</h3>
+                                <div className="email-icon">✉️</div>
+                            </div>
+
+                            <div className="card-body">
+                                <div className="email-input-container">
+                                    <label htmlFor="email-input">Enter email addresses (separate with commas)</label>
+                                    <div className="input-with-button">
+                                        <input
+                                            id="email-input"
+                                            type="text"
+                                            value={emailInput}
+                                            onChange={(e) => setEmailInput(e.target.value)}
+                                            onKeyPress={handleKeyPress}
+                                            placeholder="guest1@example.com, guest2@example.com"
+                                            className={emailError ? "error" : ""}
+                                            disabled={eventStatus === "Unpublished"}
+                                        />
+                                        <button
+                                            onClick={addEmail}
+                                            className="add-email-btn"
+                                            disabled={!emailInput.trim() || eventStatus === "Unpublished"}
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                    {emailError && <div className="error-message">{emailError}</div>}
+                                </div>
+
+                                {emailList.length > 0 && (
+                                    <div className="email-list">
+                                        <h4>Recipients ({emailList.length})</h4>
+                                        <div className="email-chips">
+                                            {emailList.map((email, index) => (
+                                                <div key={index} className="email-chip">
+                                                    {email}
+                                                    <button
+                                                        onClick={() => removeEmail(email)}
+                                                        className="remove-email"
+                                                        disabled={eventStatus === "Unpublished"}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={sendInvitations}
+                                    className="send-invites-btn"
+                                    disabled={emailList.length === 0 || isSending || eventStatus === "Unpublished"}
+                                >
+                                    {isSending ? (
+                                        <>
+                                            <span className="spinner"></span>
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        `Send Invitations to ${emailList.length} ${emailList.length === 1 ? 'Recipient' : 'Recipients'}`
+                                    )}
+                                </button>
+
+                                {sendSuccess && (
+                                    <div className="success-message">
+                                        ✅ Invitations sent successfully!
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="card-body">
-                            <div className="email-input-container">
-                                <label htmlFor="email-input">Enter email addresses (separate with commas)</label>
-                                <div className="input-with-button">
+                        {/* Shareable Link Card */}
+                        <div className="invitation-card">
+                            <div className="card-header">
+                                <h3>Shareable Link</h3>
+                                <div className="link-icon">🔗</div>
+                            </div>
+
+                            <div className="card-body">
+                                <p>Share this link with your guests directly</p>
+
+                                <div className="link-container">
                                     <input
-                                        id="email-input"
                                         type="text"
-                                        value={emailInput}
-                                        onChange={(e) => setEmailInput(e.target.value)}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder="guest1@example.com, guest2@example.com"
-                                        className={emailError ? "error" : ""}
+                                        value={invitationLink}
+                                        readOnly
+                                        className="link-input"
+                                        disabled={eventStatus === "Unpublished"}
                                     />
                                     <button
-                                        onClick={addEmail}
-                                        className="add-email-btn"
-                                        disabled={!emailInput.trim()}
+                                        onClick={copyLink}
+                                        className="copy-link-btn"
+                                        disabled={eventStatus === "Unpublished"}
                                     >
-                                        Add
+                                        Copy Link
                                     </button>
                                 </div>
-                                {emailError && <div className="error-message">{emailError}</div>}
-                            </div>
 
-                            {emailList.length > 0 && (
-                                <div className="email-list">
-                                    <h4>Recipients ({emailList.length})</h4>
-                                    <div className="email-chips">
-                                        {emailList.map((email, index) => (
-                                            <div key={index} className="email-chip">
-                                                {email}
-                                                <button
-                                                    onClick={() => removeEmail(email)}
-                                                    className="remove-email"
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
+                                {copySuccess && (
+                                    <div className="success-message">
+                                        {copySuccess}
                                     </div>
-                                </div>
-                            )}
-
-                            <button
-                                onClick={sendInvitations}
-                                className="send-invites-btn"
-                                disabled={emailList.length === 0 || isSending}
-                            >
-                                {isSending ? (
-                                    <>
-                                        <span className="spinner"></span>
-                                        Sending...
-                                    </>
-                                ) : (
-                                    `Send Invitations to ${emailList.length} ${emailList.length === 1 ? 'Recipient' : 'Recipients'}`
                                 )}
-                            </button>
 
-                            {sendSuccess && (
-                                <div className="success-message">
-                                    ✅ Invitations sent successfully!
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Shareable Link Card */}
-                    <div className="invitation-card">
-                        <div className="card-header">
-                            <h3>Shareable Link</h3>
-                            <div className="link-icon">🔗</div>
-                        </div>
-
-                        <div className="card-body">
-                            <p>Share this link with your guests directly</p>
-
-                            <div className="link-container">
-                                <input
-                                    type="text"
-                                    value={invitationLink}
-                                    readOnly
-                                    className="link-input"
-                                />
-                                <button
-                                    onClick={copyLink}
-                                    className="copy-link-btn"
-                                >
-                                    Copy Link
-                                </button>
-                            </div>
-
-                            {copySuccess && (
-                                <div className="success-message">
-                                    {copySuccess}
-                                </div>
-                            )}
-
-                            <div className="share-options">
-                                <p>Or share directly to:</p>
-                                <div className="social-buttons">
-                                    <button className="social-btn whatsapp">
-                                        WhatsApp
-                                    </button>
-                                    <button className="social-btn facebook">
-                                        Facebook
-                                    </button>
-                                    <button className="social-btn twitter">
-                                        Twitter
-                                    </button>
-                                    <button className="social-btn email">
-                                        Email
-                                    </button>
+                                <div className="share-options">
+                                    <p>Or share directly to:</p>
+                                    <div className="social-buttons">
+                                        <button
+                                            className="social-btn whatsapp"
+                                            disabled={eventStatus === "Unpublished"}
+                                        >
+                                            WhatsApp
+                                        </button>
+                                        <button
+                                            className="social-btn facebook"
+                                            disabled={eventStatus === "Unpublished"}
+                                        >
+                                            Facebook
+                                        </button>
+                                        <button
+                                            className="social-btn twitter"
+                                            disabled={eventStatus === "Unpublished"}
+                                        >
+                                            Twitter
+                                        </button>
+                                        <button
+                                            className="social-btn email"
+                                            disabled={eventStatus === "Unpublished"}
+                                        >
+                                            Email
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     );

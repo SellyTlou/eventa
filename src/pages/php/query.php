@@ -9,11 +9,34 @@ require_once "dbConnection.php";
 $db  = new Database();
 $pdo = $db->getConnection();
 
-function generateUserID()
+function generateUserID($pdo)
 {
-    $random = substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 6);
-    $time   = time();
-    return "USER-" . $random . "-" . $time;
+    do {
+        $random = substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 6);
+        $time   = time();
+        $id     = "USER-" . $random . "-" . $time;
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE user_id = ?");
+        $stmt->execute([$id]);
+        $exists = $stmt->fetchColumn();
+    } while ($exists > 0);
+
+    return $id;
+}
+
+function generateUserPackageID($pdo)
+{
+    do {
+        $random = substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 6);
+        $time   = time();
+        $id     = "PCK-" . $random . "-" . $time;
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM user_packages WHERE user_package_id = ?");
+        $stmt->execute([$id]);
+        $exists = $stmt->fetchColumn();
+    } while ($exists > 0);
+
+    return $id;
 }
 
 function generateGuestID()
@@ -35,7 +58,7 @@ if ($fun === "register") {
     $lastname = $_POST['lastname'] ?? '';
     $email    = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
-    $userID   = generateUserID();
+    $userID   = generateUserID($pdo);
 
     if (! $name || ! $lastname || ! $email || ! $password) {
         echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -335,7 +358,6 @@ if ($fun === "sendInvites") {
             $guestName  = $guest['name'];
             $guestEmail = $guest['email'];
 
-            // RSVP link (this should point to your React RSVP page, e.g. rsvpForm.js)
             $rsvpLink = "http://yourdomain.com/rsvpForm?eventID=$eventID&guestEmail=" . urlencode($guestEmail);
 
             $subject = "Invitation to $eventName";
@@ -659,8 +681,8 @@ if ($fun === "getAllPackages") {
 }
 
 if ($fun === "updateEventUsedCount") {
-    $user_id = $_POST['user_id'] ?? '';
-    $event_id = $_POST['event_id'] ?? '';
+    $user_id    = $_POST['user_id'] ?? '';
+    $event_id   = $_POST['event_id'] ?? '';
     $package_id = $_POST['package_id'] ?? '';
 
     if (!$user_id || !$event_id || !$package_id) {
@@ -669,48 +691,136 @@ if ($fun === "updateEventUsedCount") {
     }
 
     try {
-        $pdo->beginTransaction();
+        $pdo->beginTransaction(); // <-- START TRANSACTION
 
-        //Update event_used count in user_packages
-        $stmt = $pdo->prepare("UPDATE user_packages SET event_used = event_used + 1 WHERE user_id = :user_id");
-        $stmt->execute([":user_id" => $user_id]);
+        $checkStmt = $pdo->prepare("SELECT event_used, event_limit FROM user_packages WHERE user_id = ? FOR UPDATE");
+        $checkStmt->execute([$user_id]);
+        $package = $checkStmt->fetch();
 
-        //Update the event with package_id in events table
+        if (!$package) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "User package not found"]);
+            exit;
+        }
+
+        if ($package['event_used'] >= $package['event_limit']) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Event limit reached"]);
+            exit;
+        }
+
+        $updateStmt = $pdo->prepare("UPDATE user_packages SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = ?");
+        $updateStmt->execute([$user_id]);
+
+        // Update the event with package_id in events table
         $stmt = $pdo->prepare("UPDATE events SET package_id = :package_id WHERE event_id = :event_id");
         $stmt->execute([
             ":package_id" => $package_id,
-            ":event_id" => $event_id
+            ":event_id"   => $event_id,
         ]);
 
         $pdo->commit();
 
         echo json_encode(["success" => true, "message" => "Event count updated and package assigned to event"]);
     } catch (PDOException $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) { 
+            $pdo->rollBack();
+        }
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
 }
 
+
 if ($fun === "updateEventStatus") {
-    $event_id  = $_POST['event_id'] ?? '';
-    $published = $_POST['published'] ?? 0;
+    $event_id    = $_POST['event_id'] ?? '';
+    $published   = $_POST['published'] ?? 0;
+    $guest_limit = $_POST['guest_limit'] ?? null;
 
     if (! $event_id) {
         echo json_encode(["success" => false, "message" => "Missing event ID"]);
         exit;
     }
 
+    if ($guest_limit === null || (int) $guest_limit <= 0) {
+        echo json_encode(["success" => false, "message" => "Guest limit must be greater than 0"]);
+        exit;
+    }
+
     try {
-        $stmt = $pdo->prepare("UPDATE events SET published = :published WHERE event_id = :event_id");
+        $stmt = $pdo->prepare("UPDATE events SET published = :published, guest_limit = :guest_limit WHERE event_id = :event_id");
         $stmt->execute([
-            ":published" => (int) $published, 
-            ":event_id"  => $event_id,
+            ":published"   => (int) $published,
+            ":guest_limit" => (int) $guest_limit,
+            ":event_id"    => $event_id,
         ]);
 
-        echo json_encode(["success" => true, "message" => "Event status updated"]);
+        echo json_encode(["success" => true, "message" => "Event status and guest limit updated"]);
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
+}
+
+if ($fun === "getPackageById") {
+    $package_id = $_POST['package_id'] ?? '';
+
+    if (! $package_id) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing package ID",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_id = :package_id LIMIT 1");
+        $stmt->execute([":package_id" => $package_id]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "package" => $data,
+        ]);
+
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updateUserPackage") {
+    $user_id     = $_POST['user_id'] ?? null;
+    $package_id  = $_POST['package_id'] ?? null;
+    $event_limit = $_POST['events_limit'] ?? 0;
+
+    if (! $user_id || ! $package_id || $event_limit == 0) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = ?");
+        $stmt->execute([$user_id]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $stmt = $pdo->prepare("UPDATE user_packages SET package_id = ?, event_limit = ?, event_used = 0, updated_at = NOW() WHERE user_id = ?");
+            $stmt->execute([$package_id, $event_limit, $user_id]);
+
+            echo json_encode(["success" => true, "message" => "Package updated successfully"]);
+        } else {
+            $newId = generateUserPackageID($pdo);
+
+            $stmt = $pdo->prepare("INSERT INTO user_packages (user_package_id, user_id, package_id, event_limit, event_used, created_at) VALUES (?, ?, ?, ?, 0, NOW()) ");
+            $stmt->execute([$newId, $user_id, $package_id, $event_limit]);
+
+            echo json_encode(["success" => true, "message" => "New package assigned successfully"]);
+        }
+    } catch (Exception $e) {
+        echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    }
 }
