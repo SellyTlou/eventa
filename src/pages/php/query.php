@@ -7,7 +7,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 require_once "dbConnection.php";
 
 $db  = new Database();
-$pdo = $db->getConnection();
+$pdo = $db->getConnection(); 
 
 function generateUserID($pdo)
 {

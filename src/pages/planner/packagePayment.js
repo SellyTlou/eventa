@@ -26,8 +26,6 @@ const PackagePayment = () => {
             const packageId = searchParams.get("package_id");
             const userId = searchParams.get("user_id");
 
-            console.log("URL Parameters:", { id, packageId, userId });
-
             if (!userId) {
                 setLoading(false);
                 alert("User ID not found");
@@ -122,7 +120,7 @@ const PackagePayment = () => {
     const getPackageById = async (packageId) => {
         try {
             const formData = new FormData();
-            formData.append("function", "getPackgaeById");
+            formData.append("function", "getPackageById");
             formData.append("package_id", packageId);
             const API_URL = process.env.REACT_APP_API_URL;
 
@@ -134,6 +132,7 @@ const PackagePayment = () => {
             if (!response.ok) throw new Error("Network response was not ok");
 
             const data = await response.json();
+            console.log(data);
             if (data.success && data.package) {
                 setSelectedPackage({
                     ...data.package,
