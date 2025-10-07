@@ -35,13 +35,13 @@ function About() {
                     <div className="container">
                         <div className="row align-items-center">
                             <div className="col-lg-6">
-                                <h1>About Evenda</h1>
+                                <h1>About Evendi</h1>
                                 <p className="lead">
-                                    Simplifying event planning for <span className="highlight">every everyone</span> who wish to connect the people of south africa or who just want to PARTYYYY
+                                    Event planning made simple for <span className="highlight">everyone</span> from connecting friends to throwing epic parties
                                 </p>
                                 <p>
-                                    Evenda's intuitive, powerful event management platform helps you create memorable events, 
-                                    engage guests, streamline planning, and build stronger connections through seamless event experiences.
+                                    Plan smarter, engage guests, and create lasting memories 
+                                    with a platform built for effortless event management.
                                 </p>
                                 <button className="btn btn-create">
                                     Get Started For Free

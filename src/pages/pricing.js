@@ -209,10 +209,10 @@ function Pricing() {
                     <div className="container">
                         <div className="row">
                             <div className="col-12 text-center">
-                                <h1>Plans that scale with your events.</h1>
+                                <h1>Plans designed to grow with your celebration</h1>
                                 <p className="lead">
-                                    Choose the perfect plan for your needs, whether you're planning personal gatherings, 
-                                    business events, or selling tickets.
+                                    Plan smarter with options designed for personal 
+                                    gatherings, corporate events, or ticketed experiences.
                                 </p>
                             </div>
                         </div>

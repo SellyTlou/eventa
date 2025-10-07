@@ -43,9 +43,9 @@ function Sales() {
                     <div className="container">
                         <div className="row ">
                             <div className="col-lg-7">
-                                <h1>Let Us Chat About Your Events.</h1>
+                                <h1>Let Us Chat About Your Event.</h1>
                                 <p className="lead">
-                                    We offer small and big events for a variety of organizations.
+                                    No matter the size, we help organizations plan and execute successful events.
                                 </p>
                                 <button className="btn btn-get-demo">
                                     Get Demo
@@ -60,9 +60,9 @@ function Sales() {
                 <section className="features-page">
                     <div className="container">
                         <div className="section-header text-center">
-                            <h2>The Evenda difference.</h2>
+                            <h2>The Evendi difference.</h2>
                             <p>
-                                We offer a powerful suite of integrated event management tools that showcase your event and brand.
+                            Build events that shine and a brand that stands out.
                             </p>
                         </div>
                         <div className="features-row">
