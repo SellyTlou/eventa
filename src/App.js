@@ -40,6 +40,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/Manage_my_event" element={<ManageEyEvent />} />
           <Route path="/packagePayment" element={<PackagePayment />} />
+
         </Routes>
       </div>
     </Router>

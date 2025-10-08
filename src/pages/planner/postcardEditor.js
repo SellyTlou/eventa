@@ -1635,7 +1635,7 @@ export default function PostcardEditor() {
     const templateId = searchParams.get("template");
     const category = searchParams.get("category");
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     // Get templates for the given category
     const categoryTemplates = templates[category] || [];
@@ -1905,8 +1905,9 @@ export default function PostcardEditor() {
                 shapes,
                 bgConfig
             }));
+            const API_URL = process.env.REACT_APP_API_URL;
 
-            const response = await fetch("https://eventa.xo.je/api/query.php", {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });

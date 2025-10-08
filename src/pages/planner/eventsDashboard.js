@@ -150,6 +150,13 @@ const EventsDashboard = () => {
         }
     };
 
+    // Helper function to check if event is published
+    const isEventPublished = (event) => {
+        // Handle both boolean (0/1) and string ('0'/'1') values
+        return event.is_published === true || event.published === 1 || event.published === '1' ||
+            event.status === 'published' || event.status === true || event.status === 1 || event.status === '1';
+    };
+
     // Filter events based on active tab and filters
     useEffect(() => {
         let result = [...events];
@@ -157,8 +164,8 @@ const EventsDashboard = () => {
         // Filter by status tab
         if (activeTab !== "all") {
             result = result.filter(event => {
-                const isPublished = event.is_published || event.status === 'published';
-                return activeTab === "published" ? isPublished : !isPublished;
+                const published = isEventPublished(event);
+                return activeTab === "published" ? published : !published;
             });
         }
 
@@ -200,11 +207,14 @@ const EventsDashboard = () => {
         });
 
         setFilteredEvents(result);
-        setCurrentPage(1); 
-        setHasMoreEvents(result.length > itemsPerPage); 
+        setCurrentPage(1);
+        setHasMoreEvents(result.length > itemsPerPage);
     }, [filters, events, activeTab]);
 
-    
+    // Calculate published/unpublished counts
+    const publishedEventsCount = events.filter(event => isEventPublished(event)).length;
+    const unpublishedEventsCount = events.filter(event => !isEventPublished(event)).length;
+
     const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
     const canLoadMore = filteredEvents.length > displayedEvents.length;
 
@@ -213,11 +223,8 @@ const EventsDashboard = () => {
     };
 
     const handleFilterChange = (filterType, value) => setFilters(prev => ({ ...prev, [filterType]: value }));
-    const handleEventClick = (eventId) => navigate(`/manage_my_event?event_id=${eventId}`);
+    const handleEventClick = (eventId) => navigate(`/eventManagement?event_id=${eventId}`);
     const createEvent = () => navigate("/activeEventDetails");
-
-    const publishedEventsCount = events.filter(event => event.is_published || event.status === 'published').length;
-    const unpublishedEventsCount = events.filter(event => !(event.is_published || event.status === 'published')).length;
 
     if (loading) {
         return (
@@ -308,15 +315,15 @@ const EventsDashboard = () => {
                     <div className="events-grid">
                         {displayedEvents.length > 0 ? (
                             displayedEvents.map((event) => {
-                                const isPublished = event.is_published || event.status === 'published';
+                                const published = isEventPublished(event);
                                 return (
                                     <div
                                         className="event-card-container"
                                         key={event.event_id}
                                     >
                                         {/* Status Badge */}
-                                        <div className={`event-status-badge ${isPublished ? 'published' : 'unpublished'}`}>
-                                            {isPublished ? (
+                                        <div className={`event-status-badge ${published ? 'published' : 'unpublished'}`}>
+                                            {published ? (
                                                 <><i className="bi bi-check-circle"></i> Published</>
                                             ) : (
                                                 <><i className="bi bi-clock"></i> Unpublished</>
@@ -385,13 +392,13 @@ const EventsDashboard = () => {
 
                                                 <div className="event-actions">
                                                     <button
-                                                        className={`manage-btn ${isPublished ? 'published' : 'unpublished'}`}
+                                                        className={`manage-btn ${published ? 'published' : 'unpublished'}`}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleEventClick(event.event_id);
                                                         }}
                                                     >
-                                                        {isPublished ? 'Manage Event' : 'Complete Setup'}
+                                                        {published ? 'Manage Event' : 'Complete Setup'}
                                                     </button>
                                                 </div>
                                             </div>

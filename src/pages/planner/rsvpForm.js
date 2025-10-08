@@ -28,13 +28,14 @@ const RsvpForm = () => {
     }, [searchParams]);
 
     const fetchEvent = async (eventId) => {
+        const API_URL = process.env.REACT_APP_API_URL;
         try {
             setLoadingEvent(true);
             const formData = new FormData();
             formData.append("function", "getEventById");
             formData.append("event_id", eventId);
 
-            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData
             });
@@ -75,8 +76,8 @@ const RsvpForm = () => {
         e.preventDefault();
         setError(null);
         setIsSubmitting(true);
+        const API_URL = process.env.REACT_APP_API_URL;
 
-        // Create FormData instead of JSON
         const formDataToSend = new FormData();
         formDataToSend.append("function", "guestRsvp");
         formDataToSend.append("event_id", event_id);
@@ -87,9 +88,9 @@ const RsvpForm = () => {
         formDataToSend.append("guestCount", formData.guestCount);
 
         try {
-            const response = await fetch("http://localhost/eventa/src/pages/php/query.php", {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
-                body: formDataToSend, // Send FormData instead of JSON
+                body: formDataToSend, 
             });
 
             if (!response.ok) throw new Error("Network response was not ok");

@@ -178,8 +178,7 @@ function Features() {
                             <div className="col-12 text-center">
                                 <h1>Event Management Software Features</h1>
                                 <p className="lead">
-                                    Powerful, end-to-end event management software with all the features 
-                                    you need to make your events successful.
+                                    All-in-one event management solution designed to make every event seamless and successful.
                                 </p>
                             </div>
                         </div>

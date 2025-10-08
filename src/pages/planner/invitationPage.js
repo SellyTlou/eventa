@@ -183,13 +183,14 @@ const InvitationPage = () => {
 
         for (const guest of guestsArr) {
             try {
+                const API_URL = process.env.REACT_APP_API_URL;
                 const fd = new FormData();
                 fd.append("email", guest.email);
                 fd.append("name", guest.name);
                 fd.append("event", event_id);
-                const API_URL = process.env.REACT_APP_API_URL;
+                fd.append("API_URL", API_URL);
 
-                const resp = await fetch(`${API_URL}/query.php/send_invite.php`, {
+                const resp = await fetch(`${API_URL}/send_invite.php`, {
                     method: "POST",
                     body: fd,
                 });

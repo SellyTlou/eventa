@@ -537,7 +537,7 @@ Event Dashboard page - Redesigned
 }
 
 .eventsDashboard .event-status-badge.unpublished {
-    background: rgba(245, 158, 11, 0.95);
+    background: rgb(255, 0, 0);
     color: white;
 }
 

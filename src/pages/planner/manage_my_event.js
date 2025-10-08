@@ -370,7 +370,7 @@ const Manage_my_event = () => {
         }
 
         if (currentPlan && currentPlan.hasPackage && currentPlan.available_events > 0) {
-           // updateEventStatus();
+            updateEventStatus();
             updateEventUsedCount();
            // alert("Event published successfully!");
         } else {

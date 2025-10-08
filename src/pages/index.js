@@ -159,12 +159,9 @@ function Index() {
                     <div className="container">
                         <div className="row">
                             <div className="col-lg-6 text-content">
-                                <h1>evenda — Where Every Event Begins.</h1>
+                                <h1>Evendi- Where Every Celebration Comes Alive </h1>
                                 <p>
-                                    evenda is the smarter way to plan and manage your events.
-                                    Whether it's a wedding, birthday, corporate gathering, or
-                                    casual hangout, evenda makes it simple to create invitations,
-                                    track RSVPs, and keep guests engaged — all in one place.
+                                    Make every event memorable. From intimate gatherings to grand celebrations, Evendi helps you design invitations, track responses, and engage your guests effortlessly.
                                 </p>
                             </div>
                             <div className="col-lg-6 image-content">
@@ -242,10 +239,8 @@ function Index() {
                         <div className="ManagementsGuid-header text-content">
                             <h2>Comprehensive Event Management</h2>
                             <p>
-                                From guest lists and invitations to seating charts and
-                                reminders, evenda has all the tools you need to plan and
-                                execute a flawless event. Our intuitive platform makes it
-                                easy to stay organized and keep track of every detail.
+                                Planning an event has never been this easy! Evendi helps you manage guest lists, send invites, set up seating charts, 
+                                and schedule reminders so you can focus on enjoying the celebration.
                             </p>
                         </div>
                         <div className="row navBtn">
@@ -297,7 +292,7 @@ function Index() {
                     <div className="container">
                         <div className="pricing-header text-center mb-5">
                             <h2>Our Flexible Pricing Plans</h2>
-                            <p className="lead text-muted">Choose the perfect plan to fit your event needs, whether you're planning a small gathering or a large-scale conference.</p>
+                            <p className="lead text-muted">Choose the right plan to match your event, from cozy get-togethers to grand conferences.</p>
                         </div>
                         <div className="row d-flex justify-content-center">
                             {pricingPlans.map((plan) => (
