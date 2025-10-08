@@ -74,8 +74,10 @@ if ($fun === "register") {
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt           = $pdo->prepare("INSERT INTO users (user_id, name,lastname, email, password)
-                               VALUES (:user_id, :name, :lastname, :email, :password)");
+        
+        // INSERT with event_planner as default role
+        $stmt = $pdo->prepare("INSERT INTO users (user_id, name, lastname, email, password, role)
+                               VALUES (:user_id, :name, :lastname, :email, :password, 'event_planner')");
         $stmt->execute([
             ":user_id"  => $userID,
             ":name"     => $name,
@@ -83,6 +85,19 @@ if ($fun === "register") {
             ":email"    => $email,
             ":password" => $hashedPassword,
         ]);
+
+        // Also assign the event_planner role in user_roles table
+        $roleStmt = $pdo->prepare("SELECT role_id FROM roles WHERE name = 'event_planner'");
+        $roleStmt->execute();
+        $role = $roleStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($role) {
+            $userRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
+            $userRoleStmt->execute([
+                ':user_id' => $userID,
+                ':role_id' => $role['role_id']
+            ]);
+        }
 
         echo json_encode(["success" => true, "message" => "Registration successful"]);
     } catch (PDOException $e) {
@@ -165,14 +180,29 @@ if ($fun === "eventAccConfirm") {
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt           = $pdo->prepare("INSERT INTO users (user_id, name, email, password)
-                VALUES (:user_id, :name, :email, :password)");
-        $stmt->execute([
-            ":user_id"  => $userID,
-            ":name"     => $name,
-            ":email"    => $email,
-            ":password" => $hashedPassword,
+    
+    // INSERT with event_planner as default role
+    $stmt = $pdo->prepare("INSERT INTO users (user_id, name, email, password, role)
+            VALUES (:user_id, :name, :email, :password, 'event_planner')");
+    $stmt->execute([
+        ":user_id"  => $userID,
+        ":name"     => $name,
+        ":email"    => $email,
+        ":password" => $hashedPassword,
+    ]);
+
+    // Also assign the event_planner role in user_roles table
+    $roleStmt = $pdo->prepare("SELECT role_id FROM roles WHERE name = 'event_planner'");
+    $roleStmt->execute();
+    $role = $roleStmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($role) {
+        $userRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
+        $userRoleStmt->execute([
+            ':user_id' => $userID,
+            ':role_id' => $role['role_id']
         ]);
+    }
 
         // Auto-login new user
         $userStmt = $pdo->prepare("SELECT user_id, name, email, role, status FROM users WHERE user_id = :id");
@@ -824,3 +854,603 @@ if ($fun === "updateUserPackage") {
         echo json_encode(["success" => false, "message" => $e->getMessage()]);
     }
 }
+
+// ADMIN DASHBOARD FUNCTIONS
+
+if ($fun === "getDashboardStats") {
+    try {
+        // Get total users count
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total_users FROM users");
+        $stmt->execute();
+        $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
+
+        // Get active users count (users with status = 'active' OR NULL/blank)
+        $stmt = $pdo->prepare("SELECT COUNT(*) as active_users FROM users WHERE status = 'active' OR status IS NULL OR status = ''");
+        $stmt->execute();
+        $activeUsers = $stmt->fetch(PDO::FETCH_ASSOC)['active_users'];
+
+        // Get inactive users count (only users with explicit 'inactive' status)
+        $stmt = $pdo->prepare("SELECT COUNT(*) as inactive_users FROM users WHERE status = 'inactive'");
+        $stmt->execute();
+        $inactiveUsers = $stmt->fetch(PDO::FETCH_ASSOC)['inactive_users'];
+
+        // Get active events count (published events)
+        $stmt = $pdo->prepare("SELECT COUNT(*) as active_events FROM events WHERE published = 1");
+        $stmt->execute();
+        $activeEvents = $stmt->fetch(PDO::FETCH_ASSOC)['active_events'];
+
+        // Calculate response rate
+        $stmt = $pdo->prepare("SELECT COUNT(DISTINCT event_id) as events_with_rsvp FROM rsvp");
+        $stmt->execute();
+        $eventsWithRsvp = $stmt->fetch(PDO::FETCH_ASSOC)['events_with_rsvp'];
+        
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total_events FROM events");
+        $stmt->execute();
+        $totalEvents = $stmt->fetch(PDO::FETCH_ASSOC)['total_events'];
+        
+        $responseRate = $totalEvents > 0 ? round(($eventsWithRsvp / $totalEvents) * 100, 1) : 0;
+
+        echo json_encode([
+            "success" => true,
+            "stats" => [
+                "total_users" => (int)$totalUsers,
+                "active_users" => (int)$activeUsers,
+                "inactive_users" => (int)$inactiveUsers,
+                "active_events" => (int)$activeEvents,
+                "response_rate" => (float)$responseRate
+            ]
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getSystemActivity") {
+    $limit = $_POST['limit'] ?? 5;
+    
+    try {
+        // Check if system_activity table exists
+        $tableCheck = $pdo->prepare("SHOW TABLES LIKE 'system_activity'");
+        $tableCheck->execute();
+        
+        if ($tableCheck->rowCount() === 0) {
+            // Create the table if it doesn't exist
+            $createTable = $pdo->prepare("
+                CREATE TABLE IF NOT EXISTS system_activity (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(50),
+                    action VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+            $createTable->execute();
+            
+            // Insert some sample activities
+            $sampleActivities = [
+                ['System', 'System Initialized', 'Admin dashboard system started'],
+                ['System', 'First Admin Login', 'Administrator accessed the system']
+            ];
+            
+            $insertStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+            foreach ($sampleActivities as $activity) {
+                $insertStmt->execute($activity);
+            }
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT sa.*, CONCAT(u.name, ' ', u.lastname) as user_name 
+            FROM system_activity sa 
+            LEFT JOIN users u ON sa.user_id = u.user_id 
+            ORDER BY sa.created_at DESC 
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "activities" => $activities
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getAllUsers") {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                user_id,
+                CONCAT(name, ' ', lastname) as name,
+                email,
+                COALESCE(NULLIF(status, ''), 'active') as status, -- Treat blank as active
+                created_at,
+                'user' as role
+            FROM users 
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute();
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "users" => $users
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getInvitationAnalytics") {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                e.event_id,
+                e.event_name,
+                e.published as status,
+                COUNT(DISTINCT r.guest_id) as sent,
+                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as responded,
+                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as attending_count
+            FROM events e
+            LEFT JOIN rsvp r ON e.event_id = r.event_id
+            GROUP BY e.event_id, e.event_name, e.published
+            ORDER BY e.created_at DESC
+        ");
+        $stmt->execute();
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Format the data for frontend
+        $analytics = array_map(function($event) {
+            $sent = (int)$event['sent'];
+            $responded = (int)$event['responded'];
+            $responseRate = $sent > 0 ? round(($responded / $sent) * 100, 1) : 0;
+            
+            // Map status to frontend values
+            $statusMap = [
+                1 => 'active',
+                0 => 'draft'
+            ];
+            
+            return [
+                'id' => $event['event_id'],
+                'eventName' => $event['event_name'],
+                'sent' => $sent,
+                'opened' => $sent, // Assuming all sent are opened for simplicity
+                'responded' => $responded,
+                'responseRate' => $responseRate . '%',
+                'status' => $statusMap[$event['status']] ?? 'draft'
+            ];
+        }, $events);
+
+        echo json_encode([
+            "success" => true,
+            "analytics" => $analytics
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getRevenueData") {
+    try {
+        // Get revenue data (you'll need to implement actual revenue tracking)
+        // For now, returning sample data structure
+        $revenueData = [
+            ['month' => 'Jan', 'revenue' => 7500],
+            ['month' => 'Feb', 'revenue' => 8200],
+            ['month' => 'Mar', 'revenue' => 7800],
+            ['month' => 'Apr', 'revenue' => 8500],
+            ['month' => 'May', 'revenue' => 9200],
+            ['month' => 'Jun', 'revenue' => 8800]
+        ];
+
+        echo json_encode([
+            "success" => true,
+            "revenueData" => $revenueData
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "logSystemActivity") {
+    $action = $_POST['action'] ?? '';
+    $description = $_POST['description'] ?? '';
+    $userId = $_POST['user_id'] ?? null;
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO system_activity (user_id, action, description) 
+            VALUES (:user_id, :action, :description)
+        ");
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':action' => $action,
+            ':description' => $description
+        ]);
+
+        echo json_encode(["success" => true]);
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "updatePackage") {
+    $packageId = $_POST['package_id'] ?? '';
+    $packageType = $_POST['package_type'] ?? '';
+    $maxGuests = $_POST['max_guests'] ?? '';
+    $maxEvents = $_POST['max_events'] ?? '';
+    $price = $_POST['price'] ?? '';
+
+    if (!$packageId || !$packageType || !$maxGuests || !$maxEvents || !$price) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE packagetb 
+            SET package_type = :package_type, max_guests = :max_guests, max_events = :max_events, price = :price 
+            WHERE package_id = :package_id
+        ");
+        $stmt->execute([
+            ':package_type' => $packageType,
+            ':max_guests' => (int)$maxGuests,
+            ':max_events' => (int)$maxEvents,
+            ':price' => (float)$price,
+            ':package_id' => $packageId
+        ]);
+
+        echo json_encode(["success" => true, "message" => "Package updated successfully"]);
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+// ROLES AND PERMISSIONS FUNCTIONS
+
+if ($fun === "getAllRoles") {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM roles ORDER BY role_id");
+        $stmt->execute();
+        $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "roles" => $roles
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getRolePermissions") {
+    $roleId = $_POST['role_id'] ?? '';
+    
+    if (!$roleId) {
+        echo json_encode(["success" => false, "message" => "Missing role ID"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT p.* 
+            FROM permissions p
+            INNER JOIN role_permissions rp ON p.permission_id = rp.permission_id
+            WHERE rp.role_id = :role_id
+            ORDER BY p.category, p.name
+        ");
+        $stmt->execute([':role_id' => $roleId]);
+        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "permissions" => $permissions
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getUserRoles") {
+    $userId = $_POST['user_id'] ?? '';
+    
+    if (!$userId) {
+        echo json_encode(["success" => false, "message" => "Missing user ID"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT r.* 
+            FROM roles r
+            INNER JOIN user_roles ur ON r.role_id = ur.role_id
+            WHERE ur.user_id = :user_id
+            ORDER BY r.role_id
+        ");
+        $stmt->execute([':user_id' => $userId]);
+        $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "roles" => $roles
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "assignUserRole") {
+    $userId = $_POST['user_id'] ?? '';
+    $roleId = $_POST['role_id'] ?? '';
+
+    if (!$userId || !$roleId) {
+        echo json_encode(["success" => false, "message" => "Missing user ID or role ID"]);
+        exit;
+    }
+
+    try {
+        // Remove all existing roles first (if you want single role per user)
+        // Or comment this out if you want multiple roles
+        $deleteStmt = $pdo->prepare("DELETE FROM user_roles WHERE user_id = :user_id");
+        $deleteStmt->execute([':user_id' => $userId]);
+
+        // Assign new role
+        $insertStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
+        $insertStmt->execute([
+            ':user_id' => $userId,
+            ':role_id' => $roleId
+        ]);
+
+        // Update the role column in users table for backward compatibility
+        $roleStmt = $pdo->prepare("SELECT name FROM roles WHERE role_id = :role_id");
+        $roleStmt->execute([':role_id' => $roleId]);
+        $role = $roleStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($role) {
+            $updateStmt = $pdo->prepare("UPDATE users SET role = :role WHERE user_id = :user_id");
+            $updateStmt->execute([
+                ':role' => $role['name'],
+                ':user_id' => $userId
+            ]);
+        }
+
+        echo json_encode(["success" => true, "message" => "Role assigned successfully"]);
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "updateUserRole") {
+    $userId = $_POST['user_id'] ?? '';
+    $newRole = $_POST['role'] ?? '';
+
+    if (!$userId || !$newRole) {
+        echo json_encode(["success" => false, "message" => "Missing user ID or role"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE users SET role = :role WHERE user_id = :user_id");
+        $stmt->execute([
+            ':role' => $newRole,
+            ':user_id' => $userId
+        ]);
+
+        echo json_encode(["success" => true, "message" => "User role updated successfully"]);
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "getAllPermissions") {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM permissions ORDER BY category, name");
+        $stmt->execute();
+        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "permissions" => $permissions
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updateRolePermissions") {
+    $roleId = $_POST['role_id'] ?? '';
+    $permissions = $_POST['permissions'] ?? ''; // JSON array of permission IDs
+    
+    if (!$roleId) {
+        echo json_encode(["success" => false, "message" => "Missing role ID"]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // Remove all existing permissions for this role
+        $deleteStmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = :role_id");
+        $deleteStmt->execute([':role_id' => $roleId]);
+
+        // Add new permissions
+        if (!empty($permissions)) {
+            $permissionIds = json_decode($permissions, true);
+            $insertStmt = $pdo->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :permission_id)");
+            
+            foreach ($permissionIds as $permissionId) {
+                $insertStmt->execute([
+                    ':role_id' => $roleId,
+                    ':permission_id' => $permissionId
+                ]);
+            }
+        }
+
+        $pdo->commit();
+        echo json_encode(["success" => true, "message" => "Role permissions updated successfully"]);
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "checkUserPermission") {
+    $userId = $_POST['user_id'] ?? '';
+    $permissionName = $_POST['permission'] ?? '';
+
+    if (!$userId || !$permissionName) {
+        echo json_encode(["success" => false, "hasPermission" => false]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as has_permission
+            FROM user_roles ur
+            INNER JOIN role_permissions rp ON ur.role_id = rp.role_id
+            INNER JOIN permissions p ON rp.permission_id = p.permission_id
+            WHERE ur.user_id = :user_id AND p.name = :permission_name
+        ");
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':permission_name' => $permissionName
+        ]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $hasPermission = $result['has_permission'] > 0;
+
+        echo json_encode([
+            "success" => true,
+            "hasPermission" => $hasPermission
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "hasPermission" => false,
+            "message" => $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updateUserStatus") {
+    $userId = $_POST['user_id'] ?? '';
+    $status = $_POST['status'] ?? ''; // 'active' or 'inactive'
+
+    if (!$userId || !in_array($status, ['active', 'inactive'])) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Invalid user ID or status"
+        ]);
+        exit;
+    }
+
+    try {
+        // First, check if user exists and get current status
+        $checkStmt = $pdo->prepare("SELECT user_id, status FROM users WHERE user_id = :user_id");
+        $checkStmt->execute([':user_id' => $userId]);
+        $user = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            echo json_encode(["success" => false, "message" => "User not found"]);
+            exit;
+        }
+
+        // Check if status is already set to the desired value
+        if ($user['status'] === $status) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "User is already " . ($status === 'active' ? 'active' : 'inactive')
+            ]);
+            exit;
+        }
+
+        // Update the user status - ensure it's either 'active' or 'inactive'
+        $stmt = $pdo->prepare("UPDATE users SET status = :status WHERE user_id = :user_id");
+        $stmt->execute([
+            ':status' => $status, // This will be either 'active' or 'inactive'
+            ':user_id' => $userId
+        ]);
+
+        $rowsAffected = $stmt->rowCount();
+
+        if ($rowsAffected > 0) {
+            // Log the activity
+            $action = $status === 'active' ? 'User Activated' : 'User Blocked';
+            $description = "User status changed to " . $status;
+            
+            try {
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id' => $userId,
+                    ':action' => $action,
+                    ':description' => $description
+                ]);
+            } catch (PDOException $logError) {
+                // Continue even if logging fails
+            }
+
+            echo json_encode([
+                "success" => true, 
+                "message" => "User " . ($status === 'active' ? 'activated' : 'blocked') . " successfully",
+                "newStatus" => $status
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false, 
+                "message" => "No changes made to user status"
+            ]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+?>

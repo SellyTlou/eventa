@@ -4441,3 +4441,132 @@ html, body, #root {
   background-color: #e9ecef;
   color: #495057;
 }
+
+/* User status colors */
+.user-status.active {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.user-status.inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Action button colors */
+.btn-icon.block-btn {
+    color: #dc3545;
+    background-color: transparent;
+    border: 1px solid #dc3545;
+}
+
+.btn-icon.block-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-icon.unblock-btn {
+    color: #28a745;
+    background-color: transparent;
+    border: 1px solid #28a745;
+}
+
+.btn-icon.unblock-btn:hover {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-icon.role-btn {
+    color: #6f42c1;
+    background-color: transparent;
+    border: 1px solid #6f42c1;
+}
+
+.btn-icon.role-btn:hover {
+    background-color: #6f42c1;
+    color: white;
+}
+
+/* Stats card colors */
+.admin-dashboard-stat-card[data-color="blue"] .admin-dashboard-stat-icon {
+    background-color: #007bff;
+    color: white;
+}
+
+.admin-dashboard-stat-card[data-color="green"] .admin-dashboard-stat-icon {
+    background-color: #28a745;
+    color: white;
+}
+
+.admin-dashboard-stat-card[data-color="red"] .admin-dashboard-stat-icon {
+    background-color: #dc3545;
+    color: white;
+}
+
+.admin-dashboard-stat-card[data-color="purple"] .admin-dashboard-stat-icon {
+    background-color: #6f42c1;
+    color: white;
+}
+
+/* User status colors */
+.user-status.active,
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.user-status.inactive,
+.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Action button colors */
+.btn-icon.block-btn {
+    color: #dc3545;
+    background-color: transparent;
+    border: 1px solid #dc3545;
+}
+
+.btn-icon.block-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-icon.unblock-btn {
+    color: #28a745;
+    background-color: transparent;
+    border: 1px solid #28a745;
+}
+
+.btn-icon.unblock-btn:hover {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-icon.role-btn {
+    color: #6f42c1;
+    background-color: transparent;
+    border: 1px solid #6f42c1;
+}
+
+.btn-icon.role-btn:hover {
+    background-color: #6f42c1;
+    color: white;
+}
