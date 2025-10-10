@@ -11,7 +11,6 @@ function AdminDashboard() {
         active_events: 0,
         response_rate: 0,
         inactive_users: 0 
-
     });
     const [systemActivities, setSystemActivities] = useState([]);
     const [invitationAnalytics, setInvitationAnalytics] = useState([]);
@@ -19,15 +18,15 @@ function AdminDashboard() {
     const [usersData, setUsersData] = useState([]);
     const [revenueData, setRevenueData] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [adminUserId, setAdminUserId] = useState("ADMIN-003"); // This should come from your auth system
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
-      useEffect(() => {
+    useEffect(() => {
         window.fetchDashboardData = fetchDashboardData;
         window.fetchUsersData = fetchUsersData;
         
         return () => {
-            // Cleanup when component unmounts
             window.fetchDashboardData = null;
             window.fetchUsersData = null;
         };
@@ -70,6 +69,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getDashboardStats');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -80,6 +80,9 @@ function AdminDashboard() {
                 const data = await response.json();
                 if (data.success) {
                     setDashboardData(data.stats);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
                 }
             }
         } catch (error) {
@@ -92,6 +95,7 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getSystemActivity');
             formData.append('limit', 5);
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -102,6 +106,8 @@ function AdminDashboard() {
                 const data = await response.json();
                 if (data.success) {
                     setSystemActivities(data.activities);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
                 }
             }
         } catch (error) {
@@ -113,6 +119,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getInvitationAnalytics');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -123,6 +130,9 @@ function AdminDashboard() {
                 const data = await response.json();
                 if (data.success) {
                     setInvitationAnalytics(data.analytics);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
                 }
             }
         } catch (error) {
@@ -134,6 +144,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getAllPackages');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -144,6 +155,9 @@ function AdminDashboard() {
                 const data = await response.json();
                 if (data.success) {
                     setPricingPlans(data.packages);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
                 }
             }
         } catch (error) {
@@ -155,6 +169,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getRevenueData');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -165,6 +180,8 @@ function AdminDashboard() {
                 const data = await response.json();
                 if (data.success) {
                     setRevenueData(data.revenueData);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
                 }
             }
         } catch (error) {
@@ -176,6 +193,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -186,6 +204,9 @@ function AdminDashboard() {
                 const data = await response.json();
                 if (data.success) {
                     setUsersData(data.users);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
                 }
             }
         } catch (error) {
@@ -194,43 +215,43 @@ function AdminDashboard() {
     };
 
     // Format dashboard stats for display
-const dashboardStats = useMemo(() => [
-    { 
-        id: 1, 
-        title: "Total Users", 
-        value: dashboardData.total_users.toString(), 
-        icon: "bi bi-people",
-        color: "blue"
-    },
-    { 
-        id: 2, 
-        title: "Active Events", 
-        value: dashboardData.active_events.toString(), 
-        icon: "bi bi-calendar-event",
-        color: "green"
-    },
-    { 
-        id: 3, 
-        title: "Response Rate", 
-        value: `${dashboardData.response_rate}%`, 
-        icon: "bi bi-graph-up",
-        color: "purple"
-    },
-    { 
-        id: 4, 
-        title: "Active Users", 
-        value: dashboardData.active_users.toString(), 
-        icon: "bi bi-check-circle",
-        color: "green"
-    },
-    { 
-        id: 5, 
-        title: "Inactive Users", 
-        value: dashboardData.inactive_users.toString(), 
-        icon: "bi bi-x-circle",
-        color: "red"
-    }
-], [dashboardData]);
+    const dashboardStats = useMemo(() => [
+        { 
+            id: 1, 
+            title: "Total Users", 
+            value: dashboardData.total_users.toString(), 
+            icon: "bi bi-people",
+            color: "blue"
+        },
+        { 
+            id: 2, 
+            title: "Active Events", 
+            value: dashboardData.active_events.toString(), 
+            icon: "bi bi-calendar-event",
+            color: "green"
+        },
+        { 
+            id: 3, 
+            title: "Response Rate", 
+            value: `${dashboardData.response_rate}%`, 
+            icon: "bi bi-graph-up",
+            color: "purple"
+        },
+        { 
+            id: 4, 
+            title: "Active Users", 
+            value: dashboardData.active_users.toString(), 
+            icon: "bi bi-check-circle",
+            color: "green"
+        },
+        { 
+            id: 5, 
+            title: "Inactive Users", 
+            value: dashboardData.inactive_users.toString(), 
+            icon: "bi bi-x-circle",
+            color: "red"
+        }
+    ], [dashboardData]);
 
     const quickActions = useMemo(() => [
         { id: 1, title: "Generate Reports", icon: "bi bi-file-earmark-bar-graph" },
@@ -258,28 +279,28 @@ const dashboardStats = useMemo(() => [
             case "invitations":
                 return <InvitationsTabContent analytics={invitationAnalytics} />;
             case "pricing":
-                return <PricingTabContent plans={pricingPlans} revenueData={revenueData} />;
+                return <PricingTabContent plans={pricingPlans} revenueData={revenueData} adminUserId={adminUserId} />;
             case "users":
-                return <UsersTabContent users={usersData} />;
+                return <UsersTabContent users={usersData} adminUserId={adminUserId} />;
             case "dashboard":
             default:
                 return <>
                     {/* Stats Grid */}
                     <section className="admin-dashboard-stats">
-    <div className="admin-dashboard-stats-grid">
-        {dashboardStats.map(stat => (
-            <div key={stat.id} className="admin-dashboard-stat-card" data-color={stat.color}>
-                <div className="admin-dashboard-stat-icon">
-                    <i className={stat.icon}></i>
-                </div>
-                <div className="admin-dashboard-stat-content">
-                    <h3>{stat.title}</h3>
-                    <p>{stat.value}</p>
-                </div>
-            </div>
-        ))}
-    </div>
-</section>
+                        <div className="admin-dashboard-stats-grid">
+                            {dashboardStats.map(stat => (
+                                <div key={stat.id} className="admin-dashboard-stat-card" data-color={stat.color}>
+                                    <div className="admin-dashboard-stat-icon">
+                                        <i className={stat.icon}></i>
+                                    </div>
+                                    <div className="admin-dashboard-stat-content">
+                                        <h3>{stat.title}</h3>
+                                        <p>{stat.value}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
 
                     {/* Two Column Section - Recent Activity and Quick Actions */}
                     <section className="admin-dashboard-content-grid">
@@ -389,112 +410,194 @@ const dashboardStats = useMemo(() => [
         </>
     );
 }
+
 // Invitations Tab Content - Admin Focused
-const InvitationsTabContent = ({ analytics }) => (
-    <div className="admin-tab-content">
-        <div className="admin-content-header">
-            <h2>Invitation Performance Analytics</h2>
-            <div className="header-actions">
-                <button className="btn btn-outline">
-                    <i className="bi bi-download"></i> Export Data
-                </button>
-                <button className="btn btn-primary">
-                    <i className="bi bi-graph-up"></i> Generate Report
-                </button>
-            </div>
-        </div>
+const InvitationsTabContent = ({ analytics }) => {
+    const [invitationStats, setInvitationStats] = useState({
+        total_invitations: 0,
+        open_rate: 0,
+        response_rate: 0
+    });
+    const [loading, setLoading] = useState(false);
+    const [sortField, setSortField] = useState('eventName');
+    const [sortDirection, setSortDirection] = useState('asc');
 
-        <div className="analytics-overview">
-            <div className="analytics-card">
-                <div className="analytics-icon">
-                    <i className="bi bi-envelope"></i>
-                </div>
-                <div className="analytics-content">
-                    <h3>Total Invitations Sent</h3>
-                    <p className="analytics-number">1,155</p>
-                    <span className="analytics-trend positive">+12% from last week</span>
-                </div>
-            </div>
-            
-            <div className="analytics-card">
-                <div className="analytics-icon">
-                    <i className="bi bi-eye"></i>
-                </div>
-                <div className="analytics-content">
-                    <h3>Average Open Rate</h3>
-                    <p className="analytics-number">78%</p>
-                    <span className="analytics-trend positive">+3% from last week</span>
-                </div>
-            </div>
-            
-            <div className="analytics-card">
-                <div className="analytics-icon">
-                    <i className="bi bi-check-circle"></i>
-                </div>
-                <div className="analytics-content">
-                    <h3>Average Response Rate</h3>
-                    <p className="analytics-number">72%</p>
-                    <span className="analytics-trend neutral">±0% from last week</span>
-                </div>
-            </div>
-        </div>
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
-        <div className="analytics-table">
-            <div className="table-header">
-                <span>Event Name</span>
-                <span>Sent</span>
-                <span>Opened</span>
-                <span>Responses</span>
-                <span>Response Rate</span>
-                <span>Status</span>
-                <span>Actions</span>
-            </div>
+    useEffect(() => {
+        fetchInvitationStats();
+    }, []);
+
+    const fetchInvitationStats = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'getInvitationStats');
+            formData.append('admin_user_id', "ADMIN-003"); // Use your admin ID
             
-            {analytics.map(item => (
-                <div key={item.id} className="table-row">
-                    <span className="event-name">{item.eventName}</span>
-                    <span>{item.sent}</span>
-                    <span>{item.opened}</span>
-                    <span>{item.responded}</span>
-                    <span>
-                        <span className={`response-rate ${parseInt(item.responseRate) > 75 ? 'high' : parseInt(item.responseRate) > 60 ? 'medium' : 'low'}`}>
-                            {item.responseRate}
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setInvitationStats(data.stats);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching invitation stats:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    const sortedAnalytics = useMemo(() => {
+        if (!analytics || !Array.isArray(analytics)) return [];
+        
+        return [...analytics].sort((a, b) => {
+            let aValue = a[sortField];
+            let bValue = b[sortField];
+            
+            // Handle numeric values (remove % and parse)
+            if (sortField === 'responseRate') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            }
+            
+            // Handle numeric values for counts
+            if (['sent', 'opened', 'responded'].includes(sortField)) {
+                aValue = parseInt(aValue) || 0;
+                bValue = parseInt(bValue) || 0;
+            }
+            
+            if (sortDirection === 'asc') {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            } else {
+                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+            }
+        });
+    }, [analytics, sortField, sortDirection]);
+
+    const getSortIcon = (field) => {
+        if (sortField !== field) return '';
+        return sortDirection === 'asc' ? '' : '';
+    };
+
+    return (
+        <div className="admin-tab-content">
+            <div className="admin-content-header">
+                <h2>Invitation Performance Analytics</h2>
+                <div className="header-actions">
+                    <button className="btn btn-outline" onClick={fetchInvitationStats} disabled={loading}>
+                        <i className="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            {loading && <div className="loading">Loading...</div>}
+
+            <div className="analytics-overview">
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-envelope"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Total Invitations Sent</h3>
+                        <p className="analytics-number">{invitationStats.total_invitations.toLocaleString()}</p>
+                        <span className="analytics-trend positive">Live data</span>
+                    </div>
+                </div>
+                
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-eye"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Average Open Rate</h3>
+                        <p className="analytics-number">{invitationStats.open_rate}%</p>
+                        <span className="analytics-trend positive">Based on responses</span>
+                    </div>
+                </div>
+                
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-check-circle"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Average Response Rate</h3>
+                        <p className="analytics-number">{invitationStats.response_rate}%</p>
+                        <span className="analytics-trend neutral">All events</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="analytics-table">
+                <div className="table-header">
+                    <span className="sortable" onClick={() => handleSort('eventName')}>
+                        Event Name {getSortIcon('eventName')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('sent')}>
+                        Sent {getSortIcon('sent')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('opened')}>
+                        Opened {getSortIcon('opened')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('responded')}>
+                        Responses {getSortIcon('responded')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('responseRate')}>
+                        Response Rate {getSortIcon('responseRate')}
+                    </span>
+                    <span>Status</span>
+                    <span>Actions</span>
+                </div>
+                
+                {sortedAnalytics.map(item => (
+                    <div key={item.id} className="table-row">
+                        <span className="event-name">{item.eventName}</span>
+                        <span>{item.sent}</span>
+                        <span>{item.opened}</span>
+                        <span>{item.responded}</span>
+                        <span>
+                            <span className={`response-rate ${parseInt(item.responseRate) > 75 ? 'high' : parseInt(item.responseRate) > 60 ? 'medium' : 'low'}`}>
+                                {item.responseRate}
+                            </span>
                         </span>
-                    </span>
-                    <span>
-                        <span className={`status-badge ${item.status}`}>
-                            {item.status}
+                        <span>
+                            <span className={`status-badge ${item.status}`}>
+                                {item.status}
+                            </span>
                         </span>
-                    </span>
-                    <span>
-                        <button className="btn-icon" title="View Details">
-                            <i className="bi bi-eye"></i>
-                        </button>
-                        <button className="btn-icon" title="Download Data">
-                            <i className="bi bi-download"></i>
-                        </button>
-                        <button className="btn-icon" title="Generate Report">
-                            <i className="bi bi-graph-up"></i>
-                        </button>
-                    </span>
-                </div>
-            ))}
+                        <span>
+                            <button className="btn-icon" title="View Details">
+                                <i className="bi bi-eye"></i>
+                            </button>
+                        </span>
+                    </div>
+                ))}
+                {(!analytics || analytics.length === 0) && (
+                    <div className="no-data">
+                        <p>No invitation data available</p>
+                    </div>
+                )}
+            </div>
         </div>
-
-        <div className="time-filter">
-            <span>Show data for: </span>
-            <select defaultValue="7days">
-                <option value="today">Today</option>
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="90days">Last 90 Days</option>
-            </select>
-        </div>
-    </div>
-);
+    );
+};
 
 // Pricing Tab Content - Admin Focused
-const PricingTabContent = ({ plans }) => {
+const PricingTabContent = ({ plans, adminUserId }) => {
     const [editingPlan, setEditingPlan] = useState(null);
     const [editForm, setEditForm] = useState({
         package_type: '',
@@ -546,6 +649,7 @@ const PricingTabContent = ({ plans }) => {
             formData.append('max_guests', editForm.max_guests);
             formData.append('max_events', editForm.max_events);
             formData.append('price', editForm.price);
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -554,7 +658,6 @@ const PricingTabContent = ({ plans }) => {
             
             const data = await response.json();
             if (data.success) {
-                // Update local state
                 setAllPlans(prevPlans => 
                     prevPlans.map(plan => 
                         plan.package_id === packageId 
@@ -565,7 +668,11 @@ const PricingTabContent = ({ plans }) => {
                 setEditingPlan(null);
                 alert('Package updated successfully!');
             } else {
-                alert('Error updating package: ' + data.message);
+                if (data.message && data.message.includes("Unauthorized")) {
+                    alert('Access denied: Admin privileges required');
+                } else {
+                    alert('Error updating package: ' + data.message);
+                }
             }
         } catch (error) {
             console.error('Error updating package:', error);
@@ -579,9 +686,8 @@ const PricingTabContent = ({ plans }) => {
         return packageType.charAt(0).toUpperCase() + packageType.slice(1);
     };
 
-    // Get active subscriptions count (you'll need to implement this)
+    // Get active subscriptions count
     const getActiveSubscriptions = (packageType) => {
-        // This should come from your database
         const subscriptionCounts = {
             'basic': 45,
             'premium': 28,
@@ -722,123 +828,23 @@ const PricingTabContent = ({ plans }) => {
     );
 };
 
-// Users Tab Content - Admin Focused with Roles and Permissions
-const UsersTabContent = () => {
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+// Users Tab Content - Simplified without permissions
+const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
+  const [users, setUsers] = useState(initialUsers || []);
+  const [filteredUsers, setFilteredUsers] = useState(initialUsers || []);
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allRoles, setAllRoles] = useState([]);
-  const [userRoles, setUserRoles] = useState({});
-  const [currentUserPermissions, setCurrentUserPermissions] = useState({});
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
- // Get current user ID - Use the admin user ID you just created
-const getCurrentUserId = () => {
-    return 'ADMIN-001'; // Use the user_id from your SQL insert
-};
-
-  // Check if current user has permission
-  const checkPermission = async (permissionName) => {
-    try {
-      const formData = new FormData();
-      formData.append('function', 'checkUserPermission');
-      formData.append('user_id', getCurrentUserId());
-      formData.append('permission', permissionName);
-      
-      const response = await fetch(`${API_BASE_URL}/query.php`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data.success && data.hasPermission;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error checking permission:', error);
-      return false;
-    }
-  };
-
-  // Load current user permissions on component mount
+  // Fetch users from API
   useEffect(() => {
-    const loadCurrentUserPermissions = async () => {
-      const permissions = [
-        'manage_users',
-        'manage_roles', 
-        'manage_permissions',
-        'view_dashboard'
-      ];
-      
-      const permissionResults = {};
-      for (const permission of permissions) {
-        permissionResults[permission] = await checkPermission(permission);
-      }
-      setCurrentUserPermissions(permissionResults);
-    };
-
-    loadCurrentUserPermissions();
-  }, []);
-
-  // Fetch users and roles from API
-  useEffect(() => {
-    // Define all API functions inside useEffect to avoid dependency issues
-    const fetchUserRoles = async (userId) => {
-      try {
-        const formData = new FormData();
-        formData.append('function', 'getUserRoles');
-        formData.append('user_id', userId);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setUserRoles(prev => ({
-              ...prev,
-              [userId]: data.roles
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user roles:', error);
-      }
-    };
-
-    const fetchAllRoles = async () => {
-      try {
-        const formData = new FormData();
-        formData.append('function', 'getAllRoles');
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setAllRoles(data.roles);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching roles:', error);
-      }
-    };
-
     const fetchUsers = async () => {
       try {
         setLoading(true);
@@ -846,6 +852,7 @@ const getCurrentUserId = () => {
         
         const formData = new FormData();
         formData.append('function', 'getAllUsers');
+        formData.append('admin_user_id', adminUserId); // Add admin authentication
         
         const response = await fetch(`${API_BASE_URL}/query.php`, {
           method: 'POST',
@@ -863,20 +870,19 @@ const getCurrentUserId = () => {
             id: user.user_id,
             name: user.name,
             email: user.email,
-            role: user.role || 'user',
+            role: user.role || 'event_planner',
             status: user.status || 'active',
             joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
           }));
           
           setUsers(formattedUsers);
           setFilteredUsers(formattedUsers);
-          
-          // Fetch roles for each user
-          formattedUsers.forEach(user => {
-            fetchUserRoles(user.id);
-          });
         } else {
-          throw new Error(data.message || 'Failed to fetch users');
+          if (data.message && data.message.includes("Unauthorized")) {
+            throw new Error("Admin access denied. Please log in as administrator.");
+          } else {
+            throw new Error(data.message || 'Failed to fetch users');
+          }
         }
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -888,9 +894,10 @@ const getCurrentUserId = () => {
       }
     };
 
-    fetchUsers();
-    fetchAllRoles();
-  }, []);
+    if (!initialUsers || initialUsers.length === 0) {
+      fetchUsers();
+    }
+  }, [initialUsers, adminUserId]);
 
   // Filter and sort users based on search query, filters, and sorting
   useEffect(() => {
@@ -902,15 +909,13 @@ const getCurrentUserId = () => {
       
       let result = [...users];
       
-      // Filter by search query - search in name, email, and role
+      // Filter by search query
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase().trim();
         result = result.filter(user => 
           user.name.toLowerCase().includes(query) || 
           user.email.toLowerCase().includes(query) ||
-          (userRoles[user.id] && userRoles[user.id].some(role => 
-            role.name.toLowerCase().includes(query)
-          ))
+          (user.role && user.role.toLowerCase().includes(query))
         );
       }
       
@@ -926,17 +931,14 @@ const getCurrentUserId = () => {
             ? a.name.localeCompare(b.name) 
             : b.name.localeCompare(a.name);
         } else if (sortBy === 'role') {
-          const roleA = userRoles[a.id]?.[0]?.name || '';
-          const roleB = userRoles[b.id]?.[0]?.name || '';
           return sortOrder === 'asc' 
-            ? roleA.localeCompare(roleB) 
-            : roleB.localeCompare(roleA);
+            ? a.role.localeCompare(b.role) 
+            : b.role.localeCompare(a.role);
         } else if (sortBy === 'status') {
           return sortOrder === 'asc' 
             ? a.status.localeCompare(b.status) 
             : b.status.localeCompare(a.status);
         } else if (sortBy === 'joined') {
-          // For date sorting, convert back to date objects for comparison
           const dateA = a.joined === 'N/A' ? new Date(0) : new Date(a.joined);
           const dateB = b.joined === 'N/A' ? new Date(0) : new Date(b.joined);
           return sortOrder === 'asc' 
@@ -950,7 +952,7 @@ const getCurrentUserId = () => {
     };
 
     filterAndSortUsers();
-  }, [users, selectedStatus, sortBy, sortOrder, searchQuery, userRoles]);
+  }, [users, selectedStatus, sortBy, sortOrder, searchQuery]);
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -974,23 +976,12 @@ const getCurrentUserId = () => {
     setShowUserModal(true);
   };
 
-  const openRoleModal = async (user) => {
-    // Check if admin has permission to manage roles
-    const canManageRoles = await checkPermission('manage_roles');
-    if (!canManageRoles) {
-      alert('You do not have permission to manage roles.');
-      return;
-    }
-    
-    setSelectedUser(user);
-    setShowRoleModal(true);
-  };
-
   const refreshUsers = async () => {
     try {
       setLoading(true);
       const formData = new FormData();
       formData.append('function', 'getAllUsers');
+      formData.append('admin_user_id', adminUserId); // Add admin authentication
       
       const response = await fetch(`${API_BASE_URL}/query.php`, {
         method: 'POST',
@@ -1004,43 +995,13 @@ const getCurrentUserId = () => {
             id: user.user_id,
             name: user.name,
             email: user.email,
-            role: user.role || 'user',
+            role: user.role || 'event_planner',
             status: user.status || 'active',
             joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
           }));
           
           setUsers(formattedUsers);
           setFilteredUsers(formattedUsers);
-          
-          // Refresh roles for all users
-          const refreshUserRoles = async (userId) => {
-            try {
-              const formData = new FormData();
-              formData.append('function', 'getUserRoles');
-              formData.append('user_id', userId);
-              
-              const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formData
-              });
-              
-              if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                  setUserRoles(prev => ({
-                    ...prev,
-                    [userId]: data.roles
-                  }));
-                }
-              }
-            } catch (error) {
-              console.error('Error refreshing user roles:', error);
-            }
-          };
-          
-          formattedUsers.forEach(user => {
-            refreshUserRoles(user.id);
-          });
         }
       }
     } catch (error) {
@@ -1050,92 +1011,51 @@ const getCurrentUserId = () => {
     }
   };
 
-  const assignRoleToUser = async (userId, roleId) => {
-    try {
-      const formData = new FormData();
-      formData.append('function', 'assignUserRole');
-      formData.append('user_id', userId);
-      formData.append('role_id', roleId);
-      
-      const response = await fetch(`${API_BASE_URL}/query.php`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        // Refresh the users list after successful update
-        refreshUsers();
-        // Show success message
-        alert('Role assigned successfully!');
-        setShowRoleModal(false);
-      } else {
-        throw new Error(data.message || 'Failed to assign role');
-      }
-    } catch (error) {
-      console.error('Error assigning role:', error);
-      alert('Error assigning role: ' + error.message);
-    }
-  };
-
-
-///// 
-const updateUserStatus = async (userId, newStatus) => {
-    // Check if admin has permission to manage users
-    const canManageUsers = await checkPermission('manage_users');
-    if (!canManageUsers) {
-        alert('You do not have permission to manage users.');
-        return;
-    }
-
-    console.log('🔄 Updating user status:', { userId, newStatus });
+  const updateUserStatus = async (userId, newStatus) => {
+    console.log('Updating user status:', { userId, newStatus, adminUserId });
 
     try {
         const formData = new FormData();
         formData.append('function', 'updateUserStatus');
         formData.append('user_id', userId);
         formData.append('status', newStatus);
-        
-        console.log('Sending request to PHP...');
+        formData.append('admin_user_id', adminUserId); // Add admin authentication
         
         const response = await fetch(`${API_BASE_URL}/query.php`, {
             method: 'POST',
             body: formData
         });
         
-        console.log('Response status:', response.status);
-        
-        const responseText = await response.text();
-        console.log('Raw response:', responseText);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        let data;
-        try {
-            data = JSON.parse(responseText);
-            console.log('Parsed JSON data:', data);
-        } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            throw new Error('Invalid response from server');
-        }
+        const data = await response.json();
+        console.log('Server response:', data);
         
         if (data.success) {
-            console.log('✅ Status updated successfully, refreshing users...');
+            console.log('Status updated successfully');
             
-            // Refresh the users list to get updated status
+            // Force immediate UI update - this is crucial
+            setUsers(prevUsers => 
+                prevUsers.map(user => 
+                    user.id === userId 
+                        ? { ...user, status: newStatus }
+                        : user
+                )
+            );
+            
+            // Also refresh from server to ensure consistency
             await refreshUsers();
             
-            // Also refresh dashboard stats
+            // Refresh dashboard stats
             if (window.fetchDashboardData) {
-                window.fetchDashboardData();
+                await window.fetchDashboardData();
             }
             
             alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
         } else {
-            // Show specific error message from backend
-            throw new Error(data.message || 'Failed to update user status');
+            if (data.message && data.message.includes("Unauthorized")) {
+                throw new Error("Admin access denied. Please log in as administrator.");
+            } else {
+                throw new Error(data.message || 'Failed to update user status');
+            }
         }
     } catch (error) {
         console.error('Error updating status:', error);
@@ -1176,37 +1096,37 @@ const updateUserStatus = async (userId, newStatus) => {
         </div>
       </div>
 
-     <div className="users-overview">
-    <div className="users-card">
-        <div className="users-icon">
+      <div className="users-overview">
+        <div className="users-card">
+          <div className="users-icon">
             <i className="bi bi-people"></i>
-        </div>
-        <div className="users-content">
+          </div>
+          <div className="users-content">
             <h3>Total Users</h3>
             <p className="users-number">{totalUsers}</p>
+          </div>
         </div>
-    </div>
-    
-    <div className="users-card">
-        <div className="users-icon">
+        
+        <div className="users-card">
+          <div className="users-icon">
             <i className="bi bi-check-circle"></i>
-        </div>
-        <div className="users-content">
+          </div>
+          <div className="users-content">
             <h3>Active Users</h3>
             <p className="users-number">{activeUsers}</p>
+          </div>
         </div>
-    </div>
-    
-    <div className="users-card">
-        <div className="users-icon">
+        
+        <div className="users-card">
+          <div className="users-icon">
             <i className="bi bi-x-circle"></i>
-        </div>
-        <div className="users-content">
+          </div>
+          <div className="users-content">
             <h3>Inactive Users</h3>
             <p className="users-number">{inactiveUsers}</p>
+          </div>
         </div>
-    </div>
-</div>
+      </div>
 
       <div className="users-table-container">
         <div className="table-controls">
@@ -1271,48 +1191,36 @@ const updateUserStatus = async (userId, newStatus) => {
                   <div className="user-email">{user.email}</div>
                 </span>
                 <span>
-                  <span className={`user-role ${userRoles[user.id]?.[0]?.name || 'user'}`}>
-                    {userRoles[user.id]?.[0]?.name || 'user'}
+                  <span className={`user-role ${user.role || 'event_planner'}`}>
+                    {user.role || 'event_planner'}
                   </span>
                 </span>
                 <span>{user.joined}</span>
-<span>
-    <span className={`user-status ${user.status} ${user.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
-        {user.status}
-    </span>
-</span>
+                <span>
+                  <span className={`user-status ${user.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
+                    {user.status === 'inactive' ? 'Inactive' : 'Active'}
+                  </span>
+                </span>
                 <span className="actions">
-    <button 
-        className="btn-icon" 
-        title="View Details"
-        onClick={() => viewUserDetails(user)}
-    >
-        <i className="bi bi-eye"></i>
-    </button>
-    
-    {currentUserPermissions.manage_roles && (
-        <button 
-            className="btn-icon role-btn" 
-            title="Assign Role"
-            onClick={() => openRoleModal(user)}
-        >
-            <i className="bi bi-person-gear"></i>
-        </button>
-    )}
-    
-    {currentUserPermissions.manage_users && (
-        <button 
-            className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`} 
-            title={user.status === 'active' ? 'Deactivate User' : 'Activate User'}
-            onClick={() => updateUserStatus(
-                user.id, 
-                user.status === 'active' ? 'inactive' : 'active'
-            )}
-        >
-            <i className={user.status === 'active' ? 'bi bi-x-circle' : 'bi bi-check-circle'}></i>
-        </button>
-    )}
-</span>
+                  <button 
+                    className="btn-icon view-btn" 
+                    title="View Details"
+                    onClick={() => viewUserDetails(user)}
+                  >
+                    <i className="bi bi-eye"></i>
+                  </button>
+                  
+                  <button 
+                    className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`} 
+                    title={user.status === 'active' ? 'Block User' : 'Unblock User'}
+                    onClick={() => updateUserStatus(
+                      user.id, 
+                      user.status === 'active' ? 'inactive' : 'active'
+                    )}
+                  >
+                    <i className={user.status === 'active' ? 'bi bi-person-x' : 'bi bi-person-check'}></i>
+                  </button>
+                </span>
               </div>
             ))
           ) : (
@@ -1349,12 +1257,12 @@ const updateUserStatus = async (userId, newStatus) => {
                 <strong>Email:</strong> {selectedUser.email}
               </div>
               <div className="user-detail">
-                <strong>Role:</strong> {userRoles[selectedUser.id]?.[0]?.name || 'user'}
+                <strong>Role:</strong> {selectedUser.role || 'event_planner'}
               </div>
               <div className="user-detail">
                 <strong>Status:</strong> 
-                <span className={`user-status ${selectedUser.status}`}>
-                  {selectedUser.status}
+                <span className={`user-status ${selectedUser.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
+                  {selectedUser.status === 'inactive' ? 'Inactive' : 'Active'}
                 </span>
               </div>
               <div className="user-detail">
@@ -1364,76 +1272,6 @@ const updateUserStatus = async (userId, newStatus) => {
           </div>
         </div>
       )}
-
-      {/* Role Assignment Modal */}
-      {showRoleModal && selectedUser && (
-        <div className="modal-overlay" onClick={() => setShowRoleModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Assign Role to {selectedUser.name}</h2>
-              <button 
-                className="close-btn"
-                onClick={() => setShowRoleModal(false)}
-              >
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="role-selection">
-                <h3>Current Role: {userRoles[selectedUser.id]?.[0]?.name || 'None'}</h3>
-                <div className="role-options">
-                  {allRoles.map(role => (
-                    <div key={role.role_id} className="role-option">
-                      <input
-                        type="radio"
-                        id={`role-${role.role_id}`}
-                        name="userRole"
-                        value={role.role_id}
-                        checked={userRoles[selectedUser.id]?.[0]?.role_id === role.role_id}
-                        onChange={() => assignRoleToUser(selectedUser.id, role.role_id)}
-                      />
-                      <label htmlFor={`role-${role.role_id}`}>
-                        <strong>{role.name}</strong>
-                        <p>{role.description}</p>
-                        <div className="permissions-list">
-                          <span>Permissions: </span>
-                          {role.permissions && role.permissions.map((permission, index) => (
-                            <span key={index} className="permission-tag">{permission}</span>
-                          ))}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="user-roles-section">
-        <h3>User Roles & Permissions</h3>
-        <div className="roles-grid">
-          {allRoles.map(role => (
-            <div key={role.role_id} className="role-card">
-              <h4>{role.name}</h4>
-              <div className="role-permissions">
-                <h5>Permissions:</h5>
-                <div className="permissions-grid">
-                  {role.permissions && role.permissions.map((permission, index) => (
-                    <span key={index} className="permission-tag">{permission}</span>
-                  ))}
-                </div>
-              </div>
-              {currentUserPermissions.manage_permissions && (
-                <button className="btn btn-outline btn-sm">
-                  <i className="bi bi-pencil"></i> Edit Permissions
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

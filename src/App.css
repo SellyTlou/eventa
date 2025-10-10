@@ -3413,6 +3413,20 @@ html, body, #root {
     gap: 1rem;
 }
 
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.sortable:hover {
+    background-color: #f5f5f5;
+}
+
+.table-header .sortable {
+    padding: 12px 8px;
+    display: inline-block;
+}
 .btn-outline {
     background: white;
     color: #3498db;
@@ -4569,4 +4583,24 @@ html, body, #root {
 .btn-icon.role-btn:hover {
     background-color: #6f42c1;
     color: white;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
 }

@@ -9,6 +9,24 @@ require_once "dbConnection.php";
 $db  = new Database();
 $pdo = $db->getConnection(); 
 
+// Admin verification function
+function verifyAdminAccess($pdo, $userId) {
+    if (empty($userId)) {
+        return false;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("SELECT role FROM users WHERE user_id = ? AND status = 'active'");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return ($user && $user['role'] === 'admin');
+    } catch (PDOException $e) {
+        error_log("Admin verification error: " . $e->getMessage());
+        return false;
+    }
+}
+
 function generateUserID($pdo)
 {
     do {
@@ -75,7 +93,6 @@ if ($fun === "register") {
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         
-        // INSERT with event_planner as default role
         $stmt = $pdo->prepare("INSERT INTO users (user_id, name, lastname, email, password, role)
                                VALUES (:user_id, :name, :lastname, :email, :password, 'event_planner')");
         $stmt->execute([
@@ -86,18 +103,13 @@ if ($fun === "register") {
             ":password" => $hashedPassword,
         ]);
 
-        // Also assign the event_planner role in user_roles table
-        $roleStmt = $pdo->prepare("SELECT role_id FROM roles WHERE name = 'event_planner'");
-        $roleStmt->execute();
-        $role = $roleStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($role) {
-            $userRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
-            $userRoleStmt->execute([
-                ':user_id' => $userID,
-                ':role_id' => $role['role_id']
-            ]);
-        }
+        // ✅ LOG THE ACTIVITY - User registered themselves
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+        $logStmt->execute([
+            ':user_id' => $userID, // The new user's ID
+            ':action' => 'User Registered',
+            ':description' => "New user registered: {$name} {$lastname} ({$email})"
+        ]);
 
         echo json_encode(["success" => true, "message" => "Registration successful"]);
     } catch (PDOException $e) {
@@ -123,6 +135,14 @@ if ($fun === "login") {
             if (password_verify($password, $user['password'])) {
                 $update = $pdo->prepare("UPDATE users SET session = 1 WHERE user_id = :id");
                 $update->execute([":id" => $user['user_id']]);
+
+                // ✅ LOG THE ACTIVITY - User logged in
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id' => $user['user_id'],
+                    ':action' => 'User Login',
+                    ':description' => "User {$user['name']} logged into the system"
+                ]);
 
                 echo json_encode([
                     "success" => true,
@@ -181,28 +201,15 @@ if ($fun === "eventAccConfirm") {
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
     
-    // INSERT with event_planner as default role
-    $stmt = $pdo->prepare("INSERT INTO users (user_id, name, email, password, role)
-            VALUES (:user_id, :name, :email, :password, 'event_planner')");
-    $stmt->execute([
-        ":user_id"  => $userID,
-        ":name"     => $name,
-        ":email"    => $email,
-        ":password" => $hashedPassword,
-    ]);
-
-    // Also assign the event_planner role in user_roles table
-    $roleStmt = $pdo->prepare("SELECT role_id FROM roles WHERE name = 'event_planner'");
-    $roleStmt->execute();
-    $role = $roleStmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($role) {
-        $userRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
-        $userRoleStmt->execute([
-            ':user_id' => $userID,
-            ':role_id' => $role['role_id']
+        // INSERT with event_planner as default role
+        $stmt = $pdo->prepare("INSERT INTO users (user_id, name, email, password, role)
+                VALUES (:user_id, :name, :email, :password, 'event_planner')");
+        $stmt->execute([
+            ":user_id"  => $userID,
+            ":name"     => $name,
+            ":email"    => $email,
+            ":password" => $hashedPassword,
         ]);
-    }
 
         // Auto-login new user
         $userStmt = $pdo->prepare("SELECT user_id, name, email, role, status FROM users WHERE user_id = :id");
@@ -276,6 +283,14 @@ if ($fun === "saveEvent") {
                 ':event_id'         => $eventID,
                 ':user_id'          => $userID,
             ]);
+
+            // LOG THE ACTIVITY - Event updated
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id' => $userID, // The event planner's ID
+                ':action' => 'Event Updated',
+                ':description' => "Event '{$eventName}' was updated by {$userName}"
+            ]);
         } else {
             // Insert new
             $stmt = $pdo->prepare("INSERT INTO events
@@ -299,6 +314,14 @@ if ($fun === "saveEvent") {
                 ':design_data'      => $eventDesignData,
                 ':created_at'       => $createdAt,
                 ':updated_at'       => $createdAt,
+            ]);
+
+             // LOG THE ACTIVITY - Event created
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id' => $userID, // The event planner's ID
+                ':action' => 'Event Created',
+                ':description' => "New event '{$eventName}' created by {$userName}"
             ]);
         }
 
@@ -530,6 +553,66 @@ if ($fun === "getRSVPResponses") {
     exit;
 }
 
+if ($fun === "getInvitationStats") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccessWithPermission($pdo, $adminUserId, 'view_dashboard')) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Insufficient permissions"
+        ]);
+        exit;
+    }
+
+    try {
+        // Total invitations sent (total RSVP records)
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total_invitations FROM rsvp");
+        $stmt->execute();
+        $totalInvitations = $stmt->fetch(PDO::FETCH_ASSOC)['total_invitations'];
+
+        // Average open rate (estimated - you might need to track this separately)
+        $stmt = $pdo->prepare("
+            SELECT 
+                COUNT(*) as total_rsvp,
+                COUNT(CASE WHEN attending IS NOT NULL THEN 1 END) as responded
+            FROM rsvp
+        ");
+        $stmt->execute();
+        $responseStats = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $openRate = $responseStats['total_rsvp'] > 0 ? 
+            round(($responseStats['responded'] / $responseStats['total_rsvp']) * 100, 1) : 0;
+
+        // Average response rate
+        $stmt = $pdo->prepare("
+            SELECT 
+                COUNT(*) as total_rsvp,
+                COUNT(CASE WHEN attending = 'Yes' THEN 1 END) as attending
+            FROM rsvp
+        ");
+        $stmt->execute();
+        $attendingStats = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $responseRate = $attendingStats['total_rsvp'] > 0 ? 
+            round(($attendingStats['attending'] / $attendingStats['total_rsvp']) * 100, 1) : 0;
+
+        echo json_encode([
+            "success" => true,
+            "stats" => [
+                "total_invitations" => (int)$totalInvitations,
+                "open_rate" => (float)$openRate,
+                "response_rate" => (float)$responseRate
+            ]
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
 if ($fun === "deleteEvent") {
     $event_id = $_POST["event_id"] ?? '';
 
@@ -698,6 +781,16 @@ if ($fun === "getUserPackage") {
 }
 
 if ($fun === "getAllPackages") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
     try {
         $stmt = $pdo->prepare("SELECT * FROM packagetb");
         $stmt->execute();
@@ -858,18 +951,28 @@ if ($fun === "updateUserPackage") {
 // ADMIN DASHBOARD FUNCTIONS
 
 if ($fun === "getDashboardStats") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
     try {
         // Get total users count
         $stmt = $pdo->prepare("SELECT COUNT(*) as total_users FROM users");
         $stmt->execute();
         $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
 
-        // Get active users count (users with status = 'active' OR NULL/blank)
-        $stmt = $pdo->prepare("SELECT COUNT(*) as active_users FROM users WHERE status = 'active' OR status IS NULL OR status = ''");
+        // Get active users count (ONLY users with status = 'active')
+        $stmt = $pdo->prepare("SELECT COUNT(*) as active_users FROM users WHERE status = 'active'");
         $stmt->execute();
         $activeUsers = $stmt->fetch(PDO::FETCH_ASSOC)['active_users'];
 
-        // Get inactive users count (only users with explicit 'inactive' status)
+        // Get inactive users count (ONLY users with status = 'inactive')
         $stmt = $pdo->prepare("SELECT COUNT(*) as inactive_users FROM users WHERE status = 'inactive'");
         $stmt->execute();
         $inactiveUsers = $stmt->fetch(PDO::FETCH_ASSOC)['inactive_users'];
@@ -910,8 +1013,17 @@ if ($fun === "getDashboardStats") {
 }
 
 if ($fun === "getSystemActivity") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
     $limit = $_POST['limit'] ?? 5;
     
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
     try {
         // Check if system_activity table exists
         $tableCheck = $pdo->prepare("SHOW TABLES LIKE 'system_activity'");
@@ -967,15 +1079,29 @@ if ($fun === "getSystemActivity") {
 }
 
 if ($fun === "getAllUsers") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
     try {
         $stmt = $pdo->prepare("
             SELECT 
                 user_id,
                 CONCAT(name, ' ', lastname) as name,
                 email,
-                COALESCE(NULLIF(status, ''), 'active') as status, -- Treat blank as active
+                -- Ensure status is always 'active' or 'inactive'
+                CASE 
+                    WHEN status = 'inactive' THEN 'inactive'
+                    ELSE 'active'
+                END as status,
                 created_at,
-                'user' as role
+                COALESCE(role, 'event_planner') as role
             FROM users 
             ORDER BY created_at DESC
         ");
@@ -996,6 +1122,16 @@ if ($fun === "getAllUsers") {
 }
 
 if ($fun === "getInvitationAnalytics") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
     try {
         $stmt = $pdo->prepare("
             SELECT 
@@ -1050,6 +1186,16 @@ if ($fun === "getInvitationAnalytics") {
 }
 
 if ($fun === "getRevenueData") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
     try {
         // Get revenue data (you'll need to implement actual revenue tracking)
         // For now, returning sample data structure
@@ -1099,11 +1245,20 @@ if ($fun === "logSystemActivity") {
 }
 
 if ($fun === "updatePackage") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
     $packageId = $_POST['package_id'] ?? '';
     $packageType = $_POST['package_type'] ?? '';
     $maxGuests = $_POST['max_guests'] ?? '';
     $maxEvents = $_POST['max_events'] ?? '';
     $price = $_POST['price'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
 
     if (!$packageId || !$packageType || !$maxGuests || !$maxEvents || !$price) {
         echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -1131,257 +1286,20 @@ if ($fun === "updatePackage") {
     exit;
 }
 
-// ROLES AND PERMISSIONS FUNCTIONS
-
-if ($fun === "getAllRoles") {
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM roles ORDER BY role_id");
-        $stmt->execute();
-        $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "roles" => $roles
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage()
-        ]);
-    }
-    exit;
-}
-
-if ($fun === "getRolePermissions") {
-    $roleId = $_POST['role_id'] ?? '';
-    
-    if (!$roleId) {
-        echo json_encode(["success" => false, "message" => "Missing role ID"]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT p.* 
-            FROM permissions p
-            INNER JOIN role_permissions rp ON p.permission_id = rp.permission_id
-            WHERE rp.role_id = :role_id
-            ORDER BY p.category, p.name
-        ");
-        $stmt->execute([':role_id' => $roleId]);
-        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "permissions" => $permissions
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage()
-        ]);
-    }
-    exit;
-}
-
-if ($fun === "getUserRoles") {
-    $userId = $_POST['user_id'] ?? '';
-    
-    if (!$userId) {
-        echo json_encode(["success" => false, "message" => "Missing user ID"]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT r.* 
-            FROM roles r
-            INNER JOIN user_roles ur ON r.role_id = ur.role_id
-            WHERE ur.user_id = :user_id
-            ORDER BY r.role_id
-        ");
-        $stmt->execute([':user_id' => $userId]);
-        $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "roles" => $roles
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage()
-        ]);
-    }
-    exit;
-}
-
-if ($fun === "assignUserRole") {
-    $userId = $_POST['user_id'] ?? '';
-    $roleId = $_POST['role_id'] ?? '';
-
-    if (!$userId || !$roleId) {
-        echo json_encode(["success" => false, "message" => "Missing user ID or role ID"]);
-        exit;
-    }
-
-    try {
-        // Remove all existing roles first (if you want single role per user)
-        // Or comment this out if you want multiple roles
-        $deleteStmt = $pdo->prepare("DELETE FROM user_roles WHERE user_id = :user_id");
-        $deleteStmt->execute([':user_id' => $userId]);
-
-        // Assign new role
-        $insertStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)");
-        $insertStmt->execute([
-            ':user_id' => $userId,
-            ':role_id' => $roleId
-        ]);
-
-        // Update the role column in users table for backward compatibility
-        $roleStmt = $pdo->prepare("SELECT name FROM roles WHERE role_id = :role_id");
-        $roleStmt->execute([':role_id' => $roleId]);
-        $role = $roleStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($role) {
-            $updateStmt = $pdo->prepare("UPDATE users SET role = :role WHERE user_id = :user_id");
-            $updateStmt->execute([
-                ':role' => $role['name'],
-                ':user_id' => $userId
-            ]);
-        }
-
-        echo json_encode(["success" => true, "message" => "Role assigned successfully"]);
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-if ($fun === "updateUserRole") {
-    $userId = $_POST['user_id'] ?? '';
-    $newRole = $_POST['role'] ?? '';
-
-    if (!$userId || !$newRole) {
-        echo json_encode(["success" => false, "message" => "Missing user ID or role"]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("UPDATE users SET role = :role WHERE user_id = :user_id");
-        $stmt->execute([
-            ':role' => $newRole,
-            ':user_id' => $userId
-        ]);
-
-        echo json_encode(["success" => true, "message" => "User role updated successfully"]);
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-if ($fun === "getAllPermissions") {
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM permissions ORDER BY category, name");
-        $stmt->execute();
-        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "permissions" => $permissions
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage()
-        ]);
-    }
-    exit;
-}
-
-if ($fun === "updateRolePermissions") {
-    $roleId = $_POST['role_id'] ?? '';
-    $permissions = $_POST['permissions'] ?? ''; // JSON array of permission IDs
-    
-    if (!$roleId) {
-        echo json_encode(["success" => false, "message" => "Missing role ID"]);
-        exit;
-    }
-
-    try {
-        $pdo->beginTransaction();
-
-        // Remove all existing permissions for this role
-        $deleteStmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = :role_id");
-        $deleteStmt->execute([':role_id' => $roleId]);
-
-        // Add new permissions
-        if (!empty($permissions)) {
-            $permissionIds = json_decode($permissions, true);
-            $insertStmt = $pdo->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :permission_id)");
-            
-            foreach ($permissionIds as $permissionId) {
-                $insertStmt->execute([
-                    ':role_id' => $roleId,
-                    ':permission_id' => $permissionId
-                ]);
-            }
-        }
-
-        $pdo->commit();
-        echo json_encode(["success" => true, "message" => "Role permissions updated successfully"]);
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-if ($fun === "checkUserPermission") {
-    $userId = $_POST['user_id'] ?? '';
-    $permissionName = $_POST['permission'] ?? '';
-
-    if (!$userId || !$permissionName) {
-        echo json_encode(["success" => false, "hasPermission" => false]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) as has_permission
-            FROM user_roles ur
-            INNER JOIN role_permissions rp ON ur.role_id = rp.role_id
-            INNER JOIN permissions p ON rp.permission_id = p.permission_id
-            WHERE ur.user_id = :user_id AND p.name = :permission_name
-        ");
-        $stmt->execute([
-            ':user_id' => $userId,
-            ':permission_name' => $permissionName
-        ]);
-        
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        $hasPermission = $result['has_permission'] > 0;
-
-        echo json_encode([
-            "success" => true,
-            "hasPermission" => $hasPermission
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "hasPermission" => false,
-            "message" => $e->getMessage()
-        ]);
-    }
-    exit;
-}
-
 if ($fun === "updateUserStatus") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
     $userId = $_POST['user_id'] ?? '';
-    $status = $_POST['status'] ?? ''; // 'active' or 'inactive'
+    $status = $_POST['status'] ?? '';
 
-    if (!$userId || !in_array($status, ['active', 'inactive'])) {
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    if (empty($userId) || !in_array($status, ['active', 'inactive'])) {
         echo json_encode([
             "success" => false, 
             "message" => "Invalid user ID or status"
@@ -1390,59 +1308,44 @@ if ($fun === "updateUserStatus") {
     }
 
     try {
-        // First, check if user exists and get current status
-        $checkStmt = $pdo->prepare("SELECT user_id, status FROM users WHERE user_id = :user_id");
-        $checkStmt->execute([':user_id' => $userId]);
-        $user = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        // First get the target user's info for logging
+        $userStmt = $pdo->prepare("SELECT name, email FROM users WHERE user_id = :user_id");
+        $userStmt->execute([':user_id' => $userId]);
+        $targetUser = $userStmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$user) {
+        if (!$targetUser) {
             echo json_encode(["success" => false, "message" => "User not found"]);
             exit;
         }
 
-        // Check if status is already set to the desired value
-        if ($user['status'] === $status) {
-            echo json_encode([
-                "success" => false, 
-                "message" => "User is already " . ($status === 'active' ? 'active' : 'inactive')
-            ]);
-            exit;
-        }
-
-        // Update the user status - ensure it's either 'active' or 'inactive'
         $stmt = $pdo->prepare("UPDATE users SET status = :status WHERE user_id = :user_id");
         $stmt->execute([
-            ':status' => $status, // This will be either 'active' or 'inactive'
+            ':status' => $status,
             ':user_id' => $userId
         ]);
 
         $rowsAffected = $stmt->rowCount();
 
         if ($rowsAffected > 0) {
-            // Log the activity
+            // ✅ LOG THE ACTIVITY - Admin changed user status
             $action = $status === 'active' ? 'User Activated' : 'User Blocked';
-            $description = "User status changed to " . $status;
+            $description = "User {$targetUser['name']} ({$targetUser['email']}) was " . ($status === 'active' ? 'activated' : 'blocked');
             
-            try {
-                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                $logStmt->execute([
-                    ':user_id' => $userId,
-                    ':action' => $action,
-                    ':description' => $description
-                ]);
-            } catch (PDOException $logError) {
-                // Continue even if logging fails
-            }
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id' => $adminUserId, // The admin who performed the action
+                ':action' => $action,
+                ':description' => $description
+            ]);
 
             echo json_encode([
                 "success" => true, 
-                "message" => "User " . ($status === 'active' ? 'activated' : 'blocked') . " successfully",
-                "newStatus" => $status
+                "message" => "User " . ($status === 'active' ? 'activated' : 'blocked') . " successfully"
             ]);
         } else {
             echo json_encode([
                 "success" => false, 
-                "message" => "No changes made to user status"
+                "message" => "User not found or no changes made"
             ]);
         }
     } catch (PDOException $e) {

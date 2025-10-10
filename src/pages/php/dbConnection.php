@@ -1,11 +1,6 @@
 <?php
 class Database {
 
-   /* private $host = "sql104.infinityfree.com";
-    private $user = "if0_40051875";
-    private $pass = "SellyTlou";
-    private $dbname = "if0_40051875_evendadb";
-    private $port = 3306;*/
 private $host = "localhost";
     private $user = "root";
     private $pass = "";
