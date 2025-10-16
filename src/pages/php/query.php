@@ -250,6 +250,9 @@ if ($fun === "saveEvent") {
     $createdAt = date('Y-m-d H:i:s');
 
     try {
+        // Increase packet size for large design data
+        $pdo->exec("SET SESSION max_allowed_packet=1073741824"); // 1GB
+
         $checkStmt = $pdo->prepare("SELECT event_id FROM events WHERE event_id = :event_id AND user_id = :user_id");
         $checkStmt->execute([
             ':event_id' => $eventID,
@@ -257,7 +260,7 @@ if ($fun === "saveEvent") {
         ]);
 
         if ($checkStmt->fetch()) {
-            // Update existing
+            // Update existing event - REMOVE user_name from update
             $stmt = $pdo->prepare("UPDATE events SET
                 event_name = :event_name,
                 event_start_date = :event_start_date,
@@ -287,23 +290,23 @@ if ($fun === "saveEvent") {
             // LOG THE ACTIVITY - Event updated
             $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
             $logStmt->execute([
-                ':user_id' => $userID, // The event planner's ID
+                ':user_id' => $userID,
                 ':action' => 'Event Updated',
-                ':description' => "Event '{$eventName}' was updated by {$userName}"
+                ':description' => "Event '{$eventName}' was updated"
             ]);
         } else {
-            // Insert new
-            $stmt = $pdo->prepare("INSERT INTO events
-                (user_id, user_name, event_id, event_name, event_start_date, event_start_time,
-                 event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at)
-                VALUES
-                (:user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
-                 :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at)
-            ");
+            // Insert new event - Check if user_name column exists first
+            $columns = "user_id, event_id, event_name, event_start_date, event_start_time,
+                       event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at";
+            
+            $values = ":user_id, :event_id, :event_name, :event_start_date, :event_start_time,
+                      :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at";
+            
+            $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
             $stmt->execute([
                 ':user_id'          => $userID,
-                ':user_name'        => $userName,
                 ':event_id'         => $eventID,
+                ':user_name'        => $userName,
                 ':event_name'       => $eventName,
                 ':event_start_date' => $eventStartDate,
                 ':event_start_time' => $eventStartTime,
@@ -316,12 +319,12 @@ if ($fun === "saveEvent") {
                 ':updated_at'       => $createdAt,
             ]);
 
-             // LOG THE ACTIVITY - Event created
+            // LOG THE ACTIVITY - Event created
             $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
             $logStmt->execute([
-                ':user_id' => $userID, // The event planner's ID
+                ':user_id' => $userID,
                 ':action' => 'Event Created',
-                ':description' => "New event '{$eventName}' created by {$userName}"
+                ':description' => "New event '{$eventName}' created"
             ]);
         }
 
@@ -782,14 +785,6 @@ if ($fun === "getUserPackage") {
 
 if ($fun === "getAllPackages") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
-    
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required"
-        ]);
-        exit;
-    }
 
     try {
         $stmt = $pdo->prepare("SELECT * FROM packagetb");
@@ -1355,5 +1350,673 @@ if ($fun === "updateUserStatus") {
         ]);
     }
     exit;
+}
+
+if ($fun === "getAdminProfile") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                user_id,
+                name,
+                lastname,
+                email,
+                role,
+                created_at
+            FROM users 
+            WHERE user_id = :user_id
+        ");
+        $stmt->execute([':user_id' => $adminUserId]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($admin) {
+            echo json_encode([
+                "success" => true,
+                "admin" => $admin
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false,
+                "message" => "Admin profile not found"
+            ]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updateAdminProfile") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $name = $_POST['name'] ?? '';
+    $lastname = $_POST['lastname'] ?? '';
+    $email = $_POST['email'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    if (!$name || !$email) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Name and email are required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Check if email is already used by another user
+        $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = :email AND user_id != :user_id");
+        $stmt->execute([
+            ':email' => $email,
+            ':user_id' => $adminUserId
+        ]);
+        
+        if ($stmt->fetch()) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Email already in use by another account"
+            ]);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("
+            UPDATE users 
+            SET name = :name, lastname = :lastname, email = :email 
+            WHERE user_id = :user_id
+        ");
+        $stmt->execute([
+            ':name' => $name,
+            ':lastname' => $lastname,
+            ':email' => $email,
+            ':user_id' => $adminUserId
+        ]);
+
+        // ✅ LOG THE ACTIVITY
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+        $logStmt->execute([
+            ':user_id' => $adminUserId,
+            ':action' => 'Profile Updated',
+            ':description' => "Admin profile updated: {$name} {$lastname}"
+        ]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Profile updated successfully"
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+// Add these functions to your existing backend
+
+if ($fun === "getUserPackageAndStats") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $targetUserId = $_POST['user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Get user's package info
+        $packageStmt = $pdo->prepare("
+            SELECT p.package_type, up.event_limit, up.event_used 
+            FROM user_packages up 
+            LEFT JOIN packagetb p ON up.package_id = p.package_id 
+            WHERE up.user_id = :user_id
+        ");
+        $packageStmt->execute([':user_id' => $targetUserId]);
+        $packageInfo = $packageStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Get user's total events count
+        $eventsStmt = $pdo->prepare("SELECT COUNT(*) as total_events FROM events WHERE user_id = :user_id");
+        $eventsStmt->execute([':user_id' => $targetUserId]);
+        $eventsCount = $eventsStmt->fetch(PDO::FETCH_ASSOC)['total_events'];
+
+        // Get all available packages for dropdown
+        $packagesStmt = $pdo->prepare("SELECT package_id, package_type FROM packagetb");
+        $packagesStmt->execute();
+        $allPackages = $packagesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "package_info" => $packageInfo ?: null,
+            "total_events" => (int)$eventsCount,
+            "available_packages" => $allPackages
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updateUserPackage") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $targetUserId = $_POST['user_id'] ?? '';
+    $packageType = $_POST['package_type'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Get package_id from package_type
+        $packageStmt = $pdo->prepare("SELECT package_id FROM packagetb WHERE package_type = :package_type");
+        $packageStmt->execute([':package_type' => $packageType]);
+        $package = $packageStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$package) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Invalid package type"
+            ]);
+            exit;
+        }
+
+        $packageId = $package['package_id'];
+
+        // Check if user already has a package
+        $checkStmt = $pdo->prepare("SELECT user_package_id FROM user_packages WHERE user_id = :user_id");
+        $checkStmt->execute([':user_id' => $targetUserId]);
+        $existingPackage = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingPackage) {
+            // Update existing package
+            $updateStmt = $pdo->prepare("
+                UPDATE user_packages 
+                SET package_id = :package_id, event_used = 0, updated_at = NOW() 
+                WHERE user_id = :user_id
+            ");
+            $updateStmt->execute([
+                ':package_id' => $packageId,
+                ':user_id' => $targetUserId
+            ]);
+        } else {
+            // Insert new package
+            $newPackageId = generateUserPackageID($pdo);
+            $insertStmt = $pdo->prepare("
+                INSERT INTO user_packages (user_package_id, user_id, package_id, event_limit, event_used, created_at) 
+                VALUES (:user_package_id, :user_id, :package_id, 10, 0, NOW())
+            ");
+            $insertStmt->execute([
+                ':user_package_id' => $newPackageId,
+                ':user_id' => $targetUserId,
+                ':package_id' => $packageId
+            ]);
+        }
+
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+        $logStmt->execute([
+            ':user_id' => $adminUserId,
+            ':action' => 'Package Updated',
+            ':description' => "Package updated for user ID: {$targetUserId} to {$packageType}"
+        ]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "User package updated successfully"
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+// Payment History Functions
+if ($fun === "getPaymentHistory") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                ph.*,
+                u.name as user_name,
+                u.email as user_email,
+                p.package_type,
+                p.price as package_price
+            FROM payment_history ph
+            LEFT JOIN users u ON ph.user_id = u.user_id
+            LEFT JOIN packagetb p ON ph.package_id = p.package_id
+            ORDER BY ph.payment_date DESC
+            LIMIT 100
+        ");
+        $stmt->execute();
+        $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "payments" => $payments
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getRevenueAnalytics") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Total revenue
+        $totalStmt = $pdo->prepare("SELECT SUM(amount) as total_revenue FROM payment_history WHERE payment_status = 'completed'");
+        $totalStmt->execute();
+        $totalRevenue = $totalStmt->fetch(PDO::FETCH_ASSOC)['total_revenue'] ?? 0;
+
+        // Monthly revenue
+        $monthlyStmt = $pdo->prepare("
+            SELECT 
+                DATE_FORMAT(payment_date, '%Y-%m') as month,
+                SUM(amount) as revenue
+            FROM payment_history 
+            WHERE payment_status = 'completed' 
+            AND payment_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY DATE_FORMAT(payment_date, '%Y-%m')
+            ORDER BY month DESC
+            LIMIT 6
+        ");
+        $monthlyStmt->execute();
+        $monthlyRevenue = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Revenue by package
+        $packageStmt = $pdo->prepare("
+            SELECT 
+                p.package_type,
+                COUNT(ph.payment_id) as payment_count,
+                SUM(ph.amount) as total_amount
+            FROM payment_history ph
+            LEFT JOIN packagetb p ON ph.package_id = p.package_id
+            WHERE ph.payment_status = 'completed'
+            GROUP BY p.package_type
+        ");
+        $packageStmt->execute();
+        $revenueByPackage = $packageStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Payment status counts
+        $statusStmt = $pdo->prepare("
+            SELECT 
+                payment_status,
+                COUNT(*) as count
+            FROM payment_history 
+            GROUP BY payment_status
+        ");
+        $statusStmt->execute();
+        $paymentStatusCounts = $statusStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "analytics" => [
+                "total_revenue" => (float)$totalRevenue,
+                "monthly_revenue" => $monthlyRevenue,
+                "revenue_by_package" => $revenueByPackage,
+                "payment_status_counts" => $paymentStatusCounts
+            ]
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "addManualPayment") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $userId = $_POST['user_id'] ?? '';
+    $packageId = $_POST['package_id'] ?? '';
+    $amount = $_POST['amount'] ?? '';
+    $paymentMethod = $_POST['payment_method'] ?? '';
+    $billingCycle = $_POST['billing_cycle'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Generate payment ID
+        $paymentId = "PAY-" . substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 6) . "-" . time();
+
+        $stmt = $pdo->prepare("
+            INSERT INTO payment_history 
+            (payment_id, user_id, package_id, amount, payment_method, payment_status, transaction_id, billing_cycle) 
+            VALUES (?, ?, ?, ?, ?, 'completed', ?, ?)
+        ");
+        $stmt->execute([
+            $paymentId,
+            $userId,
+            $packageId,
+            $amount,
+            $paymentMethod,
+            'manual_' . $paymentId,
+            $billingCycle
+        ]);
+
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+        $logStmt->execute([
+            ':user_id' => $adminUserId,
+            ':action' => 'Manual Payment Added',
+            ':description' => "Manual payment of {$amount} added for user ID: {$userId}"
+        ]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Manual payment added successfully"
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updatePaymentStatus") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $paymentId = $_POST['payment_id'] ?? '';
+    $status = $_POST['status'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE payment_history SET payment_status = ? WHERE payment_id = ?");
+        $stmt->execute([$status, $paymentId]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Payment status updated successfully"
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+// Report Generation Functions
+if ($fun === "generateReport") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $reportType = $_POST['report_type'] ?? '';
+    $dateRange = $_POST['date_range'] ?? 'all';
+    $format = $_POST['format'] ?? 'pdf';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Generate filename with timestamp
+        $timestamp = date('Y-m-d_H-i-s');
+        $filename = "report_{$reportType}_{$timestamp}";
+        
+        // Generate report data based on type
+        $reportData = generateReportData($pdo, $reportType, $dateRange);
+        
+        // Create reports directory if it doesn't exist
+        $reportsDir = __DIR__ . '/reports/';
+        if (!is_dir($reportsDir)) {
+            mkdir($reportsDir, 0755, true);
+        }
+        
+        // Generate file based on format
+        $filePath = '';
+        switch ($format) {
+            case 'csv':
+                $filePath = generateCSVReport($reportData, $reportsDir . $filename . '.csv');
+                break;
+            case 'excel':
+                $filePath = generateExcelReport($reportData, $reportsDir . $filename . '.xlsx');
+                break;
+            case 'pdf':
+            default:
+                $filePath = generatePDFReport($reportData, $reportsDir . $filename . '.pdf');
+                break;
+        }
+        
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+        $logStmt->execute([
+            ':user_id' => $adminUserId,
+            ':action' => 'Report Generated',
+            ':description' => "Generated {$reportType} report in {$format} format"
+        ]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Report generated successfully",
+            "file_path" => $filePath,
+            "filename" => basename($filePath)
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Error generating report: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+// Helper function to generate report data
+function generateReportData($pdo, $reportType, $dateRange) {
+    $whereClause = getDateRangeWhereClause($dateRange);
+    
+    switch ($reportType) {
+        case 'users':
+            $stmt = $pdo->prepare("
+                SELECT 
+                    user_id,
+                    CONCAT(name, ' ', lastname) as name,
+                    email,
+                    role,
+                    status,
+                    created_at,
+                    (SELECT COUNT(*) FROM events WHERE user_id = users.user_id) as total_events
+                FROM users 
+                {$whereClause}
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        case 'revenue':
+            $stmt = $pdo->prepare("
+                SELECT 
+                    ph.*,
+                    u.name as user_name,
+                    u.email as user_email,
+                    p.package_type,
+                    p.price as package_price
+                FROM payment_history ph
+                LEFT JOIN users u ON ph.user_id = u.user_id
+                LEFT JOIN packagetb p ON ph.package_id = p.package_id
+                {$whereClause}
+                ORDER BY ph.payment_date DESC
+            ");
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        case 'events':
+            $stmt = $pdo->prepare("
+                SELECT 
+                    e.*,
+                    (SELECT COUNT(*) FROM rsvp WHERE event_id = e.event_id) as total_rsvp,
+                    (SELECT COUNT(*) FROM rsvp WHERE event_id = e.event_id AND attending = 'yes') as attending_count
+                FROM events e
+                {$whereClause}
+                ORDER BY e.created_at DESC
+            ");
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        case 'system':
+            return [
+                'total_users' => getTotalCount($pdo, 'users'),
+                'total_events' => getTotalCount($pdo, 'events'),
+                'total_payments' => getTotalCount($pdo, 'payment_history'),
+                'active_packages' => getPackageStats($pdo),
+                'revenue_stats' => getRevenueStats($pdo, $dateRange)
+            ];
+    }
+}
+
+// Database Backup Function
+if ($fun === "backupDatabase") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Get database configuration
+        $host = 'localhost';
+        $user = 'root';
+        $pass = '';
+        $dbname = 'eventa';
+
+        // Create backup directory
+        $backupDir = __DIR__ . '/backups/';
+        if (!is_dir($backupDir)) {
+            mkdir($backupDir, 0755, true);
+        }
+        
+        // Generate backup filename
+        $timestamp = date('Y-m-d_H-i-s');
+        $backupFile = $backupDir . "backup_{$timestamp}.sql";
+        
+        // Create backup using mysqldump
+        $command = "mysqldump --host={$host} --user={$user} --password={$pass} {$dbname} > {$backupFile}";
+        system($command, $output);
+        
+        if ($output === 0 && file_exists($backupFile)) {
+            // Log the activity
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id' => $adminUserId,
+                ':action' => 'Database Backup',
+                ':description' => "Database backup created: " . basename($backupFile)
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Database backup created successfully",
+                "file_path" => $backupFile,
+                "filename" => basename($backupFile)
+            ]);
+        } else {
+            throw new Exception("Failed to create database backup");
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Error creating backup: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+// Helper functions
+function getDateRangeWhereClause($dateRange) {
+    $now = new DateTime();
+    
+    switch ($dateRange) {
+        case 'today':
+            $startDate = $now->format('Y-m-d 00:00:00');
+            return "WHERE created_at >= '{$startDate}'";
+        case 'week':
+            $startDate = $now->modify('-7 days')->format('Y-m-d 00:00:00');
+            return "WHERE created_at >= '{$startDate}'";
+        case 'month':
+            $startDate = $now->modify('-30 days')->format('Y-m-d 00:00:00');
+            return "WHERE created_at >= '{$startDate}'";
+        case 'year':
+            $startDate = $now->modify('-365 days')->format('Y-m-d 00:00:00');
+            return "WHERE created_at >= '{$startDate}'";
+        default:
+            return "";
+    }
+}
+
+function getTotalCount($pdo, $table) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM {$table}");
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 }
 ?>
