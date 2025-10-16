@@ -5,82 +5,283 @@ import { Footer } from "../components";
 
 function AdminDashboard() {
     const [activeTab, setActiveTab] = useState("dashboard");
-    
-    // Sample data for the dashboard stats
+    const [dashboardData, setDashboardData] = useState({
+        total_users: 0,
+        active_users: 0,
+        active_events: 0,
+        response_rate: 0,
+        inactive_users: 0 
+    });
+    const [systemActivities, setSystemActivities] = useState([]);
+    const [invitationAnalytics, setInvitationAnalytics] = useState([]);
+    const [pricingPlans, setPricingPlans] = useState([]);
+    const [usersData, setUsersData] = useState([]);
+    const [revenueData, setRevenueData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [adminUserId, setAdminUserId] = useState("ADMIN-003"); // This should come from your auth system
+
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
+    useEffect(() => {
+        window.fetchDashboardData = fetchDashboardData;
+        window.fetchUsersData = fetchUsersData;
+        
+        return () => {
+            window.fetchDashboardData = null;
+            window.fetchUsersData = null;
+        };
+    }, []);
+
+    // Fetch data based on active tab
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                switch(activeTab) {
+                    case "dashboard":
+                        await fetchDashboardData();
+                        await fetchSystemActivities();
+                        break;
+                    case "invitations":
+                        await fetchInvitationAnalytics();
+                        break;
+                    case "pricing":
+                        await fetchPricingPlans();
+                        await fetchRevenueData();
+                        break;
+                    case "users":
+                        await fetchUsersData();
+                        break;
+                    default:
+                        break;
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [activeTab]);
+
+    const fetchDashboardData = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getDashboardStats');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setDashboardData(data.stats);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+        }
+    };
+
+    const fetchSystemActivities = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getSystemActivity');
+            formData.append('limit', 5);
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setSystemActivities(data.activities);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching system activities:', error);
+        }
+    };
+
+    const fetchInvitationAnalytics = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getInvitationAnalytics');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setInvitationAnalytics(data.analytics);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching invitation analytics:', error);
+        }
+    };
+
+    const fetchPricingPlans = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getAllPackages');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setPricingPlans(data.packages);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching pricing plans:', error);
+        }
+    };
+
+    const fetchRevenueData = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getRevenueData');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setRevenueData(data.revenueData);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching revenue data:', error);
+        }
+    };
+
+    const fetchUsersData = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getAllUsers');
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setUsersData(data.users);
+                } else if (data.message && data.message.includes("Unauthorized")) {
+                    console.error("Admin access denied:", data.message);
+                    alert("Admin access denied. Please log in as administrator.");
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching users data:', error);
+        }
+    };
+
+    // Format dashboard stats for display
     const dashboardStats = useMemo(() => [
-        { id: 1, title: "Total Users", value: "127", icon: "bi bi-people" },
-        { id: 2, title: "Active Events", value: "18", icon: "bi bi-calendar-event" },
-        { id: 3, title: "Response Rate", value: "72%", icon: "bi bi-graph-up" },
-        { id: 4, title: "Monthly Revenue", value: "R8,500", icon: "bi bi-currency-dollar" }
-    ], []);
+        { 
+            id: 1, 
+            title: "Total Users", 
+            value: dashboardData.total_users.toString(), 
+            icon: "bi bi-people",
+            color: "blue"
+        },
+        { 
+            id: 2, 
+            title: "Active Events", 
+            value: dashboardData.active_events.toString(), 
+            icon: "bi bi-calendar-event",
+            color: "green"
+        },
+        { 
+            id: 3, 
+            title: "Response Rate", 
+            value: `${dashboardData.response_rate}%`, 
+            icon: "bi bi-graph-up",
+            color: "purple"
+        },
+        { 
+            id: 4, 
+            title: "Active Users", 
+            value: dashboardData.active_users.toString(), 
+            icon: "bi bi-check-circle",
+            color: "green"
+        },
+        { 
+            id: 5, 
+            title: "Inactive Users", 
+            value: dashboardData.inactive_users.toString(), 
+            icon: "bi bi-x-circle",
+            color: "red"
+        }
+    ], [dashboardData]);
 
     const quickActions = useMemo(() => [
         { id: 1, title: "Generate Reports", icon: "bi bi-file-earmark-bar-graph" },
         { id: 2, title: "Run System Backup", icon: "bi bi-cloud-arrow-up" }
     ], []);
 
-    // Sample recent activity data
-    const recentActivities = useMemo(() => [
-        { id: 1, action: "New User Registered", user: "Sarah Johnson", time: "2 minutes ago", icon: "bi bi-person-plus" },
-        { id: 2, action: "RSVP Analysis Completed", user: "System Automation", time: "15 minutes ago", icon: "bi bi-graph-up" },
-        { id: 3, action: "User Permission Updated", user: "Admin: Michael", time: "1 hour ago", icon: "bi bi-shield-check" },
-        { id: 4, action: "Export Request Processed", user: "Event Planner: John", time: "2 hours ago", icon: "bi bi-download" },
-        { id: 5, action: "Weekly Report Generated", user: "System Automation", time: "3 hours ago", icon: "bi bi-file-text" }
-    ], []);
-
-    // Sample invitation analytics data for admin view
-    const invitationAnalytics = useMemo(() => [
-        { id: 1, eventName: "Annual Conference", sent: 450, opened: 380, responded: 320, responseRate: "84%", status: "completed" },
-        { id: 2, eventName: "Product Launch", sent: 300, opened: 270, responded: 210, responseRate: "78%", status: "active" },
-        { id: 3, eventName: "Team Retreat", sent: 85, opened: 65, responded: 45, responseRate: "69%", status: "draft" },
-        { id: 4, eventName: "Client Workshop", sent: 120, opened: 95, responded: 70, responseRate: "74%", status: "completed" },
-        { id: 5, eventName: "Shareholder Meeting", sent: 200, opened: 180, responded: 150, responseRate: "83%", status: "scheduled" }
-    ], []);
-
-    // Sample pricing plans data
-    const pricingPlans = useMemo(() => [
-        { id: 1, name: "Basic", price: "R199", interval: "monthly", activeSubscriptions: 45, status: "active", features: ["100 invitations/month", "Basic templates", "Email support"] },
-        { id: 2, name: "Professional", price: "R499", interval: "monthly", activeSubscriptions: 28, status: "active", features: ["500 invitations/month", "Premium templates", "Priority support", "Custom branding"] },
-        { id: 3, name: "Enterprise", price: "R999", interval: "monthly", activeSubscriptions: 12, status: "active", features: ["Unlimited invitations", "All templates", "24/7 support", "Advanced analytics", "API access"] },
-        { id: 4, name: "Starter", price: "R99", interval: "monthly", activeSubscriptions: 8, status: "inactive", features: ["50 invitations/month", "Basic templates", "Community support"] }
-    ], []);
-
-    // Sample revenue data
-    const revenueData = useMemo(() => [
-        { month: "Jan", revenue: 7500 },
-        { month: "Feb", revenue: 8200 },
-        { month: "Mar", revenue: 7800 },
-        { month: "Apr", revenue: 8500 },
-        { month: "May", revenue: 9200 },
-        { month: "Jun", revenue: 8800 }
-    ], []);
-
-    // Sample user data
-    const usersData = useMemo(() => [
-        { id: 1, name: "Sarah Johnson", email: "sarah@example.com", role: "Event Planner", status: "active", plan: "Professional", joined: "2023-03-15", events: 12 },
-        { id: 2, name: "Michael Chen", email: "michael@example.com", role: "Admin", status: "active", plan: "Enterprise", joined: "2022-11-08", events: 8 },
-        { id: 3, name: "John Williams", email: "john@example.com", role: "Event Planner", status: "active", plan: "Basic", joined: "2023-05-22", events: 5 },
-        { id: 4, name: "Emily Davis", email: "emily@example.com", role: "Event Planner", status: "inactive", plan: "Professional", joined: "2023-01-30", events: 9 },
-        { id: 5, name: "David Brown", email: "david@example.com", role: "Event Planner", status: "active", plan: "Enterprise", joined: "2023-02-14", events: 15 },
-        { id: 6, name: "Lisa Wilson", email: "lisa@example.com", role: "Event Planner", status: "pending", plan: "Starter", joined: "2023-06-10", events: 2 }
-    ], []);
-
-    // Sample user roles data
-    const userRoles = useMemo(() => [
-        { role: "Event Planner", count: 115, permissions: ["Create events", "Send invitations", "Manage guest lists"] },
-        { role: "Admin", count: 3, permissions: ["Full system access", "User management", "Billing management"] },
-        { role: "Viewer", count: 9, permissions: ["View events", "Read-only access"] }
-    ], []);
+    // Format recent activities for display
+    const recentActivities = useMemo(() => {
+        return systemActivities.map(activity => ({
+            id: activity.id,
+            action: activity.action,
+            user: activity.user_name || 'System',
+            time: new Date(activity.created_at).toLocaleDateString(),
+            icon: "bi bi-activity"
+        }));
+    }, [systemActivities]);
 
     // Render different content based on active tab
     const renderContent = () => {
+        if (loading) {
+            return <div className="loading">Loading...</div>;
+        }
+
         switch(activeTab) {
             case "invitations":
                 return <InvitationsTabContent analytics={invitationAnalytics} />;
             case "pricing":
-                return <PricingTabContent plans={pricingPlans} revenueData={revenueData} />;
+                return <PricingTabContent plans={pricingPlans} revenueData={revenueData} adminUserId={adminUserId} />;
             case "users":
-                return <UsersTabContent users={usersData} roles={userRoles} />;
+                return <UsersTabContent users={usersData} adminUserId={adminUserId} />;
             case "dashboard":
             default:
                 return <>
@@ -88,7 +289,7 @@ function AdminDashboard() {
                     <section className="admin-dashboard-stats">
                         <div className="admin-dashboard-stats-grid">
                             {dashboardStats.map(stat => (
-                                <div key={stat.id} className="admin-dashboard-stat-card">
+                                <div key={stat.id} className="admin-dashboard-stat-card" data-color={stat.color}>
                                     <div className="admin-dashboard-stat-icon">
                                         <i className={stat.icon}></i>
                                     </div>
@@ -121,6 +322,9 @@ function AdminDashboard() {
                                         </div>
                                     </div>
                                 ))}
+                                {recentActivities.length === 0 && (
+                                    <div className="no-activities">No recent activities</div>
+                                )}
                             </div>
                         </div>
 
@@ -208,280 +412,439 @@ function AdminDashboard() {
 }
 
 // Invitations Tab Content - Admin Focused
-const InvitationsTabContent = ({ analytics }) => (
-    <div className="admin-tab-content">
-        <div className="admin-content-header">
-            <h2>Invitation Performance Analytics</h2>
-            <div className="header-actions">
-                <button className="btn btn-outline">
-                    <i className="bi bi-download"></i> Export Data
-                </button>
-                <button className="btn btn-primary">
-                    <i className="bi bi-graph-up"></i> Generate Report
-                </button>
-            </div>
-        </div>
+const InvitationsTabContent = ({ analytics }) => {
+    const [invitationStats, setInvitationStats] = useState({
+        total_invitations: 0,
+        open_rate: 0,
+        response_rate: 0
+    });
+    const [loading, setLoading] = useState(false);
+    const [sortField, setSortField] = useState('eventName');
+    const [sortDirection, setSortDirection] = useState('asc');
 
-        <div className="analytics-overview">
-            <div className="analytics-card">
-                <div className="analytics-icon">
-                    <i className="bi bi-envelope"></i>
-                </div>
-                <div className="analytics-content">
-                    <h3>Total Invitations Sent</h3>
-                    <p className="analytics-number">1,155</p>
-                    <span className="analytics-trend positive">+12% from last week</span>
-                </div>
-            </div>
-            
-            <div className="analytics-card">
-                <div className="analytics-icon">
-                    <i className="bi bi-eye"></i>
-                </div>
-                <div className="analytics-content">
-                    <h3>Average Open Rate</h3>
-                    <p className="analytics-number">78%</p>
-                    <span className="analytics-trend positive">+3% from last week</span>
-                </div>
-            </div>
-            
-            <div className="analytics-card">
-                <div className="analytics-icon">
-                    <i className="bi bi-check-circle"></i>
-                </div>
-                <div className="analytics-content">
-                    <h3>Average Response Rate</h3>
-                    <p className="analytics-number">72%</p>
-                    <span className="analytics-trend neutral">±0% from last week</span>
-                </div>
-            </div>
-        </div>
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
-        <div className="analytics-table">
-            <div className="table-header">
-                <span>Event Name</span>
-                <span>Sent</span>
-                <span>Opened</span>
-                <span>Responses</span>
-                <span>Response Rate</span>
-                <span>Status</span>
-                <span>Actions</span>
-            </div>
+    useEffect(() => {
+        fetchInvitationStats();
+    }, []);
+
+    const fetchInvitationStats = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'getInvitationStats');
+            formData.append('admin_user_id', "ADMIN-003"); // Use your admin ID
             
-            {analytics.map(item => (
-                <div key={item.id} className="table-row">
-                    <span className="event-name">{item.eventName}</span>
-                    <span>{item.sent}</span>
-                    <span>{item.opened}</span>
-                    <span>{item.responded}</span>
-                    <span>
-                        <span className={`response-rate ${parseInt(item.responseRate) > 75 ? 'high' : parseInt(item.responseRate) > 60 ? 'medium' : 'low'}`}>
-                            {item.responseRate}
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setInvitationStats(data.stats);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching invitation stats:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    const sortedAnalytics = useMemo(() => {
+        if (!analytics || !Array.isArray(analytics)) return [];
+        
+        return [...analytics].sort((a, b) => {
+            let aValue = a[sortField];
+            let bValue = b[sortField];
+            
+            // Handle numeric values (remove % and parse)
+            if (sortField === 'responseRate') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            }
+            
+            // Handle numeric values for counts
+            if (['sent', 'opened', 'responded'].includes(sortField)) {
+                aValue = parseInt(aValue) || 0;
+                bValue = parseInt(bValue) || 0;
+            }
+            
+            if (sortDirection === 'asc') {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            } else {
+                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+            }
+        });
+    }, [analytics, sortField, sortDirection]);
+
+    const getSortIcon = (field) => {
+        if (sortField !== field) return '';
+        return sortDirection === 'asc' ? '' : '';
+    };
+
+    return (
+        <div className="admin-tab-content">
+            <div className="admin-content-header">
+                <h2>Invitation Performance Analytics</h2>
+                <div className="header-actions">
+                    <button className="btn btn-outline" onClick={fetchInvitationStats} disabled={loading}>
+                        <i className="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            {loading && <div className="loading">Loading...</div>}
+
+            <div className="analytics-overview">
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-envelope"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Total Invitations Sent</h3>
+                        <p className="analytics-number">{invitationStats.total_invitations.toLocaleString()}</p>
+                        <span className="analytics-trend positive">Live data</span>
+                    </div>
+                </div>
+                
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-eye"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Average Open Rate</h3>
+                        <p className="analytics-number">{invitationStats.open_rate}%</p>
+                        <span className="analytics-trend positive">Based on responses</span>
+                    </div>
+                </div>
+                
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-check-circle"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Average Response Rate</h3>
+                        <p className="analytics-number">{invitationStats.response_rate}%</p>
+                        <span className="analytics-trend neutral">All events</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="analytics-table">
+                <div className="table-header">
+                    <span className="sortable" onClick={() => handleSort('eventName')}>
+                        Event Name {getSortIcon('eventName')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('sent')}>
+                        Sent {getSortIcon('sent')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('opened')}>
+                        Opened {getSortIcon('opened')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('responded')}>
+                        Responses {getSortIcon('responded')}
+                    </span>
+                    <span className="sortable" onClick={() => handleSort('responseRate')}>
+                        Response Rate {getSortIcon('responseRate')}
+                    </span>
+                    <span>Status</span>
+                    <span>Actions</span>
+                </div>
+                
+                {sortedAnalytics.map(item => (
+                    <div key={item.id} className="table-row">
+                        <span className="event-name">{item.eventName}</span>
+                        <span>{item.sent}</span>
+                        <span>{item.opened}</span>
+                        <span>{item.responded}</span>
+                        <span>
+                            <span className={`response-rate ${parseInt(item.responseRate) > 75 ? 'high' : parseInt(item.responseRate) > 60 ? 'medium' : 'low'}`}>
+                                {item.responseRate}
+                            </span>
                         </span>
-                    </span>
-                    <span>
-                        <span className={`status-badge ${item.status}`}>
-                            {item.status}
+                        <span>
+                            <span className={`status-badge ${item.status}`}>
+                                {item.status}
+                            </span>
                         </span>
-                    </span>
-                    <span>
-                        <button className="btn-icon" title="View Details">
-                            <i className="bi bi-eye"></i>
-                        </button>
-                        <button className="btn-icon" title="Download Data">
-                            <i className="bi bi-download"></i>
-                        </button>
-                        <button className="btn-icon" title="Generate Report">
-                            <i className="bi bi-graph-up"></i>
-                        </button>
-                    </span>
-                </div>
-            ))}
+                        <span>
+                            <button className="btn-icon" title="View Details">
+                                <i className="bi bi-eye"></i>
+                            </button>
+                        </span>
+                    </div>
+                ))}
+                {(!analytics || analytics.length === 0) && (
+                    <div className="no-data">
+                        <p>No invitation data available</p>
+                    </div>
+                )}
+            </div>
         </div>
-
-        <div className="time-filter">
-            <span>Show data for: </span>
-            <select defaultValue="7days">
-                <option value="today">Today</option>
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="90days">Last 90 Days</option>
-            </select>
-        </div>
-    </div>
-);
+    );
+};
 
 // Pricing Tab Content - Admin Focused
-const PricingTabContent = ({ plans, revenueData }) => (
-    <div className="admin-tab-content">
-        <div className="admin-content-header">
-            <h2>Pricing Plan Management</h2>
-            <div className="header-actions">
-                <button className="btn btn-outline">
-                    <i className="bi bi-download"></i> Export Revenue Data
-                </button>
-                <button className="btn btn-primary">
-                    <i className="bi bi-plus-circle"></i> Add New Plan
-                </button>
-            </div>
-        </div>
+const PricingTabContent = ({ plans, adminUserId }) => {
+    const [editingPlan, setEditingPlan] = useState(null);
+    const [editForm, setEditForm] = useState({
+        package_type: '',
+        max_guests: '',
+        max_events: '',
+        price: ''
+    });
+    const [allPlans, setAllPlans] = useState(plans);
 
-        <div className="revenue-overview">
-            <div className="revenue-card">
-                <div className="revenue-icon">
-                    <i className="bi bi-currency-dollar"></i>
-                </div>
-                <div className="revenue-content">
-                    <h3>Monthly Recurring Revenue</h3>
-                    <p className="revenue-amount">R8,500</p>
-                    <span className="revenue-trend positive">+15% from last month</span>
-                </div>
-            </div>
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
+    // Start editing a plan
+    const startEditing = (plan) => {
+        setEditingPlan(plan.package_id);
+        setEditForm({
+            package_type: plan.package_type || '',
+            max_guests: plan.max_guests || '',
+            max_events: plan.max_events || '',
+            price: plan.price || ''
+        });
+    };
+
+    // Cancel editing
+    const cancelEditing = () => {
+        setEditingPlan(null);
+        setEditForm({
+            package_type: '',
+            max_guests: '',
+            max_events: '',
+            price: ''
+        });
+    };
+
+    // Handle form field changes
+    const handleEditChange = (field, value) => {
+        setEditForm(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    // Save package changes
+    const savePackage = async (packageId) => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'updatePackage');
+            formData.append('package_id', packageId);
+            formData.append('package_type', editForm.package_type);
+            formData.append('max_guests', editForm.max_guests);
+            formData.append('max_events', editForm.max_events);
+            formData.append('price', editForm.price);
+            formData.append('admin_user_id', adminUserId); // Add admin authentication
             
-            <div className="revenue-card">
-                <div className="revenue-icon">
-                    <i className="bi bi-people"></i>
-                </div>
-                <div className="revenue-content">
-                    <h3>Active Subscriptions</h3>
-                    <p className="revenue-amount">93</p>
-                    <span className="revenue-trend positive">+8% from last month</span>
-                </div>
-            </div>
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
             
-            <div className="revenue-card">
-                <div className="revenue-icon">
-                    <i className="bi bi-graph-down"></i>
-                </div>
-                <div className="revenue-content">
-                    <h3>Churn Rate</h3>
-                    <p className="revenue-amount">4.2%</p>
-                    <span className="revenue-trend negative">+0.5% from last month</span>
+            const data = await response.json();
+            if (data.success) {
+                setAllPlans(prevPlans => 
+                    prevPlans.map(plan => 
+                        plan.package_id === packageId 
+                            ? { ...plan, ...editForm }
+                            : plan
+                    )
+                );
+                setEditingPlan(null);
+                alert('Package updated successfully!');
+            } else {
+                if (data.message && data.message.includes("Unauthorized")) {
+                    alert('Access denied: Admin privileges required');
+                } else {
+                    alert('Error updating package: ' + data.message);
+                }
+            }
+        } catch (error) {
+            console.error('Error updating package:', error);
+            alert('Error updating package');
+        }
+    };
+
+    // Format plan name for display
+    const formatPlanName = (packageType) => {
+        if (!packageType) return 'Unknown';
+        return packageType.charAt(0).toUpperCase() + packageType.slice(1);
+    };
+
+    // Get active subscriptions count
+    const getActiveSubscriptions = (packageType) => {
+        const subscriptionCounts = {
+            'basic': 45,
+            'premium': 28,
+            'enterprise': 12
+        };
+        return subscriptionCounts[packageType] || 0;
+    };
+
+    return (
+        <div className="admin-tab-content">
+            <div className="admin-content-header">
+                <h2>Pricing Plan Management</h2>
+                <div className="header-actions">
+                    <button className="btn btn-outline">
+                        <i className="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
                 </div>
             </div>
-        </div>
 
-        <div className="pricing-plans-grid">
-            {plans.map(plan => (
-                <div key={plan.id} className={`pricing-plan-card ${plan.status === 'inactive' ? 'inactive' : ''}`}>
-                    <div className="plan-header">
-                        <h3>{plan.name}</h3>
-                        <span className={`plan-status ${plan.status}`}>{plan.status}</span>
-                    </div>
-                    
-                    <div className="plan-price">
-                        <span className="price-amount">{plan.price}</span>
-                        <span className="price-interval">/{plan.interval}</span>
-                    </div>
-                    
-                    <div className="plan-subscriptions">
-                        <i className="bi bi-people"></i>
-                        <span>{plan.activeSubscriptions} active subscriptions</span>
-                    </div>
-                    
-                    <div className="plan-features">
-                        <h4>Features:</h4>
-                        <ul>
-                            {plan.features.map((feature, index) => (
-                                <li key={index}>{feature}</li>
-                            ))}
-                        </ul>
-                    </div>
-                    
-                    <div className="plan-actions">
-                        <button className="btn btn-outline btn-sm">
-                            <i className="bi bi-pencil"></i> Edit
-                        </button>
-                        <button className={`btn btn-sm ${plan.status === 'active' ? 'btn-warning' : 'btn-success'}`}>
-                            <i className={`bi ${plan.status === 'active' ? 'bi-x-circle' : 'bi-check-circle'}`}></i>
-                            {plan.status === 'active' ? 'Disable' : 'Enable'}
-                        </button>
-                    </div>
-                </div>
-            ))}
-        </div>
-
-        <div className="revenue-chart-section">
-            <h3>Revenue Trends (Last 6 Months)</h3>
-            <div className="revenue-chart">
-                {revenueData.map((data, index) => (
-                    <div key={data.month} className="chart-bar-container">
-                        <div className="chart-bar" style={{ height: `${(data.revenue / 10000) * 100}%` }}>
-                            <span className="chart-value">R{data.revenue}</span>
+            <div className="pricing-plans-grid">
+                {allPlans.map(plan => (
+                    <div key={plan.package_id} className="pricing-plan-card">
+                        <div className="plan-header">
+                            <h3>
+                                {editingPlan === plan.package_id ? (
+                                    <select 
+                                        value={editForm.package_type} 
+                                        onChange={(e) => handleEditChange('package_type', e.target.value)}
+                                        className="form-control-sm"
+                                    >
+                                        <option value="basic">Basic</option>
+                                        <option value="premium">Premium</option>
+                                        <option value="enterprise">Enterprise</option>
+                                    </select>
+                                ) : (
+                                    formatPlanName(plan.package_type)
+                                )}
+                            </h3>
+                            <span className="plan-status active">Active</span>
                         </div>
-                        <span className="chart-label">{data.month}</span>
+                        
+                        <div className="plan-price">
+                            {editingPlan === plan.package_id ? (
+                                <div className="price-edit">
+                                    <span className="price-prefix">R</span>
+                                    <input 
+                                        type="number" 
+                                        value={editForm.price} 
+                                        onChange={(e) => handleEditChange('price', e.target.value)}
+                                        className="form-control-sm"
+                                        step="0.01"
+                                        min="0"
+                                        style={{width: '80px'}}
+                                    />
+                                    <span className="price-interval">/monthly</span>
+                                </div>
+                            ) : (
+                                <>
+                                    <span className="price-amount">R{plan.price || '0.00'}</span>
+                                    <span className="price-interval">/monthly</span>
+                                </>
+                            )}
+                        </div>
+                        
+                        <div className="plan-subscriptions">
+                            <i className="bi bi-people"></i>
+                            <span>{getActiveSubscriptions(plan.package_type)} active subscriptions</span>
+                        </div>
+                        
+                        <div className="plan-features">
+                            <h4>Features:</h4>
+                            <ul>
+                                <li>
+                                    {editingPlan === plan.package_id ? (
+                                        <input 
+                                            type="number" 
+                                            value={editForm.max_guests} 
+                                            onChange={(e) => handleEditChange('max_guests', e.target.value)}
+                                            className="form-control-sm"
+                                            placeholder="Max Guests"
+                                            style={{width: '120px'}}
+                                        />
+                                    ) : (
+                                        `${plan.max_guests || 0} guests/event`
+                                    )}
+                                </li>
+                                <li>
+                                    {editingPlan === plan.package_id ? (
+                                        <input 
+                                            type="number" 
+                                            value={editForm.max_events} 
+                                            onChange={(e) => handleEditChange('max_events', e.target.value)}
+                                            className="form-control-sm"
+                                            placeholder="Max Events"
+                                            style={{width: '120px'}}
+                                        />
+                                    ) : (
+                                        `${plan.max_events || 0} events/month`
+                                    )}
+                                </li>
+                                <li>Premium templates</li>
+                                <li>Email support</li>
+                                {plan.package_type === 'premium' && <li>Custom branding</li>}
+                                {plan.package_type === 'enterprise' && <li>Advanced analytics</li>}
+                                {plan.package_type === 'enterprise' && <li>API access</li>}
+                            </ul>
+                        </div>
+                        
+                        <div className="plan-actions">
+                            {editingPlan === plan.package_id ? (
+                                <>
+                                    <button 
+                                        className="btn btn-success btn-sm"
+                                        onClick={() => savePackage(plan.package_id)}
+                                    >
+                                        <i className="bi bi-check"></i> Save
+                                    </button>
+                                    <button 
+                                        className="btn btn-outline btn-sm"
+                                        onClick={cancelEditing}
+                                    >
+                                        <i className="bi bi-x"></i> Cancel
+                                    </button>
+                                </>
+                            ) : (
+                                <button 
+                                    className="btn btn-outline btn-sm"
+                                    onClick={() => startEditing(plan)}
+                                >
+                                    <i className="bi bi-pencil"></i> Edit
+                                </button>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>
         </div>
-    </div>
-);
+    );
+};
 
-// Users Tab Content - Admin Focused with Roles and Permissions
-const UsersTabContent = () => {
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+// Users Tab Content - Simplified without permissions
+const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
+  const [users, setUsers] = useState(initialUsers || []);
+  const [filteredUsers, setFilteredUsers] = useState(initialUsers || []);
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allRoles, setAllRoles] = useState([]);
-  const [userRoles, setUserRoles] = useState({});
 
-  // Fetch users and roles from API
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
+  // Fetch users from API
   useEffect(() => {
-    // Define all API functions inside useEffect to avoid dependency issues
-    const fetchUserRoles = async (userId) => {
-      try {
-        const formData = new FormData();
-        formData.append('function', 'getUserRoles');
-        formData.append('user_id', userId);
-        
-        const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setUserRoles(prev => ({
-              ...prev,
-              [userId]: data.roles
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user roles:', error);
-      }
-    };
-
-    const fetchAllRoles = async () => {
-      try {
-        const formData = new FormData();
-        formData.append('function', 'getAllRoles');
-        
-        const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setAllRoles(data.roles);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching roles:', error);
-      }
-    };
-
     const fetchUsers = async () => {
       try {
         setLoading(true);
@@ -489,8 +852,9 @@ const UsersTabContent = () => {
         
         const formData = new FormData();
         formData.append('function', 'getAllUsers');
+        formData.append('admin_user_id', adminUserId); // Add admin authentication
         
-        const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
           method: 'POST',
           body: formData
         });
@@ -506,20 +870,19 @@ const UsersTabContent = () => {
             id: user.user_id,
             name: user.name,
             email: user.email,
-            role: user.role || 'user',
+            role: user.role || 'event_planner',
             status: user.status || 'active',
             joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
           }));
           
           setUsers(formattedUsers);
           setFilteredUsers(formattedUsers);
-          
-          // Fetch roles for each user
-          formattedUsers.forEach(user => {
-            fetchUserRoles(user.id);
-          });
         } else {
-          throw new Error(data.message || 'Failed to fetch users');
+          if (data.message && data.message.includes("Unauthorized")) {
+            throw new Error("Admin access denied. Please log in as administrator.");
+          } else {
+            throw new Error(data.message || 'Failed to fetch users');
+          }
         }
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -531,9 +894,10 @@ const UsersTabContent = () => {
       }
     };
 
-    fetchUsers();
-    fetchAllRoles();
-  }, []);
+    if (!initialUsers || initialUsers.length === 0) {
+      fetchUsers();
+    }
+  }, [initialUsers, adminUserId]);
 
   // Filter and sort users based on search query, filters, and sorting
   useEffect(() => {
@@ -545,15 +909,13 @@ const UsersTabContent = () => {
       
       let result = [...users];
       
-      // Filter by search query - search in name, email, and role
+      // Filter by search query
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase().trim();
         result = result.filter(user => 
           user.name.toLowerCase().includes(query) || 
           user.email.toLowerCase().includes(query) ||
-          (userRoles[user.id] && userRoles[user.id].some(role => 
-            role.name.toLowerCase().includes(query)
-          ))
+          (user.role && user.role.toLowerCase().includes(query))
         );
       }
       
@@ -569,17 +931,14 @@ const UsersTabContent = () => {
             ? a.name.localeCompare(b.name) 
             : b.name.localeCompare(a.name);
         } else if (sortBy === 'role') {
-          const roleA = userRoles[a.id]?.[0]?.name || '';
-          const roleB = userRoles[b.id]?.[0]?.name || '';
           return sortOrder === 'asc' 
-            ? roleA.localeCompare(roleB) 
-            : roleB.localeCompare(roleA);
+            ? a.role.localeCompare(b.role) 
+            : b.role.localeCompare(a.role);
         } else if (sortBy === 'status') {
           return sortOrder === 'asc' 
             ? a.status.localeCompare(b.status) 
             : b.status.localeCompare(a.status);
         } else if (sortBy === 'joined') {
-          // For date sorting, convert back to date objects for comparison
           const dateA = a.joined === 'N/A' ? new Date(0) : new Date(a.joined);
           const dateB = b.joined === 'N/A' ? new Date(0) : new Date(b.joined);
           return sortOrder === 'asc' 
@@ -593,7 +952,7 @@ const UsersTabContent = () => {
     };
 
     filterAndSortUsers();
-  }, [users, selectedStatus, sortBy, sortOrder, searchQuery, userRoles]);
+  }, [users, selectedStatus, sortBy, sortOrder, searchQuery]);
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -617,18 +976,14 @@ const UsersTabContent = () => {
     setShowUserModal(true);
   };
 
-  const openRoleModal = (user) => {
-    setSelectedUser(user);
-    setShowRoleModal(true);
-  };
-
   const refreshUsers = async () => {
     try {
       setLoading(true);
       const formData = new FormData();
       formData.append('function', 'getAllUsers');
+      formData.append('admin_user_id', adminUserId); // Add admin authentication
       
-      const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
+      const response = await fetch(`${API_BASE_URL}/query.php`, {
         method: 'POST',
         body: formData
       });
@@ -640,43 +995,13 @@ const UsersTabContent = () => {
             id: user.user_id,
             name: user.name,
             email: user.email,
-            role: user.role || 'user',
+            role: user.role || 'event_planner',
             status: user.status || 'active',
             joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
           }));
           
           setUsers(formattedUsers);
           setFilteredUsers(formattedUsers);
-          
-          // Refresh roles for all users
-          const refreshUserRoles = async (userId) => {
-            try {
-              const formData = new FormData();
-              formData.append('function', 'getUserRoles');
-              formData.append('user_id', userId);
-              
-              const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
-                method: 'POST',
-                body: formData
-              });
-              
-              if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                  setUserRoles(prev => ({
-                    ...prev,
-                    [userId]: data.roles
-                  }));
-                }
-              }
-            } catch (error) {
-              console.error('Error refreshing user roles:', error);
-            }
-          };
-          
-          formattedUsers.forEach(user => {
-            refreshUserRoles(user.id);
-          });
         }
       }
     } catch (error) {
@@ -686,58 +1011,57 @@ const UsersTabContent = () => {
     }
   };
 
-  const assignRoleToUser = async (userId, roleId) => {
-    try {
-      const formData = new FormData();
-      formData.append('function', 'assignUserRole');
-      formData.append('user_id', userId);
-      formData.append('role_id', roleId);
-      
-      const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        // Refresh the users list after successful update
-        refreshUsers();
-        // Show success message
-        alert('Role assigned successfully!');
-        setShowRoleModal(false);
-      } else {
-        throw new Error(data.message || 'Failed to assign role');
-      }
-    } catch (error) {
-      console.error('Error assigning role:', error);
-      alert('Error assigning role: ' + error.message);
-    }
-  };
-
   const updateUserStatus = async (userId, newStatus) => {
+    console.log('Updating user status:', { userId, newStatus, adminUserId });
+
     try {
-      const formData = new FormData();
-      formData.append('function', 'updateUserStatus');
-      formData.append('user_id', userId);
-      formData.append('status', newStatus);
-      
-      const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        // Refresh the users list after successful update
-        refreshUsers();
-      } else {
-        throw new Error(data.message || 'Failed to update user status');
-      }
+        const formData = new FormData();
+        formData.append('function', 'updateUserStatus');
+        formData.append('user_id', userId);
+        formData.append('status', newStatus);
+        formData.append('admin_user_id', adminUserId); // Add admin authentication
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        console.log('Server response:', data);
+        
+        if (data.success) {
+            console.log('Status updated successfully');
+            
+            // Force immediate UI update - this is crucial
+            setUsers(prevUsers => 
+                prevUsers.map(user => 
+                    user.id === userId 
+                        ? { ...user, status: newStatus }
+                        : user
+                )
+            );
+            
+            // Also refresh from server to ensure consistency
+            await refreshUsers();
+            
+            // Refresh dashboard stats
+            if (window.fetchDashboardData) {
+                await window.fetchDashboardData();
+            }
+            
+            alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
+        } else {
+            if (data.message && data.message.includes("Unauthorized")) {
+                throw new Error("Admin access denied. Please log in as administrator.");
+            } else {
+                throw new Error(data.message || 'Failed to update user status');
+            }
+        }
     } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Error updating user status: ' + error.message);
+        console.error('Error updating status:', error);
+        alert('Error: ' + error.message);
     }
-  };
+};
 
   // Calculate user statistics
   const totalUsers = users.length;
@@ -768,9 +1092,6 @@ const UsersTabContent = () => {
         <div className="header-actions">
           <button className="btn btn-outline" onClick={refreshUsers}>
             <i className="bi bi-arrow-clockwise"></i> Refresh
-          </button>
-          <button className="btn btn-primary">
-            <i className="bi bi-person-plus"></i> Add User
           </button>
         </div>
       </div>
@@ -870,40 +1191,34 @@ const UsersTabContent = () => {
                   <div className="user-email">{user.email}</div>
                 </span>
                 <span>
-                  <span className={`user-role ${userRoles[user.id]?.[0]?.name || 'user'}`}>
-                    {userRoles[user.id]?.[0]?.name || 'user'}
+                  <span className={`user-role ${user.role || 'event_planner'}`}>
+                    {user.role || 'event_planner'}
                   </span>
                 </span>
                 <span>{user.joined}</span>
                 <span>
-                  <span className={`user-status ${user.status}`}>
-                    {user.status}
+                  <span className={`user-status ${user.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
+                    {user.status === 'inactive' ? 'Inactive' : 'Active'}
                   </span>
                 </span>
                 <span className="actions">
                   <button 
-                    className="btn-icon" 
+                    className="btn-icon view-btn" 
                     title="View Details"
                     onClick={() => viewUserDetails(user)}
                   >
                     <i className="bi bi-eye"></i>
                   </button>
+                  
                   <button 
-                    className="btn-icon role-btn" 
-                    title="Assign Role"
-                    onClick={() => openRoleModal(user)}
-                  >
-                    <i className="bi bi-person-gear"></i>
-                  </button>
-                  <button 
-                    className={user.status === 'active' ? 'btn-icon block-btn' : 'btn-icon unblock-btn'} 
-                    title={user.status === 'active' ? 'Deactivate User' : 'Activate User'}
+                    className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`} 
+                    title={user.status === 'active' ? 'Block User' : 'Unblock User'}
                     onClick={() => updateUserStatus(
                       user.id, 
                       user.status === 'active' ? 'inactive' : 'active'
                     )}
                   >
-                    <i className={user.status === 'active' ? 'bi bi-x-circle' : 'bi bi-check-circle'}></i>
+                    <i className={user.status === 'active' ? 'bi bi-person-x' : 'bi bi-person-check'}></i>
                   </button>
                 </span>
               </div>
@@ -942,12 +1257,12 @@ const UsersTabContent = () => {
                 <strong>Email:</strong> {selectedUser.email}
               </div>
               <div className="user-detail">
-                <strong>Role:</strong> {userRoles[selectedUser.id]?.[0]?.name || 'user'}
+                <strong>Role:</strong> {selectedUser.role || 'event_planner'}
               </div>
               <div className="user-detail">
                 <strong>Status:</strong> 
-                <span className={`user-status ${selectedUser.status}`}>
-                  {selectedUser.status}
+                <span className={`user-status ${selectedUser.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
+                  {selectedUser.status === 'inactive' ? 'Inactive' : 'Active'}
                 </span>
               </div>
               <div className="user-detail">
@@ -957,74 +1272,6 @@ const UsersTabContent = () => {
           </div>
         </div>
       )}
-
-      {/* Role Assignment Modal */}
-      {showRoleModal && selectedUser && (
-        <div className="modal-overlay" onClick={() => setShowRoleModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Assign Role to {selectedUser.name}</h2>
-              <button 
-                className="close-btn"
-                onClick={() => setShowRoleModal(false)}
-              >
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="role-selection">
-                <h3>Current Role: {userRoles[selectedUser.id]?.[0]?.name || 'None'}</h3>
-                <div className="role-options">
-                  {allRoles.map(role => (
-                    <div key={role.role_id} className="role-option">
-                      <input
-                        type="radio"
-                        id={`role-${role.role_id}`}
-                        name="userRole"
-                        value={role.role_id}
-                        checked={userRoles[selectedUser.id]?.[0]?.role_id === role.role_id}
-                        onChange={() => assignRoleToUser(selectedUser.id, role.role_id)}
-                      />
-                      <label htmlFor={`role-${role.role_id}`}>
-                        <strong>{role.name}</strong>
-                        <p>{role.description}</p>
-                        <div className="permissions-list">
-                          <span>Permissions: </span>
-                          {role.permissions && role.permissions.map((permission, index) => (
-                            <span key={index} className="permission-tag">{permission}</span>
-                          ))}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="user-roles-section">
-        <h3>User Roles & Permissions</h3>
-        <div className="roles-grid">
-          {allRoles.map(role => (
-            <div key={role.role_id} className="role-card">
-              <h4>{role.name}</h4>
-              <div className="role-permissions">
-                <h5>Permissions:</h5>
-                <div className="permissions-grid">
-                  {role.permissions && role.permissions.map((permission, index) => (
-                    <span key={index} className="permission-tag">{permission}</span>
-                  ))}
-                </div>
-              </div>
-              <button className="btn btn-outline btn-sm">
-                <i className="bi bi-pencil"></i> Edit Permissions
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };
