@@ -68,6 +68,12 @@ const [actionMessage, setActionMessage] = useState('');
         window.fetchDashboardData = fetchDashboardData;
         window.fetchUsersData = fetchUsersData;
         fetchAdminProfile();
+
+         // Load profile image from localStorage
+    const savedImage = localStorage.getItem('adminProfileImage');
+    if (savedImage) {
+        setProfileImage(savedImage);
+    }
         
         return () => {
             window.fetchDashboardData = null;
@@ -383,43 +389,52 @@ const runBackup = async () => {
     };
 
     // Handle profile image upload
-    const handleImageUpload = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setProfileImage(e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imageData = e.target.result;
+            setProfileImage(imageData);
+            // Save to localStorage
+            localStorage.setItem('adminProfileImage', imageData);
+        };
+        reader.readAsDataURL(file);
+    }
+};
 
     // Profile dropdown component
     const ProfileDropdown = () => {
         if (!adminProfile) return null;
 
+
         const handleLogout = async () => {
-            try {
-                const formData = new FormData();
-                formData.append('function', 'logout');
-                formData.append('user_id', adminUserId);
-                
-                await fetch(`${API_BASE_URL}/query.php`, {
-                    method: 'POST',
-                    body: formData
-                });
-            } catch (error) {
-                console.error('Logout API error:', error);
-            } finally {
-                // Clear frontend authentication
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('adminUser');
-                sessionStorage.clear();
-                
-                // Redirect to home page
-                window.location.href = '/';
-            }
-        };
+    try {
+        // Call backend logout if needed
+        const formData = new FormData();
+        formData.append('function', 'logout');
+        formData.append('user_id', adminUserId);
+        
+        await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+    } catch (error) {
+        console.error('Logout API error:', error);
+    } finally {
+        // Clear authentication data but KEEP profile image
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        localStorage.removeItem('adminData');
+        sessionStorage.clear();
+        
+        // DON'T remove the profile image from localStorage
+        // localStorage.removeItem('adminProfileImage'); // ← Remove this line
+        
+        // Redirect to login page
+        window.location.href = '/';
+    }
+};
 
         return (
             <div className="profile-dropdown" ref={profileDropdownRef}>
@@ -1136,21 +1151,36 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
     );
 };
 
-// Invitations Tab Content - Admin Focused
+// Enhanced Invitations Tab Content with Charts and Analytics
 const InvitationsTabContent = ({ analytics }) => {
     const [invitationStats, setInvitationStats] = useState({
         total_invitations: 0,
         open_rate: 0,
         response_rate: 0
     });
+    const [enhancedAnalytics, setEnhancedAnalytics] = useState(null);
     const [loading, setLoading] = useState(false);
     const [sortField, setSortField] = useState('eventName');
     const [sortDirection, setSortDirection] = useState('asc');
+    const [filters, setFilters] = useState({
+        eventType: 'all',
+        eventStatus: 'all',
+        dateRange: 'all'
+    });
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportFilters, setExportFilters] = useState({
+        event_type: 'all',
+        status: 'all',
+        user_id: ''
+    });
+    const [users, setUsers] = useState([]);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     useEffect(() => {
         fetchInvitationStats();
+        fetchEnhancedAnalytics();
+        fetchUsers();
     }, []);
 
     const fetchInvitationStats = async () => {
@@ -1158,7 +1188,7 @@ const InvitationsTabContent = ({ analytics }) => {
             setLoading(true);
             const formData = new FormData();
             formData.append('function', 'getInvitationStats');
-            formData.append('admin_user_id', "ADMIN-003"); // Use your admin ID
+            formData.append('admin_user_id', "ADMIN-003");
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -1178,12 +1208,102 @@ const InvitationsTabContent = ({ analytics }) => {
         }
     };
 
+    const fetchEnhancedAnalytics = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getEnhancedInvitationAnalytics');
+            formData.append('admin_user_id', "ADMIN-003");
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setEnhancedAnalytics(data.analytics);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching enhanced analytics:', error);
+        }
+    };
+
+    const fetchUsers = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getAllUsers');
+            formData.append('admin_user_id', "ADMIN-003");
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setUsers(data.users);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        }
+    };
+
     const handleSort = (field) => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
             setSortField(field);
             setSortDirection('asc');
+        }
+    };
+
+    const handleFilterChange = (filterType, value) => {
+        setFilters(prev => ({
+            ...prev,
+            [filterType]: value
+        }));
+    };
+
+    const handleExport = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'exportInvitationData');
+            formData.append('admin_user_id', "ADMIN-003");
+            formData.append('event_type', exportFilters.event_type);
+            formData.append('status', exportFilters.status);
+            formData.append('user_id', exportFilters.user_id);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                // Download the file
+                const downloadUrl = `${API_BASE_URL}/exports/${data.filename}`;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = data.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setShowExportModal(false);
+                alert('Export downloaded successfully!');
+            } else {
+                alert('Error exporting data: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            alert('Error exporting data');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -1194,14 +1314,12 @@ const InvitationsTabContent = ({ analytics }) => {
             let aValue = a[sortField];
             let bValue = b[sortField];
             
-            // Handle numeric values (remove % and parse)
             if (sortField === 'responseRate') {
                 aValue = parseFloat(aValue) || 0;
                 bValue = parseFloat(bValue) || 0;
             }
             
-            // Handle numeric values for counts
-            if (['sent', 'opened', 'responded'].includes(sortField)) {
+            if (sortField === 'sent' || sortField === 'opened' || sortField === 'responded') {
                 aValue = parseInt(aValue) || 0;
                 bValue = parseInt(bValue) || 0;
             }
@@ -1214,24 +1332,80 @@ const InvitationsTabContent = ({ analytics }) => {
         });
     }, [analytics, sortField, sortDirection]);
 
+    const filteredAnalytics = useMemo(() => {
+        if (!sortedAnalytics) return [];
+        
+        return sortedAnalytics.filter(item => {
+            // Event type filter
+            if (filters.eventType !== 'all' && item.eventType !== filters.eventType) {
+                return false;
+            }
+            
+            // Status filter
+            if (filters.eventStatus !== 'all' && item.status !== filters.eventStatus) {
+                return false;
+            }
+            
+            return true;
+        });
+    }, [sortedAnalytics, filters]);
+
     const getSortIcon = (field) => {
         if (sortField !== field) return '';
-        return sortDirection === 'asc' ? '' : '';
+        return sortDirection === 'asc' ? '↑' : '↓';
     };
+
+    // Chart data preparation
+    const chartData = useMemo(() => {
+        if (!enhancedAnalytics) return null;
+        
+        return {
+            monthlyTrends: enhancedAnalytics.monthly_trends.map(month => ({
+                month: month.month,
+                events: month.total_events,
+                invitations: month.total_invitations,
+                responses: month.total_responses,
+                responseRate: month.total_invitations > 0 ? 
+                    Math.round((month.total_responses / month.total_invitations) * 100) : 0
+            })),
+            eventTypeStats: enhancedAnalytics.event_type_stats.map(type => ({
+                type: type.event_type,
+                events: type.event_count,
+                responseRate: type.total_invitations > 0 ? 
+                    Math.round((type.total_responses / type.total_invitations) * 100) : 0,
+                attendanceRate: type.total_responses > 0 ?
+                    Math.round((type.total_attending / type.total_responses) * 100) : 0
+            }))
+        };
+    }, [enhancedAnalytics]);
 
     return (
         <div className="admin-tab-content">
             <div className="admin-content-header">
                 <h2>Invitation Performance Analytics</h2>
                 <div className="header-actions">
-                    <button className="btn btn-outline" onClick={fetchInvitationStats} disabled={loading}>
+                    <button 
+                        className="btn btn-outline" 
+                        onClick={() => {
+                            fetchInvitationStats();
+                            fetchEnhancedAnalytics();
+                        }}
+                        disabled={loading}
+                    >
                         <i className="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                    <button 
+                        className="btn btn-primary"
+                        onClick={() => setShowExportModal(true)}
+                    >
+                        <i className="bi bi-download"></i> Export Data
                     </button>
                 </div>
             </div>
 
             {loading && <div className="loading">Loading...</div>}
 
+            {/* Analytics Overview Cards */}
             <div className="analytics-overview">
                 <div className="analytics-card">
                     <div className="analytics-icon">
@@ -1240,7 +1414,7 @@ const InvitationsTabContent = ({ analytics }) => {
                     <div className="analytics-content">
                         <h3>Total Invitations Sent</h3>
                         <p className="analytics-number">{invitationStats.total_invitations.toLocaleString()}</p>
-                        <span className="analytics-trend positive">Live data</span>
+                        <span className="analytics-trend positive">All events</span>
                     </div>
                 </div>
                 
@@ -1267,6 +1441,123 @@ const InvitationsTabContent = ({ analytics }) => {
                 </div>
             </div>
 
+            {/* Charts Section */}
+            {enhancedAnalytics && (
+                <div className="charts-section">
+                    <div className="charts-grid">
+                        {/* Response Trends Chart */}
+                        <div className="chart-card">
+                            <h3>Response Trends (Last 6 Months)</h3>
+                            <div className="chart-container">
+                                {chartData.monthlyTrends.map(month => (
+                                    <div key={month.month} className="trend-bar">
+                                        <div className="trend-label">{month.month}</div>
+                                        <div className="trend-bars">
+                                            <div 
+                                                className="trend-bar-invitations" 
+                                                style={{width: `${(month.invitations / Math.max(...chartData.monthlyTrends.map(m => m.invitations))) * 100}%`}}
+                                                title={`${month.invitations} invitations`}
+                                            ></div>
+                                            <div 
+                                                className="trend-bar-responses"
+                                                style={{width: `${(month.responses / Math.max(...chartData.monthlyTrends.map(m => m.invitations))) * 100}%`}}
+                                                title={`${month.responses} responses`}
+                                            ></div>
+                                        </div>
+                                        <div className="trend-rate">{month.responseRate}%</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="chart-legend">
+                                <span className="legend-invitations">Invitations Sent</span>
+                                <span className="legend-responses">Responses Received</span>
+                            </div>
+                        </div>
+
+                        {/* Event Type Comparison */}
+                        <div className="chart-card">
+                            <h3>Performance by Event Type</h3>
+                            <div className="chart-container">
+                                {chartData.eventTypeStats.map(eventType => (
+                                    <div key={eventType.type} className="type-row">
+                                        <div className="type-name">{eventType.type}</div>
+                                        <div className="type-stats">
+                                            <span className="type-events">{eventType.events} events</span>
+                                            <span className="type-rate">{eventType.responseRate}% response</span>
+                                            <span className="type-attendance">{eventType.attendanceRate}% attending</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Top Performing Events */}
+            {enhancedAnalytics?.top_events && enhancedAnalytics.top_events.length > 0 && (
+                <div className="top-performers-section">
+                    <h3>🏆 Top Performing Events</h3>
+                    <div className="top-events-grid">
+                        {enhancedAnalytics.top_events.map(event => (
+                            <div key={event.event_id} className="top-event-card">
+                                <div className="event-header">
+                                    <h4>{event.event_name}</h4>
+                                    <span className="event-type-badge">{event.event_type}</span>
+                                </div>
+                                <div className="event-stats">
+                                    <div className="stat">
+                                        <span className="stat-label">Response Rate</span>
+                                        <span className="stat-value highlight">{event.response_rate}%</span>
+                                    </div>
+                                    <div className="stat">
+                                        <span className="stat-label">Invitations</span>
+                                        <span className="stat-value">{event.sent}</span>
+                                    </div>
+                                    <div className="stat">
+                                        <span className="stat-label">Attending</span>
+                                        <span className="stat-value">{event.attending_count}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Filters */}
+            <div className="analytics-filters">
+                <div className="filter-group">
+                    <label>Event Type:</label>
+                    <select 
+                        value={filters.eventType} 
+                        onChange={(e) => handleFilterChange('eventType', e.target.value)}
+                    >
+                        <option value="all">All Types</option>
+                        {enhancedAnalytics?.event_types.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <label>Event Status:</label>
+                    <select 
+                        value={filters.eventStatus} 
+                        onChange={(e) => handleFilterChange('eventStatus', e.target.value)}
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="draft">Draft</option>
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <span className="results-count">
+                        Showing {filteredAnalytics.length} of {sortedAnalytics.length} events
+                    </span>
+                </div>
+            </div>
+
+            {/* Analytics Table */}
             <div className="analytics-table">
                 <div className="table-header">
                     <span className="sortable" onClick={() => handleSort('eventName')}>
@@ -1284,11 +1575,12 @@ const InvitationsTabContent = ({ analytics }) => {
                     <span className="sortable" onClick={() => handleSort('responseRate')}>
                         Response Rate {getSortIcon('responseRate')}
                     </span>
+                    <span>Type</span>
                     <span>Status</span>
                     <span>Actions</span>
                 </div>
                 
-                {sortedAnalytics.map(item => (
+                {filteredAnalytics.map(item => (
                     <div key={item.id} className="table-row">
                         <span className="event-name">{item.eventName}</span>
                         <span>{item.sent}</span>
@@ -1298,6 +1590,9 @@ const InvitationsTabContent = ({ analytics }) => {
                             <span className={`response-rate ${parseInt(item.responseRate) > 75 ? 'high' : parseInt(item.responseRate) > 60 ? 'medium' : 'low'}`}>
                                 {item.responseRate}
                             </span>
+                        </span>
+                        <span>
+                            <span className="event-type-tag">{item.eventType || 'General'}</span>
                         </span>
                         <span>
                             <span className={`status-badge ${item.status}`}>
@@ -1317,6 +1612,91 @@ const InvitationsTabContent = ({ analytics }) => {
                     </div>
                 )}
             </div>
+
+            {/* Export Modal */}
+            {showExportModal && (
+                <div className="modal-overlay-new" onClick={() => setShowExportModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-download"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Export Invitation Data</h2>
+                                    <p>Export invitation analytics and performance data</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowExportModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="form-group-new">
+                                <label>Event Type</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={exportFilters.event_type}
+                                    onChange={(e) => setExportFilters(prev => ({...prev, event_type: e.target.value}))}
+                                >
+                                    <option value="all">All Event Types</option>
+                                    {enhancedAnalytics?.event_types.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group-new">
+                                <label>Event Status</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={exportFilters.status}
+                                    onChange={(e) => setExportFilters(prev => ({...prev, status: e.target.value}))}
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="active">Active Only</option>
+                                    <option value="draft">Draft Only</option>
+                                </select>
+                            </div>
+                            <div className="form-group-new">
+                                <label>Specific User (Optional)</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={exportFilters.user_id}
+                                    onChange={(e) => setExportFilters(prev => ({...prev, user_id: e.target.value}))}
+                                >
+                                    <option value="">All Users</option>
+                                    {users.map(user => (
+                                        <option key={user.user_id} value={user.user_id}>
+                                            {user.name} ({user.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="modal-actions-new">
+                                <button 
+                                    className="action-btn-new primary"
+                                    onClick={handleExport}
+                                    disabled={loading}
+                                >
+                                    <i className="bi bi-file-earmark-arrow-down"></i>
+                                    Export to CSV
+                                </button>
+                                <button 
+                                    className="action-btn-new secondary"
+                                    onClick={() => setShowExportModal(false)}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
