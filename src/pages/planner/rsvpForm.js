@@ -14,69 +14,163 @@ const RsvpForm = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [eventData, setEventData] = useState(null);
     const [loadingEvent, setLoadingEvent] = useState(true);
-
+    const [userEmail, setUser] = useState(null);
     const [searchParams] = useSearchParams();
+    const [totalRplyGuestCount, setTotalRplyGuestCount] = useState(0);
+    const [totalEventLimit, setTotalEventLimit] = useState(0);
     const [event_id, setEventId] = useState("");
 
+    // Fixed useEffect - only depend on searchParams
     useEffect(() => {
         const id = searchParams.get("event_id");
         if (id) {
             setEventId(id);
-            fetchEvent(id);
+            fetchEventData(id);
+            setUser(searchParams.get("user_email") || "");
         }
-        console.log(id);
     }, [searchParams]);
 
-    const fetchEvent = async (eventId) => {
-        const API_URL = process.env.REACT_APP_API_URL;
+    // Consolidated function to fetch all event data
+    const fetchEventData = async (eventId) => {
         try {
             setLoadingEvent(true);
-            const formData = new FormData();
-            formData.append("function", "getEventById");
-            formData.append("event_id", eventId);
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData
-            });
+            // Fetch all data in parallel
+            const [eventResponse, countResponse, limitResponse] = await Promise.all([
+                fetchEvent(eventId),
+                fetchRsvpCount(eventId),
+                fetchEventLimit(eventId)
+            ]);
 
-            const data = await response.json();
-            console.log("Fetched event data:", data);
-            if (data.success && data.events && data.events.length > 0) {
-                setEventData(data.events[0]);
-            } else {
-                setError("Event not found");
-            }
         } catch (err) {
-            console.error("Error fetching event:", err);
+            console.error("Error fetching event data:", err);
             setError("Failed to load event details");
         } finally {
             setLoadingEvent(false);
         }
     };
 
+    const fetchRsvpCount = async (eventId) => {
+        try {
+            if (!eventId) {
+                setTotalRplyGuestCount(0);
+                return 0;
+            }
+
+            const form = new FormData();
+            form.append("function", "getRsvpGuestCount");
+            form.append("event_id", eventId);
+
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+                method: "POST",
+                body: form,
+            });
+
+            const data = await response.json();
+
+            let guestCount = 0;
+            if (data.success && typeof data.guestCount === "number") {
+                guestCount = data.guestCount;
+            }
+            setTotalRplyGuestCount(guestCount);
+
+
+        } catch (err) {
+            console.error("Error fetching RSVP guest count:", err);
+            setTotalRplyGuestCount(0);
+            return 0;
+        }
+    };
+
+    const fetchEventLimit = async (eventId) => {
+        try {
+            if (!eventId) {
+                setTotalEventLimit(0);
+                return 0;
+            }
+
+            const form = new FormData();
+            form.append("function", "getEventGuestLimit");
+            form.append("event_id", eventId);
+
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+                method: "POST",
+                body: form,
+            });
+
+            const data = await response.json();
+
+            let eventLimit = 0;
+            if (data.success && data.geustLimit) {
+                eventLimit = parseInt(data.geustLimit.guest_limit || 0);
+            }
+
+            setTotalEventLimit(eventLimit);
+            return eventLimit;
+        } catch (err) {
+            console.error("Error fetching events guest limit:", err);
+            setTotalEventLimit(0);
+            return 0;
+        }
+    };
+
+    const fetchEvent = async (eventId) => {
+        try {
+            const form = new FormData();
+            form.append("function", "getEventById");
+            form.append("event_id", eventId);
+
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+                method: "POST",
+                body: form
+            });
+
+            const data = await response.json();
+            if (data.success && data.events && data.events.length > 0) {
+                setEventData(data.events[0]);
+                return data.events[0];
+            } else {
+                setError("Event not found");
+                return null;
+            }
+        } catch (err) {
+            console.error("Error fetching event:", err);
+            setError("Failed to load event details");
+            return null;
+        }
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-
-        // If the user changes their attending status to "no", reset guest count
-        if (name === "attending" && value === "no") {
-            setFormData(prev => ({ ...prev, guestCount: 0 }));
-        }
+        setFormData(prev => ({
+            ...prev,
+            [name]: value,
+            // Reset guestCount when not attending
+            ...(name === "attending" && value === "no" && { guestCount: 0 })
+        }));
     };
 
     const handleGuestCountChange = (increment) => {
         setFormData(prev => ({
             ...prev,
-            guestCount: Math.max(0, Math.min(1, prev.guestCount + increment)) // Limit to max 2 guests
+            guestCount: Math.max(0, Math.min(1, prev.guestCount + increment))
         }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Check if event is full before submitting
+        const availableSpots = totalEventLimit - totalRplyGuestCount;
+        const requestedSpots = formData.attending === "yes" ? 1 + formData.guestCount : 0;
+
+        if (totalEventLimit > 0 && requestedSpots > availableSpots) {
+            setError(`Sorry, only ${availableSpots} spot(s) available but you requested ${requestedSpots}`);
+            return;
+        }
+
         setError(null);
         setIsSubmitting(true);
-        const API_URL = process.env.REACT_APP_API_URL;
 
         const formDataToSend = new FormData();
         formDataToSend.append("function", "guestRsvp");
@@ -88,24 +182,31 @@ const RsvpForm = () => {
         formDataToSend.append("guestCount", formData.guestCount);
 
         try {
-            const response = await fetch(`${API_URL}/query.php`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
                 method: "POST",
-                body: formDataToSend, 
+                body: formDataToSend,
             });
 
             if (!response.ok) throw new Error("Network response was not ok");
 
             const result = await response.json();
-            alert(result.message || "RSVP submitted successfully!");
-            setFormData({
-                name: "",
-                email: "",
-                attending: "yes",
-                guestCount: 0,
-                message: ""
-            });
+
+            if (result.success) {
+                alert(result.message || "RSVP submitted successfully!");
+                setFormData({
+                    name: "",
+                    email: "",
+                    attending: "yes",
+                    guestCount: 0,
+                    message: ""
+                });
+                // Refresh the counts after successful submission
+                await fetchEventData(event_id);
+            } else {
+                throw new Error(result.message || "Failed to submit RSVP");
+            }
         } catch (err) {
-            setError("Failed to submit RSVP. Please try again.");
+            setError(err.message || "Failed to submit RSVP. Please try again.");
             console.error("Submission error:", err);
         } finally {
             setIsSubmitting(false);
@@ -125,205 +226,233 @@ const RsvpForm = () => {
         );
     }
 
+    // Calculate available spots
+    const availableSpots = totalEventLimit - totalRplyGuestCount;
+    const isEventFull = totalEventLimit > 0 && availableSpots <= 0;
+
     return (
         <div className="rsvp_form__container">
-            <div className="overlay"></div>
+            {/* Full page overlay if event is full */}
+            {isEventFull && (
+                <div className="event-full-overlay">
+                    <div className="event-full-message">
+                        <h2>Sorry, this event is fully booked!</h2>
+                        <p>
+                            The number of RSVPs has reached the maximum limit of <strong>{totalEventLimit}</strong> guests.
+                        </p>
+                        <p>
+                            Currently there are <strong>{totalRplyGuestCount}</strong> guests registered.
+                        </p>
+                        <p>
+                            If you still want to attend, please contact the event organizer at:
+                            <strong> {userEmail || "info@example.com"}</strong>
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div className="overlay-behind"></div>
             <div className="content-wrapper">
                 <div className="invitation_card">
-                    {eventData && eventData.event_image ? (
-                        <img
-                            src={eventData.event_image}
-                            alt="Event Invitation"
-                            className="invitation_image"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                            }}
-                        />
-                    ) : (
-                        <div className="no-image-placeholder">
-                            <i className="fas fa-image"></i>
-                            <p>No event image available</p>
-                        </div>
-                    )}
+                    {eventData && (
+                        <>
+                            {eventData.event_image ? (
+                                <img
+                                    src={eventData.event_image}
+                                    alt="Event Invitation"
+                                    className="invitation_image"
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                            ) : (
+                                <div className="no-image-placeholder">
+                                    <i className="fas fa-image"></i>
+                                    <p>No event image available</p>
+                                </div>
+                            )}
 
-                    {/* {eventData ? (
-                      <>
-                            <h2 className="invitation_card__eventName">{eventData.event_name}</h2>
+                            <div className="invitation_header">
+                                <div className="decoration top-left"></div>
+                                <div className="decoration top-right"></div>
+                                <h1 className="invitation_card__eventName">{eventData.event_name}</h1>
+                                <p className="invitation_card__subtitle">{eventData.event_description}</p>
+                            </div>
+
                             <div className="invitation_details">
                                 <div className="detail-item">
                                     <i className="fas fa-calendar-alt"></i>
-                                    <span>
-                                        {eventData.event_date ?
-                                            new Date(eventData.event_date).toLocaleDateString() :
-                                            'Date not specified'
-                                        }
-                                    </span>
-                                </div>
-                                <div className="detail-item">
-                                    <i className="fas fa-clock"></i>
-                                    <span>
-                                        {eventData.event_time || 'Time not specified'}
-                                    </span>
+                                    <span>{new Date(eventData.event_date).toLocaleDateString()}</span>
                                 </div>
                                 <div className="detail-item">
                                     <i className="fas fa-map-marker-alt"></i>
-                                    <span>
-                                        {eventData.event_location || 'Location not specified'}
-                                    </span>
+                                    <span>{eventData.event_location}</span>
                                 </div>
+                                {totalEventLimit > 0 && (
+                                    <div className="detail-item">
+                                        <i className="fas fa-users"></i>
+                                        <span>
+                                            {availableSpots > 0
+                                                ? `${availableSpots} spot(s) available of ${totalEventLimit}`
+                                                : 'Fully booked'
+                                            }
+                                        </span>
+                                    </div>
+                                )}
                             </div>
-                            <p className="invitation_message">
-                                {eventData.event_description ||
-                                    "We are thrilled to invite you to our special event. Please let us know if you can join us by filling out the RSVP form below."}
-                            </p>
-                        </>*
-                    ) : (
-                        <p className="invitation_message">
-                            We are thrilled to invite you to our special event. Please let us know if you can join us by filling out the RSVP form below.
-                        </p>
-                    )} */}
+                        </>
+                    )}
                 </div>
 
                 <div className="rsvp_form_wrapper">
-                    <form className="rsvp_form" onSubmit={handleSubmit}>
-                        <h1 className="rsvp_form__title">
-                            <i className="fas fa-envelope-open-text"></i> RSVP
-                        </h1>
+                    <fieldset disabled={isEventFull} style={{ border: "none", padding: 0, margin: 0 }}>
+                        <form className="rsvp_form" onSubmit={handleSubmit}>
+                            <h1 className="rsvp_form__title">
+                                <i className="fas fa-envelope-open-text"></i> RSVP
+                            </h1>
 
-                        <div className="form-row">
-                            <div className="rsvp_form__group">
-                                <label className="rsvp_form__label">Your Full Name</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    required
-                                    className="rsvp_form__input"
-                                    placeholder="Your full name"
-                                />
-                            </div>
-
-                            <div className="rsvp_form__group">
-                                <label className="rsvp_form__label">Your Email</label>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    required
-                                    className="rsvp_form__input"
-                                    placeholder="Your email address"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="rsvp_form__group--radio">
-                            <label className="rsvp_form__label">Will you be attending?</label>
-                            <div className="rsvp_form__radio_options">
-                                <label className={`radio-option ${formData.attending === "yes" ? "selected" : ""}`}>
+                            <div className="form-row">
+                                <div className="rsvp_form__group">
+                                    <label className="rsvp_form__label">Your Full Name</label>
                                     <input
-                                        type="radio"
-                                        name="attending"
-                                        value="yes"
-                                        checked={formData.attending === "yes"}
+                                        type="text"
+                                        name="name"
+                                        value={formData.name}
                                         onChange={handleChange}
+                                        required
+                                        className="rsvp_form__input"
+                                        placeholder="Your full name"
                                     />
-                                    <span className="radio-custom"></span>
-                                    <span className="radio-label">Yes, I'll be there!</span>
-                                </label>
+                                </div>
 
-                                <label className={`radio-option ${formData.attending === "no" ? "selected" : ""}`}>
+                                <div className="rsvp_form__group">
+                                    <label className="rsvp_form__label">Your Email</label>
                                     <input
-                                        type="radio"
-                                        name="attending"
-                                        value="no"
-                                        checked={formData.attending === "no"}
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
                                         onChange={handleChange}
-                                    />
-                                    <span className="radio-custom"></span>
-                                    <span className="radio-label">Sorry, can't make it</span>
-                                </label>
-
-                                <label className={`radio-option ${formData.attending === "maybe" ? "selected" : ""}`}>
-                                    <input
-                                        type="radio"
-                                        name="attending"
-                                        value="maybe"
-                                        checked={formData.attending === "maybe"}
-                                        onChange={handleChange}
-                                    />
-                                    <span className="radio-custom"></span>
-                                    <span className="radio-label">Maybe</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {formData.attending === "yes" && (
-                            <div className="rsvp_form__guests_section">
-                                <h3 className="rsvp_form__guests_title">
-                                    <i className="fas fa-users"></i> Number of Guests
-                                </h3>
-                                <div className="guest-counter">
-                                    <label className="rsvp_form__label">How many guests will you bring? (Maximum 1)</label>
-                                    <div className="counter-controls">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleGuestCountChange(-1)}
-                                            className="counter-btn"
-                                            disabled={formData.guestCount <= 0}
-                                        >
-                                            -
-                                        </button>
-                                        <span className="guest-count">{formData.guestCount}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleGuestCountChange(1)}
-                                            className="counter-btn"
-                                            disabled={formData.guestCount >= 1}
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                    <input
-                                        type="hidden"
-                                        name="guestCount"
-                                        value={formData.guestCount}
+                                        required
+                                        className="rsvp_form__input"
+                                        placeholder="Your email address"
                                     />
                                 </div>
                             </div>
-                        )}
 
-                        <div className="rsvp_form__group">
-                            <label className="rsvp_form__label">Message (optional)</label>
-                            <textarea
-                                name="message"
-                                value={formData.message}
-                                onChange={handleChange}
-                                className="rsvp_form__textarea"
-                                rows="4"
-                                placeholder="Any special requests, dietary restrictions, or notes?"
-                            />
-                        </div>
+                            <div className="rsvp_form__group--radio">
+                                <label className="rsvp_form__label">Will you be attending?</label>
+                                <div className="rsvp_form__radio_options">
+                                    <label className={`radio-option ${formData.attending === "yes" ? "selected" : ""}`}>
+                                        <input
+                                            type="radio"
+                                            name="attending"
+                                            value="yes"
+                                            checked={formData.attending === "yes"}
+                                            onChange={handleChange}
+                                            disabled={isEventFull}
+                                        />
+                                        <span className="radio-custom"></span>
+                                        <span className="radio-label">Yes, I'll be there!</span>
+                                    </label>
 
-                        {error && <p className="rsvp_form__error">{error}</p>}
+                                    <label className={`radio-option ${formData.attending === "no" ? "selected" : ""}`}>
+                                        <input
+                                            type="radio"
+                                            name="attending"
+                                            value="no"
+                                            checked={formData.attending === "no"}
+                                            onChange={handleChange}
+                                        />
+                                        <span className="radio-custom"></span>
+                                        <span className="radio-label">Sorry, can't make it</span>
+                                    </label>
 
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className={`rsvp_form__button ${isSubmitting ? "rsvp_form__button--disabled" : ""}`}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <i className="fas fa-spinner fa-spin"></i> Submitting...
-                                </>
-                            ) : (
-                                <>
-                                    <i className="fas fa-paper-plane"></i> Submit RSVP
-                                </>
+                                    <label className={`radio-option ${formData.attending === "maybe" ? "selected" : ""}`}>
+                                        <input
+                                            type="radio"
+                                            name="attending"
+                                            value="maybe"
+                                            checked={formData.attending === "maybe"}
+                                            onChange={handleChange}
+                                            disabled={isEventFull}
+                                        />
+                                        <span className="radio-custom"></span>
+                                        <span className="radio-label">Maybe</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {formData.attending === "yes" && (
+                                <div className="rsvp_form__guests_section">
+                                    <h3 className="rsvp_form__guests_title">
+                                        <i className="fas fa-users"></i> Number of Guests
+                                    </h3>
+                                    <div className="guest-counter">
+                                        <label className="rsvp_form__label">
+                                            How many guests will you bring? (Maximum 1)
+                                            {availableSpots > 0 && (
+                                                <span style={{ fontSize: '0.9em', color: '#666', marginLeft: '10px' }}>
+                                                    Available spots: {availableSpots}
+                                                </span>
+                                            )}
+                                        </label>
+                                        <div className="counter-controls">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleGuestCountChange(-1)}
+                                                className="counter-btn"
+                                                disabled={formData.guestCount <= 0 || isEventFull}
+                                            >
+                                                -
+                                            </button>
+                                            <span className="guest-count">{formData.guestCount}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleGuestCountChange(1)}
+                                                className="counter-btn"
+                                                disabled={formData.guestCount >= 1 || availableSpots <= 1 || isEventFull}
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <input type="hidden" name="guestCount" value={formData.guestCount} />
+                                    </div>
+                                </div>
                             )}
-                        </button>
-                    </form>
+
+                            <div className="rsvp_form__group">
+                                <label className="rsvp_form__label">Message (optional)</label>
+                                <textarea
+                                    name="message"
+                                    value={formData.message}
+                                    onChange={handleChange}
+                                    className="rsvp_form__textarea"
+                                    rows="4"
+                                    placeholder="Any special requests, dietary restrictions, or notes?"
+                                />
+                            </div>
+
+                            {error && <p className="rsvp_form__error">{error}</p>}
+
+                            <button
+                                type="submit"
+                                disabled={isSubmitting || isEventFull}
+                                className={`rsvp_form__button ${isSubmitting || isEventFull ? "rsvp_form__button--disabled" : ""}`}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <i className="fas fa-spinner fa-spin"></i> Submitting...
+                                    </>
+                                ) : isEventFull ? (
+                                    <>
+                                        <i className="fas fa-times"></i> Event Full
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-paper-plane"></i> Submit RSVP
+                                    </>
+                                )}
+                            </button>
+                        </form>
+                    </fieldset>
                 </div>
             </div>
         </div>

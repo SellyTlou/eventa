@@ -9,7 +9,7 @@ const PackagePayment = () => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [event_id, setEventId] = useState("");
+   
     const [eventStatus, setEventStatus] = useState("");
     const [selectedPackage, setSelectedPackage] = useState([]);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
@@ -22,30 +22,28 @@ const PackagePayment = () => {
         const initializePage = async () => {
             setLoading(true);
 
-            const id = searchParams.get("event_id");
-            const packageId = searchParams.get("package_id");
-            const userId = searchParams.get("user_id");
-
+            const id = localStorage.getItem("selectedEventId");
+            const packageId = localStorage.getItem("selectedPackageId");
+            const userData = localStorage.getItem("user");
+            const userId = userData ? JSON.parse(userData).user_id : null;
+            
             if (!userId) {
                 setLoading(false);
-                alert("User ID not found");
-                navigate("/");
+                logOut();
                 return;
             }
 
             if (!id) {
                 setLoading(false);
-                alert("Event ID not found");
                 navigate("/eventsDashboard");
                 return;
             }
 
-            setEventId(id);
+           
 
             if (!packageId) {
                 setLoading(false);
-                alert("Package ID not found ");
-                navigate("/eventsDashboard");
+                navigate("/manage_my_event?event");
                 return;
             }
 
@@ -101,13 +99,7 @@ const PackagePayment = () => {
             if (!response.ok) throw new Error("Network response was not ok");
             const data = await response.json();
             if (data.success && data.status) {
-                if (data.status.published === "0") {
-                    setEventStatus("Unpublished");
-                } else if (data.status.published === "1") {
-                    setEventStatus("Published");
-                } else {
-                    setEventStatus("Unknown");
-                }
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
             } else {
                 setEventStatus("Unknown");
             }
@@ -150,10 +142,10 @@ const PackagePayment = () => {
 
     const goToHome = () => navigate("/eventsDashboard");
     const goToEventManagement = () =>
-        navigate(`/eventManagement?event_id=${event_id}`);
+        navigate(`/eventManagement`);
     const goToInvitations = () =>
-        navigate(`/invitationPage?event_id=${event_id}`);
-    const goToManage = () => navigate(`/manage_my_event?event_id=${event_id}`);
+        navigate(`/invitationPage`);
+    const goToManage = () => navigate(`/manage_my_event`);
 
     const handleBack = () => {
         navigate(-1);
@@ -187,9 +179,9 @@ const PackagePayment = () => {
 
         setShowPaymentPopup(false);
         if (updateUserPackage()) {
-           navigate(`/manage_my_event?event_id=${event_id}`);
+            navigate(`/manage_my_event`);
 
-       }
+        }
 
     };
 
@@ -365,7 +357,7 @@ const PackagePayment = () => {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
             formData.append("function", "updateUserPackage");
-            formData.append("user_id", user?.user_id); 
+            formData.append("user_id", user?.user_id);
             formData.append("package_id", selectedPackage?.package_id);
             formData.append("events_limit", selectedPackage?.max_events);
 

@@ -152,6 +152,7 @@ if ($fun === "login") {
                         "name"    => $user['name'],
                         "role"    => $user['role'],
                         "status"  => $user['status'],
+                        "email"   => $user['email'],
                         "session" => true,
                     ],
                 ]);
@@ -450,7 +451,11 @@ if ($fun === "guestRsvp") {
     $email      = $_POST['email'] ?? '';
     $attending  = $_POST['attending'] ?? '';
     $message    = $_POST['message'] ?? '';
-    $guestCount = $_POST['guestCount'] ?? 0;
+    $guestCount = (int)($_POST['guestCount'] ?? 0); 
+    $totalRplyGuestCount = (int)($_POST['totalRplyGuestCount'] ?? 0);
+    $totalEventLimit = (int)($_POST['totalEventLimit'] ?? 0);
+
+    $totalGuests = ($attending === 'yes') ? ($guestCount + 1) : 0;
 
     if (empty($event_id) || empty($name) || empty($email) || empty($attending)) {
         echo json_encode([
@@ -461,8 +466,27 @@ if ($fun === "guestRsvp") {
     }
 
     try {
-        // 1️⃣ Check if RSVP already exists
-        $checkStmt = $pdo->prepare("SELECT guest_id FROM rsvp WHERE event_id = :event_id AND email = :email");
+        $remainingSpots = $totalEventLimit - $totalRplyGuestCount;
+
+        if ($remainingSpots <= 0) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Event is full — 0 guest slots left.",
+            ]);
+            exit;
+        }
+
+        if ($totalGuests > $remainingSpots) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Only {$remainingSpots} guest spot(s) left. Please reduce your guest count.",
+            ]);
+            exit;
+        }
+
+        $checkStmt = $pdo->prepare("
+            SELECT guest_id FROM rsvp WHERE event_id = :event_id AND email = :email
+        ");
         $checkStmt->execute([
             ':event_id' => $event_id,
             ':email'    => $email,
@@ -470,16 +494,19 @@ if ($fun === "guestRsvp") {
         $existingGuest = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
         if ($existingGuest) {
-            // 2️⃣ Update existing RSVP
             $updateStmt = $pdo->prepare("
                 UPDATE rsvp
-                SET name = :name, attending = :attending, guest_count = :guest_count, message = :message, updated_at = NOW()
+                SET name = :name,
+                    attending = :attending,
+                    guest_count = :guest_count,
+                    message = :message,
+                    updated_at = NOW()
                 WHERE guest_id = :guest_id
             ");
             $updateStmt->execute([
                 ':name'        => $name,
                 ':attending'   => $attending,
-                ':guest_count' => $guestCount,
+                ':guest_count' => $totalGuests, 
                 ':message'     => $message,
                 ':guest_id'    => $existingGuest['guest_id'],
             ]);
@@ -490,7 +517,6 @@ if ($fun === "guestRsvp") {
                 "guest_id" => $existingGuest['guest_id'],
             ]);
         } else {
-            // 3️⃣ Insert new RSVP
             $stmt = $pdo->prepare("
                 INSERT INTO rsvp (guest_id, event_id, name, email, attending, guest_count, message, created_at)
                 VALUES (:guest_id, :event_id, :name, :email, :attending, :guest_count, :message, NOW())
@@ -502,7 +528,7 @@ if ($fun === "guestRsvp") {
                 ':name'        => $name,
                 ':email'       => $email,
                 ':attending'   => $attending,
-                ':guest_count' => $guestCount,
+                ':guest_count' => $totalGuests, 
                 ':message'     => $message,
             ]);
 
@@ -519,6 +545,7 @@ if ($fun === "guestRsvp") {
             "message" => "Database error: " . $e->getMessage(),
         ]);
     }
+
     exit;
 }
 
@@ -848,7 +875,6 @@ if ($fun === "updateEventUsedCount") {
     }
     exit;
 }
-
 
 if ($fun === "updateEventStatus") {
     $event_id    = $_POST['event_id'] ?? '';
@@ -2018,5 +2044,220 @@ function getTotalCount($pdo, $table) {
     $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM {$table}");
     $stmt->execute();
     return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+}
+
+// Enhanced Invitation Analytics Functions
+if ($fun === "getEnhancedInvitationAnalytics") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Get event types and statuses for filters
+        $eventTypesStmt = $pdo->prepare("
+            SELECT DISTINCT event_type 
+            FROM events 
+            WHERE event_type IS NOT NULL AND event_type != ''
+        ");
+        $eventTypesStmt->execute();
+        $eventTypes = $eventTypesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Get monthly trends for charts
+        $monthlyTrendsStmt = $pdo->prepare("
+            SELECT 
+                DATE_FORMAT(e.created_at, '%Y-%m') as month,
+                COUNT(DISTINCT e.event_id) as total_events,
+                COUNT(DISTINCT r.guest_id) as total_invitations,
+                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as total_responses,
+                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as total_attending
+            FROM events e
+            LEFT JOIN rsvp r ON e.event_id = r.event_id
+            WHERE e.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY DATE_FORMAT(e.created_at, '%Y-%m')
+            ORDER BY month DESC
+            LIMIT 6
+        ");
+        $monthlyTrendsStmt->execute();
+        $monthlyTrends = $monthlyTrendsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get event type comparison
+        $eventTypeStatsStmt = $pdo->prepare("
+            SELECT 
+                COALESCE(e.event_type, 'Other') as event_type,
+                COUNT(DISTINCT e.event_id) as event_count,
+                COUNT(DISTINCT r.guest_id) as total_invitations,
+                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as total_responses,
+                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as total_attending
+            FROM events e
+            LEFT JOIN rsvp r ON e.event_id = r.event_id
+            GROUP BY COALESCE(e.event_type, 'Other')
+        ");
+        $eventTypeStatsStmt->execute();
+        $eventTypeStats = $eventTypeStatsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get top performing events (response rate > 70%)
+        $topEventsStmt = $pdo->prepare("
+            SELECT 
+                e.event_id,
+                e.event_name,
+                e.event_type,
+                e.published as status,
+                COUNT(DISTINCT r.guest_id) as sent,
+                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as responded,
+                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as attending_count,
+                CASE 
+                    WHEN COUNT(DISTINCT r.guest_id) > 0 THEN 
+                        ROUND((COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) / COUNT(DISTINCT r.guest_id)) * 100, 1)
+                    ELSE 0 
+                END as response_rate
+            FROM events e
+            LEFT JOIN rsvp r ON e.event_id = r.event_id
+            GROUP BY e.event_id, e.event_name, e.event_type, e.published
+            HAVING response_rate > 70 AND sent > 0
+            ORDER BY response_rate DESC, sent DESC
+            LIMIT 10
+        ");
+        $topEventsStmt->execute();
+        $topEvents = $topEventsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "analytics" => [
+                "event_types" => $eventTypes,
+                "monthly_trends" => $monthlyTrends,
+                "event_type_stats" => $eventTypeStats,
+                "top_events" => $topEvents
+            ]
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "exportInvitationData") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $eventId = $_POST['event_id'] ?? '';
+    $userId = $_POST['user_id'] ?? '';
+    $eventType = $_POST['event_type'] ?? '';
+    $status = $_POST['status'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
+
+    try {
+        // Build query based on filters
+        $whereConditions = [];
+        $params = [];
+        
+        if ($eventId) {
+            $whereConditions[] = "e.event_id = ?";
+            $params[] = $eventId;
+        }
+        
+        if ($userId) {
+            $whereConditions[] = "e.user_id = ?";
+            $params[] = $userId;
+        }
+        
+        if ($eventType && $eventType !== 'all') {
+            $whereConditions[] = "e.event_type = ?";
+            $params[] = $eventType;
+        }
+        
+        if ($status && $status !== 'all') {
+            $whereConditions[] = "e.published = ?";
+            $params[] = ($status === 'active' ? 1 : 0);
+        }
+        
+        $whereClause = $whereConditions ? "WHERE " . implode(" AND ", $whereConditions) : "";
+        
+        $exportStmt = $pdo->prepare("
+            SELECT 
+                e.event_id,
+                e.event_name,
+                e.event_type,
+                CASE e.published 
+                    WHEN 1 THEN 'active' 
+                    WHEN 0 THEN 'draft' 
+                    ELSE 'unknown' 
+                END as status,
+                u.name as organizer_name,
+                u.email as organizer_email,
+                COUNT(DISTINCT r.guest_id) as invitations_sent,
+                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as responses_received,
+                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as attending_count,
+                CASE 
+                    WHEN COUNT(DISTINCT r.guest_id) > 0 THEN 
+                        ROUND((COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) / COUNT(DISTINCT r.guest_id)) * 100, 1)
+                    ELSE 0 
+                END as response_rate,
+                e.created_at as event_created
+            FROM events e
+            LEFT JOIN users u ON e.user_id = u.user_id
+            LEFT JOIN rsvp r ON e.event_id = r.event_id
+            {$whereClause}
+            GROUP BY e.event_id, e.event_name, e.event_type, e.published, u.name, u.email, e.created_at
+            ORDER BY e.created_at DESC
+        ");
+        
+        $exportStmt->execute($params);
+        $exportData = $exportStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Create export directory
+        $exportDir = __DIR__ . '/exports/';
+        if (!is_dir($exportDir)) {
+            mkdir($exportDir, 0755, true);
+        }
+        
+        // Generate filename
+        $timestamp = date('Y-m-d_H-i-s');
+        $filename = "invitation_export_{$timestamp}.csv";
+        $filePath = $exportDir . $filename;
+        
+        // Create CSV file
+        $file = fopen($filePath, 'w');
+        
+        if (!empty($exportData)) {
+            // Add headers
+            fputcsv($file, array_keys($exportData[0]));
+            
+            // Add data rows
+            foreach ($exportData as $row) {
+                fputcsv($file, $row);
+            }
+        } else {
+            fputcsv($file, ['No data available for export']);
+        }
+        
+        fclose($file);
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "Export generated successfully",
+            "file_path" => $filePath,
+            "filename" => $filename
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Export error: " . $e->getMessage()
+        ]);
+    }
+    exit;
 }
 ?>

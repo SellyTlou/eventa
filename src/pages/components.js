@@ -1,7 +1,235 @@
 import '../App.css';
 import { useEffect, useState, useRef } from "react"
 import { NavLink } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Routes, Route } from "react-router-dom";
+
+// Import your pages
+import Index from './index';
+import Features from '../pages/feature';
+import Pricing from '../pages/pricing';
+import About from '../pages/about';
+import CreateEvent from '../pages/createEvent';
+import Sales from '../pages/salse';
+import AdminDashboard from '../pages/admin/AdminDeshboard';
+import EventTheme from '../pages/planner/eventTheme';
+import PostcardEditor from '../pages/planner/postcardEditor';
+import ActiveEventDetails from '../pages/planner/activeEventDetails';
+import EventsDashboard from '../pages/planner/eventsDashboard';
+import EventManagement from '../pages/planner/eventManagemnet';
+import InvitationPage from '../pages/planner/invitationPage';
+import RsvpForm from '../pages/planner/rsvpForm';
+import Profile from '../pages/planner/Profile';
+import ManageEyEvent from '../pages/planner/manage_my_event';
+import PackagePayment from '../pages/planner/packagePayment';
+import ForgotPassword from './forgot_password';
+
+const clearAllLocalStorage = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("selectedEventId");
+    localStorage.removeItem("selectedPackageId");
+    localStorage.removeItem("eventStatus");
+}
+
+export async function logOut() {
+    try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        const API_URL = process.env.REACT_APP_API_URL;
+        if (!user || !user.user_id) {
+            console.warn("No user logged in");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("function", "logout");
+        formData.append("user_id", user.user_id);
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.json();
+        console.log("Logout response:", result);
+
+        if (result.success) {
+
+            clearAllLocalStorage();
+
+            window.location.href = "/";
+        } else {
+            alert(result.message || "Logout failed");
+        }
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert("Server error during logout");
+    }
+}
+
+export const useSessionTimeout = (timeoutMinutes = 10, warningSeconds = 10) => {
+    const [showWarning, setShowWarning] = useState(false);
+    const [countdown, setCountdown] = useState(warningSeconds);
+    const activityTimer = useRef(null);
+    const countdownTimer = useRef(null);
+    const navigate = useNavigate();
+    const API_URL = process.env.REACT_APP_API_URL;
+
+    const resetTimer = () => {
+        setShowWarning(false);
+        setCountdown(warningSeconds);
+        clearTimeout(activityTimer.current);
+        clearInterval(countdownTimer.current);
+
+        activityTimer.current = setTimeout(() => {
+            setShowWarning(true);
+            startCountdown();
+        }, timeoutMinutes * 60 * 1000);
+    };
+
+    const startCountdown = () => {
+        let timeLeft = warningSeconds;
+        setCountdown(timeLeft);
+        countdownTimer.current = setInterval(() => {
+            timeLeft -= 1;
+            setCountdown(timeLeft);
+            if (timeLeft <= 0) logout();
+            console.log(timeLeft);
+        }, 1000);
+    };
+
+    const logout = async () => {
+        try {
+            const user = JSON.parse(localStorage.getItem("user"));
+            if (user && user.user_id) {
+                const formData = new FormData();
+                formData.append("function", "logout");
+                formData.append("user_id", user.user_id);
+
+                await fetch(`${API_URL}/query.php`, {
+                    method: "POST",
+                    body: formData,
+                });
+            }
+        } catch (err) {
+            console.error("Logout API error:", err);
+        } finally {
+            clearTimeout(activityTimer.current);
+            clearInterval(countdownTimer.current);
+            clearAllLocalStorage();
+            navigate("/");
+        }
+    };
+
+    useEffect(() => {
+        const user = localStorage.getItem("user");
+        if (!user) return;
+
+        resetTimer();
+        const events = ["mousemove", "keydown", "click", "scroll"];
+        events.forEach((evt) => window.addEventListener(evt, resetTimer));
+
+        return () => {
+            clearTimeout(activityTimer.current);
+            clearInterval(countdownTimer.current);
+            events.forEach((evt) => window.removeEventListener(evt, resetTimer));
+        };
+    }, []);
+
+    return { showWarning, countdown, stayLoggedIn: resetTimer, logout };
+};
+
+export const SessionWarningModal = ({ show, countdown, onStayLoggedIn, onLogout }) => {
+    if (!show) return null;
+
+    return (
+        <div style={modalOverlayStyle}>
+            <div style={modalBoxStyle}>
+                <h3>Session Timeout Warning</h3>
+                <p>Your session will expire in <b>{countdown}</b> seconds.</p>
+                <div style={{ marginTop: "15px" }}>
+                    <button onClick={onStayLoggedIn} style={btnPrimaryStyle}>Yes, I'm active</button>
+                    <button onClick={onLogout} style={btnDangerStyle}>Logout</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export function SessionHandler() {
+    const { showWarning, countdown, stayLoggedIn, logout } = useSessionTimeout(10, 10);
+    return (
+        <>
+            <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/feature" element={<Features />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/createevent" element={<CreateEvent />} />
+                <Route path="/sales" element={<Sales />} />
+                <Route path="/admindashboard" element={<AdminDashboard />} />
+                <Route path="/eventTheme" element={<EventTheme />} />
+                <Route path="/postcardEditor" element={<PostcardEditor />} />
+                <Route path="/activeEventDetails" element={<ActiveEventDetails />} />
+                <Route path="/eventsDashboard" element={<EventsDashboard />} />
+                <Route path="/eventManagement" element={<EventManagement />} />
+                <Route path="/invitationPage" element={<InvitationPage />} />
+                <Route path="/rsvpForm" element={<RsvpForm />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/Manage_my_event" element={<ManageEyEvent />} />
+                <Route path="/packagePayment" element={<PackagePayment />} />
+                <Route path="/forgot_password" element={<ForgotPassword />} />
+            </Routes>
+
+            <SessionWarningModal
+                show={showWarning}
+                countdown={countdown}
+                onStayLoggedIn={stayLoggedIn}
+                onLogout={logout}
+            />
+        </>
+    );
+}
+
+const modalOverlayStyle = {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0, 0, 0, 0.8)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+};
+
+const modalBoxStyle = {
+    background: "#fff",
+    padding: "25px",
+    borderRadius: "10px",
+    textAlign: "center",
+    width: "300px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+};
+
+const btnPrimaryStyle = {
+    marginRight: "10px",
+    padding: "8px 16px",
+    border: "none",
+    backgroundColor: "#005a33ff",
+    color: "#fff",
+    borderRadius: "5px",
+    cursor: "pointer",
+};
+
+const btnDangerStyle = {
+    padding: "8px 16px",
+    border: "none",
+    backgroundColor: "#dc3545",
+    color: "#fff",
+    borderRadius: "5px",
+    cursor: "pointer",
+};
+
 
 export function Navbar({ onLoginClick, onSignupClick }) {
     const [scrolled, setScrolled] = useState(false);
@@ -291,7 +519,6 @@ export function LoginNav() {
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
-            console.log(storedUser);
             setUser(JSON.parse(storedUser));
         }
     }, [])
@@ -364,6 +591,8 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         password: '',
         confirmPassword: ''
     });
+    const [showPassword, setShowPassword] = useState(false);
+
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
@@ -383,6 +612,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         e.preventDefault();
         const API_URL = process.env.REACT_APP_API_URL;
         const formDataToSend = new FormData();
+
 
         if (isLogin) {
             formDataToSend.append("function", "login");
@@ -407,11 +637,10 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             });
 
             const result = await response.json();
-            console.log("Server response:", result);
 
             if (result.success) {
                 if (isLogin) {
-                    
+
                     localStorage.setItem("user", JSON.stringify(result.user));
 
                     const isAdmin = result.user.role === "admin" ||
@@ -439,6 +668,41 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         }
     };
 
+    const handleForgotPassword = async () => {
+        setLoading(true);
+        if (!formData.email) {
+            alert("Please enter your email address first.");
+            setLoading(false);
+
+            return;
+        }
+
+        try {
+            const fd = new FormData();
+            fd.append("email", formData.email);
+            fd.append("API_URL", process.env.REACT_APP_API_URL);
+
+            const resp = await fetch(`${process.env.REACT_APP_API_URL}/send_reset_link.php`, {
+                method: "POST",
+                body: fd,
+            });
+
+            const data = await resp.json();
+
+            if (data.success) {
+                alert(`✅ ${data.message}`);
+            } else {
+                alert(`❌ ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error:", err);
+            alert("Something went wrong. Please try again later.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
     const switchMode = () => {
         setIsLogin(!isLogin);
         setFormData({
@@ -450,17 +714,17 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     };
 
     if (loading) {
-            return (
-                <>
-                    <div className="loading-container">
-                        <div className="spinner-border text-info" role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                        <div className="loading-text">Loading your events...</div>
+        return (
+            <>
+                <div className="loading-container">
+                    <div className="spinner-border text-info" role="status">
+                        <span className="visually-hidden">Loading...</span>
                     </div>
-                </>
-            );
-        }
+                    <div className="loading-text">Loading please wait</div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <div className="login-popup-overlay" onClick={onClose}>
@@ -521,16 +785,23 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
                     <div className="form-group">
                         <label htmlFor="password">Password</label>
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="Enter your password"
-                            minLength="6"
-                        />
+                        <div className="password-input-wrapper">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Enter new password"
+                                id="password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                required
+                                minLength="6"
+                            />
+                            <span
+                                className="toggle-password"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
+                                {showPassword ? "🙈" : "👁️"}
+                            </span>
+                        </div>
                     </div>
 
                     {!isLogin && (
@@ -556,7 +827,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 <input type="checkbox" />
                                 Remember me
                             </label>
-                            <a href="/forgot-password" className="forgot-password">
+                            <a onClick={handleForgotPassword} className="forgot-password">
                                 Forgot password?
                             </a>
                         </div>
@@ -589,38 +860,5 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     );
 }
 
-export async function logOut() {
-    try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        const API_URL = process.env.REACT_APP_API_URL;
-        if (!user || !user.user_id) {
-            console.warn("No user logged in");
-            return;
-        }
 
-        const formData = new FormData();
-        formData.append("function", "logout");
-        formData.append("user_id", user.user_id);
-
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData
-        });
-
-        const result = await response.json();
-        console.log("Logout response:", result);
-
-        if (result.success) {
-
-            localStorage.removeItem("user");
-
-            window.location.href = "/";
-        } else {
-            alert(result.message || "Logout failed");
-        }
-    } catch (error) {
-        console.error("Logout error:", error);
-        alert("Server error during logout");
-    }
-}
 

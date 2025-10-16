@@ -15,7 +15,7 @@ const Manage_my_event = () => {
     const [eventStatus, setEventStatus] = useState("");
     const [eventDetails, setEventDetails] = useState(null);
     const [userPackage, setUserPackage] = useState(null);
-    const [guestCount, setGuestCount] = useState("");
+    
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [showPackagePopup, setShowPackagePopup] = useState(false);
     const [guestLimit, setGuestLimit] = useState(0);
@@ -24,7 +24,7 @@ const Manage_my_event = () => {
     const [currentPlan, setCurrentPlan] = useState(null);
 
     useEffect(() => {
-        const id = searchParams.get("event_id");
+        const id = localStorage.getItem("selectedEventId") 
         const storedUser = localStorage.getItem("user");
         if (id && storedUser) {
             const userData = JSON.parse(storedUser);
@@ -34,6 +34,12 @@ const Manage_my_event = () => {
             fetchEventDetails(id);
             fetchUserPackage(userData.user_id);
             fetchAvailablePackages();
+        }
+        if (!storedUser) {
+            logOut();
+        }
+        if (!id) {
+            navigate("/eventsDashboard");
         }
 
         const handleClickOutside = (event) => {
@@ -46,7 +52,7 @@ const Manage_my_event = () => {
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [searchParams]);
+    }, []);
 
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
@@ -58,7 +64,6 @@ const Manage_my_event = () => {
         const handleGlobalMouseUp = () => {
             if (isDragging) {
                 setIsDragging(false);
-                saveGuestLimit();
             }
         };
 
@@ -148,7 +153,7 @@ const Manage_my_event = () => {
         }
     };
 
-    // Fetch available packages from database
+   
     const fetchAvailablePackages = async () => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -232,15 +237,9 @@ const Manage_my_event = () => {
             const data = await response.json();
             console.log("Event Status data:", data);
             if (data.success && data.status) {
-                if (data.status.published === "0") {
-                    setEventStatus("Unpublished");
-                } else if (data.status.published === "1") {
-                    setEventStatus("Published");
-                } else {
-                    setEventStatus("Unknown");
-                }
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
             } else {
-                return "unknown";
+                setEventStatus("Unknown");
             }
         } catch (err) {
             console.error("Failed to fetch event status:", err);
@@ -342,9 +341,9 @@ const Manage_my_event = () => {
 
     const toggleDropdown = () => setDropdownOpen((prev) => !prev);
     const goToHome = () => navigate("/eventsDashboard");
-    const goToEventManagement = () => navigate(`/eventManagement?event_id=${event_id}`);
-    const goToInvitations = () => navigate(`/invitationPage?event_id=${event_id}`);
-    const goToManage = () => navigate(`/manage_my_event?event_id=${event_id}`);
+    const goToEventManagement = () => navigate(`/eventManagement`);
+    const goToInvitations = () => navigate(`/invitationPage`);
+    const goToManage = () => navigate(`/manage_my_event`);
 
     const handlePackageClick = (pkg) => {
         setSelectedPackage(pkg);
@@ -353,7 +352,8 @@ const Manage_my_event = () => {
 
     const handleChoosePackage = () => {
         if (selectedPackage && user) {
-            navigate(`/packagePayment?user_id=${user.user_id}&package_id=${selectedPackage.id}&event_id=${event_id}`);
+            localStorage.setItem("selectedPackageId", selectedPackage.id);
+            navigate(`/packagePayment`);
         }
     };
 
@@ -394,7 +394,7 @@ const Manage_my_event = () => {
             });
 
             const data = await response.json();
-            console.log(data);
+         
             if (data.success) {
                 setEventStatus("Published");
                 alert("Event status updated to published");
@@ -458,33 +458,7 @@ const Manage_my_event = () => {
         setGuestLimit(newGuestLimit);
     };
 
-    const handleInputBlur = () => {
-        saveGuestLimit();
-    };
-
-    const saveGuestLimit = async () => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "updateGuestLimit");
-            formData.append("event_id", event_id);
-            formData.append("guest_limit", guestLimit);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                console.log("Guest limit updated successfully");
-            } else {
-                console.error("Failed to update guest limit:", data.message);
-            }
-        } catch (err) {
-            console.error("Error updating guest limit:", err);
-        }
-    };
+   
 
     const renderCurrentPlanCard = () => {
         if (!currentPlan) {
@@ -709,7 +683,6 @@ const Manage_my_event = () => {
                                                 max={maxGuests}
                                                 value={guestLimit}
                                                 onChange={handleInputChange}
-                                                onBlur={handleInputBlur}
                                             />
                                         </div>
 

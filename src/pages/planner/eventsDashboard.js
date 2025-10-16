@@ -2,14 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./main.css";
 import "../../App.css";
-import { LoginNav } from "../components";
+import { LoginNav,logOut } from "../components";
 
 const EventsDashboard = () => {
     const [events, setEvents] = useState([]);
     const [filteredEvents, setFilteredEvents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [hasMoreEvents, setHasMoreEvents] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1); 
     const [filters, setFilters] = useState({
         dateRange: "all",
         sortBy: "latest",
@@ -18,16 +17,16 @@ const EventsDashboard = () => {
     const [rsvpStats, setRsvpStats] = useState({});
     const [deletingEventId, setDeletingEventId] = useState(null);
     const [activeTab, setActiveTab] = useState("all");
-
-    const itemsPerPage = 6; // Show 6 cards initially (2 rows of 3)
-    const cardsPerRow = 3; // 3 cards per row
+    
+    const itemsPerPage = 6; 
+    
     const navigate = useNavigate();
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
             setLoading(false);
-            return;
+            logOut();
         }
 
         const user = JSON.parse(storedUser);
@@ -57,8 +56,6 @@ const EventsDashboard = () => {
 
                     setEvents(uniqueEvents);
                     setFilteredEvents(uniqueEvents);
-                    setHasMoreEvents(uniqueEvents.length > itemsPerPage);
-
                     fetchRSVPStatsForEvents(uniqueEvents);
                 }
             } catch (error) {
@@ -137,7 +134,6 @@ const EventsDashboard = () => {
                 const updatedEvents = events.filter(event => event.event_id !== eventId);
                 setEvents(updatedEvents);
                 setFilteredEvents(updatedEvents);
-                setHasMoreEvents(updatedEvents.length > currentPage * itemsPerPage);
                 alert("Event deleted successfully!");
             } else {
                 alert("Failed to delete event. Please try again.");
@@ -150,18 +146,14 @@ const EventsDashboard = () => {
         }
     };
 
-    // Helper function to check if event is published
     const isEventPublished = (event) => {
-        // Handle both boolean (0/1) and string ('0'/'1') values
         return event.is_published === true || event.published === 1 || event.published === '1' ||
             event.status === 'published' || event.status === true || event.status === 1 || event.status === '1';
     };
 
-    // Filter events based on active tab and filters
     useEffect(() => {
         let result = [...events];
 
-        // Filter by status tab
         if (activeTab !== "all") {
             result = result.filter(event => {
                 const published = isEventPublished(event);
@@ -208,10 +200,8 @@ const EventsDashboard = () => {
 
         setFilteredEvents(result);
         setCurrentPage(1);
-        setHasMoreEvents(result.length > itemsPerPage);
     }, [filters, events, activeTab]);
 
-    // Calculate published/unpublished counts
     const publishedEventsCount = events.filter(event => isEventPublished(event)).length;
     const unpublishedEventsCount = events.filter(event => !isEventPublished(event)).length;
 
@@ -223,7 +213,10 @@ const EventsDashboard = () => {
     };
 
     const handleFilterChange = (filterType, value) => setFilters(prev => ({ ...prev, [filterType]: value }));
-    const handleEventClick = (eventId) => navigate(`/eventManagement?event_id=${eventId}`);
+    const handleEventClick = (eventId) => {
+        localStorage.setItem("selectedEventId", eventId);
+        navigate("/eventManagement");
+    };
     const createEvent = () => navigate("/activeEventDetails");
 
     if (loading) {

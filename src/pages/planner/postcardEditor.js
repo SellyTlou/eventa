@@ -1971,8 +1971,7 @@ export default function PostcardEditor() {
     const goToEventDashboard = () => {
         navigate("/eventsDashboard");
     };
-    // Handle canvas click to select/deselect elements
-    const handleCanvasClick = (e) => {
+  const handleCanvasClick = (e) => {
         const clickedOnEmpty = e.target === e.target.getStage();
         if (clickedOnEmpty) {
             setSelectedId(null);

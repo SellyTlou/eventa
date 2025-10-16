@@ -1,16 +1,25 @@
 <?php
-class Database {
+class Database
+{
 
-private $host = "localhost";
-    private $user = "root";
-    private $pass = "";
-    private $dbname = "eventa";
+    /* private $host = "sql104.infinityfree.com";
+    private $user = "if0_40051875";
+    private $pass = "SellyTlou";
+    private $dbname = "if0_40051875_evendadb";
     private $port = 3306;
+     */
+
+    private $host   = "localhost";
+    private $user   = "root";
+    private $pass   = "";
+    private $dbname = "eventa";
+    private $port   = 3306;
     private $pdo;
 
-    public function __construct() {
+    public function __construct()
+    {
         try {
-            $dsn = "mysql:host={$this->host};port={$this->port};dbname={$this->dbname};charset=utf8";
+            $dsn       = "mysql:host={$this->host};port={$this->port};dbname={$this->dbname};charset=utf8";
             $this->pdo = new PDO($dsn, $this->user, $this->pass);
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
@@ -20,7 +29,8 @@ private $host = "localhost";
         }
     }
 
-    public function getConnection() {
+    public function getConnection()
+    {
         return $this->pdo;
     }
 }
