@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut } from "../components";    
+import { logOut } from "../components";
 
 
 const RSVPResponses = () => {
@@ -16,18 +16,21 @@ const RSVPResponses = () => {
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+
     const [event_id, setEventId] = useState("");
     const [eventStatus, setEventStatus] = useState("");
 
     useEffect(() => {
-        const id = searchParams.get("event_id");
+        const id = localStorage.getItem("selectedEventId")
         if (id) {
             setEventId(id);
             fetchRSVPResponses(id);
             fetchEventStatusByID(id);
         }
-    }, [searchParams]);
+        if (!id) {
+            navigate("/eventsDashboard");
+        }
+    }, []);
 
 
     useEffect(() => {
@@ -35,6 +38,9 @@ const RSVPResponses = () => {
         if (storedUser) {
             console.log(storedUser);
             setUser(JSON.parse(storedUser));
+        }
+        if (!storedUser) {
+            logOut();
         }
 
         const handleClickOutside = (event) => {
@@ -64,9 +70,9 @@ const RSVPResponses = () => {
 
             if (!response.ok) throw new Error("Network response was not ok");
 
-            const data = await response.json(); 
+            const data = await response.json();
 
-            console.log("Server data:", data); 
+            console.log("Server data:", data);
 
             if (data.success && data.responses) {
                 // Remove duplicates
@@ -107,18 +113,9 @@ const RSVPResponses = () => {
             const data = await response.json();
             console.log("Event Status data:", data);
             if (data.success && data.status) {
-                
-                if (data.status.published === "0") {
-                    setEventStatus("Unpublished");
-                } else if (data.status.published === "1") {
-                    setEventStatus("Published");
-                } else {
-                    setEventStatus("Unknown");
-                }
-
-
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
             } else {
-                return "unknown";
+                setEventStatus("Unknown");
             }
         } catch (err) {
             console.error("Failed to fetch event status:", err);
@@ -148,13 +145,13 @@ const RSVPResponses = () => {
         navigate("/eventsDashboard");
     };
     const goToEventManagement = () => {
-        navigate(`/eventManagement?event_id=${event_id}`);
+        navigate(`/eventManagement`);
     };
     const goToInvitations = () => {
-        navigate(`/invitationPage?event_id=${event_id}`);
+        navigate(`/invitationPage`);
     };
     const goToManage = () => {
-        navigate(`/manage_my_event?event_id=${event_id}`);
+        navigate(`/manage_my_event`);
     };
 
     return (
@@ -162,7 +159,8 @@ const RSVPResponses = () => {
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    
+
+                    <button>Upgrage</button>
                     <button
                         className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"
                             }`}
@@ -170,7 +168,7 @@ const RSVPResponses = () => {
                         {eventStatus}
                     </button>
 
-                    
+
                     <div
                         ref={dropdownRef}
                         className={`profile-container ${dropdownOpen ? "open" : ""}`}

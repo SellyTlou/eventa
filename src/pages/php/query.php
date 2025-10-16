@@ -117,6 +117,7 @@ if ($fun === "login") {
                         "name"    => $user['name'],
                         "role"    => $user['role'],
                         "status"  => $user['status'],
+                        "email"   => $user['email'],
                         "session" => true,
                     ],
                 ]);
@@ -394,7 +395,11 @@ if ($fun === "guestRsvp") {
     $email      = $_POST['email'] ?? '';
     $attending  = $_POST['attending'] ?? '';
     $message    = $_POST['message'] ?? '';
-    $guestCount = $_POST['guestCount'] ?? 0;
+    $guestCount = (int)($_POST['guestCount'] ?? 0); 
+    $totalRplyGuestCount = (int)($_POST['totalRplyGuestCount'] ?? 0);
+    $totalEventLimit = (int)($_POST['totalEventLimit'] ?? 0);
+
+    $totalGuests = ($attending === 'yes') ? ($guestCount + 1) : 0;
 
     if (empty($event_id) || empty($name) || empty($email) || empty($attending)) {
         echo json_encode([
@@ -405,8 +410,27 @@ if ($fun === "guestRsvp") {
     }
 
     try {
-        // 1️⃣ Check if RSVP already exists
-        $checkStmt = $pdo->prepare("SELECT guest_id FROM rsvp WHERE event_id = :event_id AND email = :email");
+        $remainingSpots = $totalEventLimit - $totalRplyGuestCount;
+
+        if ($remainingSpots <= 0) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Event is full — 0 guest slots left.",
+            ]);
+            exit;
+        }
+
+        if ($totalGuests > $remainingSpots) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Only {$remainingSpots} guest spot(s) left. Please reduce your guest count.",
+            ]);
+            exit;
+        }
+
+        $checkStmt = $pdo->prepare("
+            SELECT guest_id FROM rsvp WHERE event_id = :event_id AND email = :email
+        ");
         $checkStmt->execute([
             ':event_id' => $event_id,
             ':email'    => $email,
@@ -414,16 +438,19 @@ if ($fun === "guestRsvp") {
         $existingGuest = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
         if ($existingGuest) {
-            // 2️⃣ Update existing RSVP
             $updateStmt = $pdo->prepare("
                 UPDATE rsvp
-                SET name = :name, attending = :attending, guest_count = :guest_count, message = :message, updated_at = NOW()
+                SET name = :name,
+                    attending = :attending,
+                    guest_count = :guest_count,
+                    message = :message,
+                    updated_at = NOW()
                 WHERE guest_id = :guest_id
             ");
             $updateStmt->execute([
                 ':name'        => $name,
                 ':attending'   => $attending,
-                ':guest_count' => $guestCount,
+                ':guest_count' => $totalGuests, 
                 ':message'     => $message,
                 ':guest_id'    => $existingGuest['guest_id'],
             ]);
@@ -434,7 +461,6 @@ if ($fun === "guestRsvp") {
                 "guest_id" => $existingGuest['guest_id'],
             ]);
         } else {
-            // 3️⃣ Insert new RSVP
             $stmt = $pdo->prepare("
                 INSERT INTO rsvp (guest_id, event_id, name, email, attending, guest_count, message, created_at)
                 VALUES (:guest_id, :event_id, :name, :email, :attending, :guest_count, :message, NOW())
@@ -446,7 +472,7 @@ if ($fun === "guestRsvp") {
                 ':name'        => $name,
                 ':email'       => $email,
                 ':attending'   => $attending,
-                ':guest_count' => $guestCount,
+                ':guest_count' => $totalGuests, 
                 ':message'     => $message,
             ]);
 
@@ -463,6 +489,7 @@ if ($fun === "guestRsvp") {
             "message" => "Database error: " . $e->getMessage(),
         ]);
     }
+
     exit;
 }
 
@@ -731,7 +758,6 @@ if ($fun === "updateEventUsedCount") {
     exit;
 }
 
-
 if ($fun === "updateEventStatus") {
     $event_id    = $_POST['event_id'] ?? '';
     $published   = $_POST['published'] ?? 0;
@@ -822,5 +848,119 @@ if ($fun === "updateUserPackage") {
         }
     } catch (Exception $e) {
         echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    }
+}
+
+if ($fun === "getRsvpGuestCount") {
+    $event_id = $_POST['event_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode([
+            "success"    => false,
+            "message"    => "Missing event ID",
+            "guestCount" => 0,
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT SUM(guest_count) AS total_guests FROM rsvp WHERE event_id = :event_id AND attending = 'yes' ");
+        $stmt->execute([":event_id" => $event_id]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $totalGuests = $data['total_guests'] ?? 0;
+
+        echo json_encode([
+            "success"    => true,
+            "guestCount" => (int) $totalGuests,
+        ]);
+
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success"    => false,
+            "message"    => "Database error: " . $e->getMessage(),
+            "guestCount" => 0,
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getEventGuestLimit") {
+    $event_id = $_POST['event_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing event ID",
+            "guestCount" => 0
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT guest_limit FROM events WHERE event_id = :event_id ");
+        $stmt->execute([":event_id" => $event_id]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($data) {
+            echo json_encode([
+                "success" => true,
+                "geustLimit" => $data
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false,
+                 "message" => "cant get guest limit: " . $e->getMessage(),
+                "geustLimit" => ["guest_count" => 0]
+            ]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+            "geustLimit" => 0
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "update_password") {
+    $email = $_POST['email'] ?? '';
+    $new_password = $_POST['new_password'] ?? '';
+
+    if (empty($email) || empty($new_password)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+
+    try {
+        // Check if user exists
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            echo json_encode(["success" => false, "message" => "No account found for that email."]);
+            exit;
+        }
+
+        // Hash new password
+        $hashedPassword = password_hash($new_password, PASSWORD_DEFAULT);
+
+        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE email = ?");
+        $updateStmt->execute([$hashedPassword, $email]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Password updated successfully.",
+        ]);
+        exit;
+
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+        exit;
     }
 }
