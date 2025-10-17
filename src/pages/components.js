@@ -730,10 +730,10 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formDataToSend = new FormData();
-            formDataToSend.append("function", "resendVerification");
             formDataToSend.append("email", unverifiedEmail);
+            formDataToSend.append("API_URL", API_URL);
 
-            const response = await fetch(`${API_URL}/query.php`, {
+            const response = await fetch(`${API_URL}/send_verification.php`, {
                 method: "POST",
                 body: formDataToSend
             });

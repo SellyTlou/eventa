@@ -177,7 +177,6 @@ if ($fun === "login") {
     }
 }
 
-
 if ($fun === "logout") {
     $id = $_POST['user_id'] ?? '';
 
@@ -262,6 +261,9 @@ if ($fun === "saveEvent") {
     $createdAt = date('Y-m-d H:i:s');
 
     try {
+                                                                 // Increase packet size for large design data
+        $pdo->exec("SET SESSION max_allowed_packet=1073741824"); // 1GB
+
         $checkStmt = $pdo->prepare("SELECT event_id FROM events WHERE event_id = :event_id AND user_id = :user_id");
         $checkStmt->execute([
             ':event_id' => $eventID,
@@ -269,7 +271,7 @@ if ($fun === "saveEvent") {
         ]);
 
         if ($checkStmt->fetch()) {
-            // Update existing
+            // Update existing event - REMOVE user_name from update
             $stmt = $pdo->prepare("UPDATE events SET
                 event_name = :event_name,
                 event_start_date = :event_start_date,
@@ -299,23 +301,23 @@ if ($fun === "saveEvent") {
             // LOG THE ACTIVITY - Event updated
             $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
             $logStmt->execute([
-                ':user_id'     => $userID, // The event planner's ID
+                ':user_id'     => $userID,
                 ':action'      => 'Event Updated',
-                ':description' => "Event '{$eventName}' was updated by {$userName}",
+                ':description' => "Event '{$eventName}' was updated",
             ]);
         } else {
-            // Insert new
-            $stmt = $pdo->prepare("INSERT INTO events
-                (user_id, user_name, event_id, event_name, event_start_date, event_start_time,
-                 event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at)
-                VALUES
-                (:user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
-                 :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at)
-            ");
+            // Insert new event - Check if user_name column exists first
+            $columns = "user_id, event_id, event_name, event_start_date, event_start_time,
+                       event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at";
+
+            $values = ":user_id, :event_id, :event_name, :event_start_date, :event_start_time,
+                      :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at";
+
+            $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
             $stmt->execute([
                 ':user_id'          => $userID,
-                ':user_name'        => $userName,
                 ':event_id'         => $eventID,
+                ':user_name'        => $userName,
                 ':event_name'       => $eventName,
                 ':event_start_date' => $eventStartDate,
                 ':event_start_time' => $eventStartTime,
@@ -772,13 +774,13 @@ if ($fun === "getUserPackage") {
 if ($fun === "getAllPackages") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    /*if (! verifyAdminAccess($pdo, $adminUserId)) {
+    if (! verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
         ]);
         exit;
-    }*/
+    }
 
     try {
         $stmt = $pdo->prepare("SELECT * FROM packagetb");
@@ -1438,7 +1440,7 @@ if ($fun === "update_password") {
             exit;
         }
 
-
+// Hash new password
         $hashedPassword = password_hash($new_password, PASSWORD_DEFAULT);
 
         $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE email = ?");
@@ -1473,6 +1475,7 @@ if ($fun === "userRegEmailVerify") {
     }
 
     try {
+        // Check if user exists and get verification status
         $stmt = $pdo->prepare("SELECT user_id, verified FROM users WHERE email = ?");
         $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1490,10 +1493,12 @@ if ($fun === "userRegEmailVerify") {
             exit;
         }
 
+        // Update verification status
         $updateStmt = $pdo->prepare("UPDATE users SET verified = 1 WHERE email = ?");
         $updateResult = $updateStmt->execute([$email]);
 
         if ($updateResult) {
+            // Check if any rows were actually updated
             if ($updateStmt->rowCount() > 0) {
                 echo json_encode([
                     "success" => true,
@@ -1514,15 +1519,15 @@ if ($fun === "userRegEmailVerify") {
         exit;
 
     } catch (PDOException $e) {
-        
+        // More detailed error logging
         error_log("Database error in userRegEmailVerify: " . $e->getMessage());
         error_log("Email: " . $email);
         error_log("Error Code: " . $e->getCode());
         
         echo json_encode([
             "success" => false,
-          //  "message" => "Database error: " . $e->getMessage(), 
-            "message" => "Database error occurred. Please try again later.",
+            //"message" => "Database error: " . $e->getMessage(), // Temporarily show actual error for debugging
+            "message" => "An unexpected error occurred. Please try again later.",
         ]);
         exit;
     }

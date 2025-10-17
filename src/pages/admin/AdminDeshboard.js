@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import "../../App.css";
 import "../../index.css";
 import { Footer } from "../components";
@@ -18,19 +18,91 @@ function AdminDashboard() {
     const [usersData, setUsersData] = useState([]);
     const [revenueData, setRevenueData] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [adminUserId, setAdminUserId] = useState("ADMIN-003"); // This should come from your auth system
+    const [adminUserId, setAdminUserId] = useState("ADMIN-003");
+    const [adminProfile, setAdminProfile] = useState(null);
+    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+    const [profileImage, setProfileImage] = useState(null);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [showBackupModal, setShowBackupModal] = useState(false);
+    const [generating, setGenerating] = useState(false);
+    const [reportForm, setReportForm] = useState({
+    report_type: 'users',
+    date_range: 'all',
+    format: 'pdf'
+});
+const [downloadUrl, setDownloadUrl] = useState('');
+const [actionMessage, setActionMessage] = useState('');     
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+    
+    // Create refs for the profile trigger and dropdown
+    const profileTriggerRef = useRef(null);
+    const profileDropdownRef = useRef(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // Check if click is outside both the trigger button and the dropdown
+            if (
+                profileTriggerRef.current && 
+                !profileTriggerRef.current.contains(event.target) &&
+                profileDropdownRef.current && 
+                !profileDropdownRef.current.contains(event.target)
+            ) {
+                setShowProfileDropdown(false);
+            }
+        };
+
+        // Add event listener when dropdown is open
+        if (showProfileDropdown) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        // Cleanup event listener
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showProfileDropdown]);
 
     useEffect(() => {
         window.fetchDashboardData = fetchDashboardData;
         window.fetchUsersData = fetchUsersData;
+        fetchAdminProfile();
+
+         // Load profile image from localStorage
+    const savedImage = localStorage.getItem('adminProfileImage');
+    if (savedImage) {
+        setProfileImage(savedImage);
+    }
         
         return () => {
             window.fetchDashboardData = null;
             window.fetchUsersData = null;
         };
     }, []);
+
+    // Fetch admin profile
+    const fetchAdminProfile = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getAdminProfile');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setAdminProfile(data.admin);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching admin profile:', error);
+        }
+    };
 
     // Fetch data based on active tab
     useEffect(() => {
@@ -52,6 +124,9 @@ function AdminDashboard() {
                     case "users":
                         await fetchUsersData();
                         break;
+                    case "profile":
+                        await fetchAdminProfile();
+                        break;
                     default:
                         break;
                 }
@@ -69,7 +144,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getDashboardStats');
-            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -95,7 +170,7 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getSystemActivity');
             formData.append('limit', 5);
-            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -115,11 +190,110 @@ function AdminDashboard() {
         }
     };
 
+    // Handle quick actions
+const handleQuickAction = async (action) => {
+    switch (action) {
+        case 'generateReports':
+            setShowReportModal(true);
+            break;
+        case 'runBackup':
+            setShowBackupModal(true);
+            break;
+        default:
+            break;
+    }
+};
+
+// Generate report function
+const generateReport = async () => {
+    try {
+        setGenerating(true);
+        setActionMessage('Generating report...');
+
+        const formData = new FormData();
+        formData.append('function', 'generateReport');
+        formData.append('admin_user_id', adminUserId);
+        formData.append('report_type', reportForm.report_type);
+        formData.append('date_range', reportForm.date_range);
+        formData.append('format', reportForm.format);
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            setActionMessage('Report generated successfully! Download will start shortly...');
+            
+            // Create download link
+            const downloadUrl = `${API_BASE_URL}/reports/${data.filename}`;
+            setDownloadUrl(downloadUrl);
+            
+            // Auto download after 2 seconds
+            setTimeout(() => {
+                window.open(downloadUrl, '_blank');
+                setShowReportModal(false);
+                setActionMessage('');
+                setGenerating(false);
+            }, 2000);
+        } else {
+            setActionMessage('Error: ' + data.message);
+            setGenerating(false);
+        }
+    } catch (error) {
+        console.error('Error generating report:', error);
+        setActionMessage('Error generating report');
+        setGenerating(false);
+    }
+};
+
+// Run backup function
+const runBackup = async () => {
+    try {
+        setGenerating(true);
+        setActionMessage('Creating database backup...');
+
+        const formData = new FormData();
+        formData.append('function', 'backupDatabase');
+        formData.append('admin_user_id', adminUserId);
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            setActionMessage('Backup created successfully! Download will start shortly...');
+            
+            // Create download link
+            const downloadUrl = `${API_BASE_URL}/backups/${data.filename}`;
+            setDownloadUrl(downloadUrl);
+            
+            // Auto download after 2 seconds
+            setTimeout(() => {
+                window.open(downloadUrl, '_blank');
+                setShowBackupModal(false);
+                setActionMessage('');
+                setGenerating(false);
+            }, 2000);
+        } else {
+            setActionMessage('Error: ' + data.message);
+            setGenerating(false);
+        }
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        setActionMessage('Error creating backup');
+        setGenerating(false);
+    }
+};
+
     const fetchInvitationAnalytics = async () => {
         try {
             const formData = new FormData();
             formData.append('function', 'getInvitationAnalytics');
-            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -144,7 +318,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getAllPackages');
-            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -169,7 +343,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getRevenueData');
-            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -193,7 +367,7 @@ function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
-            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -212,6 +386,102 @@ function AdminDashboard() {
         } catch (error) {
             console.error('Error fetching users data:', error);
         }
+    };
+
+    // Handle profile image upload
+const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imageData = e.target.result;
+            setProfileImage(imageData);
+            // Save to localStorage
+            localStorage.setItem('adminProfileImage', imageData);
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+    // Profile dropdown component
+    const ProfileDropdown = () => {
+        if (!adminProfile) return null;
+
+
+        const handleLogout = async () => {
+    try {
+        // Call backend logout if needed
+        const formData = new FormData();
+        formData.append('function', 'logout');
+        formData.append('user_id', adminUserId);
+        
+        await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+    } catch (error) {
+        console.error('Logout API error:', error);
+    } finally {
+        // Clear authentication data but KEEP profile image
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        localStorage.removeItem('adminData');
+        sessionStorage.clear();
+        
+        // DON'T remove the profile image from localStorage
+        // localStorage.removeItem('adminProfileImage'); // ← Remove this line
+        
+        // Redirect to login page
+        window.location.href = '/';
+    }
+};
+
+        return (
+            <div className="profile-dropdown" ref={profileDropdownRef}>
+                <div className="profile-dropdown-header">
+                    <div className="profile-avatar">
+                        {profileImage ? (
+                            <img src={profileImage} alt="Profile" />
+                        ) : (
+                            <div className="avatar-placeholder">
+                                <i className="bi bi-person-circle"></i>
+                            </div>
+                        )}
+                    </div>
+                    <div className="profile-info">
+                        <div className="profile-name">
+                            {adminProfile.name} {adminProfile.lastname}
+                        </div>
+                        <div className="profile-email">{adminProfile.email}</div>
+                        <div className="profile-role">Administrator</div>
+                    </div>
+                </div>
+                <div className="profile-dropdown-menu">
+                    <button 
+                        className="dropdown-item"
+                        onClick={() => {
+                            setActiveTab("profile");
+                            setShowProfileDropdown(false);
+                        }}
+                    >
+                        <i className="bi bi-person"></i>
+                        My Profile
+                    </button>
+                    <button className="dropdown-item">
+                        <i className="bi bi-gear"></i>
+                        Settings
+                    </button>
+                    <div className="dropdown-divider"></div>
+                    <button 
+                        className="dropdown-item logout-btn"
+                        onClick={handleLogout}
+                    >
+                        <i className="bi bi-box-arrow-right"></i>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        );
     };
 
     // Format dashboard stats for display
@@ -254,9 +524,19 @@ function AdminDashboard() {
     ], [dashboardData]);
 
     const quickActions = useMemo(() => [
-        { id: 1, title: "Generate Reports", icon: "bi bi-file-earmark-bar-graph" },
-        { id: 2, title: "Run System Backup", icon: "bi bi-cloud-arrow-up" }
-    ], []);
+    { 
+        id: 1, 
+        title: "Generate Reports", 
+        icon: "bi bi-file-earmark-bar-graph",
+        action: 'generateReports'
+    },
+    { 
+        id: 2, 
+        title: "Run System Backup", 
+        icon: "bi bi-cloud-arrow-up",
+        action: 'runBackup'
+    }
+], []);
 
     // Format recent activities for display
     const recentActivities = useMemo(() => {
@@ -282,6 +562,14 @@ function AdminDashboard() {
                 return <PricingTabContent plans={pricingPlans} revenueData={revenueData} adminUserId={adminUserId} />;
             case "users":
                 return <UsersTabContent users={usersData} adminUserId={adminUserId} />;
+            case "profile":
+                return <ProfileTabContent 
+                    adminProfile={adminProfile} 
+                    adminUserId={adminUserId} 
+                    profileImage={profileImage}
+                    onImageUpload={handleImageUpload}
+                    onProfileUpdate={fetchAdminProfile}
+                />;
             case "dashboard":
             default:
                 return <>
@@ -329,19 +617,24 @@ function AdminDashboard() {
                         </div>
 
                         {/* Quick Actions Section */}
-                        <div className="admin-dashboard-actions">
-                            <div className="admin-dashboard-section-header">
-                                <h2>Admin Actions</h2>
-                            </div>
-                            <div className="admin-dashboard-actions-grid">
-                                {quickActions.map(action => (
-                                    <button key={action.id} className="admin-dashboard-action-btn">
-                                        <i className={action.icon}></i>
-                                        <span>{action.title}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+<div className="admin-dashboard-actions">
+    <div className="admin-dashboard-section-header">
+        <h2>Admin Actions</h2>
+    </div>
+    <div className="admin-dashboard-actions-grid">
+        {quickActions.map(action => (
+            <button 
+                key={action.id} 
+                className="admin-dashboard-action-btn"
+                onClick={() => handleQuickAction(action.action)}
+                disabled={generating}
+            >
+                <i className={action.icon}></i>
+                <span>{action.title}</span>
+            </button>
+        ))}
+    </div>
+</div>
                     </section>
                 </>;
         }
@@ -398,34 +691,496 @@ function AdminDashboard() {
                                 {activeTab === "invitations" && "Invitation Analytics"}
                                 {activeTab === "pricing" && "Pricing Management"}
                                 {activeTab === "users" && "User Administration"}
+
                             </h1>
+                            <div className="admin-header-actions">
+                                <div className="profile-section">
+                                    <button 
+                                        ref={profileTriggerRef}
+                                        className="profile-trigger"
+                                        onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                                    >
+                                        <div className="profile-avatar-sm">
+                                            {profileImage ? (
+                                                <img src={profileImage} alt="Profile" />
+                                            ) : (
+                                                <div className="avatar-placeholder-sm">
+                                                    <i className="bi bi-person-circle"></i>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="profile-name-sm">
+                                            {adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 'Admin'}
+                                        </span>
+                                        <i className="bi bi-chevron-down"></i>
+                                    </button>
+                                    {showProfileDropdown && <ProfileDropdown />}
+                                </div>
+                            </div>
                         </header>
 
                         {renderContent()}
                     </main>
                 </div>
             </div>
+{/* Generate Reports Modal - Beautiful Design */}
+{showReportModal && (
+    <div className="modal-overlay-new" onClick={() => !generating && setShowReportModal(false)}>
+        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+                <div className="modal-title-section">
+                    <div className="modal-icon-large">
+                        <i className="bi bi-file-earmark-bar-graph"></i>
+                    </div>
+                    <div className="modal-title">
+                        <h2>Generate Report</h2>
+                        <p>Create detailed analytics reports</p>
+                    </div>
+                </div>
+                <button 
+                    className="close-btn-new"
+                    onClick={() => !generating && setShowReportModal(false)}
+                    disabled={generating}
+                >
+                    <i className="bi bi-x-lg"></i>
+                </button>
+            </div>
 
+            <div className="modal-body-new">
+                {!generating ? (
+                    <>
+                        <div className="form-group-new">
+                            <label>Report Type</label>
+                            <select 
+                                className="form-select-new"
+                                value={reportForm.report_type}
+                                onChange={(e) => setReportForm(prev => ({...prev, report_type: e.target.value}))}
+                            >
+                                <option value="users">User Analytics</option>
+                                <option value="revenue">Revenue Report</option>
+                                <option value="events">Event Report</option>
+                                <option value="system">System Report</option>
+                            </select>
+                        </div>
+                        <div className="form-group-new">
+                            <label>Date Range</label>
+                            <select 
+                                className="form-select-new"
+                                value={reportForm.date_range}
+                                onChange={(e) => setReportForm(prev => ({...prev, date_range: e.target.value}))}
+                            >
+                                <option value="all">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="year">This Year</option>
+                            </select>
+                        </div>
+                        <div className="form-group-new">
+                            <label>Format</label>
+                            <select 
+                                className="form-select-new"
+                                value={reportForm.format}
+                                onChange={(e) => setReportForm(prev => ({...prev, format: e.target.value}))}
+                            >
+                                <option value="pdf">PDF</option>
+                                <option value="csv">CSV</option>
+                                <option value="excel">Excel</option>
+                            </select>
+                        </div>
+                        <div className="modal-actions-new">
+                            <button 
+                                className="action-btn-new primary"
+                                onClick={generateReport}
+                            >
+                                <i className="bi bi-file-earmark-arrow-down"></i>
+                                Generate Report
+                            </button>
+                            <button 
+                                className="action-btn-new secondary"
+                                onClick={() => setShowReportModal(false)}
+                            >
+                                <i className="bi bi-x-circle"></i>
+                                Cancel
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="generating-state-new">
+                        <div className="loading-spinner-new"></div>
+                        <p>{actionMessage}</p>
+                        {downloadUrl && (
+                            <p>Download will start automatically...</p>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    </div>
+)}
+
+{/* Backup Database Modal - Beautiful Design */}
+{showBackupModal && (
+    <div className="modal-overlay-new" onClick={() => !generating && setShowBackupModal(false)}>
+        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+                <div className="modal-title-section">
+                    <div className="modal-icon-large">
+                        <i className="bi bi-cloud-arrow-up"></i>
+                    </div>
+                    <div className="modal-title">
+                        <h2>Database Backup</h2>
+                        <p>Secure your system data</p>
+                    </div>
+                </div>
+                <button 
+                    className="close-btn-new"
+                    onClick={() => !generating && setShowBackupModal(false)}
+                    disabled={generating}
+                >
+                    <i className="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div className="modal-body-new">
+                {!generating ? (
+                    <>
+                        <div className="info-card-new">
+                            <div className="info-icon-new">
+                                <i className="bi bi-info-circle"></i>
+                            </div>
+                            <div className="info-content-new">
+                                <p>This will create a complete backup of your database. The backup file will be downloaded automatically for secure storage.</p>
+                            </div>
+                        </div>
+                        <div className="modal-actions-new">
+                            <button 
+                                className="action-btn-new primary"
+                                onClick={runBackup}
+                            >
+                                <i className="bi bi-database-check"></i>
+                                Start Backup
+                            </button>
+                            <button 
+                                className="action-btn-new secondary"
+                                onClick={() => setShowBackupModal(false)}
+                            >
+                                <i className="bi bi-x-circle"></i>
+                                Cancel
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="generating-state-new">
+                        <div className="loading-spinner-new"></div>
+                        <p>{actionMessage}</p>
+                        {downloadUrl && (
+                            <p>Download will start automatically...</p>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    </div>
+)}
             <Footer />
         </>
     );
 }
 
-// Invitations Tab Content - Admin Focused
+// Profile Tab Component
+const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpload, onProfileUpdate }) => {
+    const [editMode, setEditMode] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        lastname: '',
+        email: '',
+        username: '',
+        title: 'Administrator',
+        language: 'English'
+    });
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
+    useEffect(() => {
+        if (adminProfile) {
+            setFormData({
+                name: adminProfile.name || '',
+                lastname: adminProfile.lastname || '',
+                email: adminProfile.email || '',
+                username: adminProfile.email?.split('@')[0] || '',
+                title: 'Administrator',
+                language: 'English'
+            });
+        }
+    }, [adminProfile]);
+
+    // Auto-hide message after 5 seconds
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => {
+                setMessage('');
+                setMessageType('');
+            }, 5000); 
+
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
+
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleSaveProfile = async () => {
+        try {
+            setLoading(true);
+            setMessage('');
+
+            const formDataToSend = new FormData();
+            formDataToSend.append('function', 'updateAdminProfile');
+            formDataToSend.append('admin_user_id', adminUserId);
+            formDataToSend.append('name', formData.name);
+            formDataToSend.append('lastname', formData.lastname);
+            formDataToSend.append('email', formData.email);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formDataToSend
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                setMessage('Profile updated successfully!');
+                setMessageType('success');
+                setEditMode(false);
+                onProfileUpdate();
+            } else {
+                setMessage(data.message || 'Error updating profile');
+                setMessageType('error');
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setMessage('Error updating profile');
+            setMessageType('error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!adminProfile) {
+        return <div className="loading">Loading profile...</div>;
+    }
+
+    return (
+        <div className="admin-tab-content">
+            <div className="admin-content-header">
+                <h2>My Profile</h2>
+                <div className="header-actions">
+                    {!editMode ? (
+                        <button 
+                            className="btn btn-primary"
+                            onClick={() => setEditMode(true)}
+                        >
+                            <i className="bi bi-pencil"></i> Edit Profile
+                        </button> 
+                    ) : (
+                        <div className="edit-actions">
+                            <button 
+                                className="btn btn-success"
+                                onClick={handleSaveProfile}
+                                disabled={loading}
+                            >
+                                <i className="bi bi-check"></i> Save Changes
+                            </button>
+                            <button 
+                                className="btn btn-outline"
+                                onClick={() => {
+                                    setEditMode(false);
+                                    setMessage(''); 
+                                    setMessageType('');
+                                }}
+                                disabled={loading}
+                            >
+                                <i className="bi bi-x"></i> Cancel
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {message && (
+                <div className={`message ${messageType}`}>
+                    {message}
+                    <button 
+                        className="message-close"
+                        onClick={() => {
+                            setMessage('');
+                            setMessageType('');
+                        }}
+                    >
+                        <i className="bi bi-x"></i>
+                    </button>
+                </div>
+            )}
+
+            {/* Rest of your profile content remains the same */}
+            <div className="profile-content">
+                <div className="profile-avatar-section">
+                    <div className="avatar-upload">
+                        <div className="avatar-preview">
+                            {profileImage ? (
+                                <img src={profileImage} alt="Profile" className="avatar-image" />
+                            ) : (
+                                <div className="avatar-placeholder-large">
+                                    <i className="bi bi-person-circle"></i>
+                                </div>
+                            )}
+                        </div>
+                        <div className="avatar-upload-info">
+                            <h4>Profile Picture</h4>
+                            <p>upload your own...</p>
+                            <div className="upload-area">
+                                <input 
+                                    type="file" 
+                                    id="avatar-upload"
+                                    accept="image/*"
+                                    onChange={onImageUpload}
+                                    style={{ display: 'none' }}
+                                />
+                                <label htmlFor="avatar-upload" className="upload-label">
+                                    <i className="bi bi-cloud-arrow-up"></i>
+                                    <span>Drop your files here or click in this area</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="profile-form-section">
+                    <div className="form-section">
+                        <h3>Account</h3>
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Username</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.username}
+                                    onChange={(e) => handleInputChange('username', e.target.value)}
+                                    disabled={!editMode}
+                                    className={!editMode ? 'disabled' : ''}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Email *</label>
+                                <input 
+                                    type="email" 
+                                    value={formData.email}
+                                    onChange={(e) => handleInputChange('email', e.target.value)}
+                                    disabled={!editMode}
+                                    className={!editMode ? 'disabled' : ''}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Password</label>
+                                <div className="password-field">
+                                    <input 
+                                        type="password" 
+                                        value="••••••••"
+                                        disabled
+                                        className="disabled"
+                                    />
+                                    <button className="btn-text" disabled={!editMode}>
+                                        Change
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Full Name *</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.name}
+                                    onChange={(e) => handleInputChange('name', e.target.value)}
+                                    disabled={!editMode}
+                                    className={!editMode ? 'disabled' : ''}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Last Name</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.lastname}
+                                    onChange={(e) => handleInputChange('lastname', e.target.value)}
+                                    disabled={!editMode}
+                                    className={!editMode ? 'disabled' : ''}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Title</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.title}
+                                    onChange={(e) => handleInputChange('title', e.target.value)}
+                                    disabled={!editMode}
+                                    className={!editMode ? 'disabled' : ''}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Language</label>
+                                <select 
+                                    value={formData.language}
+                                    onChange={(e) => handleInputChange('language', e.target.value)}
+                                    disabled={!editMode}
+                                    className={!editMode ? 'disabled' : ''}
+                                >
+                                    <option value="English">English</option>
+                                    <option value="Spanish">Spanish</option>
+                                    <option value="French">French</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Enhanced Invitations Tab Content with Charts and Analytics
 const InvitationsTabContent = ({ analytics }) => {
     const [invitationStats, setInvitationStats] = useState({
         total_invitations: 0,
         open_rate: 0,
         response_rate: 0
     });
+    const [enhancedAnalytics, setEnhancedAnalytics] = useState(null);
     const [loading, setLoading] = useState(false);
     const [sortField, setSortField] = useState('eventName');
     const [sortDirection, setSortDirection] = useState('asc');
+    const [filters, setFilters] = useState({
+        eventType: 'all',
+        eventStatus: 'all',
+        dateRange: 'all'
+    });
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportFilters, setExportFilters] = useState({
+        event_type: 'all',
+        status: 'all',
+        user_id: ''
+    });
+    const [users, setUsers] = useState([]);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     useEffect(() => {
         fetchInvitationStats();
+        fetchEnhancedAnalytics();
+        fetchUsers();
     }, []);
 
     const fetchInvitationStats = async () => {
@@ -433,7 +1188,7 @@ const InvitationsTabContent = ({ analytics }) => {
             setLoading(true);
             const formData = new FormData();
             formData.append('function', 'getInvitationStats');
-            formData.append('admin_user_id', "ADMIN-003"); // Use your admin ID
+            formData.append('admin_user_id', "ADMIN-003");
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -453,12 +1208,102 @@ const InvitationsTabContent = ({ analytics }) => {
         }
     };
 
+    const fetchEnhancedAnalytics = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getEnhancedInvitationAnalytics');
+            formData.append('admin_user_id', "ADMIN-003");
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setEnhancedAnalytics(data.analytics);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching enhanced analytics:', error);
+        }
+    };
+
+    const fetchUsers = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getAllUsers');
+            formData.append('admin_user_id', "ADMIN-003");
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setUsers(data.users);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        }
+    };
+
     const handleSort = (field) => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
             setSortField(field);
             setSortDirection('asc');
+        }
+    };
+
+    const handleFilterChange = (filterType, value) => {
+        setFilters(prev => ({
+            ...prev,
+            [filterType]: value
+        }));
+    };
+
+    const handleExport = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'exportInvitationData');
+            formData.append('admin_user_id', "ADMIN-003");
+            formData.append('event_type', exportFilters.event_type);
+            formData.append('status', exportFilters.status);
+            formData.append('user_id', exportFilters.user_id);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                // Download the file
+                const downloadUrl = `${API_BASE_URL}/exports/${data.filename}`;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = data.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setShowExportModal(false);
+                alert('Export downloaded successfully!');
+            } else {
+                alert('Error exporting data: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            alert('Error exporting data');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -469,14 +1314,12 @@ const InvitationsTabContent = ({ analytics }) => {
             let aValue = a[sortField];
             let bValue = b[sortField];
             
-            // Handle numeric values (remove % and parse)
             if (sortField === 'responseRate') {
                 aValue = parseFloat(aValue) || 0;
                 bValue = parseFloat(bValue) || 0;
             }
             
-            // Handle numeric values for counts
-            if (['sent', 'opened', 'responded'].includes(sortField)) {
+            if (sortField === 'sent' || sortField === 'opened' || sortField === 'responded') {
                 aValue = parseInt(aValue) || 0;
                 bValue = parseInt(bValue) || 0;
             }
@@ -489,24 +1332,80 @@ const InvitationsTabContent = ({ analytics }) => {
         });
     }, [analytics, sortField, sortDirection]);
 
+    const filteredAnalytics = useMemo(() => {
+        if (!sortedAnalytics) return [];
+        
+        return sortedAnalytics.filter(item => {
+            // Event type filter
+            if (filters.eventType !== 'all' && item.eventType !== filters.eventType) {
+                return false;
+            }
+            
+            // Status filter
+            if (filters.eventStatus !== 'all' && item.status !== filters.eventStatus) {
+                return false;
+            }
+            
+            return true;
+        });
+    }, [sortedAnalytics, filters]);
+
     const getSortIcon = (field) => {
         if (sortField !== field) return '';
-        return sortDirection === 'asc' ? '' : '';
+        return sortDirection === 'asc' ? '↑' : '↓';
     };
+
+    // Chart data preparation
+    const chartData = useMemo(() => {
+        if (!enhancedAnalytics) return null;
+        
+        return {
+            monthlyTrends: enhancedAnalytics.monthly_trends.map(month => ({
+                month: month.month,
+                events: month.total_events,
+                invitations: month.total_invitations,
+                responses: month.total_responses,
+                responseRate: month.total_invitations > 0 ? 
+                    Math.round((month.total_responses / month.total_invitations) * 100) : 0
+            })),
+            eventTypeStats: enhancedAnalytics.event_type_stats.map(type => ({
+                type: type.event_type,
+                events: type.event_count,
+                responseRate: type.total_invitations > 0 ? 
+                    Math.round((type.total_responses / type.total_invitations) * 100) : 0,
+                attendanceRate: type.total_responses > 0 ?
+                    Math.round((type.total_attending / type.total_responses) * 100) : 0
+            }))
+        };
+    }, [enhancedAnalytics]);
 
     return (
         <div className="admin-tab-content">
             <div className="admin-content-header">
                 <h2>Invitation Performance Analytics</h2>
                 <div className="header-actions">
-                    <button className="btn btn-outline" onClick={fetchInvitationStats} disabled={loading}>
+                    <button 
+                        className="btn btn-outline" 
+                        onClick={() => {
+                            fetchInvitationStats();
+                            fetchEnhancedAnalytics();
+                        }}
+                        disabled={loading}
+                    >
                         <i className="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                    <button 
+                        className="btn btn-primary"
+                        onClick={() => setShowExportModal(true)}
+                    >
+                        <i className="bi bi-download"></i> Export Data
                     </button>
                 </div>
             </div>
 
             {loading && <div className="loading">Loading...</div>}
 
+            {/* Analytics Overview Cards */}
             <div className="analytics-overview">
                 <div className="analytics-card">
                     <div className="analytics-icon">
@@ -515,7 +1414,7 @@ const InvitationsTabContent = ({ analytics }) => {
                     <div className="analytics-content">
                         <h3>Total Invitations Sent</h3>
                         <p className="analytics-number">{invitationStats.total_invitations.toLocaleString()}</p>
-                        <span className="analytics-trend positive">Live data</span>
+                        <span className="analytics-trend positive">All events</span>
                     </div>
                 </div>
                 
@@ -542,6 +1441,123 @@ const InvitationsTabContent = ({ analytics }) => {
                 </div>
             </div>
 
+            {/* Charts Section */}
+            {enhancedAnalytics && (
+                <div className="charts-section">
+                    <div className="charts-grid">
+                        {/* Response Trends Chart */}
+                        <div className="chart-card">
+                            <h3>Response Trends (Last 6 Months)</h3>
+                            <div className="chart-container">
+                                {chartData.monthlyTrends.map(month => (
+                                    <div key={month.month} className="trend-bar">
+                                        <div className="trend-label">{month.month}</div>
+                                        <div className="trend-bars">
+                                            <div 
+                                                className="trend-bar-invitations" 
+                                                style={{width: `${(month.invitations / Math.max(...chartData.monthlyTrends.map(m => m.invitations))) * 100}%`}}
+                                                title={`${month.invitations} invitations`}
+                                            ></div>
+                                            <div 
+                                                className="trend-bar-responses"
+                                                style={{width: `${(month.responses / Math.max(...chartData.monthlyTrends.map(m => m.invitations))) * 100}%`}}
+                                                title={`${month.responses} responses`}
+                                            ></div>
+                                        </div>
+                                        <div className="trend-rate">{month.responseRate}%</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="chart-legend">
+                                <span className="legend-invitations">Invitations Sent</span>
+                                <span className="legend-responses">Responses Received</span>
+                            </div>
+                        </div>
+
+                        {/* Event Type Comparison */}
+                        <div className="chart-card">
+                            <h3>Performance by Event Type</h3>
+                            <div className="chart-container">
+                                {chartData.eventTypeStats.map(eventType => (
+                                    <div key={eventType.type} className="type-row">
+                                        <div className="type-name">{eventType.type}</div>
+                                        <div className="type-stats">
+                                            <span className="type-events">{eventType.events} events</span>
+                                            <span className="type-rate">{eventType.responseRate}% response</span>
+                                            <span className="type-attendance">{eventType.attendanceRate}% attending</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Top Performing Events */}
+            {enhancedAnalytics?.top_events && enhancedAnalytics.top_events.length > 0 && (
+                <div className="top-performers-section">
+                    <h3>🏆 Top Performing Events</h3>
+                    <div className="top-events-grid">
+                        {enhancedAnalytics.top_events.map(event => (
+                            <div key={event.event_id} className="top-event-card">
+                                <div className="event-header">
+                                    <h4>{event.event_name}</h4>
+                                    <span className="event-type-badge">{event.event_type}</span>
+                                </div>
+                                <div className="event-stats">
+                                    <div className="stat">
+                                        <span className="stat-label">Response Rate</span>
+                                        <span className="stat-value highlight">{event.response_rate}%</span>
+                                    </div>
+                                    <div className="stat">
+                                        <span className="stat-label">Invitations</span>
+                                        <span className="stat-value">{event.sent}</span>
+                                    </div>
+                                    <div className="stat">
+                                        <span className="stat-label">Attending</span>
+                                        <span className="stat-value">{event.attending_count}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Filters */}
+            <div className="analytics-filters">
+                <div className="filter-group">
+                    <label>Event Type:</label>
+                    <select 
+                        value={filters.eventType} 
+                        onChange={(e) => handleFilterChange('eventType', e.target.value)}
+                    >
+                        <option value="all">All Types</option>
+                        {enhancedAnalytics?.event_types.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <label>Event Status:</label>
+                    <select 
+                        value={filters.eventStatus} 
+                        onChange={(e) => handleFilterChange('eventStatus', e.target.value)}
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="draft">Draft</option>
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <span className="results-count">
+                        Showing {filteredAnalytics.length} of {sortedAnalytics.length} events
+                    </span>
+                </div>
+            </div>
+
+            {/* Analytics Table */}
             <div className="analytics-table">
                 <div className="table-header">
                     <span className="sortable" onClick={() => handleSort('eventName')}>
@@ -559,11 +1575,12 @@ const InvitationsTabContent = ({ analytics }) => {
                     <span className="sortable" onClick={() => handleSort('responseRate')}>
                         Response Rate {getSortIcon('responseRate')}
                     </span>
+                    <span>Type</span>
                     <span>Status</span>
                     <span>Actions</span>
                 </div>
                 
-                {sortedAnalytics.map(item => (
+                {filteredAnalytics.map(item => (
                     <div key={item.id} className="table-row">
                         <span className="event-name">{item.eventName}</span>
                         <span>{item.sent}</span>
@@ -573,6 +1590,9 @@ const InvitationsTabContent = ({ analytics }) => {
                             <span className={`response-rate ${parseInt(item.responseRate) > 75 ? 'high' : parseInt(item.responseRate) > 60 ? 'medium' : 'low'}`}>
                                 {item.responseRate}
                             </span>
+                        </span>
+                        <span>
+                            <span className="event-type-tag">{item.eventType || 'General'}</span>
                         </span>
                         <span>
                             <span className={`status-badge ${item.status}`}>
@@ -592,12 +1612,98 @@ const InvitationsTabContent = ({ analytics }) => {
                     </div>
                 )}
             </div>
+
+            {/* Export Modal */}
+            {showExportModal && (
+                <div className="modal-overlay-new" onClick={() => setShowExportModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-download"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Export Invitation Data</h2>
+                                    <p>Export invitation analytics and performance data</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowExportModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="form-group-new">
+                                <label>Event Type</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={exportFilters.event_type}
+                                    onChange={(e) => setExportFilters(prev => ({...prev, event_type: e.target.value}))}
+                                >
+                                    <option value="all">All Event Types</option>
+                                    {enhancedAnalytics?.event_types.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group-new">
+                                <label>Event Status</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={exportFilters.status}
+                                    onChange={(e) => setExportFilters(prev => ({...prev, status: e.target.value}))}
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="active">Active Only</option>
+                                    <option value="draft">Draft Only</option>
+                                </select>
+                            </div>
+                            <div className="form-group-new">
+                                <label>Specific User (Optional)</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={exportFilters.user_id}
+                                    onChange={(e) => setExportFilters(prev => ({...prev, user_id: e.target.value}))}
+                                >
+                                    <option value="">All Users</option>
+                                    {users.map(user => (
+                                        <option key={user.user_id} value={user.user_id}>
+                                            {user.name} ({user.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="modal-actions-new">
+                                <button 
+                                    className="action-btn-new primary"
+                                    onClick={handleExport}
+                                    disabled={loading}
+                                >
+                                    <i className="bi bi-file-earmark-arrow-down"></i>
+                                    Export to CSV
+                                </button>
+                                <button 
+                                    className="action-btn-new secondary"
+                                    onClick={() => setShowExportModal(false)}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-// Pricing Tab Content - Admin Focused
+// Enhanced Pricing Tab Content with Payment History
 const PricingTabContent = ({ plans, adminUserId }) => {
+    const [activeSection, setActiveSection] = useState('plans');
     const [editingPlan, setEditingPlan] = useState(null);
     const [editForm, setEditForm] = useState({
         package_type: '',
@@ -606,8 +1712,205 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         price: ''
     });
     const [allPlans, setAllPlans] = useState(plans);
+    const [paymentHistory, setPaymentHistory] = useState([]);
+    const [revenueAnalytics, setRevenueAnalytics] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [showManualPayment, setShowManualPayment] = useState(false);
+    const [manualPaymentForm, setManualPaymentForm] = useState({
+        user_id: '',
+        package_id: '',
+        amount: '',
+        payment_method: 'manual',
+        billing_cycle: 'monthly'
+    });
+    const [users, setUsers] = useState([]);
+    
+    // New state variables for filtering, sorting, and searching
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [packageFilter, setPackageFilter] = useState('all');
+    const [dateFilter, setDateFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('payment_date');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [selectedPayment, setSelectedPayment] = useState(null);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
+    useEffect(() => {
+        if (activeSection === 'payments') {
+            fetchPaymentHistory();
+            fetchRevenueAnalytics();
+            fetchUsers();
+        }
+    }, [activeSection]);
+
+    // Fetch payment history
+    const fetchPaymentHistory = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'getPaymentHistory');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setPaymentHistory(data.payments);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching payment history:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch revenue analytics
+    const fetchRevenueAnalytics = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getRevenueAnalytics');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setRevenueAnalytics(data.analytics);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching revenue analytics:', error);
+        }
+    };
+
+    // Fetch users for manual payment
+    const fetchUsers = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getAllUsers');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setUsers(data.users);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        }
+    };
+
+    // Filter and sort payments
+    const filteredPayments = useMemo(() => {
+        if (!paymentHistory || !Array.isArray(paymentHistory)) return [];
+        
+        let filtered = [...paymentHistory];
+        
+        // Apply search filter
+        if (searchQuery.trim() !== '') {
+            const query = searchQuery.toLowerCase().trim();
+            filtered = filtered.filter(payment => 
+                (payment.user_name && payment.user_name.toLowerCase().includes(query)) ||
+                (payment.user_email && payment.user_email.toLowerCase().includes(query)) ||
+                (payment.transaction_id && payment.transaction_id.toLowerCase().includes(query)) ||
+                (payment.package_type && payment.package_type.toLowerCase().includes(query))
+            );
+        }
+        
+        // Apply status filter
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(payment => payment.payment_status === statusFilter);
+        }
+        
+        // Apply package filter
+        if (packageFilter !== 'all') {
+            filtered = filtered.filter(payment => payment.package_type === packageFilter);
+        }
+        
+        // Apply date filter
+        if (dateFilter !== 'all') {
+            const now = new Date();
+            filtered = filtered.filter(payment => {
+                const paymentDate = new Date(payment.payment_date);
+                
+                switch (dateFilter) {
+                    case 'today':
+                        return paymentDate.toDateString() === now.toDateString();
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        return paymentDate >= weekAgo;
+                    case 'month':
+                        const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
+                        return paymentDate >= monthAgo;
+                    case 'year':
+                        const yearAgo = new Date(now.getFullYear(), 0, 1);
+                        return paymentDate >= yearAgo;
+                    default:
+                        return true;
+                }
+            });
+        }
+        
+        // Apply sorting
+        filtered.sort((a, b) => {
+            let aValue = a[sortBy];
+            let bValue = b[sortBy];
+            
+            // Handle different data types for sorting
+            if (sortBy === 'amount') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            } else if (sortBy === 'payment_date') {
+                aValue = new Date(aValue);
+                bValue = new Date(bValue);
+            } else {
+                // For string values
+                aValue = String(aValue || '').toLowerCase();
+                bValue = String(bValue || '').toLowerCase();
+            }
+            
+            if (sortOrder === 'asc') {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            } else {
+                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+            }
+        });
+        
+        return filtered;
+    }, [paymentHistory, searchQuery, statusFilter, packageFilter, dateFilter, sortBy, sortOrder]);
+
+    // Handle column sorting
+    const handleSort = (column) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('desc');
+        }
+    };
+
+    // View payment details
+    const viewPaymentDetails = (payment) => {
+        setSelectedPayment(payment);
+        setShowPaymentModal(true);
+    };
 
     // Start editing a plan
     const startEditing = (plan) => {
@@ -649,7 +1952,7 @@ const PricingTabContent = ({ plans, adminUserId }) => {
             formData.append('max_guests', editForm.max_guests);
             formData.append('max_events', editForm.max_events);
             formData.append('price', editForm.price);
-            formData.append('admin_user_id', adminUserId); // Add admin authentication
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -680,6 +1983,72 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         }
     };
 
+    // Handle manual payment
+    const handleManualPayment = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'addManualPayment');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('user_id', manualPaymentForm.user_id);
+            formData.append('package_id', manualPaymentForm.package_id);
+            formData.append('amount', manualPaymentForm.amount);
+            formData.append('payment_method', manualPaymentForm.payment_method);
+            formData.append('billing_cycle', manualPaymentForm.billing_cycle);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                alert('Manual payment added successfully!');
+                setShowManualPayment(false);
+                setManualPaymentForm({
+                    user_id: '',
+                    package_id: '',
+                    amount: '',
+                    payment_method: 'manual',
+                    billing_cycle: 'monthly'
+                });
+                fetchPaymentHistory();
+                fetchRevenueAnalytics();
+            } else {
+                alert('Error adding payment: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error adding manual payment:', error);
+            alert('Error adding manual payment');
+        }
+    };
+
+    // Update payment status
+    const updatePaymentStatus = async (paymentId, status) => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'updatePaymentStatus');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('payment_id', paymentId);
+            formData.append('status', status);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                alert('Payment status updated successfully!');
+                fetchPaymentHistory();
+            } else {
+                alert('Error updating status: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error updating payment status:', error);
+            alert('Error updating payment status');
+        }
+    };
+
     // Format plan name for display
     const formatPlanName = (packageType) => {
         if (!packageType) return 'Unknown';
@@ -696,139 +2065,656 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         return subscriptionCounts[packageType] || 0;
     };
 
+    // Format currency
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-ZA', {
+            style: 'currency',
+            currency: 'ZAR'
+        }).format(amount || 0);
+    };
+
+    // Format date
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString();
+    };
+
+    // Get status badge class
+    const getStatusBadgeClass = (status) => {
+        const statusClasses = {
+            'completed': 'status-completed',
+            'pending': 'status-pending',
+            'failed': 'status-failed',
+            'refunded': 'status-refunded'
+        };
+        return statusClasses[status] || 'status-pending';
+    };
+
     return (
         <div className="admin-tab-content">
             <div className="admin-content-header">
-                <h2>Pricing Plan Management</h2>
+                <h2>Pricing & Payments Management</h2>
                 <div className="header-actions">
-                    <button className="btn btn-outline">
-                        <i className="bi bi-arrow-clockwise"></i> Refresh
-                    </button>
+                    <div className="tab-buttons">
+                        <button 
+                            className={`tab-button ${activeSection === 'plans' ? 'active' : ''}`}
+                            onClick={() => setActiveSection('plans')}
+                        >
+                            Pricing Plans
+                        </button>
+                        <button 
+                            className={`tab-button ${activeSection === 'payments' ? 'active' : ''}`}
+                            onClick={() => setActiveSection('payments')}
+                        >
+                            Payment History
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div className="pricing-plans-grid">
-                {allPlans.map(plan => (
-                    <div key={plan.package_id} className="pricing-plan-card">
-                        <div className="plan-header">
-                            <h3>
+            {activeSection === 'plans' ? (
+                <div className="pricing-plans-grid">
+                    {allPlans.map(plan => (
+                        <div key={plan.package_id} className="pricing-plan-card">
+                            <div className="plan-header">
+                                <h3>
+                                    {editingPlan === plan.package_id ? (
+                                        <select 
+                                            value={editForm.package_type} 
+                                            onChange={(e) => handleEditChange('package_type', e.target.value)}
+                                            className="form-control-sm"
+                                        >
+                                            <option value="basic">Basic</option>
+                                            <option value="premium">Premium</option>
+                                            <option value="enterprise">Enterprise</option>
+                                        </select>
+                                    ) : (
+                                        formatPlanName(plan.package_type)
+                                    )}
+                                </h3>
+                                <span className="plan-status active">Active</span>
+                            </div>
+                            
+                            <div className="plan-price">
                                 {editingPlan === plan.package_id ? (
-                                    <select 
-                                        value={editForm.package_type} 
-                                        onChange={(e) => handleEditChange('package_type', e.target.value)}
-                                        className="form-control-sm"
-                                    >
-                                        <option value="basic">Basic</option>
-                                        <option value="premium">Premium</option>
-                                        <option value="enterprise">Enterprise</option>
-                                    </select>
+                                    <div className="price-edit">
+                                        <span className="price-prefix">R</span>
+                                        <input 
+                                            type="number" 
+                                            value={editForm.price} 
+                                            onChange={(e) => handleEditChange('price', e.target.value)}
+                                            className="form-control-sm"
+                                            step="0.01"
+                                            min="0"
+                                            style={{width: '80px'}}
+                                        />
+                                        <span className="price-interval">/monthly</span>
+                                    </div>
                                 ) : (
-                                    formatPlanName(plan.package_type)
+                                    <>
+                                        <span className="price-amount">R{plan.price || '0.00'}</span>
+                                        <span className="price-interval">/monthly</span>
+                                    </>
                                 )}
-                            </h3>
-                            <span className="plan-status active">Active</span>
-                        </div>
-                        
-                        <div className="plan-price">
-                            {editingPlan === plan.package_id ? (
-                                <div className="price-edit">
-                                    <span className="price-prefix">R</span>
-                                    <input 
-                                        type="number" 
-                                        value={editForm.price} 
-                                        onChange={(e) => handleEditChange('price', e.target.value)}
-                                        className="form-control-sm"
-                                        step="0.01"
-                                        min="0"
-                                        style={{width: '80px'}}
-                                    />
-                                    <span className="price-interval">/monthly</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <span className="price-amount">R{plan.price || '0.00'}</span>
-                                    <span className="price-interval">/monthly</span>
-                                </>
-                            )}
-                        </div>
-                        
-                        <div className="plan-subscriptions">
-                            <i className="bi bi-people"></i>
-                            <span>{getActiveSubscriptions(plan.package_type)} active subscriptions</span>
-                        </div>
-                        
-                        <div className="plan-features">
-                            <h4>Features:</h4>
-                            <ul>
-                                <li>
-                                    {editingPlan === plan.package_id ? (
-                                        <input 
-                                            type="number" 
-                                            value={editForm.max_guests} 
-                                            onChange={(e) => handleEditChange('max_guests', e.target.value)}
-                                            className="form-control-sm"
-                                            placeholder="Max Guests"
-                                            style={{width: '120px'}}
+                            </div>
+                            
+                            <div className="plan-subscriptions">
+                                <i className="bi bi-people"></i>
+                                <span>{getActiveSubscriptions(plan.package_type)} active subscriptions</span>
+                            </div>
+                            
+                            <div className="plan-features">
+                                <h4>Features:</h4>
+                                <ul>
+                                    <li>
+                                        {editingPlan === plan.package_id ? (
+                                            <input 
+                                                type="number" 
+                                                value={editForm.max_guests} 
+                                                onChange={(e) => handleEditChange('max_guests', e.target.value)}
+                                                className="form-control-sm"
+                                                placeholder="Max Guests"
+                                                style={{width: '120px'}}
+                                            />
+                                        ) : (
+                                            `${plan.max_guests || 0} guests/event`
+                                        )}
+                                    </li>
+                                    <li>
+                                        {editingPlan === plan.package_id ? (
+                                            <input 
+                                                type="number" 
+                                                value={editForm.max_events} 
+                                                onChange={(e) => handleEditChange('max_events', e.target.value)}
+                                                className="form-control-sm"
+                                                placeholder="Max Events"
+                                                style={{width: '120px'}}
                                         />
-                                    ) : (
-                                        `${plan.max_guests || 0} guests/event`
-                                    )}
-                                </li>
-                                <li>
-                                    {editingPlan === plan.package_id ? (
-                                        <input 
-                                            type="number" 
-                                            value={editForm.max_events} 
-                                            onChange={(e) => handleEditChange('max_events', e.target.value)}
-                                            className="form-control-sm"
-                                            placeholder="Max Events"
-                                            style={{width: '120px'}}
-                                        />
-                                    ) : (
-                                        `${plan.max_events || 0} events/month`
-                                    )}
-                                </li>
-                                <li>Premium templates</li>
-                                <li>Email support</li>
-                                {plan.package_type === 'premium' && <li>Custom branding</li>}
-                                {plan.package_type === 'enterprise' && <li>Advanced analytics</li>}
-                                {plan.package_type === 'enterprise' && <li>API access</li>}
-                            </ul>
-                        </div>
-                        
-                        <div className="plan-actions">
-                            {editingPlan === plan.package_id ? (
-                                <>
-                                    <button 
-                                        className="btn btn-success btn-sm"
-                                        onClick={() => savePackage(plan.package_id)}
-                                    >
-                                        <i className="bi bi-check"></i> Save
-                                    </button>
+                                        ) : (
+                                            `${plan.max_events || 0} events/month`
+                                        )}
+                                    </li>
+                                    <li>Premium templates</li>
+                                    <li>Email support</li>
+                                    {plan.package_type === 'premium' && <li>Custom branding</li>}
+                                    {plan.package_type === 'enterprise' && <li>Advanced analytics</li>}
+                                    {plan.package_type === 'enterprise' && <li>API access</li>}
+                                </ul>
+                            </div>
+                            
+                            <div className="plan-actions">
+                                {editingPlan === plan.package_id ? (
+                                    <>
+                                        <button 
+                                            className="btn btn-success btn-sm"
+                                            onClick={() => savePackage(plan.package_id)}
+                                        >
+                                            <i className="bi bi-check"></i> Save
+                                        </button>
+                                        <button 
+                                            className="btn btn-outline btn-sm"
+                                            onClick={cancelEditing}
+                                        >
+                                            <i className="bi bi-x"></i> Cancel
+                                        </button>
+                                    </>
+                                ) : (
                                     <button 
                                         className="btn btn-outline btn-sm"
-                                        onClick={cancelEditing}
+                                        onClick={() => startEditing(plan)}
                                     >
-                                        <i className="bi bi-x"></i> Cancel
+                                        <i className="bi bi-pencil"></i> Edit
                                     </button>
-                                </>
-                            ) : (
-                                <button 
-                                    className="btn btn-outline btn-sm"
-                                    onClick={() => startEditing(plan)}
-                                >
-                                    <i className="bi bi-pencil"></i> Edit
-                                </button>
-                            )}
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="payment-history-section">
+                    {/* Revenue Stats Cards */}
+                    <div className="revenue-stats-grid">
+                        <div className="revenue-card total">
+                            <div className="revenue-icon">
+                                <i className="bi bi-currency-dollar"></i>
+                            </div>
+                            <div className="revenue-content">
+                                <h3>Total Revenue</h3>
+                                <p className="revenue-amount">
+                                    {revenueAnalytics ? formatCurrency(revenueAnalytics.total_revenue) : 'Loading...'}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div className="revenue-card monthly">
+                            <div className="revenue-icon">
+                                <i className="bi bi-graph-up"></i>
+                            </div>
+                            <div className="revenue-content">
+                                <h3>This Month</h3>
+                                <p className="revenue-amount">
+                                    {revenueAnalytics ? formatCurrency(
+                                        revenueAnalytics.monthly_revenue[0]?.revenue || 0
+                                    ) : 'Loading...'}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div className="revenue-card pending">
+                            <div className="revenue-icon">
+                                <i className="bi bi-clock"></i>
+                            </div>
+                            <div className="revenue-content">
+                                <h3>Pending Payments</h3>
+                                <p className="revenue-amount">
+                                    {revenueAnalytics ? 
+                                        revenueAnalytics.payment_status_counts.find(s => s.payment_status === 'pending')?.count || 0 
+                                        : 'Loading...'
+                                    }
+                                </p>
+                            </div>
                         </div>
                     </div>
-                ))}
+
+                    {/* Filter, Sort, and Search Controls */}
+                    <div className="payment-controls">
+                        <div className="control-group">
+                            <div className="search-box">
+                                <i className="bi bi-search"></i>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search by user name, email, or transaction ID..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                {searchQuery && (
+                                    <button className="clear-search" onClick={() => setSearchQuery('')}>
+                                        <i className="bi bi-x"></i>
+                                    </button>
+                                )}
+                            </div>
+                            
+                            <div className="filter-controls">
+                                <select 
+                                    value={statusFilter} 
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="failed">Failed</option>
+                                    <option value="refunded">Refunded</option>
+                                </select>
+                                
+                                <select 
+                                    value={packageFilter} 
+                                    onChange={(e) => setPackageFilter(e.target.value)}
+                                >
+                                    <option value="all">All Packages</option>
+                                    {allPlans.map(plan => (
+                                        <option key={plan.package_id} value={plan.package_type}>
+                                            {formatPlanName(plan.package_type)}
+                                        </option>
+                                    ))}
+                                </select>
+                                
+                                <select 
+                                    value={dateFilter} 
+                                    onChange={(e) => setDateFilter(e.target.value)}
+                                >
+                                    <option value="all">All Time</option>
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month">This Month</option>
+                                    <option value="year">This Year</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div className="sort-controls">
+                            <select 
+                                value={sortBy} 
+                                onChange={(e) => setSortBy(e.target.value)}
+                            >
+                                <option value="payment_date">Date</option>
+                                <option value="amount">Amount</option>
+                                <option value="user_name">User</option>
+                                <option value="package_type">Package</option>
+                            </select>
+                            
+                            <button 
+                                className={`sort-direction ${sortOrder}`}
+                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                            >
+                                {sortOrder === 'asc' ? '↑' : '↓'}
+                            </button>
+                            
+                            <button 
+                                className="btn btn-outline"
+                                onClick={() => {
+                                    setSearchQuery('');
+                                    setStatusFilter('all');
+                                    setPackageFilter('all');
+                                    setDateFilter('all');
+                                    setSortBy('payment_date');
+                                    setSortOrder('desc');
+                                }}
+                            >
+                                <i className="bi bi-arrow-clockwise"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Payment History Table */}
+                    <div className="payment-table-container">
+                        <div className="table-header-actions">
+                            <h3>
+                                Payment History 
+                                <span className="result-count">({filteredPayments.length} payments)</span>
+                            </h3>
+                            <button 
+                                className="btn btn-primary"
+                                onClick={() => setShowManualPayment(true)}
+                            >
+                                <i className="bi bi-plus-circle"></i> Add Manual Payment
+                            </button>
+                        </div>
+
+                        {loading ? (
+                            <div className="loading">Loading payments...</div>
+                        ) : (
+                            <div className="payment-table">
+                                <div className="table-header">
+                                    <span className="sortable" onClick={() => handleSort('payment_date')}>
+                                        Date {sortBy === 'payment_date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                    <span className="sortable" onClick={() => handleSort('user_name')}>
+                                        User {sortBy === 'user_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                    <span className="sortable" onClick={() => handleSort('package_type')}>
+                                        Package {sortBy === 'package_type' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                    <span className="sortable" onClick={() => handleSort('amount')}>
+                                        Amount {sortBy === 'amount' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                    <span>Method</span>
+                                    <span>Status</span>
+                                    <span>Actions</span>
+                                </div>
+                                
+                                {filteredPayments.length > 0 ? (
+                                    filteredPayments.map(payment => (
+                                        <div key={payment.payment_id} className="table-row">
+                                            <span>{formatDate(payment.payment_date)}</span>
+                                            <span className="user-info">
+                                                <div className="user-name">{payment.user_name || 'N/A'}</div>
+                                                <div className="user-email">{payment.user_email}</div>
+                                            </span>
+                                            <span>
+                                                <span className="package-badge">
+                                                    {formatPlanName(payment.package_type)}
+                                                </span>
+                                            </span>
+                                            <span className="amount">{formatCurrency(payment.amount)}</span>
+                                            <span>
+                                                <span className={`method-badge ${payment.payment_method}`}>
+                                                    {payment.payment_method}
+                                                </span>
+                                            </span>
+                                            <span>
+                                                <span className={`status-badge ${getStatusBadgeClass(payment.payment_status)}`}>
+                                                    {payment.payment_status}
+                                                </span>
+                                            </span>
+                                            <span className="actions">
+                                                {payment.payment_status === 'pending' && (
+                                                    <button 
+                                                        className="btn-icon success"
+                                                        onClick={() => updatePaymentStatus(payment.payment_id, 'completed')}
+                                                        title="Mark as Completed"
+                                                    >
+                                                        <i className="bi bi-check"></i>
+                                                    </button>
+                                                )}
+                                                {payment.payment_status === 'completed' && (
+                                                    <button 
+                                                        className="btn-icon warning"
+                                                        onClick={() => updatePaymentStatus(payment.payment_id, 'refunded')}
+                                                        title="Mark as Refunded"
+                                                    >
+                                                        <i className="bi bi-arrow-counterclockwise"></i>
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    className="btn-icon info"
+                                                    onClick={() => viewPaymentDetails(payment)}
+                                                    title="View Details"
+                                                >
+                                                    <i className="bi bi-eye"></i>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="no-payments">
+                                        <i className="bi bi-receipt"></i>
+                                        <p>No payments found matching your criteria</p>
+                                        <button 
+                                            className="btn btn-outline"
+                                            onClick={() => {
+                                                setSearchQuery('');
+                                                setStatusFilter('all');
+                                                setPackageFilter('all');
+                                                setDateFilter('all');
+                                            }}
+                                        >
+                                            Clear Filters
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Manual Payment Modal */}
+            {showManualPayment && (
+                <div className="modal-overlay" onClick={() => setShowManualPayment(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Add Manual Payment</h2>
+                            <button 
+                                className="close-btn"
+                                onClick={() => setShowManualPayment(false)}
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>User *</label>
+                                    <select 
+                                        value={manualPaymentForm.user_id}
+                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, user_id: e.target.value}))}
+                                    >
+                                        <option value="">Select User</option>
+                                        {users.map(user => (
+                                            <option key={user.user_id} value={user.user_id}>
+                                                {user.name} ({user.email})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Package *</label>
+                                    <select 
+                                        value={manualPaymentForm.package_id}
+                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, package_id: e.target.value}))}
+                                    >
+                                        <option value="">Select Package</option>
+                                        {allPlans.map(plan => (
+                                            <option key={plan.package_id} value={plan.package_id}>
+                                                {formatPlanName(plan.package_type)} - ${plan.price}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Amount *</label>
+                                    <input 
+                                        type="number"
+                                        step="0.01"
+                                        value={manualPaymentForm.amount}
+                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, amount: e.target.value}))}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Billing Cycle</label>
+                                    <select 
+                                        value={manualPaymentForm.billing_cycle}
+                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, billing_cycle: e.target.value}))}
+                                    >
+                                        <option value="monthly">Monthly</option>
+                                        <option value="yearly">Yearly</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="modal-actions">
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={handleManualPayment}
+                                    disabled={!manualPaymentForm.user_id || !manualPaymentForm.package_id || !manualPaymentForm.amount}
+                                >
+                                    Add Payment
+                                </button>
+                                <button 
+                                    className="btn btn-outline"
+                                    onClick={() => setShowManualPayment(false)}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Payment Details Modal */}
+            {/* Payment Details Modal - New Design */}
+{showPaymentModal && selectedPayment && (
+    <div className="modal-overlay-new" onClick={() => setShowPaymentModal(false)}>
+        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+                <div className="payment-title-section">
+                    <div className="payment-icon-large">
+                        <i className="bi bi-credit-card"></i>
+                    </div>
+                    <div className="payment-title">
+                        <h2>Payment Details</h2>
+                        <p>Transaction ID: {selectedPayment.transaction_id}</p>
+                    </div>
+                </div>
+                <button 
+                    className="close-btn-new"
+                    onClick={() => setShowPaymentModal(false)}
+                >
+                    <i className="bi bi-x-lg"></i>
+                </button>
             </div>
+
+            <div className="modal-body-new">
+                <div className="payment-details-grid-new">
+                    <div className="detail-card-new amount-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-currency-dollar"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>Amount</label>
+                            <p className="amount-large-new">{formatCurrency(selectedPayment.amount)}</p>
+                        </div>
+                    </div>
+
+                    <div className="detail-card-new status-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-activity"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>Status</label>
+                            <p className={`status-indicator-new ${selectedPayment.payment_status}`}>
+                                {selectedPayment.payment_status}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="detail-card-new package-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-box-seam"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>Package</label>
+                            <p>{formatPlanName(selectedPayment.package_type)}</p>
+                        </div>
+                    </div>
+
+                    <div className="detail-card-new user-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-person"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>User</label>
+                            <p>{selectedPayment.user_name || 'N/A'}</p>
+                            <small>{selectedPayment.user_email}</small>
+                        </div>
+                    </div>
+
+                    <div className="detail-card-new method-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-wallet2"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>Payment Method</label>
+                            <p className={`method-badge-new ${selectedPayment.payment_method}`}>
+                                {selectedPayment.payment_method}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="detail-card-new date-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-calendar"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>Payment Date</label>
+                            <p>{formatDate(selectedPayment.payment_date)}</p>
+                        </div>
+                    </div>
+
+                    <div className="detail-card-new transaction-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-receipt"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>Payment ID</label>
+                            <p>{selectedPayment.payment_id}</p>
+                        </div>
+                    </div>
+
+                    <div className="detail-card-new billing-card">
+                        <div className="detail-icon-new">
+                            <i className="bi bi-arrow-repeat"></i>
+                        </div>
+                        <div className="detail-content-new">
+                            <label>Billing Cycle</label>
+                            <p>{selectedPayment.billing_cycle}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Payment Actions */}
+                <div className="payment-actions-new">
+                    {selectedPayment.payment_status === 'pending' && (
+                        <button 
+                            className="action-btn-new success"
+                            onClick={() => {
+                                updatePaymentStatus(selectedPayment.payment_id, 'completed');
+                                setShowPaymentModal(false);
+                            }}
+                        >
+                            <i className="bi bi-check-circle"></i>
+                            Mark as Completed
+                        </button>
+                    )}
+                    {selectedPayment.payment_status === 'completed' && (
+                        <button 
+                            className="action-btn-new warning"
+                            onClick={() => {
+                                updatePaymentStatus(selectedPayment.payment_id, 'refunded');
+                                setShowPaymentModal(false);
+                            }}
+                        >
+                            <i className="bi bi-arrow-counterclockwise"></i>
+                            Mark as Refunded
+                        </button>
+                    )}
+                    <button 
+                        className="action-btn-new secondary"
+                        onClick={() => setShowPaymentModal(false)}
+                    >
+                        <i className="bi bi-x-circle"></i>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
         </div>
     );
 };
 
-// Users Tab Content - Simplified without permissions
+// Users Tab Content - Completely Redesigned
 const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
   const [users, setUsers] = useState(initialUsers || []);
   const [filteredUsers, setFilteredUsers] = useState(initialUsers || []);
@@ -840,6 +2726,10 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userStats, setUserStats] = useState(null);
+  const [availablePackages, setAvailablePackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState('');
+  const [updatingPackage, setUpdatingPackage] = useState(false);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
@@ -852,7 +2742,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
         
         const formData = new FormData();
         formData.append('function', 'getAllUsers');
-        formData.append('admin_user_id', adminUserId); // Add admin authentication
+        formData.append('admin_user_id', adminUserId);
         
         const response = await fetch(`${API_BASE_URL}/query.php`, {
           method: 'POST',
@@ -898,6 +2788,70 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
       fetchUsers();
     }
   }, [initialUsers, adminUserId]);
+
+  // Fetch user stats and packages when modal opens
+  useEffect(() => {
+    if (selectedUser && showUserModal) {
+      fetchUserStatsAndPackages(selectedUser.id);
+    }
+  }, [selectedUser, showUserModal]);
+
+  const fetchUserStatsAndPackages = async (userId) => {
+    try {
+      const formData = new FormData();
+      formData.append('function', 'getUserPackageAndStats');
+      formData.append('admin_user_id', adminUserId);
+      formData.append('user_id', userId);
+      
+      const response = await fetch(`${API_BASE_URL}/query.php`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserStats(data);
+          setAvailablePackages(data.available_packages || []);
+          setSelectedPackage(data.package_info?.package_type || 'none');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    }
+  };
+
+  const handlePackageUpdate = async () => {
+    if (!selectedUser || selectedPackage === 'none') return;
+    
+    try {
+      setUpdatingPackage(true);
+      const formData = new FormData();
+      formData.append('function', 'updateUserPackage');
+      formData.append('admin_user_id', adminUserId);
+      formData.append('user_id', selectedUser.id);
+      formData.append('package_type', selectedPackage);
+      
+      const response = await fetch(`${API_BASE_URL}/query.php`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Package updated successfully!');
+        // Refresh the stats
+        await fetchUserStatsAndPackages(selectedUser.id);
+      } else {
+        alert('Error updating package: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error updating package:', error);
+      alert('Error updating package');
+    } finally {
+      setUpdatingPackage(false);
+    }
+  };
 
   // Filter and sort users based on search query, filters, and sorting
   useEffect(() => {
@@ -974,6 +2928,8 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
   const viewUserDetails = (user) => {
     setSelectedUser(user);
     setShowUserModal(true);
+    setUserStats(null);
+    setSelectedPackage('');
   };
 
   const refreshUsers = async () => {
@@ -981,7 +2937,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
       setLoading(true);
       const formData = new FormData();
       formData.append('function', 'getAllUsers');
-      formData.append('admin_user_id', adminUserId); // Add admin authentication
+      formData.append('admin_user_id', adminUserId);
       
       const response = await fetch(`${API_BASE_URL}/query.php`, {
         method: 'POST',
@@ -1012,14 +2968,12 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
   };
 
   const updateUserStatus = async (userId, newStatus) => {
-    console.log('Updating user status:', { userId, newStatus, adminUserId });
-
     try {
         const formData = new FormData();
         formData.append('function', 'updateUserStatus');
         formData.append('user_id', userId);
         formData.append('status', newStatus);
-        formData.append('admin_user_id', adminUserId); // Add admin authentication
+        formData.append('admin_user_id', adminUserId);
         
         const response = await fetch(`${API_BASE_URL}/query.php`, {
             method: 'POST',
@@ -1027,12 +2981,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
         });
         
         const data = await response.json();
-        console.log('Server response:', data);
-        
         if (data.success) {
-            console.log('Status updated successfully');
-            
-            // Force immediate UI update - this is crucial
             setUsers(prevUsers => 
                 prevUsers.map(user => 
                     user.id === userId 
@@ -1040,15 +2989,10 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
                         : user
                 )
             );
-            
-            // Also refresh from server to ensure consistency
             await refreshUsers();
-            
-            // Refresh dashboard stats
             if (window.fetchDashboardData) {
                 await window.fetchDashboardData();
             }
-            
             alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
         } else {
             if (data.message && data.message.includes("Unauthorized")) {
@@ -1061,7 +3005,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
         console.error('Error updating status:', error);
         alert('Error: ' + error.message);
     }
-};
+  };
 
   // Calculate user statistics
   const totalUsers = users.length;
@@ -1236,37 +3180,153 @@ const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
         </div>
       </div>
 
-      {/* User Details Modal */}
+      {/* Completely Redesigned User Details Modal */}
       {showUserModal && selectedUser && (
-        <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>User Details</h2>
+        <div className="modal-overlay-new" onClick={() => setShowUserModal(false)}>
+          <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+              <div className="user-avatar-section">
+                <div className="user-avatar-large">
+                  <i className="bi bi-person-circle"></i>
+                </div>
+                <div className="user-title">
+                  <h2>{selectedUser.name}</h2>
+                  <p>{selectedUser.email}</p>
+                </div>
+              </div>
               <button 
-                className="close-btn"
+                className="close-btn-new"
                 onClick={() => setShowUserModal(false)}
               >
-                &times;
+                <i className="bi bi-x-lg"></i>
               </button>
             </div>
-            <div className="modal-body">
-              <div className="user-detail">
-                <strong>Name:</strong> {selectedUser.name}
+
+            <div className="modal-body-new">
+              <div className="user-details-grid">
+                <div className="detail-card">
+                  <div className="detail-icon">
+                    <i className="bi bi-person-badge"></i>
+                  </div>
+                  <div className="detail-content">
+                    <label>Role</label>
+                    <p>{selectedUser.role || 'Event Planner'}</p>
+                  </div>
+                </div>
+
+                <div className="detail-card">
+                  <div className="detail-icon">
+                    <i className="bi bi-calendar-check"></i>
+                  </div>
+                  <div className="detail-content">
+                    <label>Joined Date</label>
+                    <p>{selectedUser.joined}</p>
+                  </div>
+                </div>
+
+                <div className="detail-card">
+                  <div className="detail-icon">
+                    <i className="bi bi-activity"></i>
+                  </div>
+                  <div className="detail-content">
+                    <label>Status</label>
+                    <p className={`status-indicator ${selectedUser.status === 'active' ? 'active' : 'inactive'}`}>
+                      {selectedUser.status === 'active' ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="detail-card">
+                  <div className="detail-icon">
+                    <i className="bi bi-box-seam"></i>
+                  </div>
+                  <div className="detail-content">
+                    <label>Total Events</label>
+                    <p className="events-count">
+                      {userStats ? userStats.total_events : 'Loading...'}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="user-detail">
-                <strong>Email:</strong> {selectedUser.email}
+
+              {/* Package Management Section */}
+              <div className="package-section">
+                <h3>Package Management</h3>
+                <div className="package-controls">
+                  <div className="package-selector">
+                    <label>Current Package:</label>
+                    <select 
+                      value={selectedPackage}
+                      onChange={(e) => setSelectedPackage(e.target.value)}
+                      disabled={updatingPackage}
+                    >
+                      <option value="none">No Package</option>
+                      {availablePackages.map(pkg => (
+                        <option key={pkg.package_id} value={pkg.package_type}>
+                          {pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button 
+                    className="update-package-btn"
+                    onClick={handlePackageUpdate}
+                    disabled={updatingPackage || !selectedPackage || selectedPackage === (userStats?.package_info?.package_type || 'none')}
+                  >
+                    {updatingPackage ? (
+                      <>
+                        <i className="bi bi-arrow-repeat spin"></i>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle"></i>
+                        Update Package
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {userStats?.package_info && (
+                  <div className="package-stats">
+                    <div className="stat-item">
+                      <span className="stat-label">Events Limit:</span>
+                      <span className="stat-value">{userStats.package_info.event_limit}</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Events Used:</span>
+                      <span className="stat-value">{userStats.package_info.event_used}</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Remaining:</span>
+                      <span className="stat-value">
+                        {userStats.package_info.event_limit - userStats.package_info.event_used}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="user-detail">
-                <strong>Role:</strong> {selectedUser.role || 'event_planner'}
-              </div>
-              <div className="user-detail">
-                <strong>Status:</strong> 
-                <span className={`user-status ${selectedUser.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
-                  {selectedUser.status === 'inactive' ? 'Inactive' : 'Active'}
-                </span>
-              </div>
-              <div className="user-detail">
-                <strong>Joined:</strong> {selectedUser.joined}
+
+              {/* Quick Actions */}
+              <div className="modal-actions">
+                <button 
+                  className={`action-btn ${selectedUser.status === 'active' ? 'warning' : 'success'}`}
+                  onClick={() => {
+                    updateUserStatus(selectedUser.id, selectedUser.status === 'active' ? 'inactive' : 'active');
+                    setShowUserModal(false);
+                  }}
+                >
+                  <i className={`bi ${selectedUser.status === 'active' ? 'bi-person-x' : 'bi-person-check'}`}></i>
+                  {selectedUser.status === 'active' ? 'Block User' : 'Activate User'}
+                </button>
+                
+                <button 
+                  className="action-btn secondary"
+                  onClick={() => setShowUserModal(false)}
+                >
+                  <i className="bi bi-x-circle"></i>
+                  Close
+                </button>
               </div>
             </div>
           </div>
