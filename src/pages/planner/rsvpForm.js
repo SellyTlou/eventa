@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./rsvp.css";
+import '../../alert.css';
 import { useSearchParams } from 'react-router-dom';
 
 const RsvpForm = () => {
@@ -20,7 +21,17 @@ const RsvpForm = () => {
     const [totalEventLimit, setTotalEventLimit] = useState(0);
     const [event_id, setEventId] = useState("");
 
-    // Fixed useEffect - only depend on searchParams
+    // ✅ Custom alert state
+    const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+
+    // ✅ Custom alert helper
+    const printAlert = (message, type = "info") => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => {
+            setAlert({ show: false, message: "", type: "" });
+        }, 5000);
+    };
+
     useEffect(() => {
         const id = searchParams.get("event_id");
         if (id) {
@@ -30,21 +41,17 @@ const RsvpForm = () => {
         }
     }, [searchParams]);
 
-    // Consolidated function to fetch all event data
     const fetchEventData = async (eventId) => {
         try {
             setLoadingEvent(true);
-
-            // Fetch all data in parallel
-            const [eventResponse, countResponse, limitResponse] = await Promise.all([
+            await Promise.all([
                 fetchEvent(eventId),
                 fetchRsvpCount(eventId),
                 fetchEventLimit(eventId)
             ]);
-
         } catch (err) {
             console.error("Error fetching event data:", err);
-            setError("Failed to load event details");
+            printAlert("Failed to load event details", "error");
         } finally {
             setLoadingEvent(false);
         }
@@ -73,12 +80,10 @@ const RsvpForm = () => {
                 guestCount = data.guestCount;
             }
             setTotalRplyGuestCount(guestCount);
-
-
         } catch (err) {
             console.error("Error fetching RSVP guest count:", err);
             setTotalRplyGuestCount(0);
-            return 0;
+            printAlert("Error fetching RSVP guest count", "error");
         }
     };
 
@@ -101,8 +106,8 @@ const RsvpForm = () => {
             const data = await response.json();
 
             let eventLimit = 0;
-            if (data.success && data.geustLimit) {
-                eventLimit = parseInt(data.geustLimit.guest_limit || 0);
+            if (data.success && data.guestLimit) {
+                eventLimit = parseInt(data.guestLimit.guest_limit || 0);
             }
 
             setTotalEventLimit(eventLimit);
@@ -110,6 +115,7 @@ const RsvpForm = () => {
         } catch (err) {
             console.error("Error fetching events guest limit:", err);
             setTotalEventLimit(0);
+            printAlert("Error fetching guest limit", "error");
             return 0;
         }
     };
@@ -130,12 +136,12 @@ const RsvpForm = () => {
                 setEventData(data.events[0]);
                 return data.events[0];
             } else {
-                setError("Event not found");
+                printAlert("Event not found", "warning");
                 return null;
             }
         } catch (err) {
             console.error("Error fetching event:", err);
-            setError("Failed to load event details");
+            printAlert("Failed to load event details", "error");
             return null;
         }
     };
@@ -145,7 +151,6 @@ const RsvpForm = () => {
         setFormData(prev => ({
             ...prev,
             [name]: value,
-            // Reset guestCount when not attending
             ...(name === "attending" && value === "no" && { guestCount: 0 })
         }));
     };
@@ -160,12 +165,11 @@ const RsvpForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Check if event is full before submitting
         const availableSpots = totalEventLimit - totalRplyGuestCount;
         const requestedSpots = formData.attending === "yes" ? 1 + formData.guestCount : 0;
 
         if (totalEventLimit > 0 && requestedSpots > availableSpots) {
-            setError(`Sorry, only ${availableSpots} spot(s) available but you requested ${requestedSpots}`);
+            printAlert(`Sorry, only ${availableSpots} spot(s) available but you requested ${requestedSpots}`, "warning");
             return;
         }
 
@@ -192,7 +196,7 @@ const RsvpForm = () => {
             const result = await response.json();
 
             if (result.success) {
-                alert(result.message || "RSVP submitted successfully!");
+                printAlert(result.message || "RSVP submitted successfully!", "success");
                 setFormData({
                     name: "",
                     email: "",
@@ -200,14 +204,13 @@ const RsvpForm = () => {
                     guestCount: 0,
                     message: ""
                 });
-                // Refresh the counts after successful submission
                 await fetchEventData(event_id);
             } else {
                 throw new Error(result.message || "Failed to submit RSVP");
             }
         } catch (err) {
-            setError(err.message || "Failed to submit RSVP. Please try again.");
             console.error("Submission error:", err);
+            printAlert(err.message || "Failed to submit RSVP. Please try again.", "error");
         } finally {
             setIsSubmitting(false);
         }
@@ -226,12 +229,29 @@ const RsvpForm = () => {
         );
     }
 
-    // Calculate available spots
     const availableSpots = totalEventLimit - totalRplyGuestCount;
     const isEventFull = totalEventLimit > 0 && availableSpots <= 0;
 
     return (
         <div className="rsvp_form__container">
+
+            {/* ✅ Custom alert box */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
+
             {/* Full page overlay if event is full */}
             {isEventFull && (
                 <div className="event-full-overlay">

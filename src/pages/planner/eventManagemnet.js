@@ -1,97 +1,69 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { logOut } from "../components";
-
+import RSVPBinaryTree from "../utils/RSVPTree";
 
 const RSVPResponses = () => {
-    const [activeTab, setActiveTab] = useState("overview");
-    const [selectedRows, setSelectedRows] = useState([]);
-    const [responseFilter, setResponseFilter] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
-    const [rsvpResponses, setRsvpResponses] = useState([]);
+    const [responseFilter, setResponseFilter] = useState("all");
+    const [filteredResponses, setFilteredResponses] = useState([]);
     const [eventData, setEventData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const dropdownRef = useRef(null);
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const navigate = useNavigate();
-
-    const [event_id, setEventId] = useState("");
     const [eventStatus, setEventStatus] = useState("");
+    const [bst, setBST] = useState(null);
 
-    useEffect(() => {
-        const id = localStorage.getItem("selectedEventId")
-        if (id) {
-            setEventId(id);
-            fetchRSVPResponses(id);
-            fetchEventStatusByID(id);
-        }
-        if (!id) {
-            navigate("/eventsDashboard");
-        }
-    }, []);
-
+    const dropdownRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            console.log(storedUser);
-            setUser(JSON.parse(storedUser));
-        }
-        if (!storedUser) {
-            logOut();
-        }
+        if (!storedUser) return logOut();
+        setUser(JSON.parse(storedUser));
 
         const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setDropdownOpen(false);
-            }
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setDropdownOpen(false);
         };
-
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+ 
+    useEffect(() => {
+        const eventId = localStorage.getItem("selectedEventId");
+        if (!eventId) return navigate("/eventsDashboard");
+        fetchRSVPResponses(eventId);
+        fetchEventStatusByID(eventId);
     }, []);
 
     const fetchRSVPResponses = async (eventId) => {
         setLoading(true);
-        const API_URL = process.env.REACT_APP_API_URL;
         try {
+            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
             formData.append("function", "getRSVPResponses");
             formData.append("event_id", eventId);
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error("Network response was not ok");
-
+            const response = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
             const data = await response.json();
 
-            console.log("Server data:", data);
-
             if (data.success && data.responses) {
-                // Remove duplicates
-                const uniqueEmails = new Set();
-                const uniqueResponses = data.responses.filter(r => {
-                    if (uniqueEmails.has(r.email)) return false;
-                    uniqueEmails.add(r.email);
-                    return true;
-                });
 
-                setRsvpResponses(uniqueResponses);
+                const tree = new RSVPBinaryTree();
+                tree.bulkInsert(data.responses);
+
+                setBST(tree);
+                setFilteredResponses(tree.toArray()); 
                 setEventData(data.event || null);
             } else {
-                setRsvpResponses([]);
-                setEventData(data.event || null);
+                setFilteredResponses([]);
+                setEventData(null);
             }
         } catch (err) {
-            console.error("Failed to fetch RSVP responses:", err);
-            setRsvpResponses([]);
+            console.error(err);
+            setFilteredResponses([]);
             setEventData(null);
         } finally {
             setLoading(false);
@@ -105,90 +77,55 @@ const RSVPResponses = () => {
             formData.append("function", "getEventStatusByID");
             formData.append("event_id", eventId);
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-            if (!response.ok) throw new Error("Network response was not ok");
+            const response = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
             const data = await response.json();
-            console.log("Event Status data:", data);
             if (data.success && data.status) {
                 setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
-            } else {
+            }
+            else {
                 setEventStatus("Unknown");
             }
-        } catch (err) {
-            console.error("Failed to fetch event status:", err);
-            return "unknown";
-        }
-    }
-    const toggleRowSelection = (id) => {
-        if (selectedRows.includes(id)) {
-            setSelectedRows(selectedRows.filter(rowId => rowId !== id));
-        } else {
-            setSelectedRows([...selectedRows, id]);
-        }
-    };
-    const toggleDropdown = () => {
-        setDropdownOpen(prev => !prev);
-    };
-
-    const toggleAllSelection = () => {
-        if (selectedRows.length === rsvpResponses.length) {
-            setSelectedRows([]);
-        } else {
-            setSelectedRows(rsvpResponses.map(r => r.guest_id));
+        } catch {
+            setEventStatus("Unknown");
         }
     };
 
-    const goToHome = () => {
-        navigate("/eventsDashboard");
+    useEffect(() => {
+        if (!bst) return;
+        let results = bst.searchPartial(searchTerm);
+        results = bst.filterByAttending(responseFilter).filter(r => results.includes(r));
+        setFilteredResponses(results);
+    }, [searchTerm, responseFilter, bst]);
+
+    const handleSort = (order) => {
+        if (!bst) return;
+        const sorted = bst.toArray(order).filter(r => bst.filterByAttending(responseFilter).includes(r));
+        setFilteredResponses(sorted);
     };
-    const goToEventManagement = () => {
-        navigate(`/eventManagement`);
-    };
-    const goToInvitations = () => {
-        navigate(`/invitationPage`);
-    };
-    const goToManage = () => {
-        navigate(`/manage_my_event`);
-    };
+
+    const toggleDropdown = () => setDropdownOpen(prev => !prev);
+    const goToHome = () => navigate("/eventsDashboard");
+    const goToEventManagement = () => navigate("/eventManagement");
+    const goToInvitations = () => navigate("/invitationPage");
+    const goToManage = () => navigate("/manage_my_event");
 
     return (
         <div className="dashboard-container">
+            {/* === HEADER / SIDEBAR === */}
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-
-                    <button>Upgrage</button>
-                    <button
-                        className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"
-                            }`}
-                    >
-                        {eventStatus}
-                    </button>
-
-
-                    <div
-                        ref={dropdownRef}
-                        className={`profile-container ${dropdownOpen ? "open" : ""}`}
-                        onClick={toggleDropdown}
-                    >
+                    <button>Upgrade</button>
+                    <button className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"}`}>{eventStatus}</button>
+                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
                         <span>{user ? user.name : "Guest"}</span>
                         <i className="bi bi-chevron-bar-down"></i>
-
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
-                                <button className="dropdown-item">
-                                    <i className="bi bi-person"></i>Profile
-                                </button>
-                                <button className="dropdown-item">
-                                    <i className="bi bi-gear"></i>Settings
-                                </button>
-                                <button className="dropdown-item" onClick={logOut}>
-                                    <i className="bi bi-box-arrow-right"></i>Logout
-                                </button>
+                                <button className="dropdown-item">Profile</button>
+                                <button className="dropdown-item">Settings</button>
+                                <button className="dropdown-item" onClick={logOut}>Logout</button>
                             </div>
                         )}
                     </div>
@@ -199,25 +136,20 @@ const RSVPResponses = () => {
                 <h3>DASHBOARD</h3>
                 <ul>
                     <li onClick={goToHome}>Home</li>
-                    <li onClick={goToEventManagement} className="active">overview</li>
+                    <li onClick={goToEventManagement} className="active">Overview</li>
                     <li onClick={goToManage}>Publish</li>
                     <li onClick={goToInvitations}>Invitations</li>
                     <li>Preview</li>
                 </ul>
             </div>
 
+            {/* === MAIN CONTENT === */}
             <div className="dashboard-content">
                 <div className="content-header">
                     <h5>RSVP {eventData && `for "${eventData.event_name}"`}</h5>
                     <div className="header-actions">
-                        <span>Actions ({selectedRows.length})</span>
-                        <button className="export-btn">Export</button>
                         <div className="filter-dropdown">
-                            <select
-                                value={responseFilter}
-                                onChange={(e) => setResponseFilter(e.target.value)}
-                                className="filter-select"
-                            >
+                            <select value={responseFilter} onChange={(e) => setResponseFilter(e.target.value)} className="filter-select">
                                 <option value="all">All Responses</option>
                                 <option value="yes">Yes</option>
                                 <option value="no">No</option>
@@ -225,14 +157,10 @@ const RSVPResponses = () => {
                             </select>
                         </div>
                         <div className="search-box">
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="search-input"
-                            />
+                            <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
                         </div>
+                        <button className="btn btn-sm btn-secondary ms-2" onClick={() => handleSort("asc")}>Sort A–Z</button>
+                        <button className="btn btn-sm btn-secondary ms-1" onClick={() => handleSort("desc")}>Sort Z–A</button>
                     </div>
                 </div>
 
@@ -241,24 +169,12 @@ const RSVPResponses = () => {
                         <div className="spinner-border text-info" role="status">
                             <span className="visually-hidden">Loading...</span>
                         </div>
-                        <div className="loading-text">Loading RSVP responses...</div>
                     </div>
                 ) : (
                     <div className="invitations-table-container">
                         <table className="invitations-table">
                             <thead>
                                 <tr>
-                                    <th>
-                                        <input
-                                            type="checkbox"
-                                            checked={
-                                                selectedRows.length === rsvpResponses.length &&
-                                                rsvpResponses.length > 0
-                                            }
-                                            onChange={toggleAllSelection}
-                                            disabled={rsvpResponses.length === 0}
-                                        />
-                                    </th>
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Attending</th>
@@ -267,44 +183,19 @@ const RSVPResponses = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {rsvpResponses.length > 0
-                                    ? rsvpResponses
-                                        .filter((r) =>
-                                            responseFilter === "all"
-                                                ? true
-                                                : r.attending.toLowerCase() === responseFilter
-                                        )
-                                        .filter((r) =>
-                                            searchTerm === "" ||
-                                            r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                            r.email.toLowerCase().includes(searchTerm.toLowerCase())
-                                        )
-                                        .map((r) => (
-                                            <tr
-                                                key={r.guest_id}
-                                                className={selectedRows.includes(r.guest_id) ? "selected" : ""}
-                                            >
-                                                <td>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedRows.includes(r.guest_id)}
-                                                        onChange={() => toggleRowSelection(r.guest_id)}
-                                                    />
-                                                </td>
-                                                <td>{r.name}</td>
-                                                <td>{r.email}</td>
-                                                <td>{r.attending}</td>
-                                                <td>{r.guest_count}</td>
-                                                <td>{r.message}</td>
-                                            </tr>
-                                        ))
-                                    : (
-                                        <tr>
-                                            <td colSpan="6" className="no-results">
-                                                No RSVP responses found
-                                            </td>
-                                        </tr>
-                                    )}
+                                {filteredResponses.length > 0 ? filteredResponses.map((r) => (
+                                    <tr key={r.guest_id}>
+                                        <td>{r.name}</td>
+                                        <td>{r.email}</td>
+                                        <td>{r.attending}</td>
+                                        <td>{r.guest_count}</td>
+                                        <td>{r.message}</td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="5" className="no-results">No RSVP responses found</td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

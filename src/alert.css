@@ -29,6 +29,11 @@
     border: 1px solid #bee5eb;
     color: #0c5460;
 }
+.custom-alert.warning {
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+}
 
 .alert-content {
     display: flex;
@@ -123,4 +128,8 @@
         transform: translateX(0);
         opacity: 1;
     }
+}
+
+.custom-alert.warning .alert-close {
+    color: #000;
 }

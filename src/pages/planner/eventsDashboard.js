@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import PriorityQueue from "js-priority-queue";
 import "./main.css";
 import "../../App.css";
-import { LoginNav,logOut } from "../components";
+import { LoginNav, logOut } from "../components";
 
 const EventsDashboard = () => {
     const [events, setEvents] = useState([]);
     const [filteredEvents, setFilteredEvents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [currentPage, setCurrentPage] = useState(1); 
+    const [currentPage, setCurrentPage] = useState(1);
     const [filters, setFilters] = useState({
         dateRange: "all",
         sortBy: "latest",
@@ -17,9 +18,8 @@ const EventsDashboard = () => {
     const [rsvpStats, setRsvpStats] = useState({});
     const [deletingEventId, setDeletingEventId] = useState(null);
     const [activeTab, setActiveTab] = useState("all");
-    
-    const itemsPerPage = 6; 
-    
+
+    const itemsPerPage = 6;
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -27,6 +27,7 @@ const EventsDashboard = () => {
         if (!storedUser) {
             setLoading(false);
             logOut();
+            return;
         }
 
         const user = JSON.parse(storedUser);
@@ -48,15 +49,44 @@ const EventsDashboard = () => {
 
                 if (data.success && Array.isArray(data.events)) {
                     const uniqueEvents = [];
-
                     data.events.forEach((event) => {
-                        const alreadyExists = uniqueEvents.some((e) => e.event_id === event.event_id);
-                        if (!alreadyExists) uniqueEvents.push(event);
+                        if (!uniqueEvents.some((e) => e.event_id === event.event_id)) {
+                            uniqueEvents.push(event);
+                        }
                     });
 
-                    setEvents(uniqueEvents);
-                    setFilteredEvents(uniqueEvents);
-                    fetchRSVPStatsForEvents(uniqueEvents);
+                    // -----------------------------
+                    // HEAP / PRIORITY QUEUE INTEGRATION
+                    // -----------------------------
+
+                    const eventHeap = new PriorityQueue({
+                        comparator: (a, b) =>
+                            new Date(a.event_start_date || a.created_at) -
+                            new Date(b.event_start_date || b.created_at)
+                    });
+
+                    uniqueEvents.forEach(event => eventHeap.queue(event));
+
+                    const sortedEvents = [];
+                    while (eventHeap.length > 0) {
+                        sortedEvents.push(eventHeap.dequeue());
+                    }
+
+                    const today = new Date();
+                    const upcomingEvents = sortedEvents.filter(
+                        (e) => new Date(e.event_start_date) >= today
+                    );
+
+                    const soonestEvent = upcomingEvents[0];
+                    console.log(
+                        "Soonest upcoming event:",
+                        soonestEvent?.event_name,
+                        soonestEvent?.event_start_date
+                    );
+
+                    setEvents(sortedEvents);
+                    setFilteredEvents(sortedEvents);
+                    fetchRSVPStatsForEvents(sortedEvents);
                 }
             } catch (error) {
                 console.error("Failed to fetch events:", error);
@@ -111,10 +141,7 @@ const EventsDashboard = () => {
     };
 
     const deleteEvent = async (eventId, eventName) => {
-        if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
-            return;
-        }
-
+        if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) return;
         setDeletingEventId(eventId);
 
         try {
@@ -129,7 +156,6 @@ const EventsDashboard = () => {
             });
 
             const data = await response.json();
-
             if (data.success) {
                 const updatedEvents = events.filter(event => event.event_id !== eventId);
                 setEvents(updatedEvents);
@@ -161,41 +187,30 @@ const EventsDashboard = () => {
             });
         }
 
-        // Filter by date range
         if (filters.dateRange !== "all") {
             const today = new Date();
             result = result.filter(event => {
-                const eventDate = new Date(event.event_date || event.created_at);
-
+                const eventDate = new Date(event.event_start_date || event.created_at);
                 switch (filters.dateRange) {
-                    case "today":
-                        return eventDate.toDateString() === today.toDateString();
+                    case "today": return eventDate.toDateString() === today.toDateString();
                     case "week":
-                        const oneWeekAgo = new Date();
-                        oneWeekAgo.setDate(today.getDate() - 7);
+                        const oneWeekAgo = new Date(); oneWeekAgo.setDate(today.getDate() - 7);
                         return eventDate >= oneWeekAgo;
                     case "month":
-                        const oneMonthAgo = new Date();
-                        oneMonthAgo.setMonth(today.getMonth() - 1);
+                        const oneMonthAgo = new Date(); oneMonthAgo.setMonth(today.getMonth() - 1);
                         return eventDate >= oneMonthAgo;
-                    case "upcoming":
-                        return eventDate >= today;
-                    case "past":
-                        return eventDate < today;
-                    default:
-                        return true;
+                    case "upcoming": return eventDate >= today;
+                    case "past": return eventDate < today;
+                    default: return true;
                 }
             });
         }
 
-        // Sort events
+        // Sort again if needed by latest/oldest
         result.sort((a, b) => {
-            const dateA = new Date(a.event_date || a.created_at);
-            const dateB = new Date(b.event_date || b.created_at);
-
-            return filters.sortBy === "latest"
-                ? dateB - dateA
-                : dateA - dateB;
+            const dateA = new Date(a.event_start_date || a.created_at);
+            const dateB = new Date(b.event_start_date || b.created_at);
+            return filters.sortBy === "latest" ? dateB - dateA : dateA - dateB;
         });
 
         setFilteredEvents(result);
@@ -208,15 +223,9 @@ const EventsDashboard = () => {
     const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
     const canLoadMore = filteredEvents.length > displayedEvents.length;
 
-    const loadMoreEvents = () => {
-        setCurrentPage(prevPage => prevPage + 1);
-    };
-
+    const loadMoreEvents = () => setCurrentPage(prev => prev + 1);
     const handleFilterChange = (filterType, value) => setFilters(prev => ({ ...prev, [filterType]: value }));
-    const handleEventClick = (eventId) => {
-        localStorage.setItem("selectedEventId", eventId);
-        navigate("/eventManagement");
-    };
+    const handleEventClick = (eventId) => { localStorage.setItem("selectedEventId", eventId); navigate("/eventManagement"); };
     const createEvent = () => navigate("/activeEventDetails");
 
     if (loading) {
@@ -244,29 +253,28 @@ const EventsDashboard = () => {
                             <p className="dashboard-subtitle">Manage and track your events</p>
                         </div>
                         <button className="create-event-btn-main" onClick={createEvent}>
-                            <i className="bi bi-plus-circle"></i>
-                            Create New Event
+                            <i className="bi bi-plus-circle"></i> Create New Event
                         </button>
                     </div>
 
+                    {/* Show soonest event */}
+                    {events.length > 0 && (
+                        <div className="next-event-banner">
+                            <i className="bi bi-clock-history"></i>
+                            Next upcoming event: <strong>{events[0].event_name}</strong> on{" "}
+                            {new Date(events[0].event_start_date).toLocaleString()}
+                        </div>
+                    )}
+
                     {/* Status Tabs */}
                     <div className="events-tabs">
-                        <button
-                            className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
-                            onClick={() => setActiveTab("all")}
-                        >
+                        <button className={`tab-btn ${activeTab === "all" ? "active" : ""}`} onClick={() => setActiveTab("all")}>
                             All Events <span className="tab-count">{events.length}</span>
                         </button>
-                        <button
-                            className={`tab-btn ${activeTab === "published" ? "active" : ""}`}
-                            onClick={() => setActiveTab("published")}
-                        >
+                        <button className={`tab-btn ${activeTab === "published" ? "active" : ""}`} onClick={() => setActiveTab("published")}>
                             Published <span className="tab-count">{publishedEventsCount}</span>
                         </button>
-                        <button
-                            className={`tab-btn ${activeTab === "unpublished" ? "active" : ""}`}
-                            onClick={() => setActiveTab("unpublished")}
-                        >
+                        <button className={`tab-btn ${activeTab === "unpublished" ? "active" : ""}`} onClick={() => setActiveTab("unpublished")}>
                             Unpublished <span className="tab-count">{unpublishedEventsCount}</span>
                         </button>
                     </div>
