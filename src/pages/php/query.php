@@ -162,13 +162,13 @@ if ($fun === "login") {
                     "success" => true,
                     "message" => "Login successful",
                     "user"    => [
-                        "user_id" => $user['user_id'],
-                        "name"    => $user['name'],
+                        "user_id"  => $user['user_id'],
+                        "name"     => $user['name'],
                         "lastname" => $user['lastname'],
-                        "role"    => $user['role'],
-                        "status"  => $user['status'],
-                        "email"   => $user['email'],
-                        "session" => true,
+                        "role"     => $user['role'],
+                        "status"   => $user['status'],
+                        "email"    => $user['email'],
+                        "session"  => true,
                     ],
                 ]);
 
@@ -709,9 +709,9 @@ if ($fun === "updateUserProfile") {
     $name     = $_POST['name'] ?? '';
     $lastname = $_POST['lastname'] ?? '';
     $email    = $_POST['email'] ?? '';
-    $verified = $_POST['verified'] ?? '1'; 
+    $verified = $_POST['verified'] ?? '1';
 
-    if (!$userID || !$name || !$email || !$lastname) {
+    if (! $userID || ! $name || ! $email || ! $lastname) {
         echo json_encode([
             "success" => false,
             "message" => "Missing required fields",
@@ -722,7 +722,7 @@ if ($fun === "updateUserProfile") {
     try {
         $checkEmail = $pdo->prepare("SELECT user_id FROM users WHERE email = ? AND user_id != ?");
         $checkEmail->execute([$email, $userID]);
-        
+
         if ($checkEmail->rowCount() > 0) {
             echo json_encode([
                 "success" => false,
@@ -1502,11 +1502,11 @@ if ($fun === "update_password") {
 }
 
 if ($fun === "changePassword") {
-    $user_id = $_POST['user_id'] ?? '';
+    $user_id          = $_POST['user_id'] ?? '';
     $current_password = $_POST['current_password'] ?? '';
-    $new_password = $_POST['new_password'] ?? '';
+    $new_password     = $_POST['new_password'] ?? '';
 
-    if (!$user_id || !$current_password || !$new_password) {
+    if (! $user_id || ! $current_password || ! $new_password) {
         echo json_encode(["success" => false, "message" => "All fields are required"]);
         exit;
     }
@@ -1516,22 +1516,22 @@ if ($fun === "changePassword") {
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$user) {
+        if (! $user) {
             echo json_encode(["success" => false, "message" => "User not found"]);
             exit;
         }
 
-        if (!password_verify($current_password, $user['password'])) {
+        if (! password_verify($current_password, $user['password'])) {
             echo json_encode(["success" => false, "message" => "Current password is incorrect"]);
             exit;
         }
 
         $new_password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-        $updateStmt = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
+        $updateStmt        = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
         $updateStmt->execute([$new_password_hash, $user_id]);
 
         echo json_encode(["success" => true, "message" => "Password changed successfully"]);
-        
+
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
