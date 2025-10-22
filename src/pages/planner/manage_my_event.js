@@ -719,8 +719,8 @@ const Manage_my_event = () => {
                             <button className="close-popup" onClick={closePopup}>×</button>
                             <h2>{selectedPackage.name} Package</h2>
                             <div className="package-details">
-                                <p><strong>Max Guests:</strong> {selectedPackage.max_guests === Infinity ? "Unlimited" : selectedPackage.max_guests}</p>
-                                <p><strong>Max Events:</strong> {selectedPackage.max_events === Infinity ? "Unlimited" : selectedPackage.max_events}</p>
+                                <p><strong>Max Guests:</strong> {selectedPackage.maxGuest === Infinity ? "Unlimited" : selectedPackage.maxGuest}</p>
+                                <p><strong>Max Events:</strong> {selectedPackage.maxEvents === Infinity ? "Unlimited" : selectedPackage.maxEvents}</p>
                                 <p><strong>Price:</strong> {selectedPackage.price === 0 ? "Free" : `R${selectedPackage.price}`}</p>
                                 <div className="features-list">
                                     <h4>Features:</h4>

@@ -1,4 +1,5 @@
 import '../App.css';
+import '../alert.css';
 import { useEffect, useState, useRef } from "react"
 import { NavLink } from "react-router-dom";
 import { useNavigate, Routes, Route } from "react-router-dom";
@@ -22,6 +23,7 @@ import Profile from '../pages/planner/Profile';
 import ManageEyEvent from '../pages/planner/manage_my_event';
 import PackagePayment from '../pages/planner/packagePayment';
 import ForgotPassword from './forgot_password';
+import EmailVerify from './email_verify';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -177,6 +179,7 @@ export function SessionHandler() {
                 <Route path="/Manage_my_event" element={<ManageEyEvent />} />
                 <Route path="/packagePayment" element={<PackagePayment />} />
                 <Route path="/forgot_password" element={<ForgotPassword />} />
+                <Route path="/email_verify" element={<EmailVerify />} />
             </Routes>
 
             <SessionWarningModal
@@ -592,12 +595,43 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         confirmPassword: ''
     });
     const [showPassword, setShowPassword] = useState(false);
-
     const [loading, setLoading] = useState(false);
+    const [alert, setAlert] = useState({ show: false, message: '', type: '' });
+    const [needsVerification, setNeedsVerification] = useState(false);
+    const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
     const navigate = useNavigate();
 
     if (!isOpen) return null;
+
+    const printAlert = (message, type = 'info') => {
+        setAlert({ show: true, message, type });
+
+        setTimeout(() => {
+            setAlert({ show: false, message: '', type: '' });
+        }, 5000);
+    };
+
+    const sendVerificationEmail = async (email, name) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formDataToSend = new FormData();
+            formDataToSend.append("email", email);
+            formDataToSend.append("name", name);
+            formDataToSend.append("API_URL", API_URL);
+
+            const response = await fetch(`${API_URL}/send_verification.php`, {
+                method: "POST",
+                body: formDataToSend
+            });
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error("Error sending verification email:", error);
+            return { success: false, message: "Failed to send verification email" };
+        }
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -613,14 +647,14 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         const API_URL = process.env.REACT_APP_API_URL;
         const formDataToSend = new FormData();
 
-
         if (isLogin) {
             formDataToSend.append("function", "login");
             formDataToSend.append("email", formData.email);
             formDataToSend.append("password", formData.password);
         } else {
             if (formData.password !== formData.confirmPassword) {
-                alert("Passwords don't match!");
+                printAlert("Passwords don't match!", 'error');
+                setLoading(false);
                 return;
             }
             formDataToSend.append("function", "register");
@@ -637,10 +671,10 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             });
 
             const result = await response.json();
+            console.log("API Response:", result);
 
             if (result.success) {
                 if (isLogin) {
-
                     localStorage.setItem("user", JSON.stringify(result.user));
 
                     const isAdmin = result.user.role === "admin" ||
@@ -653,16 +687,69 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     }
 
                     onClose();
+                    printAlert("Login successful!", 'success');
                 } else {
-                    alert("Account created! Please login.");
+                    printAlert("Account created successfully! Sending verification email...", 'success');
+
+                    const verificationResult = await sendVerificationEmail(formData.email, formData.name);
+
+                    if (verificationResult.success) {
+                        printAlert("Verification email sent! Please check your inbox.", 'success');
+                    } else {
+                        printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
+                    }
+
+                    setFormData({
+                        name: '',
+                        email: '',
+                        lastname: '',
+                        password: '',
+                        confirmPassword: ''
+                    });
                     setIsLogin(true);
                 }
             } else {
-                alert(result.message || "Something went wrong!");
+                if (result.needsVerification) {
+                    setNeedsVerification(true);
+                    setUnverifiedEmail(formData.email);
+                    printAlert(result.message, 'error');
+                } else {
+                    printAlert(result.message || "Something went wrong!", 'error');
+                }
             }
         } catch (error) {
             console.error("Error:", error);
-            alert("Server error, please try again later.");
+            printAlert("Server error, please try again later.", 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        setLoading(true);
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formDataToSend = new FormData();
+            formDataToSend.append("email", unverifiedEmail);
+            formDataToSend.append("API_URL", API_URL);
+
+            const response = await fetch(`${API_URL}/send_verification.php`, {
+                method: "POST",
+                body: formDataToSend
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                printAlert("Verification email sent successfully! Please check your inbox.", 'success');
+                setNeedsVerification(false);
+                setUnverifiedEmail('');
+            } else {
+                printAlert(result.message || "Failed to send verification email.", 'error');
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            printAlert("Failed to send verification email. Please try again.", 'error');
         } finally {
             setLoading(false);
         }
@@ -671,9 +758,8 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const handleForgotPassword = async () => {
         setLoading(true);
         if (!formData.email) {
-            alert("Please enter your email address first.");
+            printAlert("Please enter your email address first.", 'error');
             setLoading(false);
-
             return;
         }
 
@@ -690,44 +776,58 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             const data = await resp.json();
 
             if (data.success) {
-                alert(`✅ ${data.message}`);
+                printAlert(data.message, 'success');
             } else {
-                alert(`❌ ${data.message}`);
+                printAlert(data.message, 'error');
             }
         } catch (err) {
             console.error("Error:", err);
-            alert("Something went wrong. Please try again later.");
+            printAlert("Something went wrong. Please try again later.", 'error');
         } finally {
             setLoading(false);
         }
     };
-
 
     const switchMode = () => {
         setIsLogin(!isLogin);
         setFormData({
             name: '',
             email: '',
+            lastname: '',
             password: '',
             confirmPassword: ''
         });
+        setNeedsVerification(false);
+        setUnverifiedEmail('');
+    };
+
+    const closeAlert = () => {
+        setAlert({ show: false, message: '', type: '' });
     };
 
     if (loading) {
         return (
-            <>
-                <div className="loading-container">
-                    <div className="spinner-border text-info" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <div className="loading-text">Loading please wait</div>
+            <div className="loading-container">
+                <div className="spinner-border text-info" role="status">
+                    <span className="visually-hidden">Loading...</span>
                 </div>
-            </>
+                <div className="loading-text">Loading please wait</div>
+            </div>
         );
     }
 
     return (
         <div className="login-popup-overlay" onClick={onClose}>
+            {/* Regular Alerts */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <div className="alert-content">
+                        <span className="alert-message">{alert.message}</span>
+                        <button className="alert-close" onClick={closeAlert}>×</button>
+                    </div>
+                </div>
+            )}
+
             <div className="login-popup-content" onClick={e => e.stopPropagation()}>
                 <button className="login-close-btn" onClick={onClose}>
                     <i className="bi bi-x"></i>
@@ -741,7 +841,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
                 <form onSubmit={handleSubmit} className="login-form">
                     {!isLogin && (
-
                         <div className="form-group">
                             <label htmlFor="name">Firstname</label>
                             <input
@@ -754,11 +853,10 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 placeholder="Enter your Firstname"
                             />
                         </div>
-
                     )}
                     {!isLogin && (
                         <div className="form-group">
-                            <label htmlFor="email">Lastname</label>
+                            <label htmlFor="lastname">Lastname</label>
                             <input
                                 type="text"
                                 id="lastname"
@@ -790,8 +888,9 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Enter new password"
                                 id="password"
+                                name="password"
                                 value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                onChange={handleInputChange}
                                 required
                                 minLength="6"
                             />
@@ -805,7 +904,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     </div>
 
                     {!isLogin && (
-
                         <div className="form-group">
                             <label htmlFor="confirmPassword">Confirm Password</label>
                             <input
@@ -833,8 +931,26 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         </div>
                     )}
 
-                    <button type="submit" className="login-submit-btn">
-                        {isLogin ? 'Sign In' : 'Create Account'}
+                    {/* Resend Verification Link - Hidden by default, shows when needsVerification is true */}
+                    {needsVerification && (
+                        <div className="verification-resend-section">
+                            <div className="verification-error-message">
+                                <i className="bi bi-exclamation-triangle"></i>
+                                Please verify your email address to continue.
+                            </div>
+                            <button
+                                type="button"
+                                className="resend-verification-btn"
+                                onClick={handleResendVerification}
+                                disabled={loading}
+                            >
+                                {loading ? 'Sending...' : 'Resend Verification Email'}
+                            </button>
+                        </div>
+                    )}
+
+                    <button type="submit" className="login-submit-btn" disabled={loading}>
+                        {loading ? 'Please Wait...' : (isLogin ? 'Sign In' : 'Create Account')}
                     </button>
                 </form>
 
@@ -859,6 +975,3 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         </div>
     );
 }
-
-
-

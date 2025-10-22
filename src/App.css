@@ -395,6 +395,50 @@ Footer styling
 Login styling
 ******************************/
 
+/* Verification Resend Section */
+.verification-resend-section {
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.verification-error-message {
+  color: #721c24;
+  margin-bottom: 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.verification-error-message i {
+  font-size: 16px;
+}
+
+.resend-verification-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.resend-verification-btn:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.resend-verification-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Login Popup Styles */
 .login-popup-overlay {
   position: fixed;
