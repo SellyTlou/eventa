@@ -1,0 +1,76 @@
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:01:27 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-27.sql" 2>&1
+[20-Oct-2025 22:01:27 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:27 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:34 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-34.sql" 2>&1
+[20-Oct-2025 22:01:34 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:34 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:36 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-36.sql" 2>&1
+[20-Oct-2025 22:01:36 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:36 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:37 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-37.sql" 2>&1
+[20-Oct-2025 22:01:37 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:37 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:38 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-38.sql" 2>&1
+[20-Oct-2025 22:01:38 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:38 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:38 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-38.sql" 2>&1
+[20-Oct-2025 22:01:39 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:39 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:40 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-40.sql" 2>&1
+[20-Oct-2025 22:01:40 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:40 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:02:08 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-02-08.sql" 2>&1
+[20-Oct-2025 22:02:08 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:02:08 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:40 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592

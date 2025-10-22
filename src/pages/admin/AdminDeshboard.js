@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import "../../App.css";
 import "../../index.css";
 import { Footer } from "../components";
+import activityQueue from "../activityQueue";
 
 function AdminDashboard() {
     const [activeTab, setActiveTab] = useState("dashboard");
@@ -28,10 +29,15 @@ function AdminDashboard() {
     const [reportForm, setReportForm] = useState({
     report_type: 'users',
     date_range: 'all',
-    format: 'pdf'
+    format: 'csv'
 });
 const [downloadUrl, setDownloadUrl] = useState('');
-const [actionMessage, setActionMessage] = useState('');     
+const [actionMessage, setActionMessage] = useState('');   
+const [showLogsModal, setShowLogsModal] = useState(false);
+const [allActivities, setAllActivities] = useState([]);
+const [logsLoading, setLogsLoading] = useState(false);
+const [logsSearch, setLogsSearch] = useState("");
+const [logsFilter, setLogsFilter] = useState("all");  
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
     
@@ -39,10 +45,36 @@ const [actionMessage, setActionMessage] = useState('');
     const profileTriggerRef = useRef(null);
     const profileDropdownRef = useRef(null);
 
+    // Silent logging function
+    const logActivity = (action, description, userId = null) => {
+        activityQueue.enqueue({
+            userId: userId || adminUserId,
+            action: action,
+            description: description
+        });
+    };
+
+    // Reset forms when modals open
+useEffect(() => {
+    if (showReportModal) {
+        setReportForm({
+            report_type: 'users',
+            date_range: 'all'
+        });
+        setActionMessage('');
+    }
+}, [showReportModal]);
+
+useEffect(() => {
+    if (showBackupModal) {
+        setActionMessage('');
+        setDownloadUrl('');
+    }
+}, [showBackupModal]);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            // Check if click is outside both the trigger button and the dropdown
             if (
                 profileTriggerRef.current && 
                 !profileTriggerRef.current.contains(event.target) &&
@@ -53,12 +85,10 @@ const [actionMessage, setActionMessage] = useState('');
             }
         };
 
-        // Add event listener when dropdown is open
         if (showProfileDropdown) {
             document.addEventListener('mousedown', handleClickOutside);
         }
 
-        // Cleanup event listener
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -69,11 +99,14 @@ const [actionMessage, setActionMessage] = useState('');
         window.fetchUsersData = fetchUsersData;
         fetchAdminProfile();
 
-         // Load profile image from localStorage
-    const savedImage = localStorage.getItem('adminProfileImage');
-    if (savedImage) {
-        setProfileImage(savedImage);
-    }
+        // Log admin dashboard access
+        logActivity('Admin Dashboard Accessed', 'Administrator accessed the system dashboard');
+
+        // Load profile image from localStorage
+        const savedImage = localStorage.getItem('adminProfileImage');
+        if (savedImage) {
+            setProfileImage(savedImage);
+        }
         
         return () => {
             window.fetchDashboardData = null;
@@ -101,6 +134,7 @@ const [actionMessage, setActionMessage] = useState('');
             }
         } catch (error) {
             console.error('Error fetching admin profile:', error);
+            logActivity('Profile Fetch Failed', `Failed to fetch admin profile: ${error.message}`);
         }
     };
 
@@ -113,25 +147,31 @@ const [actionMessage, setActionMessage] = useState('');
                     case "dashboard":
                         await fetchDashboardData();
                         await fetchSystemActivities();
+                        logActivity('Dashboard Tab Viewed', 'Administrator viewed dashboard statistics');
                         break;
                     case "invitations":
                         await fetchInvitationAnalytics();
+                        logActivity('Invitations Tab Viewed', 'Administrator viewed invitation analytics');
                         break;
                     case "pricing":
                         await fetchPricingPlans();
                         await fetchRevenueData();
+                        logActivity('Pricing Tab Viewed', 'Administrator viewed pricing management');
                         break;
                     case "users":
                         await fetchUsersData();
+                        logActivity('Users Tab Viewed', 'Administrator viewed user management');
                         break;
                     case "profile":
                         await fetchAdminProfile();
+                        logActivity('Profile Tab Viewed', 'Administrator viewed profile settings');
                         break;
                     default:
                         break;
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
+                logActivity('Data Fetch Error', `Failed to fetch ${activeTab} data: ${error.message}`);
             } finally {
                 setLoading(false);
             }
@@ -191,21 +231,23 @@ const [actionMessage, setActionMessage] = useState('');
     };
 
     // Handle quick actions
-const handleQuickAction = async (action) => {
-    switch (action) {
-        case 'generateReports':
-            setShowReportModal(true);
-            break;
-        case 'runBackup':
-            setShowBackupModal(true);
-            break;
-        default:
-            break;
-    }
-};
+    const handleQuickAction = async (action) => {
+        switch (action) {
+            case 'generateReports':
+                setShowReportModal(true);
+                logActivity('Report Generation Initiated', 'Administrator opened report generation modal');
+                break;
+            case 'runBackup':
+                setShowBackupModal(true);
+                logActivity('Backup Initiated', 'Administrator opened backup modal');
+                break;
+            default:
+                break;
+        }
+    };
 
-// Generate report function
-const generateReport = async () => {
+    // Generate report function
+ const generateReport = async () => {
     try {
         setGenerating(true);
         setActionMessage('Generating report...');
@@ -215,7 +257,6 @@ const generateReport = async () => {
         formData.append('admin_user_id', adminUserId);
         formData.append('report_type', reportForm.report_type);
         formData.append('date_range', reportForm.date_range);
-        formData.append('format', reportForm.format);
         
         const response = await fetch(`${API_BASE_URL}/query.php`, {
             method: 'POST',
@@ -223,71 +264,76 @@ const generateReport = async () => {
         });
         
         const data = await response.json();
+        
         if (data.success) {
-            setActionMessage('Report generated successfully! Download will start shortly...');
+            setActionMessage('Report generated! Downloading...');
             
-            // Create download link
+            // Download the CSV file
             const downloadUrl = `${API_BASE_URL}/reports/${data.filename}`;
-            setDownloadUrl(downloadUrl);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = data.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             
-            // Auto download after 2 seconds
-            setTimeout(() => {
-                window.open(downloadUrl, '_blank');
-                setShowReportModal(false);
-                setActionMessage('');
-                setGenerating(false);
-            }, 2000);
+            setShowReportModal(false);
+            setActionMessage('');
+            
         } else {
             setActionMessage('Error: ' + data.message);
-            setGenerating(false);
         }
     } catch (error) {
         console.error('Error generating report:', error);
         setActionMessage('Error generating report');
+    } finally {
         setGenerating(false);
     }
 };
 
-// Run backup function
-const runBackup = async () => {
-    try {
-        setGenerating(true);
-        setActionMessage('Creating database backup...');
+    // Run backup function
+    const runBackup = async () => {
+        try {
+            setGenerating(true);
+            setActionMessage('Creating database backup...');
 
-        const formData = new FormData();
-        formData.append('function', 'backupDatabase');
-        formData.append('admin_user_id', adminUserId);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            setActionMessage('Backup created successfully! Download will start shortly...');
+            const formData = new FormData();
+            formData.append('function', 'backupDatabase');
+            formData.append('admin_user_id', adminUserId);
             
-            // Create download link
-            const downloadUrl = `${API_BASE_URL}/backups/${data.filename}`;
-            setDownloadUrl(downloadUrl);
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
             
-            // Auto download after 2 seconds
-            setTimeout(() => {
-                window.open(downloadUrl, '_blank');
-                setShowBackupModal(false);
-                setActionMessage('');
+            const data = await response.json();
+            if (data.success) {
+                setActionMessage('Backup created successfully! Download will start shortly...');
+                logActivity('Database Backup Created', 'System database backup completed successfully');
+                
+                // Create download link
+                const downloadUrl = `${API_BASE_URL}/backups/${data.filename}`;
+                setDownloadUrl(downloadUrl);
+                
+                // Auto download after 2 seconds
+                setTimeout(() => {
+                    window.open(downloadUrl, '_blank');
+                    setShowBackupModal(false);
+                    setActionMessage('');
+                    setGenerating(false);
+                }, 2000);
+            } else {
+                setActionMessage('Error: ' + data.message);
                 setGenerating(false);
-            }, 2000);
-        } else {
-            setActionMessage('Error: ' + data.message);
+                logActivity('Backup Failed', `Database backup failed: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error creating backup:', error);
+            setActionMessage('Error creating backup');
             setGenerating(false);
+            logActivity('Backup Error', `Backup creation error: ${error.message}`);
         }
-    } catch (error) {
-        console.error('Error creating backup:', error);
-        setActionMessage('Error creating backup');
-        setGenerating(false);
-    }
-};
+    };
 
     const fetchInvitationAnalytics = async () => {
         try {
@@ -388,53 +434,80 @@ const runBackup = async () => {
         }
     };
 
+    const fetchAllSystemActivities = async () => {
+        try {
+            setLogsLoading(true);
+            setShowLogsModal(true);
+            logActivity('System Logs Viewed', 'Administrator accessed complete system activity logs');
+            
+            const formData = new FormData();
+            formData.append('function', 'getSystemActivity');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('limit', 1000);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setAllActivities(data.activities);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching system activities:', error);
+        } finally {
+            setLogsLoading(false);
+        }
+    };
+
     // Handle profile image upload
-const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const imageData = e.target.result;
-            setProfileImage(imageData);
-            // Save to localStorage
-            localStorage.setItem('adminProfileImage', imageData);
-        };
-        reader.readAsDataURL(file);
-    }
-};
+    const handleImageUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imageData = e.target.result;
+                setProfileImage(imageData);
+                localStorage.setItem('adminProfileImage', imageData);
+                logActivity('Profile Image Updated', 'Administrator updated their profile picture');
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     // Profile dropdown component
     const ProfileDropdown = () => {
         if (!adminProfile) return null;
 
-
         const handleLogout = async () => {
-    try {
-        // Call backend logout if needed
-        const formData = new FormData();
-        formData.append('function', 'logout');
-        formData.append('user_id', adminUserId);
-        
-        await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-    } catch (error) {
-        console.error('Logout API error:', error);
-    } finally {
-        // Clear authentication data but KEEP profile image
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-        localStorage.removeItem('adminData');
-        sessionStorage.clear();
-        
-        // DON'T remove the profile image from localStorage
-        // localStorage.removeItem('adminProfileImage'); // ← Remove this line
-        
-        // Redirect to login page
-        window.location.href = '/';
-    }
-};
+            try {
+                logActivity('Admin Logout', 'Administrator signed out of the system');
+                
+                // Call backend logout if needed
+                const formData = new FormData();
+                formData.append('function', 'logout');
+                formData.append('user_id', adminUserId);
+                
+                await fetch(`${API_BASE_URL}/query.php`, {
+                    method: 'POST',
+                    body: formData
+                });
+            } catch (error) {
+                console.error('Logout API error:', error);
+            } finally {
+                // Clear authentication data but KEEP profile image
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminUser');
+                localStorage.removeItem('adminData');
+                sessionStorage.clear();
+                
+                // Redirect to login page
+                window.location.href = '/';
+            }
+        };
 
         return (
             <div className="profile-dropdown" ref={profileDropdownRef}>
@@ -484,6 +557,55 @@ const handleImageUpload = (event) => {
         );
     };
 
+    // Filter activities based on search and filter
+    const filteredActivities = useMemo(() => {
+        if (!allActivities || !Array.isArray(allActivities)) return [];
+        
+        return allActivities.filter(activity => {
+            const matchesSearch = logsSearch === '' || 
+                activity.action.toLowerCase().includes(logsSearch.toLowerCase()) ||
+                activity.description.toLowerCase().includes(logsSearch.toLowerCase()) ||
+                (activity.user_name && activity.user_name.toLowerCase().includes(logsSearch.toLowerCase()));
+            
+            const matchesFilter = logsFilter === 'all' || activity.action === logsFilter;
+            
+            return matchesSearch && matchesFilter;
+        });
+    }, [allActivities, logsSearch, logsFilter]);
+
+    // Get action type for styling
+    const getActionType = (action) => {
+        const actionTypes = {
+            'User Login': 'login',
+            'User Registered': 'register', 
+            'Event Created': 'create',
+            'Event Updated': 'update',
+            'User Blocked': 'blocked',
+            'User Activated': 'activated',
+            'Package Updated': 'package'
+        };
+        return actionTypes[action] || 'default';
+    };
+
+    // Export logs function
+    const exportLogs = () => {
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + "User,Action,Description,Date\n"
+            + filteredActivities.map(activity => 
+                `"${activity.user_name || 'System'}","${activity.action}","${activity.description}","${activity.created_at}"`
+            ).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `system_logs_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        logActivity('Logs Exported', 'System activity logs exported to CSV file');
+    };
+
     // Format dashboard stats for display
     const dashboardStats = useMemo(() => [
         { 
@@ -524,19 +646,19 @@ const handleImageUpload = (event) => {
     ], [dashboardData]);
 
     const quickActions = useMemo(() => [
-    { 
-        id: 1, 
-        title: "Generate Reports", 
-        icon: "bi bi-file-earmark-bar-graph",
-        action: 'generateReports'
-    },
-    { 
-        id: 2, 
-        title: "Run System Backup", 
-        icon: "bi bi-cloud-arrow-up",
-        action: 'runBackup'
-    }
-], []);
+        { 
+            id: 1, 
+            title: "Generate Reports", 
+            icon: "bi bi-file-earmark-bar-graph",
+            action: 'generateReports'
+        },
+        { 
+            id: 2, 
+            title: "Run System Backup", 
+            icon: "bi bi-cloud-arrow-up",
+            action: 'runBackup'
+        }
+    ], []);
 
     // Format recent activities for display
     const recentActivities = useMemo(() => {
@@ -557,11 +679,11 @@ const handleImageUpload = (event) => {
 
         switch(activeTab) {
             case "invitations":
-                return <InvitationsTabContent analytics={invitationAnalytics} />;
+                return <InvitationsTabContent analytics={invitationAnalytics} logActivity={logActivity} adminUserId={adminUserId} />;
             case "pricing":
-                return <PricingTabContent plans={pricingPlans} revenueData={revenueData} adminUserId={adminUserId} />;
+                return <PricingTabContent plans={pricingPlans} revenueData={revenueData} adminUserId={adminUserId} logActivity={logActivity} />;
             case "users":
-                return <UsersTabContent users={usersData} adminUserId={adminUserId} />;
+                return <UsersTabContent users={usersData} adminUserId={adminUserId} logActivity={logActivity} />;
             case "profile":
                 return <ProfileTabContent 
                     adminProfile={adminProfile} 
@@ -569,6 +691,7 @@ const handleImageUpload = (event) => {
                     profileImage={profileImage}
                     onImageUpload={handleImageUpload}
                     onProfileUpdate={fetchAdminProfile}
+                    logActivity={logActivity}
                 />;
             case "dashboard":
             default:
@@ -596,7 +719,12 @@ const handleImageUpload = (event) => {
                         <div className="admin-dashboard-recent-activity">
                             <div className="admin-dashboard-section-header">
                                 <h2>System Activity</h2>
-                                <button className="admin-dashboard-view-all">View Logs</button>
+                                <button 
+                                    className="admin-dashboard-view-all" 
+                                    onClick={fetchAllSystemActivities}
+                                >
+                                    View Logs
+                                </button>
                             </div>
                             <div className="admin-dashboard-activity-list">
                                 {recentActivities.map(activity => (
@@ -611,30 +739,30 @@ const handleImageUpload = (event) => {
                                     </div>
                                 ))}
                                 {recentActivities.length === 0 && (
-                                    <div className="no-activities">No recent activities</div>
+                                    <div key="no-activities" className="no-activities">No recent activities</div>
                                 )}
                             </div>
                         </div>
 
                         {/* Quick Actions Section */}
-<div className="admin-dashboard-actions">
-    <div className="admin-dashboard-section-header">
-        <h2>Admin Actions</h2>
-    </div>
-    <div className="admin-dashboard-actions-grid">
-        {quickActions.map(action => (
-            <button 
-                key={action.id} 
-                className="admin-dashboard-action-btn"
-                onClick={() => handleQuickAction(action.action)}
-                disabled={generating}
-            >
-                <i className={action.icon}></i>
-                <span>{action.title}</span>
-            </button>
-        ))}
-    </div>
-</div>
+                        <div className="admin-dashboard-actions">
+                            <div className="admin-dashboard-section-header">
+                                <h2>Admin Actions</h2>
+                            </div>
+                            <div className="admin-dashboard-actions-grid">
+                                {quickActions.map(action => (
+                                    <button 
+                                        key={action.id}
+                                        className="admin-dashboard-action-btn"
+                                        onClick={() => handleQuickAction(action.action)}
+                                        disabled={generating}
+                                    >
+                                        <i className={action.icon}></i>
+                                        <span>{action.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </section>
                 </>;
         }
@@ -691,7 +819,6 @@ const handleImageUpload = (event) => {
                                 {activeTab === "invitations" && "Invitation Analytics"}
                                 {activeTab === "pricing" && "Pricing Management"}
                                 {activeTab === "users" && "User Administration"}
-
                             </h1>
                             <div className="admin-header-actions">
                                 <div className="profile-section">
@@ -723,173 +850,282 @@ const handleImageUpload = (event) => {
                     </main>
                 </div>
             </div>
-{/* Generate Reports Modal - Beautiful Design */}
-{showReportModal && (
-    <div className="modal-overlay-new" onClick={() => !generating && setShowReportModal(false)}>
-        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-                <div className="modal-title-section">
-                    <div className="modal-icon-large">
-                        <i className="bi bi-file-earmark-bar-graph"></i>
-                    </div>
-                    <div className="modal-title">
-                        <h2>Generate Report</h2>
-                        <p>Create detailed analytics reports</p>
+
+            {/* Generate Reports Modal */}
+            {showReportModal && (
+                <div className="modal-overlay-new" onClick={() => !generating && setShowReportModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-file-earmark-bar-graph"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Generate Report</h2>
+                                    <p>Create detailed analytics reports</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => !generating && setShowReportModal(false)}
+                                disabled={generating}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            {!generating ? (
+                                <>
+                                    <div className="form-group-new">
+                                        <label>Report Type</label>
+                                        <select 
+                                            className="form-select-new"
+                                            value={reportForm.report_type}
+                                            onChange={(e) => setReportForm(prev => ({...prev, report_type: e.target.value}))}
+                                        >
+                                            <option value="users">User Analytics</option>
+                                            <option value="revenue">Revenue Report</option>
+                                            <option value="events">Event Report</option>
+                                            <option value="system">System Report</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group-new">
+                                        <label>Date Range</label>
+                                        <select 
+                                            className="form-select-new"
+                                            value={reportForm.date_range}
+                                            onChange={(e) => setReportForm(prev => ({...prev, date_range: e.target.value}))}
+                                        >
+                                            <option value="all">All Time</option>
+                                            <option value="today">Today</option>
+                                            <option value="week">This Week</option>
+                                            <option value="month">This Month</option>
+                                            <option value="year">This Year</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group-new">
+                                        <label>Format</label>
+                                        <select 
+                                            className="form-select-new"
+                                            value={reportForm.format}
+                                            onChange={(e) => setReportForm(prev => ({...prev, format: e.target.value}))}
+                                        >
+                                            <option value="pdf">PDF</option>
+                                            <option value="csv">CSV</option>
+                                            <option value="excel">Excel</option>
+                                        </select>
+                                    </div>
+                                    <div className="modal-actions-new">
+                                        <button 
+                                            className="action-btn-new primary"
+                                            onClick={generateReport}
+                                        >
+                                            <i className="bi bi-file-earmark-arrow-down"></i>
+                                            Generate Report
+                                        </button>
+                                        <button 
+                                            className="action-btn-new secondary"
+                                            onClick={() => setShowReportModal(false)}
+                                        >
+                                            <i className="bi bi-x-circle"></i>
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="generating-state-new">
+                                    <div className="loading-spinner-new"></div>
+                                    <p>{actionMessage}</p>
+                                    {downloadUrl && (
+                                        <p>Download will start automatically...</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-                <button 
-                    className="close-btn-new"
-                    onClick={() => !generating && setShowReportModal(false)}
-                    disabled={generating}
-                >
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
+            )}
 
-            <div className="modal-body-new">
-                {!generating ? (
-                    <>
-                        <div className="form-group-new">
-                            <label>Report Type</label>
-                            <select 
-                                className="form-select-new"
-                                value={reportForm.report_type}
-                                onChange={(e) => setReportForm(prev => ({...prev, report_type: e.target.value}))}
-                            >
-                                <option value="users">User Analytics</option>
-                                <option value="revenue">Revenue Report</option>
-                                <option value="events">Event Report</option>
-                                <option value="system">System Report</option>
-                            </select>
-                        </div>
-                        <div className="form-group-new">
-                            <label>Date Range</label>
-                            <select 
-                                className="form-select-new"
-                                value={reportForm.date_range}
-                                onChange={(e) => setReportForm(prev => ({...prev, date_range: e.target.value}))}
-                            >
-                                <option value="all">All Time</option>
-                                <option value="today">Today</option>
-                                <option value="week">This Week</option>
-                                <option value="month">This Month</option>
-                                <option value="year">This Year</option>
-                            </select>
-                        </div>
-                        <div className="form-group-new">
-                            <label>Format</label>
-                            <select 
-                                className="form-select-new"
-                                value={reportForm.format}
-                                onChange={(e) => setReportForm(prev => ({...prev, format: e.target.value}))}
-                            >
-                                <option value="pdf">PDF</option>
-                                <option value="csv">CSV</option>
-                                <option value="excel">Excel</option>
-                            </select>
-                        </div>
-                        <div className="modal-actions-new">
+            {/* Backup Database Modal */}
+            {showBackupModal && (
+                <div className="modal-overlay-new" onClick={() => !generating && setShowBackupModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-cloud-arrow-up"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Database Backup</h2>
+                                    <p>Secure your system data</p>
+                                </div>
+                            </div>
                             <button 
-                                className="action-btn-new primary"
-                                onClick={generateReport}
+                                className="close-btn-new"
+                                onClick={() => !generating && setShowBackupModal(false)}
+                                disabled={generating}
                             >
-                                <i className="bi bi-file-earmark-arrow-down"></i>
-                                Generate Report
-                            </button>
-                            <button 
-                                className="action-btn-new secondary"
-                                onClick={() => setShowReportModal(false)}
-                            >
-                                <i className="bi bi-x-circle"></i>
-                                Cancel
+                                <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
-                    </>
-                ) : (
-                    <div className="generating-state-new">
-                        <div className="loading-spinner-new"></div>
-                        <p>{actionMessage}</p>
-                        {downloadUrl && (
-                            <p>Download will start automatically...</p>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
-    </div>
-)}
 
-{/* Backup Database Modal - Beautiful Design */}
-{showBackupModal && (
-    <div className="modal-overlay-new" onClick={() => !generating && setShowBackupModal(false)}>
-        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-                <div className="modal-title-section">
-                    <div className="modal-icon-large">
-                        <i className="bi bi-cloud-arrow-up"></i>
-                    </div>
-                    <div className="modal-title">
-                        <h2>Database Backup</h2>
-                        <p>Secure your system data</p>
+                        <div className="modal-body-new">
+                            {!generating ? (
+                                <>
+                                    <div className="info-card-new">
+                                        <div className="info-icon-new">
+                                            <i className="bi bi-info-circle"></i>
+                                        </div>
+                                        <div className="info-content-new">
+                                            <p>This will create a complete backup of your database. The backup file will be downloaded automatically for secure storage.</p>
+                                        </div>
+                                    </div>
+                                    <div className="modal-actions-new">
+                                        <button 
+                                            className="action-btn-new primary"
+                                            onClick={runBackup}
+                                        >
+                                            <i className="bi bi-database-check"></i>
+                                            Start Backup
+                                        </button>
+                                        <button 
+                                            className="action-btn-new secondary"
+                                            onClick={() => setShowBackupModal(false)}
+                                        >
+                                            <i className="bi bi-x-circle"></i>
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="generating-state-new">
+                                    <div className="loading-spinner-new"></div>
+                                    <p>{actionMessage}</p>
+                                    {downloadUrl && (
+                                        <p>Download will start automatically...</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-                <button 
-                    className="close-btn-new"
-                    onClick={() => !generating && setShowBackupModal(false)}
-                    disabled={generating}
-                >
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
+            )} 
 
-            <div className="modal-body-new">
-                {!generating ? (
-                    <>
-                        <div className="info-card-new">
-                            <div className="info-icon-new">
-                                <i className="bi bi-info-circle"></i>
+            {/* System Logs Modal */}
+            {showLogsModal && (
+                <div className="modal-overlay-new" onClick={() => setShowLogsModal(false)}>
+                    <div className="modal-content-new logs-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-journal-text"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>System Activity Logs</h2>
+                                    <p>Complete history of system activities</p>
+                                </div>
                             </div>
-                            <div className="info-content-new">
-                                <p>This will create a complete backup of your database. The backup file will be downloaded automatically for secure storage.</p>
-                            </div>
-                        </div>
-                        <div className="modal-actions-new">
                             <button 
-                                className="action-btn-new primary"
-                                onClick={runBackup}
+                                className="close-btn-new"
+                                onClick={() => setShowLogsModal(false)}
                             >
-                                <i className="bi bi-database-check"></i>
-                                Start Backup
-                            </button>
-                            <button 
-                                className="action-btn-new secondary"
-                                onClick={() => setShowBackupModal(false)}
-                            >
-                                <i className="bi bi-x-circle"></i>
-                                Cancel
+                                <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
-                    </>
-                ) : (
-                    <div className="generating-state-new">
-                        <div className="loading-spinner-new"></div>
-                        <p>{actionMessage}</p>
-                        {downloadUrl && (
-                            <p>Download will start automatically...</p>
-                        )}
+
+                        <div className="modal-body-new">
+                            {/* Search and Filter Controls */}
+                            <div className="logs-controls">
+                                <div className="search-box">
+                                    <i className="bi bi-search"></i>
+                                    <input
+                                        type="text"
+                                        placeholder="Search activities..."
+                                        value={logsSearch}
+                                        onChange={(e) => setLogsSearch(e.target.value)}
+                                        className="search-input"
+                                    />
+                                </div>
+                                <div className="filter-controls">
+                                    <select 
+                                        value={logsFilter}
+                                        onChange={(e) => setLogsFilter(e.target.value)}
+                                        className="filter-select"
+                                    >
+                                        <option value="all">All Activities</option>
+                                        <option value="User Login">User Logins</option>
+                                        <option value="Event Created">Event Created</option>
+                                        <option value="Event Updated">Event Updated</option>
+                                        <option value="User Registered">User Registered</option>
+                                        <option value="User Blocked">User Blocked</option>
+                                        <option value="User Activated">User Activated</option>
+                                        <option value="Package Updated">Package Updated</option>
+                                    </select>
+                                </div>
+                                <button className="export-btn" onClick={exportLogs}>
+                                    <i className="bi bi-download"></i> Export
+                                </button>
+                            </div>
+
+                            {/* Logs Table */}
+                            {logsLoading ? (
+                                <div className="loading-container">
+                                    <div className="spinner-border text-info" role="status">
+                                        <span className="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div className="loading-text">Loading system logs...</div>
+                                </div>
+                            ) : (
+                                <div className="logs-table-container">
+                                    <div className="table-header">
+                                        <span>User</span>
+                                        <span>Action</span>
+                                        <span>Description</span>
+                                        <span>Date & Time</span>
+                                    </div>
+                                    
+                                    <div className="table-body">
+                                        {filteredActivities.length > 0 ? (
+                                            filteredActivities.map(activity => (
+                                                <div key={activity.id} className="table-row">
+                                                    <span className="user-cell">
+                                                        {activity.user_name || 'System'}
+                                                    </span>
+                                                    <span>
+                                                        <span className={`action-badge ${getActionType(activity.action)}`}>
+                                                            {activity.action}
+                                                        </span>
+                                                    </span>
+                                                    <span className="description-cell">
+                                                        {activity.description}
+                                                    </span>
+                                                    <span className="date-cell">
+                                                        {new Date(activity.created_at).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div key="no-logs" className="no-logs">
+                                                <i className="bi bi-inbox"></i>
+                                                <p>No system activities found</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                )}
-            </div>
-        </div>
-    </div>
-)}
+                </div>
+            )}
+
             <Footer />
         </>
     );
 }
 
-// Profile Tab Component
-const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpload, onProfileUpdate }) => {
+// Profile Tab Component with Logging
+const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpload, onProfileUpdate, logActivity }) => {
     const [editMode, setEditMode] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
@@ -901,7 +1137,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
     });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+    const [messageType, setMessageType] = useState('');
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
@@ -924,8 +1160,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
             const timer = setTimeout(() => {
                 setMessage('');
                 setMessageType('');
-            }, 5000); 
-
+            }, 5000);
             return () => clearTimeout(timer);
         }
     }, [message]);
@@ -960,14 +1195,17 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                 setMessageType('success');
                 setEditMode(false);
                 onProfileUpdate();
+                logActivity('Profile Updated', 'Administrator updated their profile information');
             } else {
                 setMessage(data.message || 'Error updating profile');
                 setMessageType('error');
+                logActivity('Profile Update Failed', `Failed to update profile: ${data.message}`);
             }
         } catch (error) {
             console.error('Error updating profile:', error);
             setMessage('Error updating profile');
             setMessageType('error');
+            logActivity('Profile Update Error', `Profile update error: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -1029,7 +1267,6 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                 </div>
             )}
 
-            {/* Rest of your profile content remains the same */}
             <div className="profile-content">
                 <div className="profile-avatar-section">
                     <div className="avatar-upload">
@@ -1151,8 +1388,8 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
     );
 };
 
-// Enhanced Invitations Tab Content with Charts and Analytics
-const InvitationsTabContent = ({ analytics }) => {
+// Enhanced Invitations Tab Content with proper data fetching
+const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
     const [invitationStats, setInvitationStats] = useState({
         total_invitations: 0,
         open_rate: 0,
@@ -1164,19 +1401,24 @@ const InvitationsTabContent = ({ analytics }) => {
     const [sortDirection, setSortDirection] = useState('asc');
     const [filters, setFilters] = useState({
         eventType: 'all',
-        eventStatus: 'all',
-        dateRange: 'all'
+        eventStatus: 'all'
     });
     const [showExportModal, setShowExportModal] = useState(false);
+    
+    // ADD ALL THE MISSING STATES:
     const [exportFilters, setExportFilters] = useState({
         event_type: 'all',
         status: 'all',
         user_id: ''
     });
+    
     const [users, setUsers] = useState([]);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showEventModal, setShowEventModal] = useState(false);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
+    // Fetch data when component mounts
     useEffect(() => {
         fetchInvitationStats();
         fetchEnhancedAnalytics();
@@ -1188,7 +1430,7 @@ const InvitationsTabContent = ({ analytics }) => {
             setLoading(true);
             const formData = new FormData();
             formData.append('function', 'getInvitationStats');
-            formData.append('admin_user_id', "ADMIN-003");
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -1212,7 +1454,7 @@ const InvitationsTabContent = ({ analytics }) => {
         try {
             const formData = new FormData();
             formData.append('function', 'getEnhancedInvitationAnalytics');
-            formData.append('admin_user_id', "ADMIN-003");
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -1234,7 +1476,7 @@ const InvitationsTabContent = ({ analytics }) => {
         try {
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
-            formData.append('admin_user_id', "ADMIN-003");
+            formData.append('admin_user_id', adminUserId);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -1268,13 +1510,13 @@ const InvitationsTabContent = ({ analytics }) => {
         }));
     };
 
+    // ADD THE MISSING HANDLEEXPORT FUNCTION:
     const handleExport = async () => {
         try {
             setLoading(true);
             const formData = new FormData();
             formData.append('function', 'exportInvitationData');
-            formData.append('admin_user_id', "ADMIN-003");
-            formData.append('event_type', exportFilters.event_type);
+            formData.append('admin_user_id', adminUserId);
             formData.append('status', exportFilters.status);
             formData.append('user_id', exportFilters.user_id);
             
@@ -1285,7 +1527,6 @@ const InvitationsTabContent = ({ analytics }) => {
             
             const data = await response.json();
             if (data.success) {
-                // Download the file
                 const downloadUrl = `${API_BASE_URL}/exports/${data.filename}`;
                 const link = document.createElement('a');
                 link.href = downloadUrl;
@@ -1295,18 +1536,38 @@ const InvitationsTabContent = ({ analytics }) => {
                 document.body.removeChild(link);
                 
                 setShowExportModal(false);
+                logActivity('Invitation Data Exported', 'Exported invitation analytics to CSV');
                 alert('Export downloaded successfully!');
             } else {
                 alert('Error exporting data: ' + data.message);
+                logActivity('Export Failed', `Failed to export invitation data: ${data.message}`);
             }
         } catch (error) {
             console.error('Error exporting data:', error);
             alert('Error exporting data');
+            logActivity('Export Error', `Invitation data export error: ${error.message}`);
         } finally {
             setLoading(false);
         }
     };
 
+    const viewEventDetails = (event) => {
+        setSelectedEvent(event);
+        setShowEventModal(true);
+        logActivity('Event Details Viewed', `Viewed invitation analytics for: ${event.eventName}`);
+    };
+
+    const refreshData = async () => {
+        setLoading(true);
+        await Promise.all([
+            fetchInvitationStats(),
+            fetchEnhancedAnalytics()
+        ]);
+        setLoading(false);
+        logActivity('Invitation Data Refreshed', 'Refreshed invitation analytics data');
+    };
+
+    // Sort and filter analytics
     const sortedAnalytics = useMemo(() => {
         if (!analytics || !Array.isArray(analytics)) return [];
         
@@ -1336,16 +1597,9 @@ const InvitationsTabContent = ({ analytics }) => {
         if (!sortedAnalytics) return [];
         
         return sortedAnalytics.filter(item => {
-            // Event type filter
-            if (filters.eventType !== 'all' && item.eventType !== filters.eventType) {
-                return false;
-            }
-            
-            // Status filter
             if (filters.eventStatus !== 'all' && item.status !== filters.eventStatus) {
                 return false;
             }
-            
             return true;
         });
     }, [sortedAnalytics, filters]);
@@ -1355,30 +1609,6 @@ const InvitationsTabContent = ({ analytics }) => {
         return sortDirection === 'asc' ? '↑' : '↓';
     };
 
-    // Chart data preparation
-    const chartData = useMemo(() => {
-        if (!enhancedAnalytics) return null;
-        
-        return {
-            monthlyTrends: enhancedAnalytics.monthly_trends.map(month => ({
-                month: month.month,
-                events: month.total_events,
-                invitations: month.total_invitations,
-                responses: month.total_responses,
-                responseRate: month.total_invitations > 0 ? 
-                    Math.round((month.total_responses / month.total_invitations) * 100) : 0
-            })),
-            eventTypeStats: enhancedAnalytics.event_type_stats.map(type => ({
-                type: type.event_type,
-                events: type.event_count,
-                responseRate: type.total_invitations > 0 ? 
-                    Math.round((type.total_responses / type.total_invitations) * 100) : 0,
-                attendanceRate: type.total_responses > 0 ?
-                    Math.round((type.total_attending / type.total_responses) * 100) : 0
-            }))
-        };
-    }, [enhancedAnalytics]);
-
     return (
         <div className="admin-tab-content">
             <div className="admin-content-header">
@@ -1386,10 +1616,7 @@ const InvitationsTabContent = ({ analytics }) => {
                 <div className="header-actions">
                     <button 
                         className="btn btn-outline" 
-                        onClick={() => {
-                            fetchInvitationStats();
-                            fetchEnhancedAnalytics();
-                        }}
+                        onClick={refreshData}
                         disabled={loading}
                     >
                         <i className="bi bi-arrow-clockwise"></i> Refresh
@@ -1403,7 +1630,7 @@ const InvitationsTabContent = ({ analytics }) => {
                 </div>
             </div>
 
-            {loading && <div className="loading">Loading...</div>}
+            {loading && <div className="loading">Loading invitation data...</div>}
 
             {/* Analytics Overview Cards */}
             <div className="analytics-overview">
@@ -1414,7 +1641,7 @@ const InvitationsTabContent = ({ analytics }) => {
                     <div className="analytics-content">
                         <h3>Total Invitations Sent</h3>
                         <p className="analytics-number">{invitationStats.total_invitations.toLocaleString()}</p>
-                        <span className="analytics-trend positive">All events</span>
+                        <span className="analytics-trend">All events</span>
                     </div>
                 </div>
                 
@@ -1425,7 +1652,7 @@ const InvitationsTabContent = ({ analytics }) => {
                     <div className="analytics-content">
                         <h3>Average Open Rate</h3>
                         <p className="analytics-number">{invitationStats.open_rate}%</p>
-                        <span className="analytics-trend positive">Based on responses</span>
+                        <span className="analytics-trend">Based on responses</span>
                     </div>
                 </div>
                 
@@ -1436,7 +1663,7 @@ const InvitationsTabContent = ({ analytics }) => {
                     <div className="analytics-content">
                         <h3>Average Response Rate</h3>
                         <p className="analytics-number">{invitationStats.response_rate}%</p>
-                        <span className="analytics-trend neutral">All events</span>
+                        <span className="analytics-trend">All events</span>
                     </div>
                 </div>
             </div>
@@ -1447,24 +1674,28 @@ const InvitationsTabContent = ({ analytics }) => {
                     <div className="charts-grid">
                         {/* Response Trends Chart */}
                         <div className="chart-card">
-                            <h3>Response Trends (Last 6 Months)</h3>
+                            <h3>Response Trends</h3>
                             <div className="chart-container">
-                                {chartData.monthlyTrends.map(month => (
-                                    <div key={month.month} className="trend-bar">
+                                {enhancedAnalytics.monthlyTrends.map((month, index) => (
+                                    <div key={index} className="trend-bar">
                                         <div className="trend-label">{month.month}</div>
                                         <div className="trend-bars">
                                             <div 
                                                 className="trend-bar-invitations" 
-                                                style={{width: `${(month.invitations / Math.max(...chartData.monthlyTrends.map(m => m.invitations))) * 100}%`}}
-                                                title={`${month.invitations} invitations`}
+                                                style={{width: `${Math.max(10, (month.total_invitations / 50) * 100)}%`}}
+                                                title={`${month.total_invitations} invitations`}
                                             ></div>
                                             <div 
                                                 className="trend-bar-responses"
-                                                style={{width: `${(month.responses / Math.max(...chartData.monthlyTrends.map(m => m.invitations))) * 100}%`}}
-                                                title={`${month.responses} responses`}
+                                                style={{width: `${Math.max(5, (month.total_responses / 50) * 100)}%`}}
+                                                title={`${month.total_responses} responses`}
                                             ></div>
                                         </div>
-                                        <div className="trend-rate">{month.responseRate}%</div>
+                                        <div className="trend-rate">
+                                            {month.total_invitations > 0 ? 
+                                                Math.round((month.total_responses / month.total_invitations) * 100) : 0
+                                            }%
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -1476,15 +1707,18 @@ const InvitationsTabContent = ({ analytics }) => {
 
                         {/* Event Type Comparison */}
                         <div className="chart-card">
-                            <h3>Performance by Event Type</h3>
+                            <h3>Performance Summary</h3>
                             <div className="chart-container">
-                                {chartData.eventTypeStats.map(eventType => (
-                                    <div key={eventType.type} className="type-row">
-                                        <div className="type-name">{eventType.type}</div>
+                                {enhancedAnalytics.eventTypeStats.map((eventType, index) => (
+                                    <div key={index} className="type-row">
+                                        <div className="type-name">{eventType.event_type}</div>
                                         <div className="type-stats">
-                                            <span className="type-events">{eventType.events} events</span>
-                                            <span className="type-rate">{eventType.responseRate}% response</span>
-                                            <span className="type-attendance">{eventType.attendanceRate}% attending</span>
+                                            <span className="type-events">{eventType.event_count} events</span>
+                                            <span className="type-rate">
+                                                {eventType.total_invitations > 0 ? 
+                                                    Math.round((eventType.total_responses / eventType.total_invitations) * 100) : 0
+                                                }% response
+                                            </span>
                                         </div>
                                     </div>
                                 ))}
@@ -1499,8 +1733,8 @@ const InvitationsTabContent = ({ analytics }) => {
                 <div className="top-performers-section">
                     <h3>🏆 Top Performing Events</h3>
                     <div className="top-events-grid">
-                        {enhancedAnalytics.top_events.map(event => (
-                            <div key={event.event_id} className="top-event-card">
+                        {enhancedAnalytics.top_events.map((event, index) => (
+                            <div key={index} className="top-event-card">
                                 <div className="event-header">
                                     <h4>{event.event_name}</h4>
                                     <span className="event-type-badge">{event.event_type}</span>
@@ -1527,18 +1761,6 @@ const InvitationsTabContent = ({ analytics }) => {
 
             {/* Filters */}
             <div className="analytics-filters">
-                <div className="filter-group">
-                    <label>Event Type:</label>
-                    <select 
-                        value={filters.eventType} 
-                        onChange={(e) => handleFilterChange('eventType', e.target.value)}
-                    >
-                        <option value="all">All Types</option>
-                        {enhancedAnalytics?.event_types.map(type => (
-                            <option key={type} value={type}>{type}</option>
-                        ))}
-                    </select>
-                </div>
                 <div className="filter-group">
                     <label>Event Status:</label>
                     <select 
@@ -1575,43 +1797,124 @@ const InvitationsTabContent = ({ analytics }) => {
                     <span className="sortable" onClick={() => handleSort('responseRate')}>
                         Response Rate {getSortIcon('responseRate')}
                     </span>
-                    <span>Type</span>
                     <span>Status</span>
                     <span>Actions</span>
                 </div>
                 
-                {filteredAnalytics.map(item => (
-                    <div key={item.id} className="table-row">
-                        <span className="event-name">{item.eventName}</span>
-                        <span>{item.sent}</span>
-                        <span>{item.opened}</span>
-                        <span>{item.responded}</span>
-                        <span>
-                            <span className={`response-rate ${parseInt(item.responseRate) > 75 ? 'high' : parseInt(item.responseRate) > 60 ? 'medium' : 'low'}`}>
-                                {item.responseRate}
+                <div className="table-body">
+                    {filteredAnalytics.map((item, index) => (
+                        <div key={index} className="table-row">
+                            <span className="event-name">{item.eventName}</span>
+                            <span>{item.sent}</span>
+                            <span>{item.opened}</span>
+                            <span>{item.responded}</span>
+                            <span>
+                                <span className={`response-rate ${parseInt(item.responseRate) > 50 ? 'high' : parseInt(item.responseRate) > 25 ? 'medium' : 'low'}`}>
+                                    {item.responseRate}
+                                </span>
                             </span>
-                        </span>
-                        <span>
-                            <span className="event-type-tag">{item.eventType || 'General'}</span>
-                        </span>
-                        <span>
-                            <span className={`status-badge ${item.status}`}>
-                                {item.status}
+                            <span>
+                                <span className={`status-badge ${item.status}`}>
+                                    {item.status}
+                                </span>
                             </span>
-                        </span>
-                        <span>
-                            <button className="btn-icon" title="View Details">
-                                <i className="bi bi-eye"></i>
-                            </button>
-                        </span>
-                    </div>
-                ))}
-                {(!analytics || analytics.length === 0) && (
-                    <div className="no-data">
-                        <p>No invitation data available</p>
-                    </div>
-                )}
+                            <span>
+                                <button 
+                                    className="btn-icon" 
+                                    title="View Details"
+                                    onClick={() => viewEventDetails(item)}
+                                >
+                                    <i className="bi bi-eye"></i>
+                                </button>
+                            </span>
+                        </div>
+                    ))}
+                    {(!analytics || analytics.length === 0) && (
+                        <div className="no-data">
+                            <p>No invitation data available. Create events and send invitations to see analytics.</p>
+                        </div>
+                    )}
+                </div>
             </div>
+
+            {/* Event Details Modal */}
+            {showEventModal && selectedEvent && (
+                <div className="modal-overlay-new" onClick={() => setShowEventModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-calendar-event"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>{selectedEvent.eventName}</h2>
+                                    <p>Invitation Performance Details</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowEventModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="event-details-grid">
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-envelope"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Invitations Sent</label>
+                                        <p className="detail-value">{selectedEvent.sent}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-eye"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Invitations Opened</label>
+                                        <p className="detail-value">{selectedEvent.opened}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-check-circle"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Responses Received</label>
+                                        <p className="detail-value">{selectedEvent.responded}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-graph-up"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Response Rate</label>
+                                        <p className="detail-value highlight">{selectedEvent.responseRate}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="modal-actions">
+                                <button 
+                                    className="action-btn secondary"
+                                    onClick={() => setShowEventModal(false)}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Export Modal */}
             {showExportModal && (
@@ -1636,19 +1939,6 @@ const InvitationsTabContent = ({ analytics }) => {
                         </div>
 
                         <div className="modal-body-new">
-                            <div className="form-group-new">
-                                <label>Event Type</label>
-                                <select 
-                                    className="form-select-new"
-                                    value={exportFilters.event_type}
-                                    onChange={(e) => setExportFilters(prev => ({...prev, event_type: e.target.value}))}
-                                >
-                                    <option value="all">All Event Types</option>
-                                    {enhancedAnalytics?.event_types.map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
-                            </div>
                             <div className="form-group-new">
                                 <label>Event Status</label>
                                 <select 
@@ -1701,8 +1991,8 @@ const InvitationsTabContent = ({ analytics }) => {
     );
 };
 
-// Enhanced Pricing Tab Content with Payment History
-const PricingTabContent = ({ plans, adminUserId }) => {
+// Enhanced Pricing Tab Content with Logging
+const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
     const [activeSection, setActiveSection] = useState('plans');
     const [editingPlan, setEditingPlan] = useState(null);
     const [editForm, setEditForm] = useState({
@@ -1725,7 +2015,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
     });
     const [users, setUsers] = useState([]);
     
-    // New state variables for filtering, sorting, and searching
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [packageFilter, setPackageFilter] = useState('all');
@@ -1742,10 +2031,10 @@ const PricingTabContent = ({ plans, adminUserId }) => {
             fetchPaymentHistory();
             fetchRevenueAnalytics();
             fetchUsers();
+            logActivity('Payments Tab Viewed', 'Administrator viewed payment history and revenue analytics');
         }
     }, [activeSection]);
 
-    // Fetch payment history
     const fetchPaymentHistory = async () => {
         try {
             setLoading(true);
@@ -1771,7 +2060,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         }
     };
 
-    // Fetch revenue analytics
     const fetchRevenueAnalytics = async () => {
         try {
             const formData = new FormData();
@@ -1794,7 +2082,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         }
     };
 
-    // Fetch users for manual payment
     const fetchUsers = async () => {
         try {
             const formData = new FormData();
@@ -1817,13 +2104,11 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         }
     };
 
-    // Filter and sort payments
     const filteredPayments = useMemo(() => {
         if (!paymentHistory || !Array.isArray(paymentHistory)) return [];
         
         let filtered = [...paymentHistory];
         
-        // Apply search filter
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase().trim();
             filtered = filtered.filter(payment => 
@@ -1834,17 +2119,14 @@ const PricingTabContent = ({ plans, adminUserId }) => {
             );
         }
         
-        // Apply status filter
         if (statusFilter !== 'all') {
             filtered = filtered.filter(payment => payment.payment_status === statusFilter);
         }
         
-        // Apply package filter
         if (packageFilter !== 'all') {
             filtered = filtered.filter(payment => payment.package_type === packageFilter);
         }
         
-        // Apply date filter
         if (dateFilter !== 'all') {
             const now = new Date();
             filtered = filtered.filter(payment => {
@@ -1868,12 +2150,10 @@ const PricingTabContent = ({ plans, adminUserId }) => {
             });
         }
         
-        // Apply sorting
         filtered.sort((a, b) => {
             let aValue = a[sortBy];
             let bValue = b[sortBy];
             
-            // Handle different data types for sorting
             if (sortBy === 'amount') {
                 aValue = parseFloat(aValue) || 0;
                 bValue = parseFloat(bValue) || 0;
@@ -1881,7 +2161,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
                 aValue = new Date(aValue);
                 bValue = new Date(bValue);
             } else {
-                // For string values
                 aValue = String(aValue || '').toLowerCase();
                 bValue = String(bValue || '').toLowerCase();
             }
@@ -1896,7 +2175,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         return filtered;
     }, [paymentHistory, searchQuery, statusFilter, packageFilter, dateFilter, sortBy, sortOrder]);
 
-    // Handle column sorting
     const handleSort = (column) => {
         if (sortBy === column) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -1906,13 +2184,12 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         }
     };
 
-    // View payment details
     const viewPaymentDetails = (payment) => {
         setSelectedPayment(payment);
         setShowPaymentModal(true);
+        logActivity('Payment Details Viewed', `Viewed payment details for transaction: ${payment.transaction_id}`);
     };
 
-    // Start editing a plan
     const startEditing = (plan) => {
         setEditingPlan(plan.package_id);
         setEditForm({
@@ -1923,7 +2200,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         });
     };
 
-    // Cancel editing
     const cancelEditing = () => {
         setEditingPlan(null);
         setEditForm({
@@ -1934,7 +2210,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         });
     };
 
-    // Handle form field changes
     const handleEditChange = (field, value) => {
         setEditForm(prev => ({
             ...prev,
@@ -1942,7 +2217,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         }));
     };
 
-    // Save package changes
     const savePackage = async (packageId) => {
         try {
             const formData = new FormData();
@@ -1969,6 +2243,9 @@ const PricingTabContent = ({ plans, adminUserId }) => {
                     )
                 );
                 setEditingPlan(null);
+                logActivity('Package Updated', 
+                    `Updated ${editForm.package_type} package: ${editForm.max_events} events, ${editForm.max_guests} guests, R${editForm.price}`
+                );
                 alert('Package updated successfully!');
             } else {
                 if (data.message && data.message.includes("Unauthorized")) {
@@ -1976,14 +2253,15 @@ const PricingTabContent = ({ plans, adminUserId }) => {
                 } else {
                     alert('Error updating package: ' + data.message);
                 }
+                logActivity('Package Update Failed', `Failed to update package: ${data.message}`);
             }
         } catch (error) {
             console.error('Error updating package:', error);
             alert('Error updating package');
+            logActivity('Package Update Error', `Package update error: ${error.message}`);
         }
     };
 
-    // Handle manual payment
     const handleManualPayment = async () => {
         try {
             const formData = new FormData();
@@ -2002,6 +2280,9 @@ const PricingTabContent = ({ plans, adminUserId }) => {
             
             const data = await response.json();
             if (data.success) {
+                logActivity('Manual Payment Added', 
+                    `Manual payment of R${manualPaymentForm.amount} processed for user ${manualPaymentForm.user_id}`
+                );
                 alert('Manual payment added successfully!');
                 setShowManualPayment(false);
                 setManualPaymentForm({
@@ -2015,14 +2296,15 @@ const PricingTabContent = ({ plans, adminUserId }) => {
                 fetchRevenueAnalytics();
             } else {
                 alert('Error adding payment: ' + data.message);
+                logActivity('Manual Payment Failed', `Failed to add manual payment: ${data.message}`);
             }
         } catch (error) {
             console.error('Error adding manual payment:', error);
             alert('Error adding manual payment');
+            logActivity('Manual Payment Error', `Manual payment error: ${error.message}`);
         }
     };
 
-    // Update payment status
     const updatePaymentStatus = async (paymentId, status) => {
         try {
             const formData = new FormData();
@@ -2038,24 +2320,25 @@ const PricingTabContent = ({ plans, adminUserId }) => {
             
             const data = await response.json();
             if (data.success) {
+                logActivity('Payment Status Updated', `Payment ${paymentId} status changed to ${status}`);
                 alert('Payment status updated successfully!');
                 fetchPaymentHistory();
             } else {
                 alert('Error updating status: ' + data.message);
+                logActivity('Payment Status Update Failed', `Failed to update payment status: ${data.message}`);
             }
         } catch (error) {
             console.error('Error updating payment status:', error);
             alert('Error updating payment status');
+            logActivity('Payment Status Update Error', `Payment status update error: ${error.message}`);
         }
     };
 
-    // Format plan name for display
     const formatPlanName = (packageType) => {
         if (!packageType) return 'Unknown';
         return packageType.charAt(0).toUpperCase() + packageType.slice(1);
     };
 
-    // Get active subscriptions count
     const getActiveSubscriptions = (packageType) => {
         const subscriptionCounts = {
             'basic': 45,
@@ -2065,7 +2348,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         return subscriptionCounts[packageType] || 0;
     };
 
-    // Format currency
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-ZA', {
             style: 'currency',
@@ -2073,12 +2355,10 @@ const PricingTabContent = ({ plans, adminUserId }) => {
         }).format(amount || 0);
     };
 
-    // Format date
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString();
     };
 
-    // Get status badge class
     const getStatusBadgeClass = (status) => {
         const statusClasses = {
             'completed': 'status-completed',
@@ -2330,38 +2610,6 @@ const PricingTabContent = ({ plans, adminUserId }) => {
                             </div>
                         </div>
                         
-                        <div className="sort-controls">
-                            <select 
-                                value={sortBy} 
-                                onChange={(e) => setSortBy(e.target.value)}
-                            >
-                                <option value="payment_date">Date</option>
-                                <option value="amount">Amount</option>
-                                <option value="user_name">User</option>
-                                <option value="package_type">Package</option>
-                            </select>
-                            
-                            <button 
-                                className={`sort-direction ${sortOrder}`}
-                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                            >
-                                {sortOrder === 'asc' ? '↑' : '↓'}
-                            </button>
-                            
-                            <button 
-                                className="btn btn-outline"
-                                onClick={() => {
-                                    setSearchQuery('');
-                                    setStatusFilter('all');
-                                    setPackageFilter('all');
-                                    setDateFilter('all');
-                                    setSortBy('payment_date');
-                                    setSortOrder('desc');
-                                }}
-                            >
-                                <i className="bi bi-arrow-clockwise"></i> Reset
-                            </button>
-                        </div>
                     </div>
 
                     {/* Payment History Table */}
@@ -2393,69 +2641,68 @@ const PricingTabContent = ({ plans, adminUserId }) => {
                                     <span className="sortable" onClick={() => handleSort('package_type')}>
                                         Package {sortBy === 'package_type' && (sortOrder === 'asc' ? '↑' : '↓')}
                                     </span>
-                                    <span className="sortable" onClick={() => handleSort('amount')}>
-                                        Amount {sortBy === 'amount' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                    <span >
+                                        Amount 
                                     </span>
                                     <span>Method</span>
                                     <span>Status</span>
                                     <span>Actions</span>
                                 </div>
                                 
-                                {filteredPayments.length > 0 ? (
-                                    filteredPayments.map(payment => (
-                                        <div key={payment.payment_id} className="table-row">
-                                            <span>{formatDate(payment.payment_date)}</span>
-                                            <span className="user-info">
-                                                <div className="user-name">{payment.user_name || 'N/A'}</div>
-                                                <div className="user-email">{payment.user_email}</div>
+                                {filteredPayments.map(payment => (
+                                    <div key={payment.payment_id} className="table-row">
+                                        <span>{formatDate(payment.payment_date)}</span>
+                                        <span className="user-info">
+                                            <div className="user-name">{payment.user_name || 'N/A'}</div>
+                                            <div className="user-email">{payment.user_email}</div>
+                                        </span>
+                                        <span>
+                                            <span className="package-badge">
+                                                {formatPlanName(payment.package_type)}
                                             </span>
-                                            <span>
-                                                <span className="package-badge">
-                                                    {formatPlanName(payment.package_type)}
-                                                </span>
+                                        </span>
+                                        <span className="amount">{formatCurrency(payment.amount)}</span>
+                                        <span>
+                                            <span className={`method-badge ${payment.payment_method}`}>
+                                                {payment.payment_method}
                                             </span>
-                                            <span className="amount">{formatCurrency(payment.amount)}</span>
-                                            <span>
-                                                <span className={`method-badge ${payment.payment_method}`}>
-                                                    {payment.payment_method}
-                                                </span>
+                                        </span>
+                                        <span>
+                                            <span className={`status-badge ${getStatusBadgeClass(payment.payment_status)}`}>
+                                                {payment.payment_status}
                                             </span>
-                                            <span>
-                                                <span className={`status-badge ${getStatusBadgeClass(payment.payment_status)}`}>
-                                                    {payment.payment_status}
-                                                </span>
-                                            </span>
-                                            <span className="actions">
-                                                {payment.payment_status === 'pending' && (
-                                                    <button 
-                                                        className="btn-icon success"
-                                                        onClick={() => updatePaymentStatus(payment.payment_id, 'completed')}
-                                                        title="Mark as Completed"
-                                                    >
-                                                        <i className="bi bi-check"></i>
-                                                    </button>
-                                                )}
-                                                {payment.payment_status === 'completed' && (
-                                                    <button 
-                                                        className="btn-icon warning"
-                                                        onClick={() => updatePaymentStatus(payment.payment_id, 'refunded')}
-                                                        title="Mark as Refunded"
-                                                    >
-                                                        <i className="bi bi-arrow-counterclockwise"></i>
-                                                    </button>
-                                                )}
+                                        </span>
+                                        <span className="actions">
+                                            {payment.payment_status === 'pending' && (
                                                 <button 
-                                                    className="btn-icon info"
-                                                    onClick={() => viewPaymentDetails(payment)}
-                                                    title="View Details"
+                                                    className="btn-icon success"
+                                                    onClick={() => updatePaymentStatus(payment.payment_id, 'completed')}
+                                                    title="Mark as Completed"
                                                 >
-                                                    <i className="bi bi-eye"></i>
+                                                    <i className="bi bi-check"></i>
                                                 </button>
-                                            </span>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="no-payments">
+                                            )}
+                                            {payment.payment_status === 'completed' && (
+                                                <button 
+                                                    className="btn-icon warning"
+                                                    onClick={() => updatePaymentStatus(payment.payment_id, 'refunded')}
+                                                    title="Mark as Refunded"
+                                                >
+                                                    <i className="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            )}
+                                            <button 
+                                                className="btn-icon info"
+                                                onClick={() => viewPaymentDetails(payment)}
+                                                title="View Details"
+                                            >
+                                                <i className="bi bi-eye"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                ))}
+                                {filteredPayments.length === 0 && (
+                                    <div key="no-payments" className="no-payments">
                                         <i className="bi bi-receipt"></i>
                                         <p>No payments found matching your criteria</p>
                                         <button 
@@ -2562,778 +2809,779 @@ const PricingTabContent = ({ plans, adminUserId }) => {
             )}
 
             {/* Payment Details Modal */}
-            {/* Payment Details Modal - New Design */}
-{showPaymentModal && selectedPayment && (
-    <div className="modal-overlay-new" onClick={() => setShowPaymentModal(false)}>
-        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-                <div className="payment-title-section">
-                    <div className="payment-icon-large">
-                        <i className="bi bi-credit-card"></i>
-                    </div>
-                    <div className="payment-title">
-                        <h2>Payment Details</h2>
-                        <p>Transaction ID: {selectedPayment.transaction_id}</p>
+            {showPaymentModal && selectedPayment && (
+                <div className="modal-overlay-new" onClick={() => setShowPaymentModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="payment-title-section">
+                                <div className="payment-icon-large">
+                                    <i className="bi bi-credit-card"></i>
+                                </div>
+                                <div className="payment-title">
+                                    <h2>Payment Details</h2>
+                                    <p>Transaction ID: {selectedPayment.transaction_id}</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowPaymentModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="payment-details-grid-new">
+                                <div className="detail-card-new amount-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-currency-dollar"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>Amount</label>
+                                        <p className="amount-large-new">{formatCurrency(selectedPayment.amount)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card-new status-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-activity"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>Status</label>
+                                        <p className={`status-indicator-new ${selectedPayment.payment_status}`}>
+                                            {selectedPayment.payment_status}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card-new package-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-box-seam"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>Package</label>
+                                        <p>{formatPlanName(selectedPayment.package_type)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card-new user-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-person"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>User</label>
+                                        <p>{selectedPayment.user_name || 'N/A'}</p>
+                                        <small>{selectedPayment.user_email}</small>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card-new method-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-wallet2"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>Payment Method</label>
+                                        <p className={`method-badge-new ${selectedPayment.payment_method}`}>
+                                            {selectedPayment.payment_method}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card-new date-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-calendar"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>Payment Date</label>
+                                        <p>{formatDate(selectedPayment.payment_date)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card-new transaction-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-receipt"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>Payment ID</label>
+                                        <p>{selectedPayment.payment_id}</p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card-new billing-card">
+                                    <div className="detail-icon-new">
+                                        <i className="bi bi-arrow-repeat"></i>
+                                    </div>
+                                    <div className="detail-content-new">
+                                        <label>Billing Cycle</label>
+                                        <p>{selectedPayment.billing_cycle}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment Actions */}
+                            <div className="payment-actions-new">
+                                {selectedPayment.payment_status === 'pending' && (
+                                    <button 
+                                        className="action-btn-new success"
+                                        onClick={() => {
+                                            updatePaymentStatus(selectedPayment.payment_id, 'completed');
+                                            setShowPaymentModal(false);
+                                        }}
+                                    >
+                                        <i className="bi bi-check-circle"></i>
+                                        Mark as Completed
+                                    </button>
+                                )}
+                                {selectedPayment.payment_status === 'completed' && (
+                                    <button 
+                                        className="action-btn-new warning"
+                                        onClick={() => {
+                                            updatePaymentStatus(selectedPayment.payment_id, 'refunded');
+                                            setShowPaymentModal(false);
+                                        }}
+                                    >
+                                        <i className="bi bi-arrow-counterclockwise"></i>
+                                        Mark as Refunded
+                                    </button>
+                                )}
+                                <button 
+                                    className="action-btn-new secondary"
+                                    onClick={() => setShowPaymentModal(false)}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button 
-                    className="close-btn-new"
-                    onClick={() => setShowPaymentModal(false)}
-                >
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
-
-            <div className="modal-body-new">
-                <div className="payment-details-grid-new">
-                    <div className="detail-card-new amount-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-currency-dollar"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>Amount</label>
-                            <p className="amount-large-new">{formatCurrency(selectedPayment.amount)}</p>
-                        </div>
-                    </div>
-
-                    <div className="detail-card-new status-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-activity"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>Status</label>
-                            <p className={`status-indicator-new ${selectedPayment.payment_status}`}>
-                                {selectedPayment.payment_status}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="detail-card-new package-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-box-seam"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>Package</label>
-                            <p>{formatPlanName(selectedPayment.package_type)}</p>
-                        </div>
-                    </div>
-
-                    <div className="detail-card-new user-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-person"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>User</label>
-                            <p>{selectedPayment.user_name || 'N/A'}</p>
-                            <small>{selectedPayment.user_email}</small>
-                        </div>
-                    </div>
-
-                    <div className="detail-card-new method-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-wallet2"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>Payment Method</label>
-                            <p className={`method-badge-new ${selectedPayment.payment_method}`}>
-                                {selectedPayment.payment_method}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="detail-card-new date-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-calendar"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>Payment Date</label>
-                            <p>{formatDate(selectedPayment.payment_date)}</p>
-                        </div>
-                    </div>
-
-                    <div className="detail-card-new transaction-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-receipt"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>Payment ID</label>
-                            <p>{selectedPayment.payment_id}</p>
-                        </div>
-                    </div>
-
-                    <div className="detail-card-new billing-card">
-                        <div className="detail-icon-new">
-                            <i className="bi bi-arrow-repeat"></i>
-                        </div>
-                        <div className="detail-content-new">
-                            <label>Billing Cycle</label>
-                            <p>{selectedPayment.billing_cycle}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Payment Actions */}
-                <div className="payment-actions-new">
-                    {selectedPayment.payment_status === 'pending' && (
-                        <button 
-                            className="action-btn-new success"
-                            onClick={() => {
-                                updatePaymentStatus(selectedPayment.payment_id, 'completed');
-                                setShowPaymentModal(false);
-                            }}
-                        >
-                            <i className="bi bi-check-circle"></i>
-                            Mark as Completed
-                        </button>
-                    )}
-                    {selectedPayment.payment_status === 'completed' && (
-                        <button 
-                            className="action-btn-new warning"
-                            onClick={() => {
-                                updatePaymentStatus(selectedPayment.payment_id, 'refunded');
-                                setShowPaymentModal(false);
-                            }}
-                        >
-                            <i className="bi bi-arrow-counterclockwise"></i>
-                            Mark as Refunded
-                        </button>
-                    )}
-                    <button 
-                        className="action-btn-new secondary"
-                        onClick={() => setShowPaymentModal(false)}
-                    >
-                        <i className="bi bi-x-circle"></i>
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-)}
+            )}
         </div>
     );
 };
 
-// Users Tab Content - Completely Redesigned
-const UsersTabContent = ({ users: initialUsers, adminUserId }) => {
-  const [users, setUsers] = useState(initialUsers || []);
-  const [filteredUsers, setFilteredUsers] = useState(initialUsers || []);
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [userStats, setUserStats] = useState(null);
-  const [availablePackages, setAvailablePackages] = useState([]);
-  const [selectedPackage, setSelectedPackage] = useState('');
-  const [updatingPackage, setUpdatingPackage] = useState(false);
+// Users Tab Content with Logging
+const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
+    const [users, setUsers] = useState(initialUsers || []);
+    const [filteredUsers, setFilteredUsers] = useState(initialUsers || []);
+    const [selectedStatus, setSelectedStatus] = useState('all');
+    const [sortBy, setSortBy] = useState('name');
+    const [sortOrder, setSortOrder] = useState('asc');
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [userStats, setUserStats] = useState(null);
+    const [availablePackages, setAvailablePackages] = useState([]);
+    const [selectedPackage, setSelectedPackage] = useState('');
+    const [updatingPackage, setUpdatingPackage] = useState(false);
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
-  // Fetch users from API
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const formData = new FormData();
-        formData.append('function', 'getAllUsers');
-        formData.append('admin_user_id', adminUserId);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const formattedUsers = data.users.map(user => ({
-            id: user.user_id,
-            name: user.name,
-            email: user.email,
-            role: user.role || 'event_planner',
-            status: user.status || 'active',
-            joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
-          }));
-          
-          setUsers(formattedUsers);
-          setFilteredUsers(formattedUsers);
-        } else {
-          if (data.message && data.message.includes("Unauthorized")) {
-            throw new Error("Admin access denied. Please log in as administrator.");
-          } else {
-            throw new Error(data.message || 'Failed to fetch users');
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        setError(error.message);
-        setUsers([]);
-        setFilteredUsers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (!initialUsers || initialUsers.length === 0) {
-      fetchUsers();
-    }
-  }, [initialUsers, adminUserId]);
-
-  // Fetch user stats and packages when modal opens
-  useEffect(() => {
-    if (selectedUser && showUserModal) {
-      fetchUserStatsAndPackages(selectedUser.id);
-    }
-  }, [selectedUser, showUserModal]);
-
-  const fetchUserStatsAndPackages = async (userId) => {
-    try {
-      const formData = new FormData();
-      formData.append('function', 'getUserPackageAndStats');
-      formData.append('admin_user_id', adminUserId);
-      formData.append('user_id', userId);
-      
-      const response = await fetch(`${API_BASE_URL}/query.php`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setUserStats(data);
-          setAvailablePackages(data.available_packages || []);
-          setSelectedPackage(data.package_info?.package_type || 'none');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-    }
-  };
-
-  const handlePackageUpdate = async () => {
-    if (!selectedUser || selectedPackage === 'none') return;
-    
-    try {
-      setUpdatingPackage(true);
-      const formData = new FormData();
-      formData.append('function', 'updateUserPackage');
-      formData.append('admin_user_id', adminUserId);
-      formData.append('user_id', selectedUser.id);
-      formData.append('package_type', selectedPackage);
-      
-      const response = await fetch(`${API_BASE_URL}/query.php`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert('Package updated successfully!');
-        // Refresh the stats
-        await fetchUserStatsAndPackages(selectedUser.id);
-      } else {
-        alert('Error updating package: ' + data.message);
-      }
-    } catch (error) {
-      console.error('Error updating package:', error);
-      alert('Error updating package');
-    } finally {
-      setUpdatingPackage(false);
-    }
-  };
-
-  // Filter and sort users based on search query, filters, and sorting
-  useEffect(() => {
-    const filterAndSortUsers = () => {
-      if (!users || !Array.isArray(users)) {
-        setFilteredUsers([]);
-        return;
-      }
-      
-      let result = [...users];
-      
-      // Filter by search query
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase().trim();
-        result = result.filter(user => 
-          user.name.toLowerCase().includes(query) || 
-          user.email.toLowerCase().includes(query) ||
-          (user.role && user.role.toLowerCase().includes(query))
-        );
-      }
-      
-      // Filter by status
-      if (selectedStatus !== 'all') {
-        result = result.filter(user => user.status === selectedStatus);
-      }
-      
-      // Sort users
-      result.sort((a, b) => {
-        if (sortBy === 'name') {
-          return sortOrder === 'asc' 
-            ? a.name.localeCompare(b.name) 
-            : b.name.localeCompare(a.name);
-        } else if (sortBy === 'role') {
-          return sortOrder === 'asc' 
-            ? a.role.localeCompare(b.role) 
-            : b.role.localeCompare(a.role);
-        } else if (sortBy === 'status') {
-          return sortOrder === 'asc' 
-            ? a.status.localeCompare(b.status) 
-            : b.status.localeCompare(a.status);
-        } else if (sortBy === 'joined') {
-          const dateA = a.joined === 'N/A' ? new Date(0) : new Date(a.joined);
-          const dateB = b.joined === 'N/A' ? new Date(0) : new Date(b.joined);
-          return sortOrder === 'asc' 
-            ? dateA - dateB
-            : dateB - dateA;
-        }
-        return 0;
-      });
-      
-      setFilteredUsers(result);
-    };
-
-    filterAndSortUsers();
-  }, [users, selectedStatus, sortBy, sortOrder, searchQuery]);
-
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
-    }
-  };
-
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
-  };
-
-  const viewUserDetails = (user) => {
-    setSelectedUser(user);
-    setShowUserModal(true);
-    setUserStats(null);
-    setSelectedPackage('');
-  };
-
-  const refreshUsers = async () => {
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('function', 'getAllUsers');
-      formData.append('admin_user_id', adminUserId);
-      
-      const response = await fetch(`${API_BASE_URL}/query.php`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          const formattedUsers = data.users.map(user => ({
-            id: user.user_id,
-            name: user.name,
-            email: user.email,
-            role: user.role || 'event_planner',
-            status: user.status || 'active',
-            joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
-          }));
-          
-          setUsers(formattedUsers);
-          setFilteredUsers(formattedUsers);
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing users:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateUserStatus = async (userId, newStatus) => {
-    try {
-        const formData = new FormData();
-        formData.append('function', 'updateUserStatus');
-        formData.append('user_id', userId);
-        formData.append('status', newStatus);
-        formData.append('admin_user_id', adminUserId);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            setUsers(prevUsers => 
-                prevUsers.map(user => 
-                    user.id === userId 
-                        ? { ...user, status: newStatus }
-                        : user
-                )
-            );
-            await refreshUsers();
-            if (window.fetchDashboardData) {
-                await window.fetchDashboardData();
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                const formData = new FormData();
+                formData.append('function', 'getAllUsers');
+                formData.append('admin_user_id', adminUserId);
+                
+                const response = await fetch(`${API_BASE_URL}/query.php`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const formattedUsers = data.users.map(user => ({
+                        id: user.user_id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role || 'event_planner',
+                        status: user.status || 'active',
+                        joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
+                    }));
+                    
+                    setUsers(formattedUsers);
+                    setFilteredUsers(formattedUsers);
+                } else {
+                    if (data.message && data.message.includes("Unauthorized")) {
+                        throw new Error("Admin access denied. Please log in as administrator.");
+                    } else {
+                        throw new Error(data.message || 'Failed to fetch users');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching users:', error);
+                setError(error.message);
+                setUsers([]);
+                setFilteredUsers([]);
+            } finally {
+                setLoading(false);
             }
-            alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
-        } else {
-            if (data.message && data.message.includes("Unauthorized")) {
-                throw new Error("Admin access denied. Please log in as administrator.");
+        };
+
+        if (!initialUsers || initialUsers.length === 0) {
+            fetchUsers();
+        }
+    }, [initialUsers, adminUserId]);
+
+    useEffect(() => {
+        if (selectedUser && showUserModal) {
+            fetchUserStatsAndPackages(selectedUser.id);
+        }
+    }, [selectedUser, showUserModal]);
+
+    const fetchUserStatsAndPackages = async (userId) => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getUserPackageAndStats');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('user_id', userId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setUserStats(data);
+                    setAvailablePackages(data.available_packages || []);
+                    setSelectedPackage(data.package_info?.package_type || 'none');
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching user stats:', error);
+        }
+    };
+
+    const handlePackageUpdate = async () => {
+        if (!selectedUser || selectedPackage === 'none') return;
+        
+        try {
+            setUpdatingPackage(true);
+            const formData = new FormData();
+            formData.append('function', 'updateUserPackage');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('user_id', selectedUser.id);
+            formData.append('package_type', selectedPackage);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                logActivity('User Package Updated', 
+                    `Updated package for user ${selectedUser.name} to ${selectedPackage}`
+                );
+                alert('Package updated successfully!');
+                await fetchUserStatsAndPackages(selectedUser.id);
             } else {
-                throw new Error(data.message || 'Failed to update user status');
+                alert('Error updating package: ' + data.message);
+                logActivity('Package Update Failed', `Failed to update user package: ${data.message}`);
             }
+        } catch (error) {
+            console.error('Error updating package:', error);
+            alert('Error updating package');
+            logActivity('Package Update Error', `User package update error: ${error.message}`);
+        } finally {
+            setUpdatingPackage(false);
         }
-    } catch (error) {
-        console.error('Error updating status:', error);
-        alert('Error: ' + error.message);
+    };
+
+    useEffect(() => {
+        const filterAndSortUsers = () => {
+            if (!users || !Array.isArray(users)) {
+                setFilteredUsers([]);
+                return;
+            }
+            
+            let result = [...users];
+            
+            if (searchQuery.trim() !== '') {
+                const query = searchQuery.toLowerCase().trim();
+                result = result.filter(user => 
+                    user.name.toLowerCase().includes(query) || 
+                    user.email.toLowerCase().includes(query) ||
+                    (user.role && user.role.toLowerCase().includes(query))
+                );
+            }
+            
+            if (selectedStatus !== 'all') {
+                result = result.filter(user => user.status === selectedStatus);
+            }
+            
+            result.sort((a, b) => {
+                if (sortBy === 'name') {
+                    return sortOrder === 'asc' 
+                        ? a.name.localeCompare(b.name) 
+                        : b.name.localeCompare(a.name);
+                } else if (sortBy === 'role') {
+                    return sortOrder === 'asc' 
+                        ? a.role.localeCompare(b.role) 
+                        : b.role.localeCompare(a.role);
+                } else if (sortBy === 'status') {
+                    return sortOrder === 'asc' 
+                        ? a.status.localeCompare(b.status) 
+                        : b.status.localeCompare(a.status);
+                } else if (sortBy === 'joined') {
+                    const dateA = a.joined === 'N/A' ? new Date(0) : new Date(a.joined);
+                    const dateB = b.joined === 'N/A' ? new Date(0) : new Date(b.joined);
+                    return sortOrder === 'asc' 
+                        ? dateA - dateB
+                        : dateB - dateA;
+                }
+                return 0;
+            });
+            
+            setFilteredUsers(result);
+        };
+
+        filterAndSortUsers();
+    }, [users, selectedStatus, sortBy, sortOrder, searchQuery]);
+
+    const handleSort = (column) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('asc');
+        }
+    };
+
+    const handleSearch = (e) => {
+        setSearchQuery(e.target.value);
+    };
+
+    const clearSearch = () => {
+        setSearchQuery('');
+    };
+
+    const viewUserDetails = (user) => {
+        setSelectedUser(user);
+        setShowUserModal(true);
+        setUserStats(null);
+        setSelectedPackage('');
+        logActivity('User Details Viewed', `Viewed details for user: ${user.name} (${user.email})`);
+    };
+
+    const refreshUsers = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'getAllUsers');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    const formattedUsers = data.users.map(user => ({
+                        id: user.user_id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role || 'event_planner',
+                        status: user.status || 'active',
+                        joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
+                    }));
+                    
+                    setUsers(formattedUsers);
+                    setFilteredUsers(formattedUsers);
+                    logActivity('Users Data Refreshed', 'Refreshed user management data');
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing users:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateUserStatus = async (userId, newStatus) => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'updateUserStatus');
+            formData.append('user_id', userId);
+            formData.append('status', newStatus);
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                setUsers(prevUsers => 
+                    prevUsers.map(user => 
+                        user.id === userId 
+                            ? { ...user, status: newStatus }
+                            : user
+                    )
+                );
+                await refreshUsers();
+                if (window.fetchDashboardData) {
+                    await window.fetchDashboardData();
+                }
+                logActivity('User Status Updated', 
+                    `User ${userId} status changed to ${newStatus}`
+                );
+                alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
+            } else {
+                if (data.message && data.message.includes("Unauthorized")) {
+                    throw new Error("Admin access denied. Please log in as administrator.");
+                } else {
+                    throw new Error(data.message || 'Failed to update user status');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('Error: ' + error.message);
+            logActivity('User Status Update Failed', `Failed to update user status: ${error.message}`);
+        }
+    };
+
+    const totalUsers = users.length;
+    const activeUsers = users.filter(user => user.status === 'active').length;
+    const inactiveUsers = users.filter(user => user.status === 'inactive').length;
+
+    if (loading) {
+        return <div className="loading">Loading users...</div>;
     }
-  };
 
-  // Calculate user statistics
-  const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.status === 'active').length;
-  const inactiveUsers = users.filter(user => user.status === 'inactive').length;
+    if (error) {
+        return (
+            <div className="admin-tab-content">
+                <div className="error-message">
+                    <p>Error loading users: {error}</p>
+                    <button onClick={refreshUsers} className="btn btn-primary">
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-  if (loading) {
-    return <div className="loading">Loading users...</div>;
-  }
-
-  if (error) {
     return (
-      <div className="admin-tab-content">
-        <div className="error-message">
-          <p>Error loading users: {error}</p>
-          <button onClick={refreshUsers} className="btn btn-primary">
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="admin-tab-content">
-      <div className="admin-content-header">
-        <h2>User Management</h2>
-        <div className="header-actions">
-          <button className="btn btn-outline" onClick={refreshUsers}>
-            <i className="bi bi-arrow-clockwise"></i> Refresh
-          </button>
-        </div>
-      </div>
-
-      <div className="users-overview">
-        <div className="users-card">
-          <div className="users-icon">
-            <i className="bi bi-people"></i>
-          </div>
-          <div className="users-content">
-            <h3>Total Users</h3>
-            <p className="users-number">{totalUsers}</p>
-          </div>
-        </div>
-        
-        <div className="users-card">
-          <div className="users-icon">
-            <i className="bi bi-check-circle"></i>
-          </div>
-          <div className="users-content">
-            <h3>Active Users</h3>
-            <p className="users-number">{activeUsers}</p>
-          </div>
-        </div>
-        
-        <div className="users-card">
-          <div className="users-icon">
-            <i className="bi bi-x-circle"></i>
-          </div>
-          <div className="users-content">
-            <h3>Inactive Users</h3>
-            <p className="users-number">{inactiveUsers}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="users-table-container">
-        <div className="table-controls">
-          <div className="search-box">
-            <i className="bi bi-search"></i>
-            <input 
-              type="text" 
-              placeholder="Search users by name, email, or role..." 
-              value={searchQuery}
-              onChange={handleSearch}
-            />
-            {searchQuery && (
-              <button className="clear-search" onClick={clearSearch}>
-                <i className="bi bi-x"></i>
-              </button>
-            )}
-          </div>
-          <div className="filter-controls">
-            <select 
-              value={selectedStatus} 
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <button 
-              className={sortBy === 'name' ? 'active' : ''}
-              onClick={() => handleSort('name')}
-            >
-              Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </button>
-            <button 
-              className={sortBy === 'role' ? 'active' : ''}
-              onClick={() => handleSort('role')}
-            >
-              Role {sortBy === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </button>
-            <button 
-              className={sortBy === 'status' ? 'active' : ''}
-              onClick={() => handleSort('status')}
-            >
-              Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </button>
-          </div>
-        </div>
-
-        <div className="users-table">
-          <div className="table-header">
-            <span>User</span>
-            <span>Role</span>
-            <span>Joined</span>
-            <span>Status</span>
-            <span>Actions</span>
-          </div>
-          
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map(user => (
-              <div key={user.id} className="table-row">
-                <span className="user-info">
-                  <div className="user-name">{user.name}</div>
-                  <div className="user-email">{user.email}</div>
-                </span>
-                <span>
-                  <span className={`user-role ${user.role || 'event_planner'}`}>
-                    {user.role || 'event_planner'}
-                  </span>
-                </span>
-                <span>{user.joined}</span>
-                <span>
-                  <span className={`user-status ${user.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
-                    {user.status === 'inactive' ? 'Inactive' : 'Active'}
-                  </span>
-                </span>
-                <span className="actions">
-                  <button 
-                    className="btn-icon view-btn" 
-                    title="View Details"
-                    onClick={() => viewUserDetails(user)}
-                  >
-                    <i className="bi bi-eye"></i>
-                  </button>
-                  
-                  <button 
-                    className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`} 
-                    title={user.status === 'active' ? 'Block User' : 'Unblock User'}
-                    onClick={() => updateUserStatus(
-                      user.id, 
-                      user.status === 'active' ? 'inactive' : 'active'
-                    )}
-                  >
-                    <i className={user.status === 'active' ? 'bi bi-person-x' : 'bi bi-person-check'}></i>
-                  </button>
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="no-users-message">
-              <p>{searchQuery ? 'No users found matching your search' : 'No users found'}</p>
-              {searchQuery && (
-                <button onClick={clearSearch} className="btn btn-outline">
-                  Clear Search
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Completely Redesigned User Details Modal */}
-      {showUserModal && selectedUser && (
-        <div className="modal-overlay-new" onClick={() => setShowUserModal(false)}>
-          <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-              <div className="user-avatar-section">
-                <div className="user-avatar-large">
-                  <i className="bi bi-person-circle"></i>
+        <div className="admin-tab-content">
+            <div className="admin-content-header">
+                <h2>User Management</h2>
+                <div className="header-actions">
+                    <button className="btn btn-outline" onClick={refreshUsers}>
+                        <i className="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
                 </div>
-                <div className="user-title">
-                  <h2>{selectedUser.name}</h2>
-                  <p>{selectedUser.email}</p>
-                </div>
-              </div>
-              <button 
-                className="close-btn-new"
-                onClick={() => setShowUserModal(false)}
-              >
-                <i className="bi bi-x-lg"></i>
-              </button>
             </div>
 
-            <div className="modal-body-new">
-              <div className="user-details-grid">
-                <div className="detail-card">
-                  <div className="detail-icon">
-                    <i className="bi bi-person-badge"></i>
-                  </div>
-                  <div className="detail-content">
-                    <label>Role</label>
-                    <p>{selectedUser.role || 'Event Planner'}</p>
-                  </div>
+            <div className="users-overview">
+                <div className="users-card">
+                    <div className="users-icon">
+                        <i className="bi bi-people"></i>
+                    </div>
+                    <div className="users-content">
+                        <h3>Total Users</h3>
+                        <p className="users-number">{totalUsers}</p>
+                    </div>
                 </div>
-
-                <div className="detail-card">
-                  <div className="detail-icon">
-                    <i className="bi bi-calendar-check"></i>
-                  </div>
-                  <div className="detail-content">
-                    <label>Joined Date</label>
-                    <p>{selectedUser.joined}</p>
-                  </div>
-                </div>
-
-                <div className="detail-card">
-                  <div className="detail-icon">
-                    <i className="bi bi-activity"></i>
-                  </div>
-                  <div className="detail-content">
-                    <label>Status</label>
-                    <p className={`status-indicator ${selectedUser.status === 'active' ? 'active' : 'inactive'}`}>
-                      {selectedUser.status === 'active' ? 'Active' : 'Inactive'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="detail-card">
-                  <div className="detail-icon">
-                    <i className="bi bi-box-seam"></i>
-                  </div>
-                  <div className="detail-content">
-                    <label>Total Events</label>
-                    <p className="events-count">
-                      {userStats ? userStats.total_events : 'Loading...'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Package Management Section */}
-              <div className="package-section">
-                <h3>Package Management</h3>
-                <div className="package-controls">
-                  <div className="package-selector">
-                    <label>Current Package:</label>
-                    <select 
-                      value={selectedPackage}
-                      onChange={(e) => setSelectedPackage(e.target.value)}
-                      disabled={updatingPackage}
-                    >
-                      <option value="none">No Package</option>
-                      {availablePackages.map(pkg => (
-                        <option key={pkg.package_id} value={pkg.package_type}>
-                          {pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button 
-                    className="update-package-btn"
-                    onClick={handlePackageUpdate}
-                    disabled={updatingPackage || !selectedPackage || selectedPackage === (userStats?.package_info?.package_type || 'none')}
-                  >
-                    {updatingPackage ? (
-                      <>
-                        <i className="bi bi-arrow-repeat spin"></i>
-                        Updating...
-                      </>
-                    ) : (
-                      <>
+                
+                <div className="users-card">
+                    <div className="users-icon">
                         <i className="bi bi-check-circle"></i>
-                        Update Package
-                      </>
-                    )}
-                  </button>
+                    </div>
+                    <div className="users-content">
+                        <h3>Active Users</h3>
+                        <p className="users-number">{activeUsers}</p>
+                    </div>
                 </div>
                 
-                {userStats?.package_info && (
-                  <div className="package-stats">
-                    <div className="stat-item">
-                      <span className="stat-label">Events Limit:</span>
-                      <span className="stat-value">{userStats.package_info.event_limit}</span>
+                <div className="users-card">
+                    <div className="users-icon">
+                        <i className="bi bi-x-circle"></i>
                     </div>
-                    <div className="stat-item">
-                      <span className="stat-label">Events Used:</span>
-                      <span className="stat-value">{userStats.package_info.event_used}</span>
+                    <div className="users-content">
+                        <h3>Inactive Users</h3>
+                        <p className="users-number">{inactiveUsers}</p>
                     </div>
-                    <div className="stat-item">
-                      <span className="stat-label">Remaining:</span>
-                      <span className="stat-value">
-                        {userStats.package_info.event_limit - userStats.package_info.event_used}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="modal-actions">
-                <button 
-                  className={`action-btn ${selectedUser.status === 'active' ? 'warning' : 'success'}`}
-                  onClick={() => {
-                    updateUserStatus(selectedUser.id, selectedUser.status === 'active' ? 'inactive' : 'active');
-                    setShowUserModal(false);
-                  }}
-                >
-                  <i className={`bi ${selectedUser.status === 'active' ? 'bi-person-x' : 'bi-person-check'}`}></i>
-                  {selectedUser.status === 'active' ? 'Block User' : 'Activate User'}
-                </button>
-                
-                <button 
-                  className="action-btn secondary"
-                  onClick={() => setShowUserModal(false)}
-                >
-                  <i className="bi bi-x-circle"></i>
-                  Close
-                </button>
-              </div>
+                </div>
             </div>
-          </div>
+
+            <div className="users-table-container">
+                <div className="table-controls">
+                    <div className="search-box">
+                        <i className="bi bi-search"></i>
+                        <input 
+                            type="text" 
+                            placeholder="Search users by name, email, or role..." 
+                            value={searchQuery}
+                            onChange={handleSearch}
+                        />
+                        {searchQuery && (
+                            <button className="clear-search" onClick={clearSearch}>
+                                <i className="bi bi-x"></i>
+                            </button>
+                        )}
+                    </div>
+                    <div className="filter-controls">
+                        <select 
+                            value={selectedStatus} 
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                        >
+                            <option value="all">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        <button 
+                            className={sortBy === 'name' ? 'active' : ''}
+                            onClick={() => handleSort('name')}
+                        >
+                            Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </button>
+                        <button 
+                            className={sortBy === 'role' ? 'active' : ''}
+                            onClick={() => handleSort('role')}
+                        >
+                            Role {sortBy === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </button>
+                        <button 
+                            className={sortBy === 'status' ? 'active' : ''}
+                            onClick={() => handleSort('status')}
+                        >
+                            Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="users-table">
+                    <div className="table-header">
+                        <span>User</span>
+                        <span>Role</span>
+                        <span>Joined</span>
+                        <span>Status</span>
+                        <span>Actions</span>
+                    </div>
+                    
+                    {filteredUsers.map(user => (
+                        <div key={user.id} className="table-row">
+                            <span className="user-info">
+                                <div className="user-name">{user.name}</div>
+                                <div className="user-email">{user.email}</div>
+                            </span>
+                            <span>
+                                <span className={`user-role ${user.role || 'event_planner'}`}>
+                                    {user.role || 'event_planner'}
+                                </span>
+                            </span>
+                            <span>{user.joined}</span>
+                            <span>
+                                <span className={`user-status ${user.status === 'inactive' ? 'status-inactive' : 'status-active'}`}>
+                                    {user.status === 'inactive' ? 'Inactive' : 'Active'}
+                                </span>
+                            </span>
+                            <span className="actions">
+                                <button 
+                                    className="btn-icon view-btn" 
+                                    title="View Details"
+                                    onClick={() => viewUserDetails(user)}
+                                >
+                                    <i className="bi bi-eye"></i>
+                                </button>
+                                
+                                <button 
+                                    className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`} 
+                                    title={user.status === 'active' ? 'Block User' : 'Unblock User'}
+                                    onClick={() => updateUserStatus(
+                                        user.id, 
+                                        user.status === 'active' ? 'inactive' : 'active'
+                                    )}
+                                >
+                                    <i className={user.status === 'active' ? 'bi bi-person-x' : 'bi bi-person-check'}></i>
+                                </button>
+                            </span>
+                        </div>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                        <div key="no-users" className="no-users-message">
+                            <p>{searchQuery ? 'No users found matching your search' : 'No users found'}</p>
+                            {searchQuery && (
+                                <button onClick={clearSearch} className="btn btn-outline">
+                                    Clear Search
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* User Details Modal */}
+            {showUserModal && selectedUser && (
+                <div className="modal-overlay-new" onClick={() => setShowUserModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="user-avatar-section">
+                                <div className="user-avatar-large">
+                                    <i className="bi bi-person-circle"></i>
+                                </div>
+                                <div className="user-title">
+                                    <h2>{selectedUser.name}</h2>
+                                    <p>{selectedUser.email}</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowUserModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="user-details-grid">
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-person-badge"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Role</label>
+                                        <p>{selectedUser.role || 'Event Planner'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-calendar-check"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Joined Date</label>
+                                        <p>{selectedUser.joined}</p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-activity"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Status</label>
+                                        <p className={`status-indicator ${selectedUser.status === 'active' ? 'active' : 'inactive'}`}>
+                                            {selectedUser.status === 'active' ? 'Active' : 'Inactive'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card">
+                                    <div className="detail-icon">
+                                        <i className="bi bi-box-seam"></i>
+                                    </div>
+                                    <div className="detail-content">
+                                        <label>Total Events</label>
+                                        <p className="events-count">
+                                            {userStats ? userStats.total_events : 'Loading...'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Package Management Section */}
+                            <div className="package-section">
+                                <h3>Package Management</h3>
+                                <div className="package-controls">
+                                    <div className="package-selector">
+                                        <label>Current Package:</label>
+                                        <select 
+                                            value={selectedPackage}
+                                            onChange={(e) => setSelectedPackage(e.target.value)}
+                                            disabled={updatingPackage}
+                                        >
+                                            <option value="none">No Package</option>
+                                            {availablePackages.map(pkg => (
+                                                <option key={pkg.package_id} value={pkg.package_type}>
+                                                    {pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button 
+                                        className="update-package-btn"
+                                        onClick={handlePackageUpdate}
+                                        disabled={updatingPackage || !selectedPackage || selectedPackage === (userStats?.package_info?.package_type || 'none')}
+                                    >
+                                        {updatingPackage ? (
+                                            <>
+                                                <i className="bi bi-arrow-repeat spin"></i>
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="bi bi-check-circle"></i>
+                                                Update Package
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                                
+                                {userStats?.package_info && (
+                                    <div className="package-stats">
+                                        <div className="stat-item">
+                                            <span className="stat-label">Events Limit:</span>
+                                            <span className="stat-value">{userStats.package_info.event_limit}</span>
+                                        </div>
+                                        <div className="stat-item">
+                                            <span className="stat-label">Events Used:</span>
+                                            <span className="stat-value">{userStats.package_info.event_used}</span>
+                                        </div>
+                                        <div className="stat-item">
+                                            <span className="stat-label">Remaining:</span>
+                                            <span className="stat-value">
+                                                {userStats.package_info.event_limit - userStats.package_info.event_used}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="modal-actions">
+                                <button 
+                                    className={`action-btn ${selectedUser.status === 'active' ? 'warning' : 'success'}`}
+                                    onClick={() => {
+                                        updateUserStatus(selectedUser.id, selectedUser.status === 'active' ? 'inactive' : 'active');
+                                        setShowUserModal(false);
+                                    }}
+                                >
+                                    <i className={`bi ${selectedUser.status === 'active' ? 'bi-person-x' : 'bi-person-check'}`}></i>
+                                    {selectedUser.status === 'active' ? 'Block User' : 'Activate User'}
+                                </button>
+                                
+                                <button 
+                                    className="action-btn secondary"
+                                    onClick={() => setShowUserModal(false)}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default AdminDashboard;

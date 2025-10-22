@@ -2,13 +2,11 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import "./main.css";
 import { templates } from "./templates.js";
-import{ LoginNav } from "../components";
+import { LoginNav } from "../components";
 
 export default function EventTheme() {
     const navigate = useNavigate();
-    const [currentStep, setCurrentStep] = useState(3); 
     const [activeFilter, setActiveFilter] = useState("All");
-
 
     const allCategories = useMemo(() => {
         const allTemplates = {
@@ -22,18 +20,20 @@ export default function EventTheme() {
         return { ...allTemplates, ...templates };
     }, []);
 
-    // Create a mapping of template IDs to their categories
+    // Create a mapping of template IDs to their categories using Map
     const templateToCategoryMap = useMemo(() => {
-        const map = {};
+        const map = new Map();
         Object.keys(templates).forEach(category => {
             templates[category].forEach(template => {
-                map[template.id] = category;
+                map.set(template.id, category);
             });
         });
         return map;
     }, []);
 
+    // ADD THIS MISSING FUNCTION
     const getStepClass = (step) => {
+        const currentStep = 3; // Since this is step 3 in the flow
         if (step === currentStep) {
             return "progress-step active";
         } else if (step < currentStep) {
@@ -43,13 +43,13 @@ export default function EventTheme() {
         }
     };
 
+    // ADD THIS MISSING FUNCTION
     const handleFilterClick = (filter) => {
         setActiveFilter(filter);
     };
 
     const handleTemplateSelect = (templateId) => {
-        const actualCategory = templateToCategoryMap[templateId];
-
+        const actualCategory = templateToCategoryMap.get(templateId);
         navigate(`/postcardEditor?template=${templateId}&category=${actualCategory}`);
     };
 
