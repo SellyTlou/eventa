@@ -108,6 +108,10 @@ const RSVPResponses = () => {
     const goToEventManagement = () => navigate("/eventManagement");
     const goToInvitations = () => navigate("/invitationPage");
     const goToManage = () => navigate("/manage_my_event");
+    const goToProfile = () => {
+        navigate("/Profile");
+    }
+
 
     return (
         <div className="dashboard-container">
@@ -123,7 +127,7 @@ const RSVPResponses = () => {
                         <i className="bi bi-chevron-bar-down"></i>
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
-                                <button className="dropdown-item">Profile</button>
+                                <button className="dropdown-item" onClick={goToProfile}>Profile</button>
                                 <button className="dropdown-item">Settings</button>
                                 <button className="dropdown-item" onClick={logOut}>Logout</button>
                             </div>

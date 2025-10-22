@@ -35,7 +35,7 @@ const EmailVerify = () => {
             });
 
             const data = await resp.json();
-
+            
             if (data.success) {
                 setStatus("success");
                 setMessage(data.message || "Email verified successfully! You can now log in.");

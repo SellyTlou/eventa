@@ -565,7 +565,6 @@ export function LoginNav() {
                                 <div className="dropdown-menu show">
 
                                     <button onClick={goToProfile} className="dropdown-item">
-
                                         <i className="bi bi-person"></i>Profile
                                     </button>
                                     <button className="dropdown-item">
