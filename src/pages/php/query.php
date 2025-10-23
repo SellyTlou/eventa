@@ -1973,3 +1973,466 @@ if ($fun === "getInvitationAnalytics") {
     }
     exit;
 }
+
+if ($fun === "exportInvitationData") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $status = $_POST['status'] ?? 'all';
+    $userId = $_POST['user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    try {
+        // Build the base query
+        $query = "
+            SELECT
+                e.event_id,
+                e.event_name,
+                e.user_name as organizer_name,
+                e.created_at as event_created,
+                e.published as event_status,
+                COUNT(DISTINCT r.guest_id) as invitations_sent,
+                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as invitations_responded,
+                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as attending_count,
+                COUNT(DISTINCT CASE WHEN r.attending = 'no' THEN r.guest_id END) as declined_count,
+                CASE
+                    WHEN COUNT(DISTINCT r.guest_id) > 0 THEN
+                        ROUND((COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) / COUNT(DISTINCT r.guest_id)) * 100, 1)
+                    ELSE 0
+                END as response_rate_percent
+            FROM events e
+            LEFT JOIN rsvp r ON e.event_id = r.event_id
+        ";
+
+        // Add WHERE conditions based on filters
+        $conditions = [];
+        $params = [];
+
+        if ($status !== 'all') {
+            if ($status === 'active') {
+                $conditions[] = "e.published = 1";
+            } elseif ($status === 'draft') {
+                $conditions[] = "e.published = 0";
+            }
+        }
+
+        if (!empty($userId)) {
+            $conditions[] = "e.user_id = ?";
+            $params[] = $userId;
+        }
+
+        if (!empty($conditions)) {
+            $query .= " WHERE " . implode(" AND ", $conditions);
+        }
+
+        $query .= " GROUP BY e.event_id, e.event_name, e.user_name, e.created_at, e.published";
+        $query .= " ORDER BY e.created_at DESC";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Format data for CSV
+        $csvData = [];
+        
+        // Add header row
+        $csvData[] = [
+            'Event ID',
+            'Event Name', 
+            'Organizer',
+            'Event Created',
+            'Status',
+            'Invitations Sent',
+            'Invitations Responded',
+            'Attending Count',
+            'Declined Count',
+            'Response Rate (%)'
+        ];
+
+        // Add data rows
+        foreach ($events as $event) {
+            $status = $event['event_status'] == 1 ? 'Active' : 'Draft';
+            
+            $csvData[] = [
+                $event['event_id'],
+                $event['event_name'],
+                $event['organizer_name'],
+                $event['event_created'],
+                $status,
+                $event['invitations_sent'],
+                $event['invitations_responded'],
+                $event['attending_count'],
+                $event['declined_count'],
+                $event['response_rate_percent']
+            ];
+        }
+
+        // Generate CSV file
+        $timestamp = date('Y-m-d_H-i-s');
+        $filename = "invitation_analytics_export_{$timestamp}.csv";
+        $exportDir = __DIR__ . '/exports/';
+
+        // Create exports directory if it doesn't exist
+        if (!is_dir($exportDir)) {
+            mkdir($exportDir, 0755, true);
+        }
+
+        $filePath = $exportDir . $filename;
+
+        // Write CSV file
+        $file = fopen($filePath, 'w');
+        foreach ($csvData as $row) {
+            fputcsv($file, $row);
+        }
+        fclose($file);
+
+        // Verify file was created
+        if (file_exists($filePath)) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Export completed successfully",
+                "filename" => $filename,
+                "file_path" => $filePath
+            ]);
+        } else {
+            throw new Exception("Failed to create export file");
+        }
+
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Export error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+// Payment History Functions
+if ($fun === "getPaymentHistory") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                ph.*,
+                u.name as user_name,
+                u.email as user_email,
+                p.package_type,
+                p.price as package_price
+            FROM payment_history ph
+            LEFT JOIN users u ON ph.user_id = u.user_id
+            LEFT JOIN packagetb p ON ph.package_id = p.package_id
+            ORDER BY ph.payment_date DESC
+        ");
+        $stmt->execute();
+        $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "payments" => $payments,
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getRevenueAnalytics") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    try {
+        // Total Revenue
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) as total_revenue FROM payment_history WHERE payment_status = 'completed'");
+        $stmt->execute();
+        $totalRevenue = $stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
+
+        // Monthly Revenue (current month)
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as monthly_revenue 
+            FROM payment_history 
+            WHERE payment_status = 'completed' 
+            AND MONTH(payment_date) = MONTH(CURRENT_DATE()) 
+            AND YEAR(payment_date) = YEAR(CURRENT_DATE())
+        ");
+        $stmt->execute();
+        $monthlyRevenue = $stmt->fetch(PDO::FETCH_ASSOC)['monthly_revenue'];
+
+        // Payment Status Counts
+        $stmt = $pdo->prepare("
+            SELECT payment_status, COUNT(*) as count 
+            FROM payment_history 
+            GROUP BY payment_status
+        ");
+        $stmt->execute();
+        $paymentStatusCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Monthly revenue data for charts (last 6 months)
+        $stmt = $pdo->prepare("
+            SELECT 
+                DATE_FORMAT(payment_date, '%Y-%m') as month,
+                COALESCE(SUM(amount), 0) as revenue
+            FROM payment_history 
+            WHERE payment_status = 'completed'
+            AND payment_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
+            GROUP BY DATE_FORMAT(payment_date, '%Y-%m')
+            ORDER BY month DESC
+            LIMIT 6
+        ");
+        $stmt->execute();
+        $monthlyRevenueData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "analytics" => [
+                "total_revenue" => (float)$totalRevenue,
+                "monthly_revenue" => $monthlyRevenueData,
+                "payment_status_counts" => $paymentStatusCounts,
+                "current_month_revenue" => (float)$monthlyRevenue
+            ],
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "addManualPayment") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $userId = $_POST['user_id'] ?? '';
+    $packageId = $_POST['package_id'] ?? '';
+    $amount = $_POST['amount'] ?? '';
+    $paymentMethod = $_POST['payment_method'] ?? 'manual';
+    $billingCycle = $_POST['billing_cycle'] ?? 'monthly';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    if (empty($userId) || empty($packageId) || empty($amount)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing required fields",
+        ]);
+        exit;
+    }
+
+    // Check if user already has active package
+    $checkPackage = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = ?");
+    $checkPackage->execute([$userId]);
+    if ($checkPackage->fetch()) {
+        echo json_encode([
+            "success" => false,
+            "message" => "User already has an active package",
+        ]);
+        exit;
+    }
+
+    try {
+        // Generate payment ID
+        $paymentId = "PAY-" . substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 8) . "-" . time();
+        
+        // Generate transaction ID
+        $transactionId = "TXN-" . substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 10) . "-" . time();
+
+        $stmt = $pdo->prepare("
+            INSERT INTO payment_history (
+                payment_id, user_id, package_id, amount, payment_method, 
+                billing_cycle, payment_status, transaction_id, payment_date
+            ) VALUES (?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
+        ");
+        
+        $stmt->execute([
+            $paymentId,
+            $userId,
+            $packageId,
+            $amount,
+            $paymentMethod,
+            $billingCycle,
+            $transactionId
+        ]);
+
+        // Update user package
+        $updateStmt = $pdo->prepare("
+            INSERT INTO user_packages (user_id, package_id, event_limit, event_used, created_at, updated_at)
+            VALUES (?, ?, (SELECT max_events FROM packagetb WHERE package_id = ?), 0, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE 
+            package_id = VALUES(package_id),
+            event_limit = VALUES(event_limit),
+            updated_at = NOW()
+        ");
+        
+        $updateStmt->execute([$userId, $packageId, $packageId]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Manual payment added successfully",
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updatePaymentStatus") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $paymentId = $_POST['payment_id'] ?? '';
+    $status = $_POST['status'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    if (empty($paymentId) || empty($status)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing required fields",
+        ]);
+        exit;
+    }
+
+    
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE payment_history 
+            SET payment_status = ?, updated_at = NOW() 
+            WHERE payment_id = ?
+        ");
+        
+        $stmt->execute([$status, $paymentId]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Payment status updated successfully",
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+// Get active subscription counts by package type
+if ($fun === "getActiveSubscriptions") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                p.package_type,
+                COUNT(DISTINCT up.user_id) as active_subscriptions
+            FROM user_packages up
+            INNER JOIN packagetb p ON up.package_id = p.package_id
+            INNER JOIN users u ON up.user_id = u.user_id
+            WHERE u.status = 'active'
+            AND (up.event_used < up.event_limit OR up.event_limit = 0)
+            AND up.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+            GROUP BY p.package_type
+        ");
+        $stmt->execute();
+        $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "subscriptions" => $subscriptions,
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+// Get package usage statistics
+if ($fun === "getPackageUsageStats") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                p.package_id,
+                p.package_type,
+                p.max_events,
+                p.max_guests,
+                COUNT(up.user_id) as total_users,
+                AVG(up.event_used) as avg_events_used,
+                SUM(CASE WHEN up.event_used >= up.event_limit THEN 1 ELSE 0 END) as users_at_limit
+            FROM packagetb p
+            LEFT JOIN user_packages up ON p.package_id = up.package_id
+            GROUP BY p.package_id, p.package_type, p.max_events, p.max_guests
+        ");
+        $stmt->execute();
+        $usageStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "usage_stats" => $usageStats,
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
