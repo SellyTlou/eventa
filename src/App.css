@@ -97,7 +97,7 @@ Nav styling
 
 .signin-btn:hover {
   background-color: #000;
-  color: #fff !important;
+  color: #000 !important;
   transform: translateY(-2px);
 }
 
@@ -948,7 +948,7 @@ Homepage styling
 }
 
 .homepage-section .popular-events .event-card .btn-view:hover {
-  background: #fff;
+  background: #00b4d8;
   color: #000;
 }
 
@@ -2513,7 +2513,7 @@ createEvent Styling
 /* =================== CSS: Extract to createEvent.css =================== */
 
 .eventa-header-bar {
-  background: #111;
+  background: #fff;
   color: #fff;
   display: flex;
   align-items: center;
@@ -2542,7 +2542,7 @@ createEvent Styling
 .eventa-back-btn {
   background: transparent;
   border: 2px solid #00b4d8;
-  color: #00b4d8;
+  color: #000;
   border-radius: 20px;
   padding: 6px 22px;
   font-weight: 600;
@@ -2619,9 +2619,9 @@ createEvent Styling
 
 .progress-step.active .progress-step-number,
 .progress-step.completed .progress-step-number {
-  background: #00b4d8;
-  color: #fff;
-  border: 2px solid #020508;
+  background: #fff;
+  color: #000;
+  border: 2px solid #00b4d8;
 }
 
 .progress-step-label {
