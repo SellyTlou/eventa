@@ -184,6 +184,8 @@ const RsvpForm = () => {
         formDataToSend.append("attending", formData.attending);
         formDataToSend.append("message", formData.message);
         formDataToSend.append("guestCount", formData.guestCount);
+        formDataToSend.append("totalRplyGuestCount", totalRplyGuestCount);
+        formDataToSend.append("totalEventLimit", totalEventLimit);
 
         try {
             const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {

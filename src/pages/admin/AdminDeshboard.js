@@ -1395,6 +1395,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
         open_rate: 0,
         response_rate: 0
     });
+    const [statsLoading, setStatsLoading] = useState(true); // Add separate loading state
     const [enhancedAnalytics, setEnhancedAnalytics] = useState(null);
     const [loading, setLoading] = useState(false);
     const [sortField, setSortField] = useState('eventName');
@@ -1421,36 +1422,69 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
     // Fetch data when component mounts
     useEffect(() => {
         fetchInvitationStats();
-        fetchEnhancedAnalytics();
+        fetchInvitationAnalytics();
         fetchUsers();
     }, []);
 
     const fetchInvitationStats = async () => {
+    try {
+        setStatsLoading(true);
+        console.log('Fetching invitation stats...');
+        
+        const formData = new FormData();
+        formData.append('function', 'getInvitationStats');
+        formData.append('admin_user_id', adminUserId);
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Stats API Response:', data);
+        
+        if (data.success && data.stats) {
+            setInvitationStats(data.stats);
+        } else {
+            console.error('API Error:', data.message);
+            // Keep default values (0, 0, 0)
+        }
+    } catch (error) {
+        console.error('Network Error:', error);
+        // Keep default values (0, 0, 0)
+    } finally {
+        setStatsLoading(false);
+    }
+};
+
+    const fetchInvitationAnalytics = async () => {
+
         try {
             setLoading(true);
             const formData = new FormData();
-            formData.append('function', 'getInvitationStats');
+            formData.append('function', 'getInvitationAnalytics');
             formData.append('admin_user_id', adminUserId);
-            
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    setInvitationStats(data.stats);
+                    setEnhancedAnalytics(data.analytics);
                 }
             }
         } catch (error) {
-            console.error('Error fetching invitation stats:', error);
+            console.error('Error fetching invitation analytics:', error);
         } finally {
             setLoading(false);
         }
     };
-
-    const fetchEnhancedAnalytics = async () => {
+ /*   const fetchEnhancedAnalytics = async () => {
         try {
             const formData = new FormData();
             formData.append('function', 'getEnhancedInvitationAnalytics');
@@ -1471,6 +1505,8 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
             console.error('Error fetching enhanced analytics:', error);
         }
     };
+    
+*/
 
     const fetchUsers = async () => {
         try {
@@ -1561,7 +1597,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
         setLoading(true);
         await Promise.all([
             fetchInvitationStats(),
-            fetchEnhancedAnalytics()
+            fetchInvitationAnalytics()
         ]);
         setLoading(false);
         logActivity('Invitation Data Refreshed', 'Refreshed invitation analytics data');
@@ -1632,42 +1668,59 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
 
             {loading && <div className="loading">Loading invitation data...</div>}
 
-            {/* Analytics Overview Cards */}
-            <div className="analytics-overview">
-                <div className="analytics-card">
-                    <div className="analytics-icon">
-                        <i className="bi bi-envelope"></i>
-                    </div>
-                    <div className="analytics-content">
-                        <h3>Total Invitations Sent</h3>
-                        <p className="analytics-number">{invitationStats.total_invitations.toLocaleString()}</p>
-                        <span className="analytics-trend">All events</span>
-                    </div>
-                </div>
-                
-                <div className="analytics-card">
-                    <div className="analytics-icon">
-                        <i className="bi bi-eye"></i>
-                    </div>
-                    <div className="analytics-content">
-                        <h3>Average Open Rate</h3>
-                        <p className="analytics-number">{invitationStats.open_rate}%</p>
-                        <span className="analytics-trend">Based on responses</span>
-                    </div>
-                </div>
-                
-                <div className="analytics-card">
-                    <div className="analytics-icon">
-                        <i className="bi bi-check-circle"></i>
-                    </div>
-                    <div className="analytics-content">
-                        <h3>Average Response Rate</h3>
-                        <p className="analytics-number">{invitationStats.response_rate}%</p>
-                        <span className="analytics-trend">All events</span>
-                    </div>
-                </div>
-            </div>
-
+           {/* Analytics Overview Cards */}
+<div className="analytics-overview">
+    <div className="analytics-card">
+        <div className="analytics-icon">
+            <i className="bi bi-envelope"></i>
+        </div>
+        <div className="analytics-content">
+            <h3>Total Invitations Sent</h3>
+            {statsLoading ? (
+                <div className="stats-loading">Loading...</div>
+            ) : (
+                <p className="analytics-number">
+                    {invitationStats.total_invitations?.toLocaleString() || 0}
+                </p>
+            )}
+            <span className="analytics-trend">All events</span>
+        </div>
+    </div>
+    
+    <div className="analytics-card">
+        <div className="analytics-icon">
+            <i className="bi bi-eye"></i>
+        </div>
+        <div className="analytics-content">
+            <h3>Average Open Rate</h3>
+            {statsLoading ? (
+                <div className="stats-loading">Loading...</div>
+            ) : (
+                <p className="analytics-number">
+                    {invitationStats.open_rate || 0}%
+                </p>
+            )}
+            <span className="analytics-trend">Based on responses</span>
+        </div>
+    </div>
+    
+    <div className="analytics-card">
+        <div className="analytics-icon">
+            <i className="bi bi-check-circle"></i>
+        </div>
+        <div className="analytics-content">
+            <h3>Average Response Rate</h3>
+            {statsLoading ? (
+                <div className="stats-loading">Loading...</div>
+            ) : (
+                <p className="analytics-number">
+                    {invitationStats.response_rate || 0}%
+                </p>
+            )}
+            <span className="analytics-trend">All events</span>
+        </div>
+    </div>
+</div>
             {/* Charts Section */}
             {enhancedAnalytics && (
                 <div className="charts-section">
