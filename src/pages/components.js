@@ -24,15 +24,22 @@ import ManageEyEvent from '../pages/planner/manage_my_event';
 import PackagePayment from '../pages/planner/packagePayment';
 import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
+import UpgradePackage from './planner/upgrade_package';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("selectedEventId");
     localStorage.removeItem("selectedPackageId");
     localStorage.removeItem("eventStatus");
+
+    const deviceId = localStorage.getItem("eventa_device_id");
+    if (deviceId) {
+        localStorage.removeItem(`eventa_${deviceId}_current_event`);
+    }
 }
 
 export async function logOut() {
+    
     try {
         const user = JSON.parse(localStorage.getItem("user"));
         const API_URL = process.env.REACT_APP_API_URL;
@@ -180,6 +187,7 @@ export function SessionHandler() {
                 <Route path="/packagePayment" element={<PackagePayment />} />
                 <Route path="/forgot_password" element={<ForgotPassword />} />
                 <Route path="/email_verify" element={<EmailVerify />} />
+                <Route path="/upgrade_package" element={<UpgradePackage />} />
             </Routes>
 
             <SessionWarningModal
@@ -259,12 +267,12 @@ export function Navbar({ onLoginClick, onSignupClick }) {
         <>
             <section className={`nav-section d-none d-md-block ${scrolled ? "scrolled" : ""}`}>
                 <div className="container">
-                    <div className="row bottom-nav-row align-items-center py-3">
+                    <div className="row bottom-nav-row">
                         <div className="col-md-3 logo-container">
                             <img src="/images/logo.png" alt="Eventa Logo" className="logo img-fluid" />
                         </div>
                         <div className="col-md-6">
-                            <ul className="nav-list nav justify-content-center">
+                            <ul className="nav-list nav ">
                                 <li className="nav-item">
                                     <NavLink
                                         to="/"
@@ -329,7 +337,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                 </li>
                             </ul>
                         </div>
-                        <div className="col-md-3 text-end btns-container">
+                        <div className="col-md-3  btns-container">
                             <button className="btn signin-btn" onClick={onLoginClick}>
                                 <i className="bi bi-person-fill me-2"></i> Sign IN
                             </button>

@@ -116,7 +116,7 @@ const InvitationPage = () => {
 
     const shareViaWhatsApp = () => {
         if (!invitationLink) return;
-        const message = encodeURIComponent(`You're invited! 🎉\nJoin the event using this link:\n${invitationLink}`);
+        const message = `You're invited!\nJoin the event using this link:\n${invitationLink}`;
         const whatsappURL = `https://wa.me/?text=${message}`;
         window.open(whatsappURL, "_blank");
     };
@@ -178,7 +178,7 @@ const InvitationPage = () => {
                 fd.append("name", guest.name);
                 fd.append("event", event_id);
                 fd.append("API_URL", API_URL);
-                fd.append("user_email", user.email);    
+                fd.append("user_email", user.email);
                 const resp = await fetch(`${API_URL}/send_invite.php`, {
                     method: "POST",
                     body: fd,

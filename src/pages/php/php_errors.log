@@ -74,3 +74,15 @@ Stack trace:
 Stack trace:
 #0 {main}
   thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[23-Oct-2025 01:02:58 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: Unsupported operand types: string + int in C:\xampp\htdocs\eventa\src\pages\php\query.php:441
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 441
+[23-Oct-2025 01:03:55 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: Unsupported operand types: string + int in C:\xampp\htdocs\eventa\src\pages\php\query.php:441
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 441
+[23-Oct-2025 01:04:52 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: Unsupported operand types: string + int in C:\xampp\htdocs\eventa\src\pages\php\query.php:441
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 441

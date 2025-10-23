@@ -110,7 +110,7 @@ Profile Page Styles
   overflow: hidden;
 }
 
-.nav-item {
+.profile-nav .nav-item {
   width: 100%;
   padding: 16px 20px;
   border: none;
@@ -126,21 +126,21 @@ Profile Page Styles
   border-bottom: 1px solid #f1f5f9;
 }
 
-.nav-item:last-child {
+.profile-nav .nav-item:last-child {
   border-bottom: none;
 }
 
-.nav-item:hover {
+.profile-nav .nav-item:hover {
   background: #f8fafc;
   color: #3b82f6;
 }
 
-.nav-item.active {
+.profile-nav .nav-item.active {
   background: #3b82f6;
   color: white;
 }
 
-.nav-item i {
+.profile-nav .nav-item i {
   font-size: 1.1rem;
   width: 20px;
 }

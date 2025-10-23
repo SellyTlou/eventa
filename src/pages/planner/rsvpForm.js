@@ -193,9 +193,10 @@ const RsvpForm = () => {
                 body: formDataToSend,
             });
 
-            if (!response.ok) throw new Error("Network response was not ok");
+           if (!response.ok) throw new Error("Network response was not ok");
 
             const result = await response.json();
+            console.log("Submission result:", result);  
 
             if (result.success) {
                 printAlert(result.message || "RSVP submitted successfully!", "success");
@@ -302,7 +303,10 @@ const RsvpForm = () => {
                             <div className="invitation_details">
                                 <div className="detail-item">
                                     <i className="fas fa-calendar-alt"></i>
-                                    <span>{new Date(eventData.event_date).toLocaleDateString()}</span>
+                                    <span>
+                                        {new Date(`${eventData.event_start_date}T${eventData.event_start_time}`).toLocaleString()}
+                                    </span>
+
                                 </div>
                                 <div className="detail-item">
                                     <i className="fas fa-map-marker-alt"></i>
