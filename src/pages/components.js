@@ -39,7 +39,7 @@ const clearAllLocalStorage = () => {
 }
 
 export async function logOut() {
-    
+
     try {
         const user = JSON.parse(localStorage.getItem("user"));
         const API_URL = process.env.REACT_APP_API_URL;
@@ -683,8 +683,8 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 if (isLogin) {
                     localStorage.setItem("user", JSON.stringify(result.user));
 
-                    const isAdmin = result.user.role === "admin" ||
-                        (result.user.roles && result.user.roles.includes("admin"));
+                    const isAdmin = result.user.role == "admin" ||
+                        (result.user.role && result.user.role.includes("admin"));
 
                     if (isAdmin) {
                         navigate("/adminDashboard");

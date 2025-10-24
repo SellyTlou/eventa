@@ -107,12 +107,12 @@ const UpgradePackage = () => {
         }
     };
 
-    const handleUpgrade = async (pkg) => {
+    const handleChoosePackage = (pkg) => {
         if (processing) return;
 
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
-            printAlert("Please log in to upgrade your package.", "error");
+            printAlert("Please log in to choose a package.", "error");
             return;
         }
 
@@ -123,35 +123,22 @@ const UpgradePackage = () => {
             return;
         }
 
-        setSelectedPackage(pkg);
         setProcessing(true);
+        setSelectedPackage(pkg);
 
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "upgradeUserPackage");
-            formData.append("user_id", user.user_id);
-            formData.append("package_id", pkg.package_id);
+            localStorage.setItem("selectedPackageId", pkg.package_id);
+            localStorage.setItem("selectedPackage", JSON.stringify(pkg));
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData
-            });
+            printAlert(`Selected ${pkg.package_type} package. Redirecting to payment...`, "success");
 
-            const data = await response.json();
-            if (data.success) {
-                printAlert(`Successfully upgraded to ${pkg.package_type} package!`, "success");
-                await fetchCurrentPackage(user.user_id);
-                setTimeout(() => {
-                    navigate("/profile");
-                }, 2000);
-            } else {
-                printAlert(data.message || "Failed to upgrade package. Please try again.", "error");
-            }
+            setTimeout(() => {
+                navigate("/packagePayment");
+            }, 100);
+
         } catch (error) {
-            console.error("Upgrade error:", error);
-            printAlert("An error occurred during upgrade. Please try again.", "error");
-        } finally {
+            console.error("Package selection error:", error);
+            printAlert("An error occurred. Please try again.", "error");
             setProcessing(false);
         }
     };
@@ -233,8 +220,8 @@ const UpgradePackage = () => {
                 </button>
                 {/* Header */}
                 <div className="upgrade-header">
-                    <h1>Upgrade Your Package</h1>
-                    <p>Choose the perfect plan for your event management needs</p>
+                    <h1>Choose Your Package</h1>
+                    <p>Select the perfect plan for your event management needs</p>
                     {currentPackage && (
                         <div className="current-package-banner">
                             <i className="bi bi-info-circle"></i>
@@ -316,27 +303,23 @@ const UpgradePackage = () => {
                                             <i className="bi bi-check-circle"></i>
                                             Current Plan
                                         </button>
-                                    ) : canUpgrade ? (
+                                    ) : (
                                         <button
                                             className="btn-upgrade"
-                                            onClick={() => handleUpgrade(pkg)}
+                                            onClick={() => handleChoosePackage(pkg)}
                                             disabled={processing}
                                         >
                                             {processing && selectedPackage?.package_id === pkg.package_id ? (
                                                 <>
                                                     <div className="spinner-border spinner-border-sm" role="status"></div>
-                                                    Upgrading...
+                                                    Processing...
                                                 </>
                                             ) : (
                                                 <>
-                                                    Upgrade Now
-                                                    <i className="bi bi-arrow-up-circle"></i>
+                                                    Choose Plan
+                                                    <i className="bi bi-arrow-right-circle"></i>
                                                 </>
                                             )}
-                                        </button>
-                                    ) : (
-                                        <button className="btn-downgrade" disabled>
-                                            Not Available
                                         </button>
                                     )}
                                 </div>

@@ -97,7 +97,10 @@ const Profile = () => {
     navigate("/Profile");
   }
   const goToHome = () => navigate("/eventsDashboard");
-  const handleBack = () => {navigate(-1);};
+  const handleBack = () => { navigate(-1); };
+  const goToUpgradePackage = () => {
+    navigate("/upgrade_package");
+  }
 
   const fetchUserEvents = async (userId) => {
     try {
@@ -652,7 +655,7 @@ const Profile = () => {
                 <div className="tab-content">
                   <div className="tab-header">
                     <h2>My Package</h2>
-                    <button className="upgrade-btn">
+                    <button className="upgrade-btn" onClick={goToUpgradePackage}>
                       Upgrade Package
                     </button>
                   </div>

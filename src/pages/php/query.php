@@ -70,6 +70,29 @@ function generateGuestID()
     return "GUEST-" . $random . "-" . $time;
 }
 
+function generateSimpleTransactionId($pdo)
+{
+    $unique   = false;
+    $attempts = 0;
+
+    while (! $unique && $attempts < 10) {
+        $random = substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 6);
+        $time   = time();
+        $id     = "PYE" . $random . "-" . $time;
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM payment_history WHERE payment_id = ?");
+        $stmt->execute([$id]);
+        $exists = $stmt->fetchColumn();
+
+        if ($exists == 0) {
+            $unique = true;
+        }
+        $attempts++;
+    }
+
+    return $id;
+}
+
 if (! isset($_POST['function'])) {
     echo json_encode(["error" => "No function specified"]);
     exit;
@@ -272,9 +295,9 @@ if ($fun === "saveEvent") {
         ini_set('max_execution_time', 300);
 
         // Ensure UTF-8 encoding for all string data
-        $eventName = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
-        $userName = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
-        $eventLocation = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
+        $eventName       = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
+        $userName        = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
+        $eventLocation   = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
         $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
 
         // Remove any invalid UTF-8 characters
@@ -285,8 +308,8 @@ if ($fun === "saveEvent") {
         $designDataSize = strlen($eventDesignData);
         if ($designDataSize > 10000000) { // 10MB
             echo json_encode([
-                "success" => false, 
-                "message" => "Event design data is too large (" . round($designDataSize/1024/1024, 2) . "MB). Please reduce the size."
+                "success" => false,
+                "message" => "Event design data is too large (" . round($designDataSize / 1024 / 1024, 2) . "MB). Please reduce the size.",
             ]);
             exit;
         }
@@ -311,7 +334,7 @@ if ($fun === "saveEvent") {
                 updated_at = :updated_at
                 WHERE event_id = :event_id AND user_id = :user_id
             ");
-            
+
             $stmt->execute([
                 ':event_name'       => $eventName,
                 ':event_start_date' => $eventStartDate,
@@ -373,13 +396,13 @@ if ($fun === "saveEvent") {
         // Handle specific MySQL errors
         if (strpos($e->getMessage(), 'Incorrect string value') !== false) {
             echo json_encode([
-                "success" => false, 
-                "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8."
+                "success" => false,
+                "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8.",
             ]);
         } elseif (strpos($e->getMessage(), 'max_allowed_packet') !== false) {
             echo json_encode([
-                "success" => false, 
-                "message" => "Event data is too large. Please reduce the design complexity."
+                "success" => false,
+                "message" => "Event data is too large. Please reduce the design complexity.",
             ]);
         } else {
             echo json_encode(["success" => false, "message" => $e->getMessage()]);
@@ -588,7 +611,7 @@ if ($fun === "getRSVPResponses") {
 if ($fun === "getInvitationStats") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
-  if (!verifyAdminAccess($pdo, $adminUserId)) {
+    if (! verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
@@ -630,10 +653,10 @@ if ($fun === "getInvitationStats") {
 
         echo json_encode([
             "success" => true,
-            "stats" => [
+            "stats"   => [
                 "total_invitations" => (int) $totalInvitations,
-                "open_rate" => (float) $openRate,
-                "response_rate" => (float) $responseRate,
+                "open_rate"         => (float) $openRate,
+                "response_rate"     => (float) $responseRate,
             ],
         ]);
     } catch (PDOException $e) {
@@ -1302,11 +1325,11 @@ if ($fun === "logSystemActivity") {
 
 if ($fun === "updateAdminProfile") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
-    $name = $_POST['name'] ?? '';
-    $lastname = $_POST['lastname'] ?? '';
-    $email = $_POST['email'] ?? '';
+    $name        = $_POST['name'] ?? '';
+    $lastname    = $_POST['lastname'] ?? '';
+    $email       = $_POST['email'] ?? '';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
+    if (! verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
@@ -1326,7 +1349,7 @@ if ($fun === "updateAdminProfile") {
         // Check if email is already taken by another user
         $checkStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ? AND user_id != ?");
         $checkStmt->execute([$email, $adminUserId]);
-        
+
         if ($checkStmt->fetch()) {
             echo json_encode([
                 "success" => false,
@@ -1347,7 +1370,7 @@ if ($fun === "updateAdminProfile") {
         echo json_encode([
             "success" => true,
             "message" => "Profile updated successfully",
-            "admin" => $admin
+            "admin"   => $admin,
         ]);
 
     } catch (PDOException $e) {
@@ -1362,7 +1385,7 @@ if ($fun === "updateAdminProfile") {
 if ($fun === "getAdminProfile") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
+    if (! verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
@@ -1372,8 +1395,8 @@ if ($fun === "getAdminProfile") {
 
     try {
         $stmt = $pdo->prepare("
-            SELECT user_id, name, lastname, email, role, created_at 
-            FROM users 
+            SELECT user_id, name, lastname, email, role, created_at
+            FROM users
             WHERE user_id = ? AND role = 'admin'
         ");
         $stmt->execute([$adminUserId]);
@@ -1946,7 +1969,7 @@ function getTotalCount($pdo, $table)
 if ($fun === "getInvitationAnalytics") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
+    if (! verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
@@ -1978,9 +2001,9 @@ if ($fun === "getInvitationAnalytics") {
 
         // Format the data for frontend
         $analytics = array_map(function ($event) {
-            $sent = (int) $event['sent'];
+            $sent      = (int) $event['sent'];
             $responded = (int) $event['responded'];
-            
+
             // FIX: Proper response rate calculation (should never exceed 100%)
             $responseRate = $sent > 0 ? min(100, round(($responded / $sent) * 100, 1)) : 0;
 
@@ -1991,18 +2014,18 @@ if ($fun === "getInvitationAnalytics") {
             ];
 
             return [
-                'id' => $event['event_id'],
-                'eventName' => $event['event_name'],
-                'sent' => $sent,
-                'opened' => $sent, // Assuming all sent are opened for simplicity
-                'responded' => $responded,
+                'id'           => $event['event_id'],
+                'eventName'    => $event['event_name'],
+                'sent'         => $sent,
+                'opened'       => $sent, // Assuming all sent are opened for simplicity
+                'responded'    => $responded,
                 'responseRate' => $responseRate . '%',
-                'status' => $statusMap[$event['status']] ?? 'draft',
+                'status'       => $statusMap[$event['status']] ?? 'draft',
             ];
         }, $events);
 
         echo json_encode([
-            "success" => true,
+            "success"   => true,
             "analytics" => $analytics,
         ]);
     } catch (PDOException $e) {
@@ -2016,10 +2039,10 @@ if ($fun === "getInvitationAnalytics") {
 
 if ($fun === "exportInvitationData") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
-    $status = $_POST['status'] ?? 'all';
-    $userId = $_POST['user_id'] ?? '';
+    $status      = $_POST['status'] ?? 'all';
+    $userId      = $_POST['user_id'] ?? '';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
+    if (! verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
@@ -2051,7 +2074,7 @@ if ($fun === "exportInvitationData") {
 
         // Add WHERE conditions based on filters
         $conditions = [];
-        $params = [];
+        $params     = [];
 
         if ($status !== 'all') {
             if ($status === 'active') {
@@ -2061,12 +2084,12 @@ if ($fun === "exportInvitationData") {
             }
         }
 
-        if (!empty($userId)) {
+        if (! empty($userId)) {
             $conditions[] = "e.user_id = ?";
-            $params[] = $userId;
+            $params[]     = $userId;
         }
 
-        if (!empty($conditions)) {
+        if (! empty($conditions)) {
             $query .= " WHERE " . implode(" AND ", $conditions);
         }
 
@@ -2079,11 +2102,11 @@ if ($fun === "exportInvitationData") {
 
         // Format data for CSV
         $csvData = [];
-        
+
         // Add header row
         $csvData[] = [
             'Event ID',
-            'Event Name', 
+            'Event Name',
             'Organizer',
             'Event Created',
             'Status',
@@ -2091,13 +2114,13 @@ if ($fun === "exportInvitationData") {
             'Invitations Responded',
             'Attending Count',
             'Declined Count',
-            'Response Rate (%)'
+            'Response Rate (%)',
         ];
 
         // Add data rows
         foreach ($events as $event) {
             $status = $event['event_status'] == 1 ? 'Active' : 'Draft';
-            
+
             $csvData[] = [
                 $event['event_id'],
                 $event['event_name'],
@@ -2108,17 +2131,17 @@ if ($fun === "exportInvitationData") {
                 $event['invitations_responded'],
                 $event['attending_count'],
                 $event['declined_count'],
-                $event['response_rate_percent']
+                $event['response_rate_percent'],
             ];
         }
 
         // Generate CSV file
         $timestamp = date('Y-m-d_H-i-s');
-        $filename = "invitation_analytics_export_{$timestamp}.csv";
+        $filename  = "invitation_analytics_export_{$timestamp}.csv";
         $exportDir = __DIR__ . '/exports/';
 
         // Create exports directory if it doesn't exist
-        if (!is_dir($exportDir)) {
+        if (! is_dir($exportDir)) {
             mkdir($exportDir, 0755, true);
         }
 
@@ -2134,10 +2157,10 @@ if ($fun === "exportInvitationData") {
         // Verify file was created
         if (file_exists($filePath)) {
             echo json_encode([
-                "success" => true,
-                "message" => "Export completed successfully",
-                "filename" => $filename,
-                "file_path" => $filePath
+                "success"   => true,
+                "message"   => "Export completed successfully",
+                "filename"  => $filename,
+                "file_path" => $filePath,
             ]);
         } else {
             throw new Exception("Failed to create export file");
@@ -2154,5 +2177,79 @@ if ($fun === "exportInvitationData") {
             "message" => "Export error: " . $e->getMessage(),
         ]);
     }
+    exit;
+}
+
+if ($fun === 'recordPayment') {
+    // Add proper headers and error reporting
+    header('Content-Type: application/json');
+
+    $user_id        = $_POST['user_id'] ?? '';
+    $user_name      = $_POST['user_name'] ?? '';
+    $package_id     = $_POST['package_id'] ?? '';
+    $package_name   = $_POST['package_name'] ?? '';
+    $amount         = $_POST['amount'] ?? '';
+    $payment_method = $_POST['payment_method'] ?? '';
+    $payment_status = $_POST['payment_status'] ?? 'completed';
+
+    // Debug logging
+    error_log("recordPayment called: user_id=$user_id, package_id=$package_id, amount=$amount");
+
+    if (empty($user_id) || empty($package_id) || empty($amount) || empty($payment_method)) {
+        $response = ["success" => false, "message" => "Missing required fields"];
+        echo json_encode($response);
+        error_log("Missing fields: " . json_encode($response));
+        exit;
+    }
+
+    try {
+        $payment_id = generateSimpleTransactionId($pdo);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO payment_history (
+                user_id, user_name, package_id, package_name, amount,
+                payment_method, payment_status, payment_id, payment_date
+            )
+            VALUES (:user_id, :user_name, :package_id, :package_name, :amount,
+                    :payment_method, :payment_status, :payment_id, NOW())
+        ");
+
+        $result = $stmt->execute([
+            ':user_id'        => $user_id,
+            ':user_name'      => $user_name,
+            ':package_id'     => $package_id,
+            ':package_name'   => $package_name,
+            ':amount'         => $amount,
+            ':payment_method' => $payment_method,
+            ':payment_status' => $payment_status,
+            ':payment_id'     => $payment_id,
+        ]);
+
+        if ($result) {
+            $response = [
+                "success"    => true,
+                "message"    => "Payment recorded successfully",
+                "payment_id" => $payment_id,
+            ];
+            echo json_encode($response);
+            error_log("Payment recorded: " . json_encode($response));
+        } else {
+            $response = [
+                "success" => false,
+                "message" => "Failed to insert payment record",
+            ];
+            echo json_encode($response);
+            error_log("Payment insert failed");
+        }
+
+    } catch (PDOException $e) {
+        $response = [
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ];
+        echo json_encode($response);
+        error_log("Payment error: " . $e->getMessage());
+    }
+
     exit;
 }
