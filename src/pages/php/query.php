@@ -267,8 +267,29 @@ if ($fun === "saveEvent") {
     $createdAt = date('Y-m-d H:i:s');
 
     try {
-                                                                 // Increase packet size for large design data
-        $pdo->exec("SET SESSION max_allowed_packet=1073741824"); // 1GB
+        // Set PHP memory limits
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', 300);
+
+        // Ensure UTF-8 encoding for all string data
+        $eventName       = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
+        $userName        = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
+        $eventLocation   = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
+        $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
+
+        // Remove any invalid UTF-8 characters
+        $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
+        $eventDesignData = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $eventDesignData);
+
+        // Check if eventDesignData is too large
+        $designDataSize = strlen($eventDesignData);
+        if ($designDataSize > 10000000) { // 10MB
+            echo json_encode([
+                "success" => false,
+                "message" => "Event design data is too large (" . round($designDataSize / 1024 / 1024, 2) . "MB). Please reduce the size.",
+            ]);
+            exit;
+        }
 
         $checkStmt = $pdo->prepare("SELECT event_id FROM events WHERE event_id = :event_id AND user_id = :user_id");
         $checkStmt->execute([
@@ -277,7 +298,7 @@ if ($fun === "saveEvent") {
         ]);
 
         if ($checkStmt->fetch()) {
-            // Update existing event - REMOVE user_name from update
+            // Update existing event
             $stmt = $pdo->prepare("UPDATE events SET
                 event_name = :event_name,
                 event_start_date = :event_start_date,
@@ -290,6 +311,7 @@ if ($fun === "saveEvent") {
                 updated_at = :updated_at
                 WHERE event_id = :event_id AND user_id = :user_id
             ");
+
             $stmt->execute([
                 ':event_name'       => $eventName,
                 ':event_start_date' => $eventStartDate,
@@ -312,11 +334,11 @@ if ($fun === "saveEvent") {
                 ':description' => "Event '{$eventName}' was updated",
             ]);
         } else {
-            // Option 1: If you want to include user_name in the insert
+            // Insert new event
             $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
                        event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at";
 
-            $values = ":user_id, :event_id, :event_name, :event_start_date, :event_start_time,
+            $values = ":user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
                       :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at";
 
             $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
@@ -339,7 +361,7 @@ if ($fun === "saveEvent") {
             // LOG THE ACTIVITY - Event created
             $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
             $logStmt->execute([
-                ':user_id'     => $userID, // The event planner's ID
+                ':user_id'     => $userID,
                 ':action'      => 'Event Created',
                 ':description' => "New event '{$eventName}' created by {$userName}",
             ]);
@@ -348,7 +370,20 @@ if ($fun === "saveEvent") {
         echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
 
     } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => $e->getMessage()]);
+        // Handle specific MySQL errors
+        if (strpos($e->getMessage(), 'Incorrect string value') !== false) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8.",
+            ]);
+        } elseif (strpos($e->getMessage(), 'max_allowed_packet') !== false) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Event data is too large. Please reduce the design complexity.",
+            ]);
+        } else {
+            echo json_encode(["success" => false, "message" => $e->getMessage()]);
+        }
     }
     exit;
 }
@@ -830,8 +865,8 @@ if ($fun === "updateEventUsedCount") {
             exit;
         }
 
-        $updateStmt = $pdo->prepare("UPDATE user_packages SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = ?");
-        $updateStmt->execute([$user_id]);
+        /*$updateStmt = $pdo->prepare("UPDATE user_packages SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = ?");
+        $updateStmt->execute([$user_id]);*/
 
         // Update the event with package_id in events table
         $stmt = $pdo->prepare("UPDATE events SET package_id = :package_id WHERE event_id = :event_id");

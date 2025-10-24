@@ -18,6 +18,7 @@ const EventsDashboard = () => {
     const [rsvpStats, setRsvpStats] = useState({});
     const [deletingEventId, setDeletingEventId] = useState(null);
     const [activeTab, setActiveTab] = useState("all");
+    const [soonestEvent, setSoonestEvent] = useState(null); // New state for soonest event
 
     const itemsPerPage = 6;
     const navigate = useNavigate();
@@ -56,37 +57,67 @@ const EventsDashboard = () => {
                     });
 
                     // -----------------------------
-                    // HEAP / PRIORITY QUEUE INTEGRATION
+                    // FIXED: HEAP / PRIORITY QUEUE FOR UPCOMING EVENTS ONLY
                     // -----------------------------
 
-                    const eventHeap = new PriorityQueue({
-                        comparator: (a, b) =>
-                            new Date(a.event_start_date || a.created_at) -
-                            new Date(b.event_start_date || b.created_at)
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
+                    // Separate upcoming and past events
+                    const upcomingEvents = uniqueEvents.filter(event => {
+                        const eventDate = new Date(event.event_start_date || event.created_at);
+                        eventDate.setHours(0, 0, 0, 0);
+                        return eventDate >= today;
                     });
 
-                    uniqueEvents.forEach(event => eventHeap.queue(event));
+                    const pastEvents = uniqueEvents.filter(event => {
+                        const eventDate = new Date(event.event_start_date || event.created_at);
+                        eventDate.setHours(0, 0, 0, 0);
+                        return eventDate < today;
+                    });
 
-                    const sortedEvents = [];
-                    while (eventHeap.length > 0) {
-                        sortedEvents.push(eventHeap.dequeue());
+                    // Create priority queue for upcoming events (closest date first)
+                    const upcomingEventHeap = new PriorityQueue({
+                        comparator: (a, b) => {
+                            const dateA = new Date(a.event_start_date || a.created_at);
+                            const dateB = new Date(b.event_start_date || b.created_at);
+                            return dateA - dateB; // Closest date comes first
+                        }
+                    });
+
+                    upcomingEvents.forEach(event => upcomingEventHeap.queue(event));
+
+                    // Sort upcoming events from heap (closest first)
+                    const sortedUpcomingEvents = [];
+                    while (upcomingEventHeap.length > 0) {
+                        sortedUpcomingEvents.push(upcomingEventHeap.dequeue());
                     }
 
-                    const today = new Date();
-                    const upcomingEvents = sortedEvents.filter(
-                        (e) => new Date(e.event_start_date) >= today
-                    );
+                    // Sort past events by most recent first
+                    const sortedPastEvents = pastEvents.sort((a, b) => {
+                        const dateA = new Date(a.event_start_date || a.created_at);
+                        const dateB = new Date(b.event_start_date || b.created_at);
+                        return dateB - dateA; // Most recent past event first
+                    });
 
-                    const soonestEvent = upcomingEvents[0];
+                    // Combine: upcoming events first, then past events
+                    const finalSortedEvents = [...sortedUpcomingEvents, ...sortedPastEvents];
+
+                    // Set the soonest upcoming event (first in upcoming events array)
+                    const soonestUpcomingEvent = sortedUpcomingEvents[0] || null;
+                    setSoonestEvent(soonestUpcomingEvent);
+
                     console.log(
                         "Soonest upcoming event:",
-                        soonestEvent?.event_name,
-                        soonestEvent?.event_start_date
+                        soonestUpcomingEvent?.event_name,
+                        soonestUpcomingEvent?.event_start_date
                     );
+                    console.log("Total upcoming events:", sortedUpcomingEvents.length);
+                    console.log("Total past events:", sortedPastEvents.length);
 
-                    setEvents(sortedEvents);
-                    setFilteredEvents(sortedEvents);
-                    fetchRSVPStatsForEvents(sortedEvents);
+                    setEvents(finalSortedEvents);
+                    setFilteredEvents(finalSortedEvents);
+                    fetchRSVPStatsForEvents(finalSortedEvents);
                 }
             } catch (error) {
                 console.error("Failed to fetch events:", error);
@@ -140,6 +171,7 @@ const EventsDashboard = () => {
         setRsvpStats(stats);
     };
 
+    // Rest of your functions remain the same...
     const deleteEvent = async (eventId, eventName) => {
         if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) return;
         setDeletingEventId(eventId);
@@ -189,19 +221,29 @@ const EventsDashboard = () => {
 
         if (filters.dateRange !== "all") {
             const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
             result = result.filter(event => {
                 const eventDate = new Date(event.event_start_date || event.created_at);
+                eventDate.setHours(0, 0, 0, 0);
+
                 switch (filters.dateRange) {
-                    case "today": return eventDate.toDateString() === today.toDateString();
+                    case "today":
+                        return eventDate.toDateString() === today.toDateString();
                     case "week":
-                        const oneWeekAgo = new Date(); oneWeekAgo.setDate(today.getDate() - 7);
+                        const oneWeekAgo = new Date();
+                        oneWeekAgo.setDate(today.getDate() - 7);
                         return eventDate >= oneWeekAgo;
                     case "month":
-                        const oneMonthAgo = new Date(); oneMonthAgo.setMonth(today.getMonth() - 1);
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(today.getMonth() - 1);
                         return eventDate >= oneMonthAgo;
-                    case "upcoming": return eventDate >= today;
-                    case "past": return eventDate < today;
-                    default: return true;
+                    case "upcoming":
+                        return eventDate >= today;
+                    case "past":
+                        return eventDate < today;
+                    default:
+                        return true;
                 }
             });
         }
@@ -257,12 +299,17 @@ const EventsDashboard = () => {
                         </button>
                     </div>
 
-                    {/* Show soonest event */}
-                    {events.length > 0 && (
+                    {/* FIXED: Show soonest UPCOMING event */}
+                    {soonestEvent && (
                         <div className="next-event-banner">
                             <i className="bi bi-clock-history"></i>
-                            Next upcoming event: <strong>{events[0].event_name}</strong> on{" "}
-                            {new Date(events[0].event_start_date).toLocaleString()}
+                            Next upcoming event: <strong>{soonestEvent.event_name}</strong> on{" "}
+                            {new Date(soonestEvent.event_start_date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            })}
                         </div>
                     )}
 
@@ -317,6 +364,12 @@ const EventsDashboard = () => {
                         {displayedEvents.length > 0 ? (
                             displayedEvents.map((event) => {
                                 const published = isEventPublished(event);
+                                const eventDate = new Date(event.event_start_date || event.created_at);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                eventDate.setHours(0, 0, 0, 0);
+                                const isUpcoming = eventDate >= today;
+
                                 return (
                                     <div
                                         className="event-card-container"
@@ -328,6 +381,15 @@ const EventsDashboard = () => {
                                                 <><i className="bi bi-check-circle"></i> Published</>
                                             ) : (
                                                 <><i className="bi bi-clock"></i> Unpublished</>
+                                            )}
+                                        </div>
+
+                                        {/* Date Type Badge */}
+                                        <div className={`event-date-badge ${isUpcoming ? 'upcoming' : 'past'}`}>
+                                            {isUpcoming ? (
+                                                <><i className="bi bi-arrow-up-circle"></i> Upcoming</>
+                                            ) : (
+                                                <><i className="bi bi-clock-history"></i> Past</>
                                             )}
                                         </div>
 

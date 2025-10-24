@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
+import '../../alert.css';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut } from "../components";
 
@@ -10,12 +11,11 @@ const Manage_my_event = () => {
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const [event_id, setEventId] = useState("");
     const [eventStatus, setEventStatus] = useState("");
     const [eventDetails, setEventDetails] = useState(null);
     const [userPackage, setUserPackage] = useState(null);
-    
+
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [showPackagePopup, setShowPackagePopup] = useState(false);
     const [guestLimit, setGuestLimit] = useState(0);
@@ -23,8 +23,17 @@ const Manage_my_event = () => {
     const [availablePackages, setAvailablePackages] = useState([]);
     const [currentPlan, setCurrentPlan] = useState(null);
 
+    const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+
+    const printAlert = (message, type = "info") => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => {
+            setAlert({ show: false, message: "", type: "" });
+        }, 5000);
+    };
+
     useEffect(() => {
-        const id = localStorage.getItem("selectedEventId") 
+        const id = localStorage.getItem("selectedEventId")
         const storedUser = localStorage.getItem("user");
         if (id && storedUser) {
             const userData = JSON.parse(storedUser);
@@ -100,7 +109,7 @@ const Manage_my_event = () => {
 
                 fetchPackageDetails(data.userPackage.package_id, data.userPackage);
             } else {
-                
+
                 setCurrentPlan({
                     hasPackage: false,
                     message: "You don't have an active package yet."
@@ -153,7 +162,7 @@ const Manage_my_event = () => {
         }
     };
 
-   
+
     const fetchAvailablePackages = async () => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -344,6 +353,7 @@ const Manage_my_event = () => {
     const goToEventManagement = () => navigate(`/eventManagement`);
     const goToInvitations = () => navigate(`/invitationPage`);
     const goToManage = () => navigate(`/manage_my_event`);
+    const goToUpgradePlan = () => navigate(`/upgrade_package`);
 
     const handlePackageClick = (pkg) => {
         setSelectedPackage(pkg);
@@ -365,16 +375,15 @@ const Manage_my_event = () => {
 
     const handlePublishEvent = () => {
         if (guestLimit === 0) {
-            alert("Please select a guest limit greater than 0.");
+            printAlert("Please select a guest limit greater than 0.", "warning");
             return;
         }
 
         if (currentPlan && currentPlan.hasPackage && currentPlan.available_events > 0) {
             updateEventStatus();
             updateEventUsedCount();
-           // alert("Event published successfully!");
         } else {
-            alert("No available events left in your plan or no active package. Please upgrade your package.");
+            printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
         }
     };
 
@@ -394,13 +403,16 @@ const Manage_my_event = () => {
             });
 
             const data = await response.json();
-         
+
             if (data.success) {
                 setEventStatus("Published");
-                alert("Event status updated to published");
+                printAlert("Event published successfully!", "success");
+            } else {
+                printAlert("Failed to publish event. Please try again.", "error");
             }
         } catch (err) {
             console.error("Error updating event status:", err);
+            printAlert("Error publishing event. Please try again.", "error");
         }
     };
 
@@ -411,7 +423,7 @@ const Manage_my_event = () => {
             formData.append("function", "updateEventUsedCount");
             formData.append("user_id", user.user_id);
             formData.append("event_id", event_id);
-            formData.append("package_id", userPackage.package_id); 
+            formData.append("package_id", userPackage.package_id);
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -423,9 +435,13 @@ const Manage_my_event = () => {
             if (data.success) {
                 console.log("Event used count updated and package assigned to event");
                 fetchUserPackage(user.user_id);
+                printAlert("Event count updated successfully.", "success");
+            } else {
+                printAlert("Failed to update event count.", "error");
             }
         } catch (err) {
             console.error("Error updating event used count:", err);
+            printAlert("Error updating event count.", "error");
         }
     };
 
@@ -458,7 +474,7 @@ const Manage_my_event = () => {
         setGuestLimit(newGuestLimit);
     };
 
-   
+
 
     const renderCurrentPlanCard = () => {
         if (!currentPlan) {
@@ -494,7 +510,7 @@ const Manage_my_event = () => {
                             <p>You need a package to publish events. Choose a plan from above.</p>
                         </div>
                         <div className="plan-footer">
-                            <button className="upgrade-btn">Choose Plan</button>
+                            <button className="upgrade-btn" onClick={goToUpgradePlan}>Choose Plan</button>
                         </div>
                     </div>
                 </div>
@@ -550,7 +566,7 @@ const Manage_my_event = () => {
 
                     <div className="plan-footer">
                         <p className="renewal-date">Last updated: {currentPlan.renewal_date}</p>
-                        <button className="upgrade-btn">Upgrade Plan</button>
+                        <button className="upgrade-btn" onClick={goToUpgradePlan}>Upgrade Plan</button>
                     </div>
                 </div>
             </div>
@@ -559,6 +575,24 @@ const Manage_my_event = () => {
 
     return (
         <div className="dashboard-container">
+
+            {/* Custom alert box */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
+
             {/* Header */}
             <div className="dashboard-header">
                 <h1>Evenda</h1>

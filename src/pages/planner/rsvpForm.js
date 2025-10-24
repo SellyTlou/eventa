@@ -238,7 +238,7 @@ const RsvpForm = () => {
     return (
         <div className="rsvp_form__container">
 
-            {/* ✅ Custom alert box */}
+            {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i

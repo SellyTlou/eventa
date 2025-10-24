@@ -24,7 +24,7 @@ import ManageEyEvent from '../pages/planner/manage_my_event';
 import PackagePayment from '../pages/planner/packagePayment';
 import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
-import UpgradePackage from './planner/upgrade_package';
+import UpgradePackage from '../pages/planner/upgrade_package';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -240,7 +240,6 @@ const btnDangerStyle = {
     borderRadius: "5px",
     cursor: "pointer",
 };
-
 
 export function Navbar({ onLoginClick, onSignupClick }) {
     const [scrolled, setScrolled] = useState(false);
