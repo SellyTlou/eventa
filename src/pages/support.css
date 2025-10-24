@@ -1,0 +1,351 @@
+
+.support-page {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Hero Section */
+.header-section {
+    position: relative;
+    height: 70vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.hero-bg-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+
+.overlayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(106, 13, 173, 0.8) 0%, rgba(23, 97, 146, 0.8) 100%);
+    z-index: 2;
+}
+
+.header-section .container {
+    position: relative;
+    z-index: 3;
+}
+
+.header-section h1 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 1.5rem;
+}
+
+.header-section .lead {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+
+
+/* Features Section */
+.features-page {
+    padding: 5rem 0;
+    background: #f8f9fa;
+}
+
+.section-header {
+    margin-bottom: 4rem;
+}
+
+.section-header h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.section-header p {
+    font-size: 1.1rem;
+    color: #6c757d;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.features-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.feature-card {
+    background: white;
+    padding: 2.5rem 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+.feature-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #6a0dad, #176192);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feature-icon i {
+    font-size: 2rem;
+    color: white;
+}
+
+.feature-card h4 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.feature-card p {
+    color: #6c757d;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+/* FAQ Section */
+.faq-section {
+    padding: 5rem 0;
+    background: white;
+}
+
+.faq-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faq-item {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #6a0dad;
+}
+
+.faq-item h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.faq-item p {
+    color: #6c757d;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* CTA Section */
+.cta-banner {
+    position: relative;
+    padding: 4rem 0;
+    overflow: hidden;
+}
+
+.cta-bg-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+
+.cta-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2;
+}
+
+.cta-banner .container {
+    position: relative;
+    z-index: 3;
+}
+
+.cta-banner h3 {
+    font-size: 2.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.cta-banner p {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+/* Buttons */
+.btn-get-demo, .btn-view-more {
+    background: linear-gradient(135deg, #6a0dad, #176192);
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-get-demo:hover, .btn-view-more:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(106, 13, 173, 0.3);
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-section h1 {
+        font-size: 2.5rem;
+    }
+    
+    .header-section .lead {
+        font-size: 1.1rem;
+    }
+    
+    .features-row {
+        gap: 1.5rem;
+    }
+    
+    .feature-card {
+        padding: 2rem 1.5rem;
+    }
+    
+    .cta-banner .row {
+        text-align: center;
+    }
+    
+    .cta-banner h3 {
+        font-size: 1.75rem;
+    }
+}
+
+/* Contact Modal Styles */
+.contact-message {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.contact-icon {
+    font-size: 3rem;
+    color: #6a0dad;
+    margin-bottom: 1rem;
+}
+
+.contact-info {
+    margin: 2rem 0;
+    text-align: left;
+}
+
+.contact-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.contact-item i {
+    font-size: 1.5rem;
+    color: #6a0dad;
+    margin-right: 1rem;
+    margin-top: 0.25rem;
+}
+
+.contact-item h4 {
+    margin: 0 0 0.25rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.contact-item p {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+    color: #6a0dad;
+    font-size: 1.1rem;
+}
+
+.contact-item small {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.contact-tips {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #e8f4fd;
+    border-radius: 8px;
+    border-left: 4px solid #176192;
+}
+
+.contact-tips h4 {
+    color: #176192;
+    margin-bottom: 1rem;
+}
+
+.contact-tips ul {
+    text-align: left;
+    margin: 0;
+    padding-left: 1rem;
+}
+
+.contact-tips li {
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+/* Modal Action Buttons */
+.modal-actions-new {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.action-btn-new.secondary {
+    background: #6c757d;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.action-btn-new.secondary:hover {
+    background: #5a6268;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+}

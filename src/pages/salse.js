@@ -3,12 +3,12 @@ import "../App.css";
 import "../responce.css";
 import "./sales.css";
 import { Navbar, Footer, Login } from "./components";
+import { useNavigate } from "react-router-dom";
 
 function Sales() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
-    const [showMaintenance, setShowMaintenance] = useState(false);
-    
+    const navigate = useNavigate();
 
     const handleLoginClick = () => {
         setLoginMode("login");
@@ -20,8 +20,8 @@ function Sales() {
         setIsLoginOpen(true);
     };
 
-    const handleMaintenanceClick = () => {
-        setShowMaintenance(true);
+    const handleCreateEvent = () => {
+        navigate("/createevent");
     };
 
     
@@ -56,7 +56,7 @@ function Sales() {
                                 </p>
                                 <button 
                                     className="btn btn-get-demo"
-                                    onClick={handleMaintenanceClick}
+                                    onClick={handleCreateEvent}
                                 >
                                     Get Demo
                                 </button>
@@ -85,7 +85,7 @@ function Sales() {
                                 </p>
                                 <button 
                                     className="btn btn-view-more"
-                                    onClick={handleMaintenanceClick}
+                                    onClick={handleCreateEvent}
                                 >
                                     Get started
                                 </button>
@@ -100,7 +100,7 @@ function Sales() {
                                 </p>
                                 <button 
                                     className="btn btn-view-more"
-                                    onClick={handleMaintenanceClick}
+                                    onClick={handleCreateEvent}
                                 >
                                     Get started
                                 </button>
@@ -115,7 +115,7 @@ function Sales() {
                                 </p>
                                 <button 
                                     className="btn btn-view-more"
-                                    onClick={handleMaintenanceClick}
+                                    onClick={handleCreateEvent}
                                 >
                                     Get started
                                 </button>
@@ -155,7 +155,7 @@ function Sales() {
                             <div>
                                 <button 
                                     className="btn btn-get-demo"
-                                    onClick={handleMaintenanceClick}
+                                    onClick={handleCreateEvent}
                                 >
                                     Get Demo
                                 </button>
@@ -164,61 +164,6 @@ function Sales() {
                     </div>
                 </section>
             </section>
-
-            {/* Maintenance Modal */}
-            {showMaintenance && (
-                <div className="modal-overlay-new" onClick={() => setShowMaintenance(false)}>
-                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header-new">
-                            <div className="modal-title-section">
-                                <div className="modal-icon-large">
-                                    <i className="bi bi-tools"></i>
-                                </div>
-                                <div className="modal-title">
-                                    <h2>Feature Under Maintenance</h2>
-                                    <p>We're working hard to bring you this feature</p>
-                                </div>
-                            </div>
-                            <button 
-                                className="close-btn-new"
-                                onClick={() => setShowMaintenance(false)}
-                            >
-                                <i className="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-
-                        <div className="modal-body-new">
-                            <div className="maintenance-message">
-                                <div className="maintenance-icon">
-                                    <i className="bi bi-gear"></i>
-                                </div>
-                                <h3>Coming Soon!</h3>
-                                <p>This feature is currently being developed and will be available in our next update.</p>
-                                <p>We appreciate your patience as we work to make Eventa even better!</p>
-                                
-                                <div className="maintenance-tips">
-                                    <h4>In the meantime, you can:</h4>
-                                    <ul>
-                                        <li>Explore our other available features</li>
-                                        <li>Contact support for alternative solutions</li>
-                                        <li>Check back later for updates</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            
-                            <div className="modal-actions-new">
-                                <button 
-                                    className="action-btn-new primary"
-                                    onClick={() => setShowMaintenance(false)}
-                                >
-                                    <i className="bi bi-check-circle"></i>
-                                    Got It
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <Footer />
         </>

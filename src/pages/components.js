@@ -25,6 +25,7 @@ import PackagePayment from '../pages/planner/packagePayment';
 import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
+import Support from '../pages/support';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -188,6 +189,8 @@ export function SessionHandler() {
                 <Route path="/forgot_password" element={<ForgotPassword />} />
                 <Route path="/email_verify" element={<EmailVerify />} />
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
+                <Route path="/support" element={<Support />} />
+
             </Routes>
 
             <SessionWarningModal

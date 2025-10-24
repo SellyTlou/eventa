@@ -55,6 +55,8 @@ function Index() {
         setIsLoginOpen(true);
     }
 
+    
+
     const [activeTab, setActiveTab] = useState("Invitations");
     const [managementStartIndex, setManagementStartIndex] = useState(0);
 
