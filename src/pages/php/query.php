@@ -70,6 +70,76 @@ function generateGuestID()
     return "GUEST-" . $random . "-" . $time;
 }
 
+// Add these helper functions before the main if statements
+
+function generateCSVReport($data, $filePath) {
+    $file = fopen($filePath, 'w');
+    
+    if (!empty($data)) {
+        // Add headers
+        fputcsv($file, array_keys($data[0]));
+        
+        // Add data rows
+        foreach ($data as $row) {
+            fputcsv($file, $row);
+        }
+    }
+    
+    fclose($file);
+    return $filePath;
+}
+
+function generateExcelReport($data, $filePath) {
+    // Simple CSV implementation (you can use PHPExcel for real Excel files)
+    return generateCSVReport($data, $filePath);
+}
+
+function generatePDFReport($data, $filePath) {
+    // Simple text file implementation (you can use TCPDF or Dompdf for real PDFs)
+    $content = "REPORT GENERATED ON: " . date('Y-m-d H:i:s') . "\n\n";
+    
+    if (!empty($data) && is_array($data)) {
+        foreach ($data as $index => $row) {
+            if (is_array($row)) {
+                $content .= "Record " . ($index + 1) . ":\n";
+                foreach ($row as $key => $value) {
+                    $content .= "  " . $key . ": " . $value . "\n";
+                }
+                $content .= "\n";
+            }
+        }
+    }
+    
+    file_put_contents($filePath, $content);
+    return $filePath;
+}
+
+function getPackageStats($pdo) {
+    $stmt = $pdo->prepare("
+        SELECT package_type, COUNT(*) as count 
+        FROM packagetb 
+        GROUP BY package_type
+    ");
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getRevenueStats($pdo, $dateRange) {
+    $whereClause = getDateRangeWhereClause($dateRange);
+    $table = strpos($whereClause, 'WHERE') !== false ? 'payment_history' : 'payment_history';
+    
+    $stmt = $pdo->prepare("
+        SELECT 
+            COALESCE(SUM(amount), 0) as total_revenue,
+            COUNT(*) as total_transactions
+        FROM {$table}
+        WHERE payment_status = 'completed'
+        " . ($whereClause ? str_replace('created_at', 'payment_date', $whereClause) : '')
+    );
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
 function generateSimpleTransactionId($pdo)
 {
     $unique   = false;
@@ -435,6 +505,40 @@ if ($fun === "getUserEvents") {
         echo json_encode([
             "success" => false,
             "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getUserEventsCount") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $userId = $_POST['user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+
+    if (empty($userId)) {
+        echo json_encode(["success" => false, "message" => "Missing user ID"]);
+        exit;
+    }
+
+    try {
+        // Count user's events
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total_events FROM events WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $eventData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "total_events" => (int)$eventData['total_events']
+        ]);
+
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
         ]);
     }
     exit;

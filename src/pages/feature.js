@@ -7,6 +7,7 @@ function Features() {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [activeTab, setActiveTab] = useState("Organizing Tools");
     const [startIndex, setStartIndex] = useState(0);
+    const [showMaintenance, setShowMaintenance] = useState(false);
 
     const featureSections = useMemo(() => ({
         "Organizing Tools": [
@@ -146,6 +147,13 @@ function Features() {
         setStartIndex(0);
     };
 
+    const handleLearnMore = () => {
+        setShowMaintenance(true);
+        setTimeout(() => {
+            setShowMaintenance(false);
+        }, 20000);
+    };
+
     const getVisibleCards = () => {
         const currentCards = featureSections[activeTab];
         const cardsToShow = isMobile ? 1 : 3;
@@ -169,6 +177,61 @@ function Features() {
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
             />
+
+            {/* Maintenance Modal */}
+            {showMaintenance && (
+                <div className="modal-overlay-new" onClick={() => setShowMaintenance(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-tools"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Feature Under Maintenance</h2>
+                                    <p>We're working hard to bring you this feature</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowMaintenance(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="maintenance-message">
+                                <div className="maintenance-icon">
+                                    <i className="bi bi-gear"></i>
+                                </div>
+                                <h3>Coming Soon!</h3>
+                                <p>This feature is currently being developed and will be available in our next update.</p>
+                                <p>We appreciate your patience as we work to make Eventa even better!</p>
+                                
+                                <div className="maintenance-tips">
+                                    <h4>In the meantime, you can:</h4>
+                                    <ul>
+                                        <li>Explore our other available features</li>
+                                        <li>Contact support for alternative solutions</li>
+                                        <li>Check back later for updates</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div className="modal-actions-new">
+                                <button 
+                                    className="action-btn-new primary"
+                                    onClick={() => setShowMaintenance(false)}
+                                >
+                                    <i className="bi bi-check-circle"></i>
+                                    Got It
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="features-page">
                 {/* Hero Section */}
@@ -222,7 +285,12 @@ function Features() {
                                             </div>
                                             <h4>{card.title}</h4>
                                             <p>{card.description}</p>
-                                            <button className="btn btn-view-more">Learn More</button>
+                                            <button 
+                                                className="btn btn-view-more" 
+                                                onClick={handleLearnMore}
+                                            >
+                                                Learn More
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
