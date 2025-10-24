@@ -2983,90 +2983,80 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
         </div>
     );
 };
+
 // Users Tab Content with Logging
 const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
-    const [users, setUsers] = useState(initialUsers || []);
-    const [filteredUsers, setFilteredUsers] = useState(initialUsers || []);
+    const [users, setUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState([]);
     const [selectedStatus, setSelectedStatus] = useState('all');
     const [sortBy, setSortBy] = useState('name');
     const [sortOrder, setSortOrder] = useState('asc');
     const [selectedUser, setSelectedUser] = useState(null);
     const [showUserModal, setShowUserModal] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [userStats, setUserStats] = useState(null);
-    const [availablePackages, setAvailablePackages] = useState([]);
-    const [selectedPackage, setSelectedPackage] = useState('');
-    const [updatingPackage, setUpdatingPackage] = useState(false);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
+    // Always fetch fresh data when component mounts
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                
-                const formData = new FormData();
-                formData.append('function', 'getAllUsers');
-                formData.append('admin_user_id', adminUserId);
-                
-                const response = await fetch(`${API_BASE_URL}/query.php`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    const formattedUsers = data.users.map(user => ({
-                        id: user.user_id,
-                        name: user.name,
-                        email: user.email,
-                        role: user.role || 'event_planner',
-                        status: user.status || 'active',
-                        joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
-                    }));
-                    
-                    setUsers(formattedUsers);
-                    setFilteredUsers(formattedUsers);
-                } else {
-                    if (data.message && data.message.includes("Unauthorized")) {
-                        throw new Error("Admin access denied. Please log in as administrator.");
-                    } else {
-                        throw new Error(data.message || 'Failed to fetch users');
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching users:', error);
-                setError(error.message);
-                setUsers([]);
-                setFilteredUsers([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+        fetchUsersData();
+    }, []);
 
-        if (!initialUsers || initialUsers.length === 0) {
-            fetchUsers();
+    const fetchUsersData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            
+            const formData = new FormData();
+            formData.append('function', 'getAllUsers');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                const formattedUsers = data.users.map(user => ({
+                    id: user.user_id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role || 'event_planner',
+                    status: user.status || 'active',
+                    joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
+                }));
+                
+                setUsers(formattedUsers);
+                setFilteredUsers(formattedUsers);
+                logActivity('Users Data Loaded', 'Loaded user management data');
+            } else {
+                throw new Error(data.message || 'Failed to fetch users');
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            setError(error.message);
+        } finally {
+            setLoading(false);
         }
-    }, [initialUsers, adminUserId]);
+    };
 
     useEffect(() => {
         if (selectedUser && showUserModal) {
-            fetchUserStatsAndPackages(selectedUser.id);
+            fetchUserStats(selectedUser.id);
         }
     }, [selectedUser, showUserModal]);
 
-    const fetchUserStatsAndPackages = async (userId) => {
+    const fetchUserStats = async (userId) => {
         try {
             const formData = new FormData();
-            formData.append('function', 'getUserPackageAndStats');
+            formData.append('function', 'getUserEventsCount');
             formData.append('admin_user_id', adminUserId);
             formData.append('user_id', userId);
             
@@ -3079,101 +3069,12 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
                 const data = await response.json();
                 if (data.success) {
                     setUserStats(data);
-                    setAvailablePackages(data.available_packages || []);
-                    setSelectedPackage(data.package_info?.package_type || 'none');
                 }
             }
         } catch (error) {
             console.error('Error fetching user stats:', error);
         }
     };
-
-    const handlePackageUpdate = async () => {
-        if (!selectedUser || selectedPackage === 'none') return;
-        
-        try {
-            setUpdatingPackage(true);
-            const formData = new FormData();
-            formData.append('function', 'updateUserPackage');
-            formData.append('admin_user_id', adminUserId);
-            formData.append('user_id', selectedUser.id);
-            formData.append('package_type', selectedPackage);
-            
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                logActivity('User Package Updated', 
-                    `Updated package for user ${selectedUser.name} to ${selectedPackage}`
-                );
-                alert('Package updated successfully!');
-                await fetchUserStatsAndPackages(selectedUser.id);
-            } else {
-                alert('Error updating package: ' + data.message);
-                logActivity('Package Update Failed', `Failed to update user package: ${data.message}`);
-            }
-        } catch (error) {
-            console.error('Error updating package:', error);
-            alert('Error updating package');
-            logActivity('Package Update Error', `User package update error: ${error.message}`);
-        } finally {
-            setUpdatingPackage(false);
-        }
-    };
-
-    const fetchUsersData = async () => {
-    try {
-        setLoading(true);
-        setError(null);
-        
-        const formData = new FormData();
-        formData.append('function', 'getAllUsers');
-        formData.append('admin_user_id', adminUserId);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            const formattedUsers = data.users.map(user => ({
-                id: user.user_id,
-                name: user.name,
-                email: user.email,
-                role: user.role || 'event_planner',
-                status: user.status || 'active',
-                joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
-            }));
-            
-            setUsers(formattedUsers);
-            setFilteredUsers(formattedUsers);
-        } else {
-            throw new Error(data.message || 'Failed to fetch users');
-        }
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        setError(error.message);
-    } finally {
-        setLoading(false);
-    }
-};
-
-    useEffect(() => {
-    // Refresh data when component mounts or when initialUsers changes
-    if (initialUsers && initialUsers.length > 0) {
-        setUsers(initialUsers);
-        setFilteredUsers(initialUsers);
-    } else {
-        fetchUsersData();
-    }
-}, [initialUsers]); // ✅ This will refresh when parent passes new data
 
     useEffect(() => {
         const filterAndSortUsers = () => {
@@ -3247,44 +3148,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
         setSelectedUser(user);
         setShowUserModal(true);
         setUserStats(null);
-        setSelectedPackage('');
         logActivity('User Details Viewed', `Viewed details for user: ${user.name} (${user.email})`);
-    };
-
-    const refreshUsers = async () => {
-        try {
-            setLoading(true);
-            const formData = new FormData();
-            formData.append('function', 'getAllUsers');
-            formData.append('admin_user_id', adminUserId);
-            
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    const formattedUsers = data.users.map(user => ({
-                        id: user.user_id,
-                        name: user.name,
-                        email: user.email,
-                        role: user.role || 'event_planner',
-                        status: user.status || 'active',
-                        joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
-                    }));
-                    
-                    setUsers(formattedUsers);
-                    setFilteredUsers(formattedUsers);
-                    logActivity('Users Data Refreshed', 'Refreshed user management data');
-                }
-            }
-        } catch (error) {
-            console.error('Error refreshing users:', error);
-        } finally {
-            setLoading(false);
-        }
     };
 
     const updateUserStatus = async (userId, newStatus) => {
@@ -3301,20 +3165,20 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
             });
             
             const data = await response.json();
-        if (data.success) {
-            // ✅ AUTO-REFRESH: Fetch fresh data after successful update
-            await fetchUsersData();
-            
-            logActivity('User Status Updated', 
-                `User ${userId} status changed to ${newStatus}`
-            );
-            alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
-        } else {
-                if (data.message && data.message.includes("Unauthorized")) {
-                    throw new Error("Admin access denied. Please log in as administrator.");
-                } else {
-                    throw new Error(data.message || 'Failed to update user status');
-                }
+            if (data.success) {
+                // Update local state immediately for better UX
+                setUsers(prevUsers => 
+                    prevUsers.map(user => 
+                        user.id === userId 
+                            ? { ...user, status: newStatus }
+                            : user
+                    )
+                );
+                
+                logActivity('User Status Updated', `User ${userId} status changed to ${newStatus}`);
+                alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
+            } else {
+                throw new Error(data.message || 'Failed to update user status');
             }
         } catch (error) {
             console.error('Error updating status:', error);
@@ -3336,7 +3200,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
             <div className="admin-tab-content">
                 <div className="error-message">
                     <p>Error loading users: {error}</p>
-                    <button onClick={refreshUsers} className="btn btn-primary">
+                    <button onClick={fetchUsersData} className="btn btn-primary">
                         Try Again
                     </button>
                 </div>
@@ -3349,7 +3213,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
             <div className="admin-content-header">
                 <h2>User Management</h2>
                 <div className="header-actions">
-                    <button className="btn btn-outline" onClick={refreshUsers}>
+                    <button className="btn btn-outline" onClick={fetchUsersData}>
                         <i className="bi bi-arrow-clockwise"></i> Refresh
                     </button>
                 </div>
@@ -3496,7 +3360,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
 
             {/* User Details Modal */}
             {showUserModal && selectedUser && (
-                <div className="modal-overlay-new" onClick={() => setShowUserModal(false)}>
+                <div className="modal-overview-new" onClick={() => setShowUserModal(false)}>
                     <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header-new">
                             <div className="user-avatar-section">
@@ -3563,65 +3427,6 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
                                 </div>
                             </div>
 
-                            {/* Package Management Section */}
-                            <div className="package-section">
-                                <h3>Package Management</h3>
-                                <div className="package-controls">
-                                    <div className="package-selector">
-                                        <label>Current Package:</label>
-                                        <select 
-                                            value={selectedPackage}
-                                            onChange={(e) => setSelectedPackage(e.target.value)}
-                                            disabled={updatingPackage}
-                                        >
-                                            <option value="none">No Package</option>
-                                            {availablePackages.map(pkg => (
-                                                <option key={pkg.package_id} value={pkg.package_type}>
-                                                    {pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <button 
-                                        className="update-package-btn"
-                                        onClick={handlePackageUpdate}
-                                        disabled={updatingPackage || !selectedPackage || selectedPackage === (userStats?.package_info?.package_type || 'none')}
-                                    >
-                                        {updatingPackage ? (
-                                            <>
-                                                <i className="bi bi-arrow-repeat spin"></i>
-                                                Updating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <i className="bi bi-check-circle"></i>
-                                                Update Package
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                                
-                                {userStats?.package_info && (
-                                    <div className="package-stats">
-                                        <div className="stat-item">
-                                            <span className="stat-label">Events Limit:</span>
-                                            <span className="stat-value">{userStats.package_info.event_limit}</span>
-                                        </div>
-                                        <div className="stat-item">
-                                            <span className="stat-label">Events Used:</span>
-                                            <span className="stat-value">{userStats.package_info.event_used}</span>
-                                        </div>
-                                        <div className="stat-item">
-                                            <span className="stat-label">Remaining:</span>
-                                            <span className="stat-value">
-                                                {userStats.package_info.event_limit - userStats.package_info.event_used}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Quick Actions */}
                             <div className="modal-actions">
                                 <button 
                                     className={`action-btn ${selectedUser.status === 'active' ? 'warning' : 'success'}`}
@@ -3649,5 +3454,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
         </div>
     );
 };
+
+
 
 export default AdminDashboard;

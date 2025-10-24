@@ -5398,6 +5398,7 @@ body,
   }
 }
 
+/*
 .package-stats {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -5413,7 +5414,7 @@ body,
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
-
+*/
 .stat-label {
   display: block;
   font-size: 0.8rem;
@@ -6118,7 +6119,7 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 9999;
   padding: 20px;
 }
 
@@ -6131,6 +6132,11 @@ body,
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   animation: modalSlideIn 0.3s ease-out;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
 }
 
 @keyframes modalSlideIn {
@@ -7378,3 +7384,81 @@ body,
   margin-top: 15px;
   color: #666;
 }
+
+@media (max-width: 768px) {
+  .logs-table-container .table-header,
+  .logs-table-container .table-row {
+    grid-template-columns: 1fr 2fr;
+    gap: 10px;
+  }
+
+  .logs-table-container .table-header div:nth-child(3),
+  .logs-table-container .table-header div:nth-child(4),
+  .logs-table-container .table-row div:nth-child(3),
+  .logs-table-container .table-row div:nth-child(4) {
+    display: none;
+  }
+}
+.amount {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #10b981 !important;
+}
+
+/* Maintenance Modal Styles */
+.maintenance-message {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.maintenance-icon {
+    font-size: 4rem;
+    color: #8b6a35;
+    margin-bottom: 20px;
+}
+
+.maintenance-message h3 {
+    color: #8b6a35;
+    margin-bottom: 15px;
+}
+
+.maintenance-tips {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.maintenance-tips h4 {
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.maintenance-tips ul {
+    padding-left: 20px;
+    margin-bottom: 0;
+}
+
+.maintenance-tips li {
+    margin-bottom: 8px;
+    color: #6c757d;
+}
+
+/* Feature Card Button */
+.btn-view-more {
+    background: #8b6a35;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.btn-view-more:hover {
+    background: #745a2d;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(139, 106, 53, 0.3);
+}
+
+

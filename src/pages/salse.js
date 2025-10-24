@@ -7,6 +7,8 @@ import { Navbar, Footer, Login } from "./components";
 function Sales() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
+    const [showMaintenance, setShowMaintenance] = useState(false);
+    
 
     const handleLoginClick = () => {
         setLoginMode("login");
@@ -18,6 +20,11 @@ function Sales() {
         setIsLoginOpen(true);
     };
 
+    const handleMaintenanceClick = () => {
+        setShowMaintenance(true);
+    };
+
+    
     return (
         <>
             <Navbar
@@ -47,11 +54,13 @@ function Sales() {
                                 <p className="lead">
                                     No matter the size, we help organizations plan and execute successful events.
                                 </p>
-                                <button className="btn btn-get-demo">
+                                <button 
+                                    className="btn btn-get-demo"
+                                    onClick={handleMaintenanceClick}
+                                >
                                     Get Demo
                                 </button>
                             </div>
-
                         </div>
                     </div>
                 </section>
@@ -74,7 +83,12 @@ function Sales() {
                                 <p>
                                     EVENDA offers comprehensive, flexible tools to plan, manage, and analyze your events.
                                 </p>
-                                <button className="btn btn-view-more">Get started</button>
+                                <button 
+                                    className="btn btn-view-more"
+                                    onClick={handleMaintenanceClick}
+                                >
+                                    Get started
+                                </button>
                             </div>
                             <div className="feature-card col-lg-4 col-md-6 col-12">
                                 <div className="feature-icon">
@@ -84,7 +98,12 @@ function Sales() {
                                 <p>
                                     evenda helps you design on-brand registrations, pages, and communications.
                                 </p>
-                                <button className="btn btn-view-more">Get started</button>
+                                <button 
+                                    className="btn btn-view-more"
+                                    onClick={handleMaintenanceClick}
+                                >
+                                    Get started
+                                </button>
                             </div>
                             <div className="feature-card col-lg-4 col-md-6 col-12">
                                 <div className="feature-icon">
@@ -94,7 +113,12 @@ function Sales() {
                                 <p>
                                     Our team delivers hands-on support to help you succeed at every stage.
                                 </p>
-                                <button className="btn btn-view-more">Get started</button>
+                                <button 
+                                    className="btn btn-view-more"
+                                    onClick={handleMaintenanceClick}
+                                >
+                                    Get started
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -108,7 +132,6 @@ function Sales() {
                     }}
                     aria-label="CTA: Let's get your event started"
                 >
-                    {/* CTA background image element (public/images) */}
                     <img
                         src="/images/Sales.png"
                         alt="CTA background"
@@ -130,7 +153,10 @@ function Sales() {
                                 <h3 className="fw-semibold">Let's get your event started.</h3>
                             </div>
                             <div>
-                                <button className="btn btn-get-demo">
+                                <button 
+                                    className="btn btn-get-demo"
+                                    onClick={handleMaintenanceClick}
+                                >
                                     Get Demo
                                 </button>
                             </div>
@@ -139,6 +165,60 @@ function Sales() {
                 </section>
             </section>
 
+            {/* Maintenance Modal */}
+            {showMaintenance && (
+                <div className="modal-overlay-new" onClick={() => setShowMaintenance(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-tools"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Feature Under Maintenance</h2>
+                                    <p>We're working hard to bring you this feature</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowMaintenance(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="maintenance-message">
+                                <div className="maintenance-icon">
+                                    <i className="bi bi-gear"></i>
+                                </div>
+                                <h3>Coming Soon!</h3>
+                                <p>This feature is currently being developed and will be available in our next update.</p>
+                                <p>We appreciate your patience as we work to make Eventa even better!</p>
+                                
+                                <div className="maintenance-tips">
+                                    <h4>In the meantime, you can:</h4>
+                                    <ul>
+                                        <li>Explore our other available features</li>
+                                        <li>Contact support for alternative solutions</li>
+                                        <li>Check back later for updates</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div className="modal-actions-new">
+                                <button 
+                                    className="action-btn-new primary"
+                                    onClick={() => setShowMaintenance(false)}
+                                >
+                                    <i className="bi bi-check-circle"></i>
+                                    Got It
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </>
