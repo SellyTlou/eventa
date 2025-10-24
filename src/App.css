@@ -21,7 +21,7 @@ Nav styling
 }
 
 .nav-section.scrolled {
-  background: #000 !important;
+  background: #fff !important;
   position: fixed;
   /* Added fixed position for scrolled state */
 }
@@ -48,7 +48,7 @@ Nav styling
 }
 
 .nav-section .bottom-nav-row .nav-list .nav-link {
-  color: #cdb46d !important;
+  color: #000 !important;
   padding: 5px 8px !important;
   border-radius: 4px;
   transition: all 0.3s ease;
@@ -59,13 +59,13 @@ Nav styling
 }
 
 .nav-section .bottom-nav-row .nav-list .nav-link:hover {
-  color: #5AA340 !important;
+  color: #000 !important;
   background-color: rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
 }
 
 .nav-section .bottom-nav-row .nav-list .nav-link.active {
-  color: #5AA340 !important;
+  color: #000 !important;
   background-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -76,7 +76,7 @@ Nav styling
   left: 50%;
   width: 0;
   height: 2px;
-  background: #cdb46d;
+  background: #00b4d8;
   transition: all 0.3s ease;
   transform: translateX(-50%);
 }
@@ -88,26 +88,26 @@ Nav styling
 
 .signin-btn {
   padding: 8px 20px;
-  border: 1px solid #cdb46d !important;
+  border: 1px solid #fff !important;
   font-weight: 600;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
-  color: #cdb46d;
+  color: #000;
 }
 
 .signin-btn:hover {
-  background-color: #fff;
-  color: #cdb46d !important;
+  background-color: #000;
+  color: #000 !important;
   transform: translateY(-2px);
 }
 
 .nav-section.scrolled .signin-btn {
-  color: white !important;
+  color: #000 !important;
 }
 
 .signup-btn {
   padding: 8px 20px;
-  background-color: #cdb46d !important;
+  background-color: #fff !important;
   font-weight: 600;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
@@ -116,7 +116,7 @@ Nav styling
 .signup-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
-  background-color: #cdb46d !important;
+  background-color: #000  !important;
   color: white !important;
 }
 
@@ -140,11 +140,11 @@ Nav styling
   z-index: 1000;
   transition: background-color 0.3s ease;
   padding-top: 20px;
-  border-bottom: 1px solid #cdb46d;
+  border-bottom: 1px solid #000;
 }
 
 .mobile-nav-section.scrolled {
-  background: #000 !important;
+  background: #fff !important;
   padding: 10px 0 !important;
   position: fixed;
   /* Added fixed position for scrolled state */
@@ -176,7 +176,7 @@ Nav styling
   display: block;
   height: 3px;
   width: 100%;
-  background-color: #cdb46d;
+  background-color: #fff;
   border-radius: 2px;
   transition: all 0.3s ease;
 }
@@ -220,7 +220,7 @@ Nav styling
 }
 
 .mobile-nav-link {
-  color: #cdb46d !important;
+  color: #00b4d8 !important;
   text-decoration: none;
   font-weight: 500;
   display: block;
@@ -231,7 +231,7 @@ Nav styling
 
 .mobile-nav-link.active,
 .mobile-nav-link:hover {
-  color: #5AA340 !important;
+  color: #00b4d8 !important;
 }
 
 .mobile-buttons {
@@ -243,8 +243,8 @@ Nav styling
 
 .mobile-signin-btn {
   padding: 10px;
-  border: 1px solid #cdb46d !important;
-  color: #cdb46d;
+  border: 1px solid #000 !important;
+  color: #000;
   background: transparent;
   border-radius: 5px;
   font-weight: 500;
@@ -253,8 +253,8 @@ Nav styling
 
 .mobile-signup-btn {
   padding: 10px;
-  background-color: #cdb46d !important;
-  color: white;
+  background-color: #fff !important;
+  color: #000;
   border: none;
   border-radius: 5px;
   font-weight: 500;
@@ -310,7 +310,7 @@ Footer styling
   bottom: 0;
   width: 40px;
   height: 2px;
-  background: linear-gradient(90deg, #75CC54, #00cec9);
+  background: linear-gradient(90deg, #592693, #00b4d8);
 }
 
 .footer-section .list-quick-links {
@@ -330,7 +330,7 @@ Footer styling
 }
 
 .footer-section .list-quick-links a:hover {
-  color: #75CC54;
+  color: #fff;
   transform: translateX(5px);
 }
 
@@ -359,7 +359,7 @@ Footer styling
 .footer-section .contact-item i {
   margin-right: 10px;
   font-size: 18px;
-  color: #75CC54;
+  color: #fff;
 }
 
 .footer-section .social-icons a {
@@ -377,18 +377,19 @@ Footer styling
 }
 
 .footer-section .social-icons a:hover {
-  background: linear-gradient(90deg, #75CC54, #00cec9);
+  background: linear-gradient(90deg, #592693, #00b4d8);
   transform: translateY(-3px);
 }
 
 .footer-section .about-description {
   line-height: 1.6;
-  color: #bbb;
+  color: #fff;
   margin-top: 20px;
 }
 
 .footer-section .bottom-footer-row {
-  background: #75CC54;
+  background: #000;
+  color: #fff;
   padding: 15px 5px;
 }
 
@@ -530,7 +531,7 @@ Login styling
 
 .form-group input:focus {
   outline: none;
-  border-color: #cdb46d;
+  border-color: #00b4d8;
 }
 
 .login-options {
@@ -553,7 +554,7 @@ Login styling
 }
 
 .forgot-password {
-  color: #cdb46d;
+  color: #00b4d8;
   text-decoration: none;
   font-size: 14px;
   transition: color 0.3s ease;
@@ -561,13 +562,13 @@ Login styling
 }
 
 .forgot-password:hover {
-  color: #8B6A35;
+  color: #0056b3;
 }
 
 .login-submit-btn {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #cdb46d, #8B6A35);
+  background: linear-gradient(135deg, #00b4d8, #0056b3);
   color: white;
   border: none;
   border-radius: 8px;
@@ -578,7 +579,7 @@ Login styling
 }
 
 .login-submit-btn:hover {
-  background: linear-gradient(135deg, #8B6A35, #75603D);
+  background: linear-gradient(135deg, #0056b3, #00b4d8);
   transform: translateY(-2px);
 }
 
@@ -594,7 +595,7 @@ Login styling
 .switch-mode-btn {
   background: none;
   border: none;
-  color: #cdb46d;
+  color: #00b4d8;
   cursor: pointer;
   text-decoration: underline;
   font-weight: 500;
@@ -602,7 +603,7 @@ Login styling
 }
 
 .switch-mode-btn:hover {
-  color: #8B6A35;
+  color: #0056b3;
 }
 
 .social-login p {
@@ -683,7 +684,7 @@ planner nav styling
 
 /* Button Styles */
 .eventsNavbar .btn-createEvevt {
-  background-color: #75CC54;
+  background-color: #00b4d8;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -694,7 +695,7 @@ planner nav styling
 }
 
 .eventsNavbar .btn-createEvevt:hover {
-  background-color: #cdb46d;
+  background-color: #0056b3;
 }
 
 .eventsNavbar .profile-container {
@@ -710,7 +711,7 @@ planner nav styling
 }
 
 .eventsNavbar .profile-container:hover {
-  color: #cdb46d;
+  color: #0056b3;
 }
 
 .eventsNavbar .bi-person-circle {
@@ -754,7 +755,7 @@ planner nav styling
 
 .eventsNavbar .dropdown-item:hover {
   background-color: #f7f9fa;
-  color: #75CC54;
+  color: #0056b3;
 }
 
 
@@ -811,26 +812,26 @@ Homepage styling
 }
 
 .homepage-section .btn-container .btn-create {
-  background-color: #E7D88A !important;
+  background-color: #00b4d8 !important;
 }
 
 .homepage-section .btn-container .btn-getdemo {
-  background-color: #E7D88A !important;
+  background-color: #00b4d8 !important;
 }
 
 
 .homepage-section .btn-container .btn-create:hover {
-  background-color: #D6C66B !important;
+  background-color: #0056b3 !important;
   transform: translateY(-2px);
 }
 
 .homepage-section .btn-container .btn-demo {
-  background-color: #75CC54 !important;
+  background-color: #00b4d8 !important;
   color: white !important;
 }
 
 .homepage-section .btn-container .btn-demo:hover {
-  background-color: #66B44A !important;
+  background-color: #0056b3 !important;
   transform: translateY(-2px);
 }
 
@@ -857,7 +858,7 @@ Homepage styling
   bottom: -10px;
   width: 50px;
   height: 3px;
-  background: linear-gradient(90deg, #75CC54, #00cec9);
+  background: linear-gradient(90deg, #592693, #00b4d8);
 }
 
 .homepage-section .popular-events .slider-wrapper {
@@ -879,7 +880,7 @@ Homepage styling
 
 .homepage-section .popular-events .event-card {
   width: 30%;
-  background: #cdb46d;
+  background: #fff;
   border-top-right-radius: 15px;
   border-bottom-left-radius: 15px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
@@ -930,7 +931,7 @@ Homepage styling
 
 .homepage-section .popular-events .event-card .card-content {
   padding: 20px;
-  color: white;
+  color: black;
   font-size: 16px;
   line-height: 1.5;
   text-align: center;
@@ -938,7 +939,7 @@ Homepage styling
 
 .homepage-section .popular-events .event-card .btn-view {
   background: #000;
-  color: #75CC54;
+  color: #fff;
   padding: 5px 10px;
   border: none;
   border-radius: 5px;
@@ -947,12 +948,12 @@ Homepage styling
 }
 
 .homepage-section .popular-events .event-card .btn-view:hover {
-  background: #75CC54;
+  background: #00b4d8;
   color: #000;
 }
 
 .homepage-section .popular-events .slider-btn {
-  background: #28a745;
+  background: #00b4d8;
   color: white;
   border: none;
   border-radius: 50%;
@@ -971,7 +972,7 @@ Homepage styling
 }
 
 .homepage-section .popular-events .slider-btn:hover {
-  background: #218838;
+  background: #0056b3;
   transform: scale(1.1);
 }
 
@@ -1001,7 +1002,7 @@ Homepage styling
   bottom: -10px;
   width: 100px;
   height: 3px;
-  background: linear-gradient(90deg, #75CC54, #00cec9);
+  background: linear-gradient(90deg, #592693, #00b4d8);
 }
 
 .homepage-section .ManagementsGuid .ManagementsGuid-header p {
@@ -1017,7 +1018,7 @@ Homepage styling
   gap: 15px;
   margin-bottom: 30px;
   flex-wrap: wrap;
-  border-bottom: 2px solid #75CC54;
+  border-bottom: 2px solid #000;
   padding: 20px 0 10px 0;
 }
 
@@ -1032,9 +1033,9 @@ Homepage styling
 
 .homepage-section .ManagementsGuid .navBtn .btn.btn-create,
 .homepage-section .ManagementsGuid .navBtn .btn:hover {
-  background-color: #cdb46d;
-  color: white;
-  border-color: #cdb46d;
+  background-color: #fff;
+  color: black;
+  border-color: #00b4d8;
 }
 
 .homepage-section .ManagementsGuid .slider-wrapper {
@@ -1054,14 +1055,14 @@ Homepage styling
   border: none;
   cursor: pointer;
   font-size: 2rem;
-  color: #cdb46d;
+  color: #00b4d8;
   z-index: 10;
   transition: color 0.3s;
   background-color: transparent;
 }
 
 .homepage-section .ManagementsGuid .slider-btn:hover {
-  color: #75CC54;
+  color: #0056b3;
 }
 
 .homepage-section .ManagementsGuid .slider-btn i {
@@ -1105,7 +1106,7 @@ Homepage styling
 }
 
 .homepage-section .ManagementsGuid .feature-card h4 i {
-  color: #75CC54;
+  color: #00b4d8;
 }
 
 .homepage-section .ManagementsGuid .feature-card p {
@@ -1117,8 +1118,8 @@ Homepage styling
 
 .homepage-section .ManagementsGuid .btn-view-more {
   background-color: transparent;
-  border: 1px solid #75CC54;
-  color: #cdb46d;
+  border: 1px solid #00b4d8;
+  color: #000;
   padding: 8px 15px;
   border-radius: 5px;
   font-weight: 500;
@@ -1127,9 +1128,9 @@ Homepage styling
 }
 
 .homepage-section .ManagementsGuid .btn-view-more:hover {
-  background-color: #cdb46d;
-  border: 1px solid #cdb46d;
-  color: #fff;
+  background-color: #fff;
+  border: 1px solid #000;
+  color: #00b4d8;
 }
 
 /* Styling for the Our Pricing section */
@@ -1175,7 +1176,7 @@ Homepage styling
 .homepage-section .pricing-card h3 {
   font-size: 1.8rem;
   font-weight: 600;
-  color: #cdb46d;
+  color: #6f2da8;
   margin-bottom: 15px;
 }
 
@@ -1186,7 +1187,7 @@ Homepage styling
 .homepage-section .price-tag .price {
   font-size: 3rem;
   font-weight: 700;
-  color: #75CC54;
+  color: #00b4d8;
 }
 
 .homepage-section .price-tag .duration {
@@ -1206,7 +1207,7 @@ Homepage styling
 }
 
 .homepage-section .our-pricing .features-list li i {
-  color: #28a745;
+  color: #00b4d8;
   margin-right: 10px;
 }
 
@@ -1219,7 +1220,7 @@ Homepage styling
 
 /* Most popular plan styling */
 .homepage-section .our-pricing .pricing-card-wrapper.popular .pricing-card {
-  border-color: #75CC54;
+  border-color: #6f2da8;
   position: relative;
   transform: scale(1.05);
   z-index: 10;
@@ -1230,7 +1231,7 @@ Homepage styling
   top: -15px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #75CC54;
+  background-color: #00b4d8;
   color: white;
   padding: 5px 15px;
   border-radius: 20px;
@@ -1290,7 +1291,7 @@ Features Page Styling - PAGE SPECIFIC
   transform: translateX(-50%);
   width: 80px;
   height: 4px;
-  background: linear-gradient(90deg, #75CC54, #cdb46d);
+  background: linear-gradient(90deg, #6f2da8, #00b4d8);
   border-radius: 2px;
 }
 
@@ -1314,7 +1315,7 @@ Features Page Styling - PAGE SPECIFIC
   gap: 15px;
   margin-bottom: 40px;
   flex-wrap: wrap;
-  border-bottom: 2px solid #75CC54;
+  border-bottom: 2px solid #000;
   padding: 20px 0 30px 0;
 }
 
@@ -1329,9 +1330,9 @@ Features Page Styling - PAGE SPECIFIC
 
 .features-page .features-tabs-section .navBtn .btn.btn-create,
 .features-page .features-tabs-section .navBtn .btn:hover {
-  background-color: #cdb46d;
-  color: white;
-  border-color: #cdb46d;
+  background-color: #fff;
+  color: black;
+  border-color: #00b4d8;
   transform: translateY(-2px);
 }
 
@@ -1356,7 +1357,7 @@ Features Page Styling - PAGE SPECIFIC
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(90deg, #75CC54, #cdb46d);
+  background: linear-gradient(90deg, #6f2da8, #00b4d8);
 }
 
 .features-page .section-header p {
@@ -1403,7 +1404,7 @@ Features Page Styling - PAGE SPECIFIC
   width: 80px;
   height: 80px;
   margin: 0 auto 20px;
-  background: linear-gradient(135deg, #cdb46d, #75CC54);
+  background: linear-gradient(135deg, #00b4d8, #6f2da8);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1428,8 +1429,8 @@ Features Page Styling - PAGE SPECIFIC
 
 .features-page .feature-card .btn-view-more {
   background-color: transparent;
-  border: 2px solid #75CC54;
-  color: #75CC54;
+  border: 2px solid #00b4d8;
+  color: #000;
   padding: 10px 20px;
   border-radius: 25px;
   font-weight: 500;
@@ -1437,8 +1438,8 @@ Features Page Styling - PAGE SPECIFIC
 }
 
 .features-page .feature-card .btn-view-more:hover {
-  background-color: #75CC54;
-  color: white;
+  background-color: #fff;
+  color: #00b4d8;
   transform: translateY(-2px);
 }
 
@@ -1452,7 +1453,7 @@ Features Page Styling - PAGE SPECIFIC
 }
 
 .features-page .features-tabs-section .slider-btn {
-  background: #75CC54;
+  background: #00b4d8;
   color: white;
   border: none;
   border-radius: 50%;
@@ -1471,7 +1472,7 @@ Features Page Styling - PAGE SPECIFIC
 }
 
 .features-page .features-tabs-section .slider-btn:hover {
-  background: #5AA340;
+  background: #0056b3;
   transform: translateY(-50%) scale(1.1);
 }
 
@@ -1540,7 +1541,7 @@ Pricing Page Styling - PAGE SPECIFIC
   transform: translateX(-50%);
   width: 80px;
   height: 4px;
-  background: linear-gradient(90deg, #75CC54, #cdb46d);
+  background: linear-gradient(90deg, #6f2da8, #00b4d8);
   border-radius: 2px;
 }
 
@@ -1568,7 +1569,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page .billing-toggle span {
-  color: #666;
+  color: #000;
   transition: color 0.3s ease;
 }
 
@@ -1578,7 +1579,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page .save-badge {
-  background: linear-gradient(135deg, #75CC54, #cdb46d);
+  background: linear-gradient(135deg, #6f2da8, #00b4d8);
   color: white;
   padding: 2px 8px;
   border-radius: 12px;
@@ -1624,7 +1625,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page input:checked+.slider {
-  background: linear-gradient(135deg, #75CC54, #cdb46d);
+  background: linear-gradient(135deg, #6f2da8, #00b4d8);
 }
 
 .pricing-page input:checked+.slider:before {
@@ -1655,9 +1656,9 @@ Pricing Page Styling - PAGE SPECIFIC
 
 .pricing-page .category-section .navBtn .btn.btn-create,
 .pricing-page .category-section .navBtn .btn:hover {
-  background-color: #cdb46d;
-  color: white;
-  border-color: #cdb46d;
+  background-color: #fff;
+  color: black;
+  border-color: #00b4d8;
   transform: translateY(-2px);
 }
 
@@ -1691,7 +1692,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page .pricing-card-wrapper.popular .pricing-card {
-  border-color: #75CC54;
+  border-color: #00b4d8;
   transform: scale(1.05);
 }
 
@@ -1700,7 +1701,7 @@ Pricing Page Styling - PAGE SPECIFIC
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #75CC54, #cdb46d);
+  background: linear-gradient(135deg, #6f2da8, #00b4d8);
   color: white;
   padding: 5px 15px;
   border-radius: 20px;
@@ -1729,7 +1730,7 @@ Pricing Page Styling - PAGE SPECIFIC
 .pricing-page .price-tag .price {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #75CC54;
+  color: #00b4d8;
   display: block;
 }
 
@@ -1739,7 +1740,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page .savings-text {
-  color: #75CC54;
+  color: #00b4d8;
   font-weight: 600;
   font-size: 0.9rem;
   margin-bottom: 20px;
@@ -1762,7 +1763,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page .features-list li i {
-  color: #75CC54;
+  color: #00b4d8;
   font-size: 1.1rem;
 }
 
@@ -1788,7 +1789,7 @@ Pricing Page Styling - PAGE SPECIFIC
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(90deg, #75CC54, #cdb46d);
+  background: linear-gradient(90deg, #6f2da8, #00b4d8);
 }
 
 .pricing-page .faq-container {
@@ -1804,7 +1805,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page .faq-item:hover {
-  border-color: #cdb46d;
+  border-color: #00b4d8;
 }
 
 .pricing-page .faq-question {
@@ -1824,7 +1825,7 @@ Pricing Page Styling - PAGE SPECIFIC
 }
 
 .pricing-page .faq-question i {
-  color: #75CC54;
+  color: #00b4d8;
   font-size: 1.2rem;
   transition: transform 0.3s ease;
 }
@@ -1854,23 +1855,23 @@ Pricing Card Buttons Styling - PAGE SPECIFIC
 }
 
 .pricing-page .pricing-card .btn-create {
-  background-color: #E7D88A !important;
+  background-color: #00b4d8 !important;
   color: #000 !important;
 }
 
 .pricing-page .pricing-card .btn-create:hover {
-  background-color: #D6C66B !important;
+  background-color: #0056b3 !important;
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
 }
 
 .pricing-page .pricing-card .btn-demo {
-  background-color: #75CC54 !important;
+  background-color: #00b4d8 !important;
   color: white !important;
 }
 
 .pricing-page .pricing-card .btn-demo:hover {
-  background-color: #66B44A !important;
+  background-color: #0056b3 !important;
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
 }
@@ -1884,11 +1885,11 @@ Pricing Card Buttons Styling - PAGE SPECIFIC
 }
 
 .pricing-page .pricing-card .btn-create {
-  border: 2px solid #E7D88A;
+  border: 2px solid #00b4d8;
 }
 
 .pricing-page .pricing-card .btn-demo {
-  border: 2px solid #75CC54;
+  border: 2px solid #00b4d8;
 }
 
 /* Popular plan button emphasis */
@@ -1944,21 +1945,21 @@ Pricing Card Plan Name Styling - PAGE SPECIFIC
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(90deg, #75CC54, #cdb46d);
+  background: linear-gradient(90deg, #6f2da8, #00b4d8);
   border-radius: 2px;
 }
 
 /* Specific styles for different plan names */
 .pricing-page .pricing-card-wrapper:nth-child(1) .pricing-card h3 {
-  color: #75CC54;
+  color: #000;
 }
 
 .pricing-page .pricing-card-wrapper:nth-child(2) .pricing-card h3 {
-  color: #cdb46d;
+  color: #000;
 }
 
 .pricing-page .pricing-card-wrapper:nth-child(3) .pricing-card h3 {
-  color: #A37A40;
+  color: #000;
 }
 
 .pricing-page .pricing-card-wrapper:nth-child(4) .pricing-card h3 {
@@ -1968,13 +1969,13 @@ Pricing Card Plan Name Styling - PAGE SPECIFIC
 /* Popular plan name emphasis */
 .pricing-page .pricing-card-wrapper.popular .pricing-card h3 {
   font-size: 2rem;
-  color: #75CC54;
+  color: #00b4d8;
 }
 
 .pricing-page .pricing-card-wrapper.popular .pricing-card h3::after {
   width: 80px;
   height: 4px;
-  background: linear-gradient(90deg, #75CC54, #cdb46d);
+  background: linear-gradient(90deg, #6f2da8, #00b4d8);
 }
 
 /* Optional: Add background gradient for plan names */
@@ -2037,7 +2038,7 @@ About Page Styling
 }
 
 .about-hero .highlight {
-  color: #75CC54;
+  color: #00b4d8;
   font-weight: 700;
 }
 
@@ -2052,7 +2053,7 @@ About Page Styling
   padding: 15px 30px;
   font-size: 1.1rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #cdb46d, #75CC54);
+  background: linear-gradient(135deg, #00b4d8, #6f2da8);
   border: none;
   border-radius: 30px;
   transition: background 0.3s ease;
@@ -2060,7 +2061,7 @@ About Page Styling
 }
 
 .about-hero .btn-create:hover {
-  background: linear-gradient(135deg, #75CC54, #cdb46d);
+  background: linear-gradient(135deg, #6f2da8, #00b4d8);
 }
 
 /* Stats Section */
@@ -2076,7 +2077,7 @@ About Page Styling
 .stat-item h3 {
   font-size: 3rem;
   font-weight: 700;
-  color: #75CC54;
+  color: #00b4d8;
   margin-bottom: 10px;
 }
 
@@ -2088,14 +2089,14 @@ About Page Styling
 }
 
 .stat-link {
-  color: #cdb46d;
+  color: #00b4d8;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .stat-link:hover {
-  color: #75CC54;
+  color: #0056b3;
 }
 
 /* Mission Section */
@@ -2201,7 +2202,7 @@ About Page Styling
 .member-image {
   width: 120px;
   height: 120px;
-  background: linear-gradient(135deg, #cdb46d, #75CC54);
+  background: linear-gradient(135deg, #00b4d8, #6f2da8);
   border-radius: 50%;
   margin: 0 auto 20px;
 }
@@ -2219,7 +2220,7 @@ About Page Styling
 }
 
 .team-link {
-  color: #cdb46d;
+  color: #00b4d8;
   text-decoration: none;
   font-weight: 600;
   font-size: 1.1rem;
@@ -2227,7 +2228,7 @@ About Page Styling
 }
 
 .team-link:hover {
-  color: #75CC54;
+  color: #0056b3;
 }
 
 /******************************
@@ -2410,13 +2411,13 @@ createEvent Styling
 }
 
 .theme-preview-gold {
-  background: linear-gradient(90deg, #FFD700 60%, #fffbe6 100%);
-  color: #b8860b;
+  background: linear-gradient(90deg, #00b4d8 60%, #fffbe6 100%);
+  color: #0056b3;
 }
 
 .theme-preview-green {
-  background: linear-gradient(90deg, #28a745 60%, #e6fff2 100%);
-  color: #155724;
+  background: linear-gradient(90deg, #00b4d8 60%, #e6fff2 100%);
+  color: #0056b3;
 }
 
 .theme-preview-purple {
@@ -2459,7 +2460,7 @@ createEvent Styling
 }
 
 .btn-event-skip {
-  background: #ffc107;
+  background: #00b4d8;
   color: #333;
 }
 
@@ -2512,7 +2513,7 @@ createEvent Styling
 /* =================== CSS: Extract to createEvent.css =================== */
 
 .eventa-header-bar {
-  background: #111;
+  background: #fff;
   color: #fff;
   display: flex;
   align-items: center;
@@ -2534,14 +2535,14 @@ createEvent Styling
 .eventa-logo-text {
   font-weight: 600;
   font-size: 20px;
-  color: #39ff14;
+  color: #00b4d8;
   letter-spacing: 1px;
 }
 
 .eventa-back-btn {
   background: transparent;
-  border: 2px solid #39ff14;
-  color: #39ff14;
+  border: 2px solid #00b4d8;
+  color: #000;
   border-radius: 20px;
   padding: 6px 22px;
   font-weight: 600;
@@ -2552,7 +2553,7 @@ createEvent Styling
 }
 
 .eventa-back-btn:hover {
-  background: #39ff14;
+  background: #00b4d8;
   color: #111;
 }
 
@@ -2588,7 +2589,7 @@ createEvent Styling
 
 .progress-bar-fill {
   height: 100%;
-  background: #3a8125;
+  background: #00b4d8;
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -2618,9 +2619,9 @@ createEvent Styling
 
 .progress-step.active .progress-step-number,
 .progress-step.completed .progress-step-number {
-  background: #967d49;
-  color: #fff;
-  border: 2px solid #020508;
+  background: #fff;
+  color: #000;
+  border: 2px solid #00b4d8;
 }
 
 .progress-step-label {
@@ -2630,7 +2631,7 @@ createEvent Styling
 
 .progress-step.active .progress-step-label,
 .progress-step.completed .progress-step-label {
-  color: #c2b155;
+  color: #007bff;
 }
 
 .event-step {
@@ -2682,7 +2683,7 @@ createEvent Styling
   width: 100%;
   max-width: 700px;
   margin: 24px auto 0 auto;
-  background: #eea41c;
+  background: #00b4d8;
   color: #fff;
   font-weight: 700;
   font-size: 1.1rem;
@@ -2694,7 +2695,7 @@ createEvent Styling
 }
 
 .btn-event-next:hover {
-  background: #dac02f;
+  background: #007bff;
 }
 
 .datetime-row {
@@ -2719,7 +2720,7 @@ createEvent Styling
 }
 
 .url-preview-value {
-  color: #8a671d;
+  color: #007bff;
   font-weight: 600;
   margin: 0 2px;
 }
@@ -2800,7 +2801,7 @@ createEvent Styling
   font-weight: 500;
   margin: 0 4px;
   cursor: pointer;
-  background: #c0bd13;
+  background: #00b4d8;
   color: #fff;
   transition: background 0.2s;
 }
@@ -2810,16 +2811,16 @@ createEvent Styling
 }
 
 .btn-event-skip {
-  background: #ffc107;
+  background: #007bff;
   color: #333;
 }
 
 .btn-event-next {
-  background: #ffd900;
+  background: #00b4d8;
 }
 
 .btn-create-event {
-  background: #fbff00;
+  background: #00b4d8;
   color: #fff;
   border: none;
   padding: 12px 28px;
@@ -2833,7 +2834,7 @@ createEvent Styling
 
 .btn-create-event:hover,
 .btn-event:hover {
-  background: #8a8b25;
+  background: #007bff;
 }
 
 .text-muted {
@@ -2938,7 +2939,7 @@ createEvent Styling
   padding: 15px 30px;
   font-size: 1.05rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #cdb46d, #75CC54);
+  background: linear-gradient(135deg, #00b4d8, #6f2da8);
   border: none;
   border-radius: 30px;
   transition: background 0.3s ease, transform 0.15s ease;
@@ -2953,7 +2954,7 @@ createEvent Styling
 
 .btn-get-demo:hover,
 .hero-section .btn-create:hover {
-  background: linear-gradient(135deg, #75CC54, #cdb46d);
+  background: linear-gradient(135deg, #6f2da8, #00b4d8);
   transform: translateY(-3px);
 }
 
@@ -3084,7 +3085,7 @@ body,
   padding: 15px 30px;
   font-size: 1.05rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #cdb46d, #75CC54);
+  background: linear-gradient(135deg, #00b4d8, #6f2da8);
   border: none;
   border-radius: 30px;
   transition: background 0.3s ease, transform 0.15s ease;
@@ -3099,7 +3100,7 @@ body,
 
 .btn-get-demo:hover,
 .hero-section .btn-create:hover {
-  background: linear-gradient(135deg, #75CC54, #cdb46d);
+  background: linear-gradient(135deg, #6f2da8, #00b4d8);
   transform: translateY(-3px);
 }
 

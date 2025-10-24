@@ -58,7 +58,7 @@
 }
 
 .sales-page .btn-get-demo {
-    background-color: #cdb46d !important;
+    background-color: #00b4d8 !important;
     color: white !important;
     padding: 12px 30px;
     border-radius: 50px;
@@ -76,7 +76,7 @@
 .sales-page .features-page .section-header {
     padding-top: 6rem;
     padding-bottom: 3rem;
-    color: #cdb46d;
+    color: #00b4d8;
 }
 
 .sales-page .features-page .section-header h2 {
@@ -115,7 +115,7 @@
 
 .sales-page .feature-icon {
     font-size: 3rem;
-    color: #cdb46d;
+    color: #fff;
     margin-bottom: 1rem;
 }
 
@@ -132,7 +132,7 @@
 }
 
 .sales-page .btn-view-more {
-    background: #5AA340;
+    background: #00b4d8;
     color: white;
     border-radius: 50px;
     padding: 8px 20px;
@@ -142,7 +142,7 @@
 }
 
 .sales-page .btn-view-more:hover {
-    background: #4a8a35;
+    background: #023e8a;
     transform: translateY(-2px);
 }
 

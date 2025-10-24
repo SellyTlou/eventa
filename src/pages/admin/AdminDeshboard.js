@@ -420,15 +420,12 @@ useEffect(() => {
                 body: formData
             });
             
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    setUsersData(data.users);
-                } else if (data.message && data.message.includes("Unauthorized")) {
-                    console.error("Admin access denied:", data.message);
-                    alert("Admin access denied. Please log in as administrator.");
-                }
+           if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                setUsersData(data.users); // ✅ This updates the state that gets passed as props
             }
+        }
         } catch (error) {
             console.error('Error fetching users data:', error);
         }
@@ -1395,6 +1392,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
         open_rate: 0,
         response_rate: 0
     });
+    const [statsLoading, setStatsLoading] = useState(true); // Add separate loading state
     const [enhancedAnalytics, setEnhancedAnalytics] = useState(null);
     const [loading, setLoading] = useState(false);
     const [sortField, setSortField] = useState('eventName');
@@ -1421,36 +1419,69 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
     // Fetch data when component mounts
     useEffect(() => {
         fetchInvitationStats();
-        fetchEnhancedAnalytics();
+        fetchInvitationAnalytics();
         fetchUsers();
     }, []);
 
     const fetchInvitationStats = async () => {
+    try {
+        setStatsLoading(true);
+        console.log('Fetching invitation stats...');
+        
+        const formData = new FormData();
+        formData.append('function', 'getInvitationStats');
+        formData.append('admin_user_id', adminUserId);
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Stats API Response:', data);
+        
+        if (data.success && data.stats) {
+            setInvitationStats(data.stats);
+        } else {
+            console.error('API Error:', data.message);
+            // Keep default values (0, 0, 0)
+        }
+    } catch (error) {
+        console.error('Network Error:', error);
+        // Keep default values (0, 0, 0)
+    } finally {
+        setStatsLoading(false);
+    }
+};
+
+    const fetchInvitationAnalytics = async () => {
+
         try {
             setLoading(true);
             const formData = new FormData();
-            formData.append('function', 'getInvitationStats');
+            formData.append('function', 'getInvitationAnalytics');
             formData.append('admin_user_id', adminUserId);
-            
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    setInvitationStats(data.stats);
+                    setEnhancedAnalytics(data.analytics);
                 }
             }
         } catch (error) {
-            console.error('Error fetching invitation stats:', error);
+            console.error('Error fetching invitation analytics:', error);
         } finally {
             setLoading(false);
         }
     };
-
-    const fetchEnhancedAnalytics = async () => {
+ /*   const fetchEnhancedAnalytics = async () => {
         try {
             const formData = new FormData();
             formData.append('function', 'getEnhancedInvitationAnalytics');
@@ -1471,6 +1502,8 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
             console.error('Error fetching enhanced analytics:', error);
         }
     };
+    
+*/
 
     const fetchUsers = async () => {
         try {
@@ -1510,46 +1543,46 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
         }));
     };
 
-    // ADD THE MISSING HANDLEEXPORT FUNCTION:
-    const handleExport = async () => {
-        try {
-            setLoading(true);
-            const formData = new FormData();
-            formData.append('function', 'exportInvitationData');
-            formData.append('admin_user_id', adminUserId);
-            formData.append('status', exportFilters.status);
-            formData.append('user_id', exportFilters.user_id);
+const handleExport = async () => {
+    try {
+        setLoading(true);
+        const formData = new FormData();
+        formData.append('function', 'exportInvitationData');
+        formData.append('admin_user_id', adminUserId);
+        formData.append('status', exportFilters.status);
+        formData.append('user_id', exportFilters.user_id);
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            // Fix the download URL - use the correct path
+            const downloadUrl = `${API_BASE_URL}/exports/${data.filename}`;
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = data.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                const downloadUrl = `${API_BASE_URL}/exports/${data.filename}`;
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = data.filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                setShowExportModal(false);
-                logActivity('Invitation Data Exported', 'Exported invitation analytics to CSV');
-                alert('Export downloaded successfully!');
-            } else {
-                alert('Error exporting data: ' + data.message);
-                logActivity('Export Failed', `Failed to export invitation data: ${data.message}`);
-            }
-        } catch (error) {
-            console.error('Error exporting data:', error);
-            alert('Error exporting data');
-            logActivity('Export Error', `Invitation data export error: ${error.message}`);
-        } finally {
-            setLoading(false);
+            setShowExportModal(false);
+            logActivity('Invitation Data Exported', 'Exported invitation analytics to CSV');
+            alert('Export downloaded successfully!');
+        } else {
+            alert('Error exporting data: ' + data.message);
+            logActivity('Export Failed', `Failed to export invitation data: ${data.message}`);
         }
-    };
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        alert('Error exporting data');
+        logActivity('Export Error', `Invitation data export error: ${error.message}`);
+    } finally {
+        setLoading(false);
+    }
+};
 
     const viewEventDetails = (event) => {
         setSelectedEvent(event);
@@ -1561,7 +1594,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
         setLoading(true);
         await Promise.all([
             fetchInvitationStats(),
-            fetchEnhancedAnalytics()
+            fetchInvitationAnalytics()
         ]);
         setLoading(false);
         logActivity('Invitation Data Refreshed', 'Refreshed invitation analytics data');
@@ -1632,152 +1665,59 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
 
             {loading && <div className="loading">Loading invitation data...</div>}
 
-            {/* Analytics Overview Cards */}
-            <div className="analytics-overview">
-                <div className="analytics-card">
-                    <div className="analytics-icon">
-                        <i className="bi bi-envelope"></i>
-                    </div>
-                    <div className="analytics-content">
-                        <h3>Total Invitations Sent</h3>
-                        <p className="analytics-number">{invitationStats.total_invitations.toLocaleString()}</p>
-                        <span className="analytics-trend">All events</span>
-                    </div>
-                </div>
-                
-                <div className="analytics-card">
-                    <div className="analytics-icon">
-                        <i className="bi bi-eye"></i>
-                    </div>
-                    <div className="analytics-content">
-                        <h3>Average Open Rate</h3>
-                        <p className="analytics-number">{invitationStats.open_rate}%</p>
-                        <span className="analytics-trend">Based on responses</span>
-                    </div>
-                </div>
-                
-                <div className="analytics-card">
-                    <div className="analytics-icon">
-                        <i className="bi bi-check-circle"></i>
-                    </div>
-                    <div className="analytics-content">
-                        <h3>Average Response Rate</h3>
-                        <p className="analytics-number">{invitationStats.response_rate}%</p>
-                        <span className="analytics-trend">All events</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Charts Section */}
-            {enhancedAnalytics && (
-                <div className="charts-section">
-                    <div className="charts-grid">
-                        {/* Response Trends Chart */}
-                        <div className="chart-card">
-                            <h3>Response Trends</h3>
-                            <div className="chart-container">
-                                {enhancedAnalytics.monthlyTrends.map((month, index) => (
-                                    <div key={index} className="trend-bar">
-                                        <div className="trend-label">{month.month}</div>
-                                        <div className="trend-bars">
-                                            <div 
-                                                className="trend-bar-invitations" 
-                                                style={{width: `${Math.max(10, (month.total_invitations / 50) * 100)}%`}}
-                                                title={`${month.total_invitations} invitations`}
-                                            ></div>
-                                            <div 
-                                                className="trend-bar-responses"
-                                                style={{width: `${Math.max(5, (month.total_responses / 50) * 100)}%`}}
-                                                title={`${month.total_responses} responses`}
-                                            ></div>
-                                        </div>
-                                        <div className="trend-rate">
-                                            {month.total_invitations > 0 ? 
-                                                Math.round((month.total_responses / month.total_invitations) * 100) : 0
-                                            }%
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="chart-legend">
-                                <span className="legend-invitations">Invitations Sent</span>
-                                <span className="legend-responses">Responses Received</span>
-                            </div>
-                        </div>
-
-                        {/* Event Type Comparison */}
-                        <div className="chart-card">
-                            <h3>Performance Summary</h3>
-                            <div className="chart-container">
-                                {enhancedAnalytics.eventTypeStats.map((eventType, index) => (
-                                    <div key={index} className="type-row">
-                                        <div className="type-name">{eventType.event_type}</div>
-                                        <div className="type-stats">
-                                            <span className="type-events">{eventType.event_count} events</span>
-                                            <span className="type-rate">
-                                                {eventType.total_invitations > 0 ? 
-                                                    Math.round((eventType.total_responses / eventType.total_invitations) * 100) : 0
-                                                }% response
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+           {/* Analytics Overview Cards */}
+<div className="analytics-overview">
+    <div className="analytics-card">
+        <div className="analytics-icon">
+            <i className="bi bi-envelope"></i>
+        </div>
+        <div className="analytics-content">
+            <h3>Total Invitations Sent</h3>
+            {statsLoading ? (
+                <div className="stats-loading">Loading...</div>
+            ) : (
+                <p className="analytics-number">
+                    {invitationStats.total_invitations?.toLocaleString() || 0}
+                </p>
             )}
-
-            {/* Top Performing Events */}
-            {enhancedAnalytics?.top_events && enhancedAnalytics.top_events.length > 0 && (
-                <div className="top-performers-section">
-                    <h3>🏆 Top Performing Events</h3>
-                    <div className="top-events-grid">
-                        {enhancedAnalytics.top_events.map((event, index) => (
-                            <div key={index} className="top-event-card">
-                                <div className="event-header">
-                                    <h4>{event.event_name}</h4>
-                                    <span className="event-type-badge">{event.event_type}</span>
-                                </div>
-                                <div className="event-stats">
-                                    <div className="stat">
-                                        <span className="stat-label">Response Rate</span>
-                                        <span className="stat-value highlight">{event.response_rate}%</span>
-                                    </div>
-                                    <div className="stat">
-                                        <span className="stat-label">Invitations</span>
-                                        <span className="stat-value">{event.sent}</span>
-                                    </div>
-                                    <div className="stat">
-                                        <span className="stat-label">Attending</span>
-                                        <span className="stat-value">{event.attending_count}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            <span className="analytics-trend">All events</span>
+        </div>
+    </div>
+    
+    <div className="analytics-card">
+        <div className="analytics-icon">
+            <i className="bi bi-eye"></i>
+        </div>
+        <div className="analytics-content">
+            <h3>Average Open Rate</h3>
+            {statsLoading ? (
+                <div className="stats-loading">Loading...</div>
+            ) : (
+                <p className="analytics-number">
+                    {invitationStats.open_rate || 0}%
+                </p>
             )}
-
-            {/* Filters */}
-            <div className="analytics-filters">
-                <div className="filter-group">
-                    <label>Event Status:</label>
-                    <select 
-                        value={filters.eventStatus} 
-                        onChange={(e) => handleFilterChange('eventStatus', e.target.value)}
-                    >
-                        <option value="all">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="draft">Draft</option>
-                    </select>
-                </div>
-                <div className="filter-group">
-                    <span className="results-count">
-                        Showing {filteredAnalytics.length} of {sortedAnalytics.length} events
-                    </span>
-                </div>
-            </div>
+            <span className="analytics-trend">Based on responses</span>
+        </div>
+    </div>
+    
+    <div className="analytics-card">
+        <div className="analytics-icon">
+            <i className="bi bi-check-circle"></i>
+        </div>
+        <div className="analytics-content">
+            <h3>Average Response Rate</h3>
+            {statsLoading ? (
+                <div className="stats-loading">Loading...</div>
+            ) : (
+                <p className="analytics-number">
+                    {invitationStats.response_rate || 0}%
+                </p>
+            )}
+            <span className="analytics-trend">All events</span>
+        </div>
+    </div>
+</div>
 
             {/* Analytics Table */}
             <div className="analytics-table">
@@ -2024,6 +1964,10 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
     const [selectedPayment, setSelectedPayment] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+    // New states for real data
+    const [activeSubscriptions, setActiveSubscriptions] = useState({});
+    const [packageUsageStats, setPackageUsageStats] = useState([]);
+
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     useEffect(() => {
@@ -2032,6 +1976,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
             fetchRevenueAnalytics();
             fetchUsers();
             logActivity('Payments Tab Viewed', 'Administrator viewed payment history and revenue analytics');
+        } else if (activeSection === 'plans') {
+            fetchActiveSubscriptions();
+            fetchPackageUsageStats();
         }
     }, [activeSection]);
 
@@ -2101,6 +2048,56 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
             }
         } catch (error) {
             console.error('Error fetching users:', error);
+        }
+    };
+
+    // New fetch functions for real data
+    const fetchActiveSubscriptions = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getActiveSubscriptions');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Convert array to object for easy lookup
+                    const subscriptionsObj = {};
+                    data.subscriptions.forEach(sub => {
+                        subscriptionsObj[sub.package_type] = sub.active_subscriptions;
+                    });
+                    setActiveSubscriptions(subscriptionsObj);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching active subscriptions:', error);
+        }
+    };
+
+    const fetchPackageUsageStats = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getPackageUsageStats');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setPackageUsageStats(data.usage_stats);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching package usage stats:', error);
         }
     };
 
@@ -2243,6 +2240,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                     )
                 );
                 setEditingPlan(null);
+                // Refresh subscription data
+                fetchActiveSubscriptions();
+                fetchPackageUsageStats();
                 logActivity('Package Updated', 
                     `Updated ${editForm.package_type} package: ${editForm.max_events} events, ${editForm.max_guests} guests, R${editForm.price}`
                 );
@@ -2277,6 +2277,8 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                 method: 'POST',
                 body: formData
             });
+
+            
             
             const data = await response.json();
             if (data.success) {
@@ -2292,8 +2294,11 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                     payment_method: 'manual',
                     billing_cycle: 'monthly'
                 });
+                // Refresh data
                 fetchPaymentHistory();
                 fetchRevenueAnalytics();
+                fetchActiveSubscriptions();
+                fetchPackageUsageStats();
             } else {
                 alert('Error adding payment: ' + data.message);
                 logActivity('Manual Payment Failed', `Failed to add manual payment: ${data.message}`);
@@ -2323,6 +2328,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                 logActivity('Payment Status Updated', `Payment ${paymentId} status changed to ${status}`);
                 alert('Payment status updated successfully!');
                 fetchPaymentHistory();
+                fetchRevenueAnalytics();
             } else {
                 alert('Error updating status: ' + data.message);
                 logActivity('Payment Status Update Failed', `Failed to update payment status: ${data.message}`);
@@ -2339,13 +2345,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
         return packageType.charAt(0).toUpperCase() + packageType.slice(1);
     };
 
+    // Real subscription count function
     const getActiveSubscriptions = (packageType) => {
-        const subscriptionCounts = {
-            'basic': 45,
-            'premium': 28,
-            'enterprise': 12
-        };
-        return subscriptionCounts[packageType] || 0;
+        return activeSubscriptions[packageType] || 0;
     };
 
     const formatCurrency = (amount) => {
@@ -2443,7 +2445,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                             </div>
                             
                             <div className="plan-features">
-                                <h4>Features:</h4>
+                                <h4>Features & Usage:</h4>
                                 <ul>
                                     <li>
                                         {editingPlan === plan.package_id ? (
@@ -2468,11 +2470,19 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                                 className="form-control-sm"
                                                 placeholder="Max Events"
                                                 style={{width: '120px'}}
-                                        />
+                                            />
                                         ) : (
                                             `${plan.max_events || 0} events/month`
                                         )}
                                     </li>
+                                    <li>
+                                        <strong>Active Users:</strong> {getActiveSubscriptions(plan.package_type)}
+                                    </li>
+                                    {packageUsageStats.find(stat => stat.package_id === plan.package_id) && (
+                                        <li>
+                                            <strong>Avg Usage:</strong> {Math.round(packageUsageStats.find(stat => stat.package_id === plan.package_id)?.avg_events_used || 0)} events
+                                        </li>
+                                    )}
                                     <li>Premium templates</li>
                                     <li>Email support</li>
                                     {plan.package_type === 'premium' && <li>Custom branding</li>}
@@ -2522,6 +2532,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                 <p className="revenue-amount">
                                     {revenueAnalytics ? formatCurrency(revenueAnalytics.total_revenue) : 'Loading...'}
                                 </p>
+                                <span className="revenue-trend">All time</span>
                             </div>
                         </div>
                         
@@ -2532,10 +2543,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                             <div className="revenue-content">
                                 <h3>This Month</h3>
                                 <p className="revenue-amount">
-                                    {revenueAnalytics ? formatCurrency(
-                                        revenueAnalytics.monthly_revenue[0]?.revenue || 0
-                                    ) : 'Loading...'}
+                                    {revenueAnalytics ? formatCurrency(revenueAnalytics.current_month_revenue) : 'Loading...'}
                                 </p>
+                                <span className="revenue-trend">Current month</span>
                             </div>
                         </div>
                         
@@ -2551,6 +2561,20 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                         : 'Loading...'
                                     }
                                 </p>
+                                <span className="revenue-trend">Awaiting processing</span>
+                            </div>
+                        </div>
+
+                        <div className="revenue-card users">
+                            <div className="revenue-icon">
+                                <i className="bi bi-people"></i>
+                            </div>
+                            <div className="revenue-content">
+                                <h3>Active Subscriptions</h3>
+                                <p className="revenue-amount">
+                                    {Object.values(activeSubscriptions).reduce((sum, count) => sum + count, 0)}
+                                </p>
+                                <span className="revenue-trend">Total active users</span>
                             </div>
                         </div>
                     </div>
@@ -2762,7 +2786,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                         <option value="">Select Package</option>
                                         {allPlans.map(plan => (
                                             <option key={plan.package_id} value={plan.package_id}>
-                                                {formatPlanName(plan.package_type)} - ${plan.price}
+                                                {formatPlanName(plan.package_type)} - R{plan.price}
                                             </option>
                                         ))}
                                     </select>
@@ -2959,7 +2983,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
         </div>
     );
 };
-
 // Users Tab Content with Logging
 const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
     const [users, setUsers] = useState(initialUsers || []);
@@ -3101,6 +3124,57 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
         }
     };
 
+    const fetchUsersData = async () => {
+    try {
+        setLoading(true);
+        setError(null);
+        
+        const formData = new FormData();
+        formData.append('function', 'getAllUsers');
+        formData.append('admin_user_id', adminUserId);
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const formattedUsers = data.users.map(user => ({
+                id: user.user_id,
+                name: user.name,
+                email: user.email,
+                role: user.role || 'event_planner',
+                status: user.status || 'active',
+                joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
+            }));
+            
+            setUsers(formattedUsers);
+            setFilteredUsers(formattedUsers);
+        } else {
+            throw new Error(data.message || 'Failed to fetch users');
+        }
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        setError(error.message);
+    } finally {
+        setLoading(false);
+    }
+};
+
+    useEffect(() => {
+    // Refresh data when component mounts or when initialUsers changes
+    if (initialUsers && initialUsers.length > 0) {
+        setUsers(initialUsers);
+        setFilteredUsers(initialUsers);
+    } else {
+        fetchUsersData();
+    }
+}, [initialUsers]); // ✅ This will refresh when parent passes new data
+
     useEffect(() => {
         const filterAndSortUsers = () => {
             if (!users || !Array.isArray(users)) {
@@ -3227,23 +3301,15 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
             });
             
             const data = await response.json();
-            if (data.success) {
-                setUsers(prevUsers => 
-                    prevUsers.map(user => 
-                        user.id === userId 
-                            ? { ...user, status: newStatus }
-                            : user
-                    )
-                );
-                await refreshUsers();
-                if (window.fetchDashboardData) {
-                    await window.fetchDashboardData();
-                }
-                logActivity('User Status Updated', 
-                    `User ${userId} status changed to ${newStatus}`
-                );
-                alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
-            } else {
+        if (data.success) {
+            // ✅ AUTO-REFRESH: Fetch fresh data after successful update
+            await fetchUsersData();
+            
+            logActivity('User Status Updated', 
+                `User ${userId} status changed to ${newStatus}`
+            );
+            alert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`);
+        } else {
                 if (data.message && data.message.includes("Unauthorized")) {
                     throw new Error("Admin access denied. Please log in as administrator.");
                 } else {

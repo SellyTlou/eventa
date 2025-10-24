@@ -272,9 +272,9 @@ if ($fun === "saveEvent") {
         ini_set('max_execution_time', 300);
 
         // Ensure UTF-8 encoding for all string data
-        $eventName       = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
-        $userName        = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
-        $eventLocation   = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
+        $eventName = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
+        $userName = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
+        $eventLocation = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
         $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
 
         // Remove any invalid UTF-8 characters
@@ -285,8 +285,8 @@ if ($fun === "saveEvent") {
         $designDataSize = strlen($eventDesignData);
         if ($designDataSize > 10000000) { // 10MB
             echo json_encode([
-                "success" => false,
-                "message" => "Event design data is too large (" . round($designDataSize / 1024 / 1024, 2) . "MB). Please reduce the size.",
+                "success" => false, 
+                "message" => "Event design data is too large (" . round($designDataSize/1024/1024, 2) . "MB). Please reduce the size."
             ]);
             exit;
         }
@@ -311,7 +311,7 @@ if ($fun === "saveEvent") {
                 updated_at = :updated_at
                 WHERE event_id = :event_id AND user_id = :user_id
             ");
-
+            
             $stmt->execute([
                 ':event_name'       => $eventName,
                 ':event_start_date' => $eventStartDate,
@@ -373,13 +373,13 @@ if ($fun === "saveEvent") {
         // Handle specific MySQL errors
         if (strpos($e->getMessage(), 'Incorrect string value') !== false) {
             echo json_encode([
-                "success" => false,
-                "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8.",
+                "success" => false, 
+                "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8."
             ]);
         } elseif (strpos($e->getMessage(), 'max_allowed_packet') !== false) {
             echo json_encode([
-                "success" => false,
-                "message" => "Event data is too large. Please reduce the design complexity.",
+                "success" => false, 
+                "message" => "Event data is too large. Please reduce the design complexity."
             ]);
         } else {
             echo json_encode(["success" => false, "message" => $e->getMessage()]);
@@ -588,10 +588,10 @@ if ($fun === "getRSVPResponses") {
 if ($fun === "getInvitationStats") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (! verifyAdminAccessWithPermission($pdo, $adminUserId, 'view_dashboard')) {
+  if (!verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
-            "message" => "Unauthorized: Insufficient permissions",
+            "message" => "Unauthorized: Admin access required",
         ]);
         exit;
     }
@@ -613,7 +613,7 @@ if ($fun === "getInvitationStats") {
         $responseStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
         $openRate = $responseStats['total_rsvp'] > 0 ?
-        round(($responseStats['responded'] / $responseStats['total_rsvp']) * 100, 1) : 0;
+        min(100, round(($responseStats['responded'] / $responseStats['total_rsvp']) * 100, 1)) : 0;
 
         // Calculate response rate (percentage of "yes" responses)
         $stmt = $pdo->prepare("
@@ -626,14 +626,14 @@ if ($fun === "getInvitationStats") {
         $attendingStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
         $responseRate = $attendingStats['total_rsvp'] > 0 ?
-        round(($attendingStats['attending'] / $attendingStats['total_rsvp']) * 100, 1) : 0;
+        min(100, round(($attendingStats['attending'] / $attendingStats['total_rsvp']) * 100, 1)) : 0;
 
         echo json_encode([
             "success" => true,
-            "stats"   => [
+            "stats" => [
                 "total_invitations" => (int) $totalInvitations,
-                "open_rate"         => (float) $openRate,
-                "response_rate"     => (float) $responseRate,
+                "open_rate" => (float) $openRate,
+                "response_rate" => (float) $responseRate,
             ],
         ]);
     } catch (PDOException $e) {
@@ -1300,6 +1300,96 @@ if ($fun === "logSystemActivity") {
     exit;
 }
 
+if ($fun === "updateAdminProfile") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $name = $_POST['name'] ?? '';
+    $lastname = $_POST['lastname'] ?? '';
+    $email = $_POST['email'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    if (empty($name) || empty($email)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Name and email are required",
+        ]);
+        exit;
+    }
+
+    try {
+        // Check if email is already taken by another user
+        $checkStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ? AND user_id != ?");
+        $checkStmt->execute([$email, $adminUserId]);
+        
+        if ($checkStmt->fetch()) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Email is already taken by another user",
+            ]);
+            exit;
+        }
+
+        // Update admin profile
+        $stmt = $pdo->prepare("UPDATE users SET name = ?, lastname = ?, email = ? WHERE user_id = ?");
+        $stmt->execute([$name, $lastname, $email, $adminUserId]);
+
+        // Get updated admin data
+        $adminStmt = $pdo->prepare("SELECT user_id, name, lastname, email, role FROM users WHERE user_id = ?");
+        $adminStmt->execute([$adminUserId]);
+        $admin = $adminStmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Profile updated successfully",
+            "admin" => $admin
+        ]);
+
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getAdminProfile") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized: Admin access required",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT user_id, name, lastname, email, role, created_at 
+            FROM users 
+            WHERE user_id = ? AND role = 'admin'
+        ");
+        $stmt->execute([$adminUserId]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($admin) {
+            echo json_encode(["success" => true, "admin" => $admin]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Admin not found"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
 // In your updatePackage function in query.php
 if ($fun === "updatePackage") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -1853,10 +1943,10 @@ function getTotalCount($pdo, $table)
 }
 
 // Enhanced Invitation Analytics Functions
-if ($fun === "getEnhancedInvitationAnalytics") {
+if ($fun === "getInvitationAnalytics") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (! verifyAdminAccess($pdo, $adminUserId)) {
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
@@ -1865,54 +1955,10 @@ if ($fun === "getEnhancedInvitationAnalytics") {
     }
 
     try {
-        // Get event types and statuses for filters
-        $eventTypesStmt = $pdo->prepare("
-            SELECT DISTINCT event_type
-            FROM events
-            WHERE event_type IS NOT NULL AND event_type != ''
-        ");
-        $eventTypesStmt->execute();
-        $eventTypes = $eventTypesStmt->fetchAll(PDO::FETCH_COLUMN);
-
-        // Get monthly trends for charts
-        $monthlyTrendsStmt = $pdo->prepare("
-            SELECT
-                DATE_FORMAT(e.created_at, '%Y-%m') as month,
-                COUNT(DISTINCT e.event_id) as total_events,
-                COUNT(DISTINCT r.guest_id) as total_invitations,
-                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as total_responses,
-                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as total_attending
-            FROM events e
-            LEFT JOIN rsvp r ON e.event_id = r.event_id
-            WHERE e.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-            GROUP BY DATE_FORMAT(e.created_at, '%Y-%m')
-            ORDER BY month DESC
-            LIMIT 6
-        ");
-        $monthlyTrendsStmt->execute();
-        $monthlyTrends = $monthlyTrendsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get event type comparison
-        $eventTypeStatsStmt = $pdo->prepare("
-            SELECT
-                COALESCE(e.event_type, 'Other') as event_type,
-                COUNT(DISTINCT e.event_id) as event_count,
-                COUNT(DISTINCT r.guest_id) as total_invitations,
-                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as total_responses,
-                COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as total_attending
-            FROM events e
-            LEFT JOIN rsvp r ON e.event_id = r.event_id
-            GROUP BY COALESCE(e.event_type, 'Other')
-        ");
-        $eventTypeStatsStmt->execute();
-        $eventTypeStats = $eventTypeStatsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get top performing events (response rate > 70%)
-        $topEventsStmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
             SELECT
                 e.event_id,
                 e.event_name,
-                e.event_type,
                 e.published as status,
                 COUNT(DISTINCT r.guest_id) as sent,
                 COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as responded,
@@ -1924,29 +1970,56 @@ if ($fun === "getEnhancedInvitationAnalytics") {
                 END as response_rate
             FROM events e
             LEFT JOIN rsvp r ON e.event_id = r.event_id
-            GROUP BY e.event_id, e.event_name, e.event_type, e.published
-            HAVING response_rate > 70 AND sent > 0
-            ORDER BY response_rate DESC, sent DESC
-            LIMIT 10
+            GROUP BY e.event_id, e.event_name, e.published
+            ORDER BY e.created_at DESC
         ");
-        $topEventsStmt->execute();
-        $topEvents = $topEventsStmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Format the data for frontend
+        $analytics = array_map(function ($event) {
+            $sent = (int) $event['sent'];
+            $responded = (int) $event['responded'];
+            
+            // FIX: Proper response rate calculation (should never exceed 100%)
+            $responseRate = $sent > 0 ? min(100, round(($responded / $sent) * 100, 1)) : 0;
+
+            // Map status to frontend values
+            $statusMap = [
+                1 => 'active',
+                0 => 'draft',
+            ];
+
+            return [
+                'id' => $event['event_id'],
+                'eventName' => $event['event_name'],
+                'sent' => $sent,
+                'opened' => $sent, // Assuming all sent are opened for simplicity
+                'responded' => $responded,
+                'responseRate' => $responseRate . '%',
+                'status' => $statusMap[$event['status']] ?? 'draft',
+            ];
+        }, $events);
 
         echo json_encode([
-            "success"   => true,
-            "analytics" => [
-                "event_types"      => $eventTypes,
-                "monthly_trends"   => $monthlyTrends,
-                "event_type_stats" => $eventTypeStats,
-                "top_events"       => $topEvents,
-            ],
+            "success" => true,
+            "analytics" => $analytics,
         ]);
     } catch (PDOException $e) {
-        // More detailed error logging
-        error_log("Database error in userRegEmailVerify: " . $e->getMessage());
-        error_log("Email: " . $email);
-        error_log("Error Code: " . $e->getCode());
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
 
+if ($fun === "exportInvitationData") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $status = $_POST['status'] ?? 'all';
+    $userId = $_POST['user_id'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode([
             "success" => false,
             "message" => "Unauthorized: Admin access required",
@@ -1955,99 +2028,127 @@ if ($fun === "getEnhancedInvitationAnalytics") {
     }
 
     try {
-        // Build query based on filters
-        $whereConditions = [];
-        $params          = [];
-
-        if ($eventId) {
-            $whereConditions[] = "e.event_id = ?";
-            $params[]          = $eventId;
-        }
-
-        if ($userId) {
-            $whereConditions[] = "e.user_id = ?";
-            $params[]          = $userId;
-        }
-
-        if ($eventType && $eventType !== 'all') {
-            $whereConditions[] = "e.event_type = ?";
-            $params[]          = $eventType;
-        }
-
-        if ($status && $status !== 'all') {
-            $whereConditions[] = "e.published = ?";
-            $params[]          = ($status === 'active' ? 1 : 0);
-        }
-
-        $whereClause = $whereConditions ? "WHERE " . implode(" AND ", $whereConditions) : "";
-
-        $exportStmt = $pdo->prepare("
+        // Build the base query
+        $query = "
             SELECT
                 e.event_id,
                 e.event_name,
-                e.event_type,
-                CASE e.published
-                    WHEN 1 THEN 'active'
-                    WHEN 0 THEN 'draft'
-                    ELSE 'unknown'
-                END as status,
-                u.name as organizer_name,
-                u.email as organizer_email,
+                e.user_name as organizer_name,
+                e.created_at as event_created,
+                e.published as event_status,
                 COUNT(DISTINCT r.guest_id) as invitations_sent,
-                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as responses_received,
+                COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) as invitations_responded,
                 COUNT(DISTINCT CASE WHEN r.attending = 'yes' THEN r.guest_id END) as attending_count,
+                COUNT(DISTINCT CASE WHEN r.attending = 'no' THEN r.guest_id END) as declined_count,
                 CASE
                     WHEN COUNT(DISTINCT r.guest_id) > 0 THEN
                         ROUND((COUNT(DISTINCT CASE WHEN r.attending IS NOT NULL THEN r.guest_id END) / COUNT(DISTINCT r.guest_id)) * 100, 1)
                     ELSE 0
-                END as response_rate,
-                e.created_at as event_created
+                END as response_rate_percent
             FROM events e
-            LEFT JOIN users u ON e.user_id = u.user_id
             LEFT JOIN rsvp r ON e.event_id = r.event_id
-            {$whereClause}
-            GROUP BY e.event_id, e.event_name, e.event_type, e.published, u.name, u.email, e.created_at
-            ORDER BY e.created_at DESC
-        ");
+        ";
 
-        $exportStmt->execute($params);
-        $exportData = $exportStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Add WHERE conditions based on filters
+        $conditions = [];
+        $params = [];
 
-        // Create export directory
+        if ($status !== 'all') {
+            if ($status === 'active') {
+                $conditions[] = "e.published = 1";
+            } elseif ($status === 'draft') {
+                $conditions[] = "e.published = 0";
+            }
+        }
+
+        if (!empty($userId)) {
+            $conditions[] = "e.user_id = ?";
+            $params[] = $userId;
+        }
+
+        if (!empty($conditions)) {
+            $query .= " WHERE " . implode(" AND ", $conditions);
+        }
+
+        $query .= " GROUP BY e.event_id, e.event_name, e.user_name, e.created_at, e.published";
+        $query .= " ORDER BY e.created_at DESC";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Format data for CSV
+        $csvData = [];
+        
+        // Add header row
+        $csvData[] = [
+            'Event ID',
+            'Event Name', 
+            'Organizer',
+            'Event Created',
+            'Status',
+            'Invitations Sent',
+            'Invitations Responded',
+            'Attending Count',
+            'Declined Count',
+            'Response Rate (%)'
+        ];
+
+        // Add data rows
+        foreach ($events as $event) {
+            $status = $event['event_status'] == 1 ? 'Active' : 'Draft';
+            
+            $csvData[] = [
+                $event['event_id'],
+                $event['event_name'],
+                $event['organizer_name'],
+                $event['event_created'],
+                $status,
+                $event['invitations_sent'],
+                $event['invitations_responded'],
+                $event['attending_count'],
+                $event['declined_count'],
+                $event['response_rate_percent']
+            ];
+        }
+
+        // Generate CSV file
+        $timestamp = date('Y-m-d_H-i-s');
+        $filename = "invitation_analytics_export_{$timestamp}.csv";
         $exportDir = __DIR__ . '/exports/';
-        if (! is_dir($exportDir)) {
+
+        // Create exports directory if it doesn't exist
+        if (!is_dir($exportDir)) {
             mkdir($exportDir, 0755, true);
         }
 
-        // Generate filename
-        $timestamp = date('Y-m-d_H-i-s');
-        $filename  = "invitation_export_{$timestamp}.csv";
-        $filePath  = $exportDir . $filename;
+        $filePath = $exportDir . $filename;
 
-        // Create CSV file
+        // Write CSV file
         $file = fopen($filePath, 'w');
-
-        if (! empty($exportData)) {
-            // Add headers
-            fputcsv($file, array_keys($exportData[0]));
-
-            // Add data rows
-            foreach ($exportData as $row) {
-                fputcsv($file, $row);
-            }
-        } else {
-            fputcsv($file, ['No data available for export']);
+        foreach ($csvData as $row) {
+            fputcsv($file, $row);
         }
-
         fclose($file);
 
-        echo json_encode([
-            "success"   => true,
-            "message"   => "Export generated successfully",
-            "file_path" => $filePath,
-            "filename"  => $filename,
-        ]);
+        // Verify file was created
+        if (file_exists($filePath)) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Export completed successfully",
+                "filename" => $filename,
+                "file_path" => $filePath
+            ]);
+        } else {
+            throw new Exception("Failed to create export file");
+        }
+
     } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    } catch (Exception $e) {
         echo json_encode([
             "success" => false,
             "message" => "Export error: " . $e->getMessage(),
