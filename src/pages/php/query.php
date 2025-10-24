@@ -337,6 +337,30 @@ if ($fun === "saveEvent") {
     $createdAt = date('Y-m-d H:i:s');
 
     try {
+        // Set PHP memory limits
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', 300);
+
+        // Ensure UTF-8 encoding for all string data
+        $eventName = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
+        $userName = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
+        $eventLocation = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
+        $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
+
+        // Remove any invalid UTF-8 characters
+        $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
+        $eventDesignData = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $eventDesignData);
+
+        // Check if eventDesignData is too large
+        $designDataSize = strlen($eventDesignData);
+        if ($designDataSize > 10000000) { // 10MB
+            echo json_encode([
+                "success" => false, 
+                "message" => "Event design data is too large (" . round($designDataSize/1024/1024, 2) . "MB). Please reduce the size."
+            ]);
+            exit;
+        }
+
         $checkStmt = $pdo->prepare("SELECT event_id FROM events WHERE event_id = :event_id AND user_id = :user_id");
         $checkStmt->execute([
             ':event_id' => $eventID,
@@ -357,6 +381,7 @@ if ($fun === "saveEvent") {
                 updated_at = :updated_at
                 WHERE event_id = :event_id AND user_id = :user_id
             ");
+            
             $stmt->execute([
                 ':event_name'       => $eventName,
                 ':event_start_date' => $eventStartDate,
@@ -379,12 +404,14 @@ if ($fun === "saveEvent") {
                 ':description' => "Event '{$eventName}' was updated",
             ]);
         } else {
-            // Insert new event with correct parameter binding
-            $stmt = $pdo->prepare("INSERT INTO events 
-                (user_id, user_name, event_id, event_name, event_start_date, event_start_time, event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at) 
-                VALUES 
-                (:user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time, :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at)");
-            
+            // Insert new event
+            $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
+                       event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at";
+
+            $values = ":user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
+                      :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at";
+
+            $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
             $stmt->execute([
                 ':user_id'          => $userID,
                 ':user_name'        => $userName,
@@ -413,7 +440,20 @@ if ($fun === "saveEvent") {
         echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
 
     } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => $e->getMessage()]);
+        // Handle specific MySQL errors
+        if (strpos($e->getMessage(), 'Incorrect string value') !== false) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8."
+            ]);
+        } elseif (strpos($e->getMessage(), 'max_allowed_packet') !== false) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Event data is too large. Please reduce the design complexity."
+            ]);
+        } else {
+            echo json_encode(["success" => false, "message" => $e->getMessage()]);
+        }
     }
     exit;
 }
@@ -929,8 +969,8 @@ if ($fun === "updateEventUsedCount") {
             exit;
         }
 
-        $updateStmt = $pdo->prepare("UPDATE user_packages SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = ?");
-        $updateStmt->execute([$user_id]);
+        /*$updateStmt = $pdo->prepare("UPDATE user_packages SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = ?");
+        $updateStmt->execute([$user_id]);*/
 
         // Update the event with package_id in events table
         $stmt = $pdo->prepare("UPDATE events SET package_id = :package_id WHERE event_id = :event_id");
@@ -2216,326 +2256,6 @@ if ($fun === "exportInvitationData") {
         echo json_encode([
             "success" => false,
             "message" => "Export error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
-// Payment History Functions
-if ($fun === "getPaymentHistory") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT 
-                ph.*,
-                u.name as user_name,
-                u.email as user_email,
-                p.package_type,
-                p.price as package_price
-            FROM payment_history ph
-            LEFT JOIN users u ON ph.user_id = u.user_id
-            LEFT JOIN packagetb p ON ph.package_id = p.package_id
-            ORDER BY ph.payment_date DESC
-        ");
-        $stmt->execute();
-        $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "payments" => $payments,
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
-if ($fun === "getRevenueAnalytics") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
-
-    try {
-        // Total Revenue
-        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) as total_revenue FROM payment_history WHERE payment_status = 'completed'");
-        $stmt->execute();
-        $totalRevenue = $stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
-
-        // Monthly Revenue (current month)
-        $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(amount), 0) as monthly_revenue 
-            FROM payment_history 
-            WHERE payment_status = 'completed' 
-            AND MONTH(payment_date) = MONTH(CURRENT_DATE()) 
-            AND YEAR(payment_date) = YEAR(CURRENT_DATE())
-        ");
-        $stmt->execute();
-        $monthlyRevenue = $stmt->fetch(PDO::FETCH_ASSOC)['monthly_revenue'];
-
-        // Payment Status Counts
-        $stmt = $pdo->prepare("
-            SELECT payment_status, COUNT(*) as count 
-            FROM payment_history 
-            GROUP BY payment_status
-        ");
-        $stmt->execute();
-        $paymentStatusCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Monthly revenue data for charts (last 6 months)
-        $stmt = $pdo->prepare("
-            SELECT 
-                DATE_FORMAT(payment_date, '%Y-%m') as month,
-                COALESCE(SUM(amount), 0) as revenue
-            FROM payment_history 
-            WHERE payment_status = 'completed'
-            AND payment_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
-            GROUP BY DATE_FORMAT(payment_date, '%Y-%m')
-            ORDER BY month DESC
-            LIMIT 6
-        ");
-        $stmt->execute();
-        $monthlyRevenueData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "analytics" => [
-                "total_revenue" => (float)$totalRevenue,
-                "monthly_revenue" => $monthlyRevenueData,
-                "payment_status_counts" => $paymentStatusCounts,
-                "current_month_revenue" => (float)$monthlyRevenue
-            ],
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
-if ($fun === "addManualPayment") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $userId = $_POST['user_id'] ?? '';
-    $packageId = $_POST['package_id'] ?? '';
-    $amount = $_POST['amount'] ?? '';
-    $paymentMethod = $_POST['payment_method'] ?? 'manual';
-    $billingCycle = $_POST['billing_cycle'] ?? 'monthly';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
-
-    if (empty($userId) || empty($packageId) || empty($amount)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Missing required fields",
-        ]);
-        exit;
-    }
-
-    // Check if user already has active package
-    $checkPackage = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = ?");
-    $checkPackage->execute([$userId]);
-    if ($checkPackage->fetch()) {
-        echo json_encode([
-            "success" => false,
-            "message" => "User already has an active package",
-        ]);
-        exit;
-    }
-
-    try {
-        // Generate payment ID
-        $paymentId = "PAY-" . substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 8) . "-" . time();
-        
-        // Generate transaction ID
-        $transactionId = "TXN-" . substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 10) . "-" . time();
-
-        $stmt = $pdo->prepare("
-            INSERT INTO payment_history (
-                payment_id, user_id, package_id, amount, payment_method, 
-                billing_cycle, payment_status, transaction_id, payment_date
-            ) VALUES (?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
-        ");
-        
-        $stmt->execute([
-            $paymentId,
-            $userId,
-            $packageId,
-            $amount,
-            $paymentMethod,
-            $billingCycle,
-            $transactionId
-        ]);
-
-        // Update user package
-        $updateStmt = $pdo->prepare("
-            INSERT INTO user_packages (user_id, package_id, event_limit, event_used, created_at, updated_at)
-            VALUES (?, ?, (SELECT max_events FROM packagetb WHERE package_id = ?), 0, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE 
-            package_id = VALUES(package_id),
-            event_limit = VALUES(event_limit),
-            updated_at = NOW()
-        ");
-        
-        $updateStmt->execute([$userId, $packageId, $packageId]);
-
-        echo json_encode([
-            "success" => true,
-            "message" => "Manual payment added successfully",
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
-if ($fun === "updatePaymentStatus") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $paymentId = $_POST['payment_id'] ?? '';
-    $status = $_POST['status'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
-
-    if (empty($paymentId) || empty($status)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Missing required fields",
-        ]);
-        exit;
-    }
-
-    
-
-    try {
-        $stmt = $pdo->prepare("
-            UPDATE payment_history 
-            SET payment_status = ?, updated_at = NOW() 
-            WHERE payment_id = ?
-        ");
-        
-        $stmt->execute([$status, $paymentId]);
-
-        echo json_encode([
-            "success" => true,
-            "message" => "Payment status updated successfully",
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
-// Get active subscription counts by package type
-if ($fun === "getActiveSubscriptions") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT 
-                p.package_type,
-                COUNT(DISTINCT up.user_id) as active_subscriptions
-            FROM user_packages up
-            INNER JOIN packagetb p ON up.package_id = p.package_id
-            INNER JOIN users u ON up.user_id = u.user_id
-            WHERE u.status = 'active'
-            AND (up.event_used < up.event_limit OR up.event_limit = 0)
-            AND up.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
-            GROUP BY p.package_type
-        ");
-        $stmt->execute();
-        $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "subscriptions" => $subscriptions,
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
-// Get package usage statistics
-if ($fun === "getPackageUsageStats") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("
-            SELECT 
-                p.package_id,
-                p.package_type,
-                p.max_events,
-                p.max_guests,
-                COUNT(up.user_id) as total_users,
-                AVG(up.event_used) as avg_events_used,
-                SUM(CASE WHEN up.event_used >= up.event_limit THEN 1 ELSE 0 END) as users_at_limit
-            FROM packagetb p
-            LEFT JOIN user_packages up ON p.package_id = up.package_id
-            GROUP BY p.package_id, p.package_type, p.max_events, p.max_guests
-        ");
-        $stmt->execute();
-        $usageStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "usage_stats" => $usageStats,
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
         ]);
     }
     exit;

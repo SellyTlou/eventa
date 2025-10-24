@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./UpgradePackage.css";
 import "../../alert.css";
+import "../../App.css";
+import { logOut } from "../components";
 
 const UpgradePackage = () => {
     const [packages, setPackages] = useState([]);
@@ -9,16 +11,19 @@ const UpgradePackage = () => {
     const [loading, setLoading] = useState(true);
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [processing, setProcessing] = useState(false);
+    const [user, setUser] = useState(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
-    const navigate = useNavigate();
-
-    const printAlert = (message, type = 'info') => {
+    const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
         setTimeout(() => {
-            setAlert({ show: false, message: '', type: '' });
+            setAlert({ show: false, message: "", type: "" });
         }, 5000);
     };
+
+    const navigate = useNavigate();
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -29,10 +34,17 @@ const UpgradePackage = () => {
                     navigate("/login");
                     return;
                 }
-
                 const user = JSON.parse(storedUser);
+                setUser(user);
+
                 await fetchPackages();
                 await fetchCurrentPackage(user.user_id);
+
+                const handleClickOutside = (event) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setDropdownOpen(false);
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
 
             } catch (error) {
                 console.error("Failed to fetch data:", error);
@@ -44,6 +56,14 @@ const UpgradePackage = () => {
 
         fetchData();
     }, [navigate]);
+
+
+    const toggleDropdown = () => setDropdownOpen(prev => !prev);
+    const goToProfile = () => {
+        navigate("/Profile");
+    }
+    const goToHome = () => navigate("/eventsDashboard");
+    const handleBack = () => { navigate(-1); };
 
     const fetchPackages = async () => {
         try {
@@ -157,6 +177,7 @@ const UpgradePackage = () => {
         return newTier > currentTier;
     };
 
+
     if (loading) {
         return (
             <div className="upgrade-page">
@@ -186,8 +207,30 @@ const UpgradePackage = () => {
                     </div>
                 </div>
             )}
+            <div className="dashboard-header">
+                <h1>Evenda</h1>
+                <div className="header-tabs">
+                    <button onClick={goToHome}>Home</button>
 
+                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
+                        <i className="bi bi-person-circle"></i>
+                        <span>{user ? user.name : "Guest"}</span>
+                        <i className="bi bi-chevron-bar-down"></i>
+                        {dropdownOpen && (
+                            <div className="dropdown-menu show">
+                                <button className="dropdown-item" onClick={goToProfile}>Profile</button>
+                                <button className="dropdown-item">Settings</button>
+                                <button className="dropdown-item" onClick={logOut}>Logout</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
             <div className="container">
+
+                <button className="btn-event btn-event-back" onClick={handleBack}>
+                    Back
+                </button>
                 {/* Header */}
                 <div className="upgrade-header">
                     <h1>Upgrade Your Package</h1>

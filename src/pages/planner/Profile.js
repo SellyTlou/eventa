@@ -97,6 +97,7 @@ const Profile = () => {
     navigate("/Profile");
   }
   const goToHome = () => navigate("/eventsDashboard");
+  const handleBack = () => {navigate(-1);};
 
   const fetchUserEvents = async (userId) => {
     try {
@@ -403,6 +404,9 @@ const Profile = () => {
 
       <section className="profilePage">
         <div className="container">
+        <button className="btn-event btn-event-back" onClick={handleBack}>
+                    Back
+                </button>
 
           <div className="profile-layout">
             {/* Sidebar */}
