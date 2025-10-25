@@ -1,0 +1,38 @@
+REPORT GENERATED ON: 2025-10-24 23:20:48
+
+Record 1:
+  user_id: USER-10T29Y-1761229694
+  name: selly ndou
+  email: sellytlou@gmail.com
+  role: event_planner
+  status: active
+  created_at: 2025-10-23 16:28:14
+  total_events: 0
+
+Record 2:
+  user_id: USER-D725JN-1761229605
+  name: Lwando mhlwana
+  email: lwandomhlwana0@gmail.com
+  role: event_planner
+  status: active
+  created_at: 2025-10-23 16:26:45
+  total_events: 0
+
+Record 3:
+  user_id: USER-GA3S1I-1761219081
+  name: Mfanafuthi Magcaba
+  email: mfanafuthimagcaba366@gmail.com
+  role: event_planner
+  status: active
+  created_at: 2025-10-23 13:31:22
+  total_events: 2
+
+Record 4:
+  user_id: ADMIN-003
+  name: System Administrators
+  email: admin00@event.com
+  role: admin
+  status: active
+  created_at: 2025-10-08 17:01:52
+  total_events: 0
+

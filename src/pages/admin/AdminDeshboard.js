@@ -29,7 +29,7 @@ function AdminDashboard() {
     const [reportForm, setReportForm] = useState({
     report_type: 'users',
     date_range: 'all',
-    format: 'csv'
+    format: 'pdf'
 });
 const [downloadUrl, setDownloadUrl] = useState('');
 const [actionMessage, setActionMessage] = useState('');   
@@ -2341,7 +2341,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
     };
 
     const formatPlanName = (packageType) => {
-        if (!packageType) return 'Unknown';
+        if (!packageType) return 'Enterprise';
         return packageType.charAt(0).toUpperCase() + packageType.slice(1);
     };
 
