@@ -103,3 +103,39 @@ Stack trace:
   thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2296
 [25-Oct-2025 09:21:36 Europe/Berlin] PHP Warning:  Undefined variable $provider in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2310
 [25-Oct-2025 09:21:36 Europe/Berlin] PHP Warning:  Undefined variable $gateway_id in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2311
+[27-Oct-2025 15:55:40 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 15:55:40 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288
+[27-Oct-2025 15:56:40 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 15:56:40 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288
+[27-Oct-2025 15:57:40 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 15:57:40 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288
+[27-Oct-2025 16:06:19 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:246
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(246): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 246
+[27-Oct-2025 16:06:19 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 275
+[27-Oct-2025 16:08:03 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:246
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(246): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 246
+[27-Oct-2025 16:08:03 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 275
+[27-Oct-2025 16:08:36 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 2006 MySQL server has gone away in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 16:08:36 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288

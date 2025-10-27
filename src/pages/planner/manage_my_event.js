@@ -435,7 +435,6 @@ const Manage_my_event = () => {
             if (data.success) {
                 console.log("Event used count updated and package assigned to event");
                 fetchUserPackage(user.user_id);
-                printAlert("Event count updated successfully.", "success");
             } else {
                 printAlert("Failed to update event count.", "error");
             }

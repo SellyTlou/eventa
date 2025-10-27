@@ -18,7 +18,8 @@ function CreateEvent() {
   const [timezone, setTimezone] = useState("Africa/Johannesburg");
   const [eventLocation, setEventLocation] = useState("");
   const [eventUrl, setEventUrl] = useState("myevent");
-  const [fullName, setFullName] = useState("");
+  const [lastname, setLastname] = useState("");
+  const [firstname, setFirstname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -106,7 +107,7 @@ function CreateEvent() {
 
     // Step 3: Account Information
     if (currentStep === 3) {
-      if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
+      if (!firstname.trim() || !lastname.trim() || !email.trim() || !password || !confirmPassword) {
         setError("Please fill in all account fields.");
         return;
       }
@@ -118,11 +119,14 @@ function CreateEvent() {
       try {
         const formData = new FormData();
         formData.append("function", "eventAccConfirm");
-        formData.append("name", fullName.trim());
+        formData.append("name", firstname.trim());
+        formData.append("lastname", lastname.trim());
         formData.append("email", email.trim());
         formData.append("password", password);
 
-        const response = await fetch("https://eventa.xo.je/api/query.php", {
+        const API_URL = process.env.REACT_APP_API_URL;
+
+        const response = await fetch(`${API_URL}/query.php`, {
           method: "POST",
           body: formData,
         });
@@ -359,14 +363,26 @@ function CreateEvent() {
               <h2 className="step-title">Account Information</h2>
               <p className="step-subtitle">Create your account to manage your event</p>
               <div className="form-group-event">
-                <label htmlFor="fullName">Full Name</label>
+                
+                <label htmlFor="fullName">Firstname</label>
                 <input
                   type="text"
                   className="form-control-event"
                   id="fullName"
-                  placeholder="Your full name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your Firstname"
+                  value={firstname}
+                  onChange={(e) => setFirstname(e.target.value)}
+                />
+              </div>
+              <div className="form-group-event">
+                <label htmlFor="lastname">Lastname</label>
+                <input
+                  type="text"
+                  className="form-control-event"
+                  id="lastname"
+                  placeholder="Your Lastname"
+                  value={lastname}
+                  onChange={(e) => setLastname(e.target.value)}
                 />
               </div>
               <div className="form-group-event">

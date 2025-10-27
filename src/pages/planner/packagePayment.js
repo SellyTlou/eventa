@@ -235,7 +235,7 @@ const PackagePayment = () => {
                 if (updateSuccess) {
                     localStorage.removeItem("selectedPackageId");
                     alert("Payment successful! Your package has been upgraded.");
-                    navigate("/manage_my_event");
+                    handleBack();
                 } else {
                     throw new Error("Failed to update user package");
                 }
