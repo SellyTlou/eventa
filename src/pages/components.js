@@ -26,7 +26,7 @@ import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
 import Support from '../pages/support';
-
+import AttendanceStats from './planner/attendance_stats';
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("selectedEventId");
@@ -190,7 +190,7 @@ export function SessionHandler() {
                 <Route path="/email_verify" element={<EmailVerify />} />
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
                 <Route path="/support" element={<Support />} />
-
+                <Route path="/attendance_stats" element={<AttendanceStats />} />
             </Routes>
 
             <SessionWarningModal

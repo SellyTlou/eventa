@@ -2425,6 +2425,147 @@ try {
         }
         exit;
     }
+
+    if ($fun === "removeGuests") {
+        $guest_ids = $_POST['guest_ids'] ?? '';
+    
+        if (empty($guest_ids)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Missing guest IDs",
+            ]);
+            exit;
+        }
+
+        try {
+            $guest_ids_array = explode(',', $guest_ids);
+            $placeholders = str_repeat('?,', count($guest_ids_array) - 1) . '?';
+            
+            $stmt = $pdo->prepare("
+                SELECT rr.guest_id, rr.email, rr.name, e.event_name 
+                FROM rsvp rr 
+                JOIN events e ON rr.event_id = e.event_id 
+                WHERE rr.guest_id IN ($placeholders)
+            ");
+            $stmt->execute($guest_ids_array);
+            $guests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (empty($guests)) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "No guests found with the provided IDs",
+                ]);
+                exit;
+            }
+
+            $eventName = $guests[0]['event_name'] ?? 'the event';
+            $deletedGuests = [];
+
+            // Send notification email to each guest before deleting
+            $SENDGRID_API_KEY = "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"; 
+            $fromEmail = "bugbusters929@gmail.com";          
+            $fromName  = "Eventa (no-reply)";
+
+            $emailSuccessCount = 0;
+            $emailFailedCount = 0;
+
+            foreach ($guests as $guest) {
+                $guestEmail = $guest['email'];
+                $guestName = $guest['name'];
+                $deletedGuests[] = $guestName;
+
+                // Send removal notification email
+                $emailData = [
+                    "personalizations" => [[
+                        "to" => [["email" => $guestEmail, "name" => $guestName]],
+                        "subject" => "Update Regarding Your Invitation to {$eventName}",
+                    ]],
+                    "from" => ["email" => $fromEmail, "name" => $fromName],
+                    "content" => [[
+                        "type" => "text/html",
+                        "value" => "
+                        <html>
+                        <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;'>
+                            <div style='background: #fff; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto;'>
+                                <h1 style='color: #e74c3c;'>Important Update</h1>
+                                <div style='background: #fdf2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #e74c3c;'>
+                                    <p style='margin: 0; font-size: 16px; line-height: 1.6; color: #333;'>
+                                        Your invitation to <strong>{$eventName}</strong> has been cancelled.
+                                    </p>
+                                </div>
+                                <p style='color: #666; font-size: 14px;'>
+                                    We regret to inform you that your registration for this event has been removed. 
+                                </p>
+                                <hr style='border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
+                                <p style='color: #999; font-size: 12px;'>
+                                    This is an automated message. Please do not reply to this email.
+                                </p>
+                            </div>
+                        </body>
+                        </html>"
+                    ]]
+                ];
+
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, "https://api.sendgrid.com/v3/mail/send");
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    "Authorization: Bearer $SENDGRID_API_KEY",
+                    "Content-Type: application/json"
+                ]);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+                $response = curl_exec($ch);
+                $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($status == 202) {
+                    $emailSuccessCount++;
+                } else {
+                    $emailFailedCount++;
+                    error_log("Failed to send removal email to $guestEmail: HTTP $status");
+                }
+            }
+
+            // Now delete the guests from database
+            $stmt = $pdo->prepare("DELETE FROM rsvp WHERE guest_id IN ($placeholders)");
+            $stmt->execute($guest_ids_array);
+            $deletedCount = $stmt->rowCount();
+
+            if ($deletedCount > 0) {
+                $message = "Successfully removed $deletedCount guest(s)";
+                if ($emailSuccessCount > 0) {
+                    $message .= " and sent removal notifications to $emailSuccessCount guest(s)";
+                }
+                if ($emailFailedCount > 0) {
+                    $message .= " (Failed to send emails to $emailFailedCount guest(s))";
+                }
+
+                echo json_encode([
+                    "success" => true,
+                    "message" => $message,
+                    "deleted_count" => $deletedCount,
+                    "notification_sent" => $emailSuccessCount,
+                    "notification_failed" => $emailFailedCount,
+                    "deleted_guests" => $deletedGuests
+                ]);
+            } else {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "No guests were removed"
+                ]);
+            }
+
+        } catch (PDOException $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database error: " . $e->getMessage(),
+            ]);
+        }
+        exit;
+    }
+
 } catch (Exception $e) {
     error_log("Error in query.php: " . $e->getMessage());
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
