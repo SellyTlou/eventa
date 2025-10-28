@@ -27,6 +27,8 @@ import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
 import Support from '../pages/support';
 import AttendanceStats from './planner/attendance_stats';
+import GuestInsights from './planner/guest_insights';
+
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("selectedEventId");
@@ -191,6 +193,7 @@ export function SessionHandler() {
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
+                <Route path="/guest_insights" element={<GuestInsights />} />
             </Routes>
 
             <SessionWarningModal
@@ -593,8 +596,6 @@ export function LoginNav() {
 
     );
 }
-
-
 
 export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [isLogin, setIsLogin] = useState(defaultMode === "login");

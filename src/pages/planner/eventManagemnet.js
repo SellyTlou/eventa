@@ -32,38 +32,38 @@ const RSVPResponses = () => {
         }, 5000);
     };
 
-const [confirmModal, setConfirmModal] = useState({
-    show: false,
-    title: "",
-    message: "",
-    onConfirm: null,
-    onCancel: null
-});
-
-// Custom confirmation helper
-var showConfirm = function (title, message, onConfirm, onCancel) {
-    setConfirmModal({
-        show: true,
-        title: title,
-        message: message,
-        onConfirm: onConfirm,
-        onCancel: onCancel || function() { setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null }); }
+    const [confirmModal, setConfirmModal] = useState({
+        show: false,
+        title: "",
+        message: "",
+        onConfirm: null,
+        onCancel: null
     });
-};
 
-var handleConfirm = function () {
-    if (confirmModal.onConfirm) {
-        confirmModal.onConfirm();
-    }
-    setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null });
-};
+    // Custom confirmation helper
+    var showConfirm = function (title, message, onConfirm, onCancel) {
+        setConfirmModal({
+            show: true,
+            title: title,
+            message: message,
+            onConfirm: onConfirm,
+            onCancel: onCancel || function () { setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null }); }
+        });
+    };
 
-var handleCancel = function () {
-    if (confirmModal.onCancel) {
-        confirmModal.onCancel();
-    }
-    setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null });
-};
+    var handleConfirm = function () {
+        if (confirmModal.onConfirm) {
+            confirmModal.onConfirm();
+        }
+        setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null });
+    };
+
+    var handleCancel = function () {
+        if (confirmModal.onCancel) {
+            confirmModal.onCancel();
+        }
+        setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null });
+    };
 
     const dropdownRef = useRef(null);
     const bulkActionRef = useRef(null);
@@ -175,115 +175,115 @@ var handleCancel = function () {
     };
 
     var handleBulkAction = function (action) {
-    if (selectedGuests.size === 0) {
-        printAlert("Please select at least one guest", "warning");
-        return;
-    }
+        if (selectedGuests.size === 0) {
+            printAlert("Please select at least one guest", "warning");
+            return;
+        }
 
-    switch (action) {
-        case "message":
-            setMessageType("bulk");
-            setMessageContent("");
-            setMessageModalOpen(true);
-            break;
-        case "remove":
-            var guestCount = selectedGuests.size;
-            showConfirm(
-                "Remove Guests",
-                "Are you sure you want to remove " + guestCount + " guest(s)? They will receive a notification email about this change.",
-                function() {
-                    removeSelectedGuests();
-                }
-            );
-            break;
-        default:
-            break;
-    }
-    setBulkActionOpen(false);
-};
+        switch (action) {
+            case "message":
+                setMessageType("bulk");
+                setMessageContent("");
+                setMessageModalOpen(true);
+                break;
+            case "remove":
+                var guestCount = selectedGuests.size;
+                showConfirm(
+                    "Remove Guests",
+                    "Are you sure you want to remove " + guestCount + " guest(s)? They will receive a notification email about this change.",
+                    function () {
+                        removeSelectedGuests();
+                    }
+                );
+                break;
+            default:
+                break;
+        }
+        setBulkActionOpen(false);
+    };
 
 
-   var removeSelectedGuests = async function () {
-    try {
-        var API_URL = process.env.REACT_APP_API_URL;
-        var formData = new FormData();
-        formData.append("function", "removeGuests");
-        formData.append("guest_ids", Array.from(selectedGuests).join(","));
+    var removeSelectedGuests = async function () {
+        try {
+            var API_URL = process.env.REACT_APP_API_URL;
+            var formData = new FormData();
+            formData.append("function", "removeGuests");
+            formData.append("guest_ids", Array.from(selectedGuests).join(","));
 
-        console.log("Removing guests with IDs:", Array.from(selectedGuests));
+            console.log("Removing guests with IDs:", Array.from(selectedGuests));
 
-        var response = await fetch(API_URL + "/query.php", { method: "POST", body: formData });
-        var data = await response.json();
+            var response = await fetch(API_URL + "/query.php", { method: "POST", body: formData });
+            var data = await response.json();
 
-        console.log("Remove guests response:", data);
+            console.log("Remove guests response:", data);
 
-        if (data.success) {
-            printAlert("Successfully removed " + data.deleted_count + " guest(s)", "success");
-            
-            // Refresh the data to update the table
+            if (data.success) {
+                printAlert("Successfully removed " + data.deleted_count + " guest(s)", "success");
+
+                // Refresh the data to update the table
+                var eventId = localStorage.getItem("selectedEventId");
+                fetchRSVPResponses(eventId);
+
+                // Clear selection
+                setSelectedGuests(new Set());
+            } else {
+                printAlert("Failed to remove guests: " + data.message, "error");
+            }
+        } catch (error) {
+            console.error(error);
+            printAlert("Error removing guests", "error");
+        }
+    };
+
+    var sendMessage = async function () {
+        if (!messageContent.trim()) {
+            printAlert("Please enter a message", "warning");
+            return;
+        }
+
+        try {
+            var API_URL = process.env.REACT_APP_API_URL;
             var eventId = localStorage.getItem("selectedEventId");
-            fetchRSVPResponses(eventId);
-            
-            // Clear selection
-            setSelectedGuests(new Set());
-        } else {
-            printAlert("Failed to remove guests: " + data.message, "error");
+
+            var formData = new FormData();
+            formData.append("function", "sendGuestMessage");
+            formData.append("message", messageContent);
+            formData.append("event_id", eventId);
+
+            // Handle guest_ids properly for both bulk and individual
+            var guestIds;
+            if (messageType === "bulk") {
+                guestIds = Array.from(selectedGuests).join(",");
+            } else {
+                // For individual message, ensure it's a string
+                guestIds = selectedGuestForMessage.guest_id.toString();
+            }
+
+            formData.append("guest_ids", guestIds);
+
+            console.log("Sending message with guest IDs:", guestIds);
+            console.log("Message type:", messageType);
+            console.log("Event ID:", eventId);
+
+            var response = await fetch(API_URL + "/send_message_to_guest.php", { method: "POST", body: formData });
+            var data = await response.json();
+
+            console.log("messages response: ", data);
+
+            if (data.success) {
+                var recipientCount = messageType === "bulk" ? selectedGuests.size : 1;
+                printAlert("Message sent to " + recipientCount + " guest(s)", "success");
+                setMessageModalOpen(false);
+                setMessageContent("");
+                setSelectedGuestForMessage(null);
+            } else {
+                printAlert("Failed to send message: " + data.message, "error");
+            }
+        } catch (error) {
+            console.error(error);
+            printAlert("Error sending message", "error");
         }
-    } catch (error) {
-        console.error(error);
-        printAlert("Error removing guests", "error");
-    }
-};
-
- var sendMessage = async function () {
-    if (!messageContent.trim()) {
-        printAlert("Please enter a message", "warning");
-        return;
-    }
-
-    try {
-        var API_URL = process.env.REACT_APP_API_URL;
-        var eventId = localStorage.getItem("selectedEventId");
-        
-        var formData = new FormData();
-        formData.append("function", "sendGuestMessage");
-        formData.append("message", messageContent);
-        formData.append("event_id", eventId);
-
-        // Handle guest_ids properly for both bulk and individual
-        var guestIds;
-        if (messageType === "bulk") {
-            guestIds = Array.from(selectedGuests).join(",");
-        } else {
-            // For individual message, ensure it's a string
-            guestIds = selectedGuestForMessage.guest_id.toString();
-        }
-        
-        formData.append("guest_ids", guestIds);
-
-        console.log("Sending message with guest IDs:", guestIds);
-        console.log("Message type:", messageType);
-        console.log("Event ID:", eventId);
-
-        var response = await fetch(API_URL + "/send_message_to_guest.php", { method: "POST", body: formData });
-        var data = await response.json();
-        
-        console.log("messages response: ", data);
-
-        if (data.success) {
-            var recipientCount = messageType === "bulk" ? selectedGuests.size : 1;
-            printAlert("Message sent to " + recipientCount + " guest(s)", "success");
-            setMessageModalOpen(false);
-            setMessageContent("");
-            setSelectedGuestForMessage(null);
-        } else {
-            printAlert("Failed to send message: " + data.message, "error");
-        }
-    } catch (error) {
-        console.error(error);
-        printAlert("Error sending message", "error");
-    }
-};
+    };
     var openIndividualMessage = function (guest) {
         setSelectedGuestForMessage(guest);
         setMessageType("individual");
@@ -297,12 +297,13 @@ var handleCancel = function () {
     var goToInvitations = function () { return navigate("/invitationPage"); };
     var goToManage = function () { return navigate("/manage_my_event"); };
     var goToProfile = function () { return navigate("/Profile"); };
-    var goToAttStats = function () { return navigate("/attendance_stats"); }; 
-    
-return (
+    var goToGuest = function () { return navigate("/guest_insights"); };
+    var goToAttendanceStats = function () { return navigate("/attendance_stats"); };
+
+    return (
         <div className="dashboard-container">
             {/* Custom alert box */}
-             {alert.show && (
+            {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i
                         className={`fas ${alert.type === "error"
@@ -319,122 +320,79 @@ return (
             )}
 
             {/* Custom Confirmation Modal */}
-{confirmModal.show && (
-    <div className="modal-overlay">
-        <div className="modal-content">
-            <div className="modal-header">
-                <h3>{confirmModal.title}</h3>
-                <button 
-                    className="btn-close"
-                    onClick={handleCancel}
-                >
-                    <i className="bi bi-x"></i>
-                </button>
-            </div>
-            <div className="modal-body">
-                <p>{confirmModal.message}</p>
-            </div>
-            <div className="modal-footer">
-                <button 
-                    className="btn btn-outline"
-                    onClick={handleCancel}
-                >
-                    <i className="bi bi-x-circle"></i> Cancel
-                </button>
-                <button 
-                    className="btn btn-danger"
-                    onClick={handleConfirm}
-                >
-                    <i className="bi bi-check-circle"></i> Confirm
-                </button>
-            </div>
-        </div>
-    </div>
-)}
+            {confirmModal.show && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h3>{confirmModal.title}</h3>
+                            <button
+                                className="btn-close"
+                                onClick={handleCancel}
+                            >
+                                <i className="bi bi-x"></i>
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <p>{confirmModal.message}</p>
+                        </div>
+                        <div className="modal-footer">
+                            <button
+                                className="btn btn-outline"
+                                onClick={handleCancel}
+                            >
+                                <i className="bi bi-x-circle"></i> Cancel
+                            </button>
+                            <button
+                                className="btn btn-danger"
+                                onClick={handleConfirm}
+                            >
+                                <i className="bi bi-check-circle"></i> Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-            {/* HEADER / SIDEBAR */}
+
+            {/* HEADER */}
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
                     <button className="upgrade-btn">Upgrade</button>
-                    <button className={"status-btn " + (eventStatus === "Published" ? "status-success" : "status-failed")}>
-                        {eventStatus}
-                    </button>
-                    <div ref={dropdownRef} className={"profile-container " + (dropdownOpen ? "open" : "")} onClick={toggleDropdown}>
+                    <button className="status-btn status-success">Published</button>
+                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
-                        <span>{user ? user.name : "Guest"}</span>
+                        <span>{user?.name || "Guest"}</span>
                         <i className="bi bi-chevron-bar-down"></i>
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
-                                <button className="dropdown-item" onClick={goToProfile}>Profile</button>
-                                <button className="dropdown-item">Settings</button>
-                                <button className="dropdown-item" onClick={logOut}>Logout</button>
+                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
+                                <button className="dropdown-item"><i className="bi bi-gear"></i>Settings</button>
+                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
+            {/* SIDEBAR */}
             <div className="dashboard-sidebar">
-                <div className="sidebar-header">
-                    <h3>Event Management</h3>
-                </div>
-                
+                <div className="sidebar-header"><h3>Event Management</h3></div>
                 <div className="sidebar-section">
                     <h4>Event Planning</h4>
                     <ul>
-                        <li onClick={goToHome}>
-                            <i className="bi bi-house"></i>
-                            Dashboard
-                        </li>
-                        <li onClick={goToManage}>
-                            <i className="bi bi-megaphone"></i>
-                            Publish Event
-                        </li>
-                        <li onClick={goToInvitations}>
-                            <i className="bi bi-send"></i>
-                            Send Invitations
-                        </li>
-                        <li className="active">
-                            <i className="bi bi-list-check"></i>
-                            RSVP Responses
-                        </li>
+                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
+                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
+                        <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
+                        <li className="active"  onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
                     </ul>
                 </div>
-
                 <div className="sidebar-section">
                     <h4>Event Analytics</h4>
                     <ul>
-                        <li onClick={goToAttStats}>
-                            <i className="bi bi-graph-up"></i>
-                            Attendance Stats
-                        </li>
-                        <li>
-                            <i className="bi bi-people"></i>
-                            Guest Insights
-                        </li>
-                        <li>
-                            <i className="bi bi-calendar-check"></i>
-                            Event Performance
-                        </li>
-                    </ul>
-                </div>
-
-                <div className="sidebar-section">
-                    <h4>Tools</h4>
-                    <ul>
-                        <li>
-                            <i className="bi bi-download"></i>
-                            Export Data
-                        </li>
-                        <li>
-                            <i className="bi bi-printer"></i>
-                            Print Reports
-                        </li>
-                        <li>
-                            <i className="bi bi-gear"></i>
-                            Settings
-                        </li>
+                        <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
+                        <li onClick={goToGuest}><i className="bi bi-people"></i>Guest Insights</li>
+                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
                     </ul>
                 </div>
             </div>
@@ -455,14 +413,14 @@ return (
                                 <option value="maybe">Maybe</option>
                             </select>
                         </div>
-                        <div className="search-box">
+                        <div className="search-box with">
                             <i className="bi bi-search"></i>
-                            <input 
-                                type="text" 
-                                placeholder="Search guests..." 
-                                value={searchTerm} 
-                                onChange={function (e) { return setSearchTerm(e.target.value); }} 
-                                className="search-input" 
+                            <input
+                                type="text"
+                                placeholder="Search guests..."
+                                value={searchTerm}
+                                onChange={function (e) { return setSearchTerm(e.target.value); }}
+                                className="search-input"
                             />
                         </div>
                         <button className="btn btn-sm btn-outline" onClick={function () { return handleSort("asc"); }}>
@@ -481,19 +439,19 @@ return (
                             <strong>{selectedGuests.size}</strong> guest(s) selected
                         </div>
                         <div ref={bulkActionRef} className="bulk-actions">
-                            <button 
+                            <button
                                 className="btn btn-primary btn-sm"
                                 onClick={function () { return handleBulkAction("message"); }}
                             >
                                 <i className="bi bi-envelope"></i> Send Message
                             </button>
-                            <button 
+                            <button
                                 className="btn btn-danger btn-sm"
                                 onClick={function () { return handleBulkAction("remove"); }}
                             >
                                 <i className="bi bi-trash"></i> Remove
                             </button>
-                            <button 
+                            <button
                                 className="btn btn-outline btn-sm"
                                 onClick={function () { return setSelectedGuests(new Set()); }}
                             >
@@ -515,8 +473,8 @@ return (
                             <thead>
                                 <tr>
                                     <th width="50">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={selectedGuests.size === filteredResponses.length && filteredResponses.length > 0}
                                             onChange={selectAllGuests}
                                         />
@@ -524,61 +482,45 @@ return (
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Attending</th>
-                                    <th>Guests</th>
-                                    <th>Message</th>
-                                    <th width="120">Actions</th>
+                                        <th>Guests</th>
+                                        <th>date</th>
+                                    {/* <th width="120">Actions</th> */}
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredResponses.length > 0 ? filteredResponses.map(function (r) { return (
-                                    <tr key={r.guest_id} className={selectedGuests.has(r.guest_id) ? "selected" : ""}>
-                                        <td>
-                                            <input 
-                                                type="checkbox" 
-                                                checked={selectedGuests.has(r.guest_id)}
-                                                onChange={function () { return toggleGuestSelection(r.guest_id); }}
-                                            />
-                                        </td>
-                                        <td className="guest-name">{r.name}</td>
-                                        <td className="guest-email">{r.email}</td>
-                                        <td>
-                                            <span className={"attending-badge " + (r.attending ? r.attending.toLowerCase() : "")}>
-                                                {r.attending}
-                                            </span>
-                                        </td>
-                                        <td className="guest-count">{r.guest_count}</td>
-                                        <td className="guest-message">{r.message || "-"}</td>
-                                        <td>
-                                            <div className="action-buttons">
-                                                <button 
-                                                    className="btn-icon btn-message"
-                                                    onClick={function () { return openIndividualMessage(r); }}
-                                                    title="Send message"
-                                                >
-                                                    <i className="bi bi-envelope"></i>
-                                                </button>
-                                              
-<button 
-    className="btn-icon btn-remove"
-    onClick={function () {
-        showConfirm(
-            "Remove Guest",
-            "Are you sure you want to remove " + r.name + " from the guest list? They will receive a notification email about this change.",
-            function() {
-                var tempSelected = new Set([r.guest_id]);
-                setSelectedGuests(tempSelected);
-                removeSelectedGuests();
-            }
-        );
-    }}
-    title="Remove guest"
->
-    <i className="bi bi-trash"></i>
-</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ); }) : (
+                                {filteredResponses.length > 0 ? filteredResponses.map(function (r) {
+                                    return (
+                                        <tr key={r.guest_id} className={selectedGuests.has(r.guest_id) ? "selected" : ""}>
+                                            <td>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedGuests.has(r.guest_id)}
+                                                    onChange={function () { return toggleGuestSelection(r.guest_id); }}
+                                                />
+                                            </td>
+                                            <td className="guest-name">{r.name}</td>
+                                            <td className="guest-email">{r.email}</td>
+                                            <td>
+                                                <span className={"attending-badge " + (r.attending ? r.attending.toLowerCase() : "")}>
+                                                    {r.attending}
+                                                </span>
+                                            </td>
+                                            <td className="guest-count">{r.guest_count}</td>
+                                            <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                                            {/* <td>
+                                                <div className="action-buttons">
+                                                    <button
+                                                        className="btn-icon btn-message"
+                                                        onClick={function () { return openIndividualMessage(r); }}
+                                                        title="Send message"
+                                                    >
+                                                        <i className="bi bi-envelope"></i>
+                                                    </button>
+                                                </div>
+                                            </td> */}
+                                        </tr>
+                                    );
+                                }) : (
                                     <tr>
                                         <td colSpan="7" className="no-results">
                                             <i className="bi bi-inbox"></i>
@@ -598,12 +540,12 @@ return (
                     <div className="modal-content">
                         <div className="modal-header">
                             <h3>
-                                {messageType === "bulk" 
+                                {messageType === "bulk"
                                     ? "Send Message to " + selectedGuests.size + " Guests"
                                     : "Message " + (selectedGuestForMessage ? selectedGuestForMessage.name : "")
                                 }
                             </h3>
-                            <button 
+                            <button
                                 className="btn-close"
                                 onClick={function () { return setMessageModalOpen(false); }}
                             >
@@ -620,13 +562,13 @@ return (
                             />
                         </div>
                         <div className="modal-footer">
-                            <button 
+                            <button
                                 className="btn btn-outline"
                                 onClick={function () { return setMessageModalOpen(false); }}
                             >
                                 Cancel
                             </button>
-                            <button 
+                            <button
                                 className="btn btn-primary"
                                 onClick={sendMessage}
                             >

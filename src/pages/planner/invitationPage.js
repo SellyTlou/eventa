@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut } from "../components";
+import '../../alert.css';
 
 const InvitationPage = () => {
     const [emailInput, setEmailInput] = useState("");
@@ -17,6 +18,16 @@ const InvitationPage = () => {
     const dropdownRef = useRef(null);
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+
+    const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+    
+        const printAlert = (message, type = "info") => {
+            setAlert({ show: true, message, type });
+            setTimeout(() => {
+                setAlert({ show: false, message: "", type: "" });
+            }, 5000);
+        };
+    
 
     const API_URL = process.env.REACT_APP_API_URL;
     let baseURL = "";
@@ -67,6 +78,9 @@ const InvitationPage = () => {
     const goToEventManagement = () => navigate(`/eventManagement`);
     const goToInvitations = () => navigate(`/invitationPage`);
     const goToManage = () => navigate(`/manage_my_event`);
+    const goToGuestInsights = () => navigate("/guest_insights");
+    const goToAttendanceStats = () => navigate("/attendance_stats");
+    const goToProfile = () => navigate("/Profile");
 
     const fetchEventStatusByID = async (eventId) => {
         try {
@@ -134,7 +148,7 @@ const InvitationPage = () => {
 
     const sendInvitations = async () => {
         if (emailList.length === 0) {
-            setEmailError("Please add at least one email address");
+            printAlert("Please add at least one email address", "error");
             return;
         }
 
@@ -158,6 +172,7 @@ const InvitationPage = () => {
                 }
             } catch (err) {
                 console.warn("Failed to fetch event name:", err);
+                printAlert("Failed to fetch event name", "warning");
             }
             return "Evenda Event";
         };
@@ -215,7 +230,7 @@ const InvitationPage = () => {
             setSendSuccess(true);
             setEmailList([]);
             setTimeout(() => setSendSuccess(false), 3000);
-            alert(`Invitations sent successfully to ${successCount} recipient(s).`);
+            printAlert(`Invitations sent successfully to ${successCount} recipient(s).`, "success");
         } else {
             setEmailError(`${successCount} sent, ${failures.length} failed. Check console.`);
             console.error("Invitation failures:", failures);
@@ -245,50 +260,64 @@ const InvitationPage = () => {
 
     return (
         <div className="dashboard-container">
+            {/* Custom alert box */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
+
+            {/* HEADER */}
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    <button
-                        className={`status-btn ${eventStatus === "Published" ? "status-success" : "status-failed"}`}
-                    >
-                        {eventStatus}
-                    </button>
-                    <div
-                        ref={dropdownRef}
-                        className={`profile-container ${dropdownOpen ? "open" : ""}`}
-                        onClick={toggleDropdown}
-                    >
+                    <button className="upgrade-btn">Upgrade</button>
+                    <button className="status-btn status-success">Published</button>
+                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
-                        <span>{user ? user.name : "Guest"}</span>
+                        <span>{user?.name || "Guest"}</span>
                         <i className="bi bi-chevron-bar-down"></i>
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
-                                <button className="dropdown-item">
-                                    <i className="bi bi-person"></i>Profile
-                                </button>
-                                <button className="dropdown-item">
-                                    <i className="bi bi-gear"></i>Settings
-                                </button>
-                                <button className="dropdown-item" onClick={logOut}>
-                                    <i className="bi bi-box-arrow-right"></i>Logout
-                                </button>
+                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
+                                <button className="dropdown-item"><i className="bi bi-gear"></i>Settings</button>
+                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
+            {/* SIDEBAR */}
             <div className="dashboard-sidebar">
-                <h3>DASHBOARD</h3>
-                <ul>
-                    <li onClick={goToHome}>Home</li>
-                    <li onClick={goToEventManagement}>Overview</li>
-                    <li onClick={goToManage}>Publish</li>
-                    <li onClick={goToInvitations} className="active">
-                        Invitations
-                    </li>
-                    <li>Preview</li>
-                </ul>
+                <div className="sidebar-header"><h3>Event Management</h3></div>
+                <div className="sidebar-section">
+                    <h4>Event Planning</h4>
+                    <ul>
+                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
+                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
+                        <li className="active" onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
+                        <li onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
+                    </ul>
+                </div>
+                <div className="sidebar-section">
+                    <h4>Event Analytics</h4>
+                    <ul>
+                        <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
+                        <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
+                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
+                    </ul>
+                </div>
             </div>
 
             <div className="invitation-content">

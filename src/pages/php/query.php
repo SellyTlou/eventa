@@ -485,21 +485,21 @@ try {
     }
 
     if ($fun === "updateEvent") {
-    $event_id         = $_POST['event_id'] ?? '';
-    $event_name       = $_POST['event_name'] ?? '';
-    $event_start_date = $_POST['event_start_date'] ?? '';
-    $event_start_time = $_POST['event_start_time'] ?? '';
-    $event_end_date   = $_POST['event_end_date'] ?? '';
-    $event_end_time   = $_POST['event_end_time'] ?? '';
-    $updated_at       = date('Y-m-d H:i:s');
+        $event_id         = $_POST['event_id'] ?? '';
+        $event_name       = $_POST['event_name'] ?? '';
+        $event_start_date = $_POST['event_start_date'] ?? '';
+        $event_start_time = $_POST['event_start_time'] ?? '';
+        $event_end_date   = $_POST['event_end_date'] ?? '';
+        $event_end_time   = $_POST['event_end_time'] ?? '';
+        $updated_at       = date('Y-m-d H:i:s');
 
-    if (empty($event_id) || empty($event_name) || empty($event_start_date)) {
-        echo json_encode(["success" => false, "message" => "Missing required fields"]);
-        exit;
-    }
+        if (empty($event_id) || empty($event_name) || empty($event_start_date)) {
+            echo json_encode(["success" => false, "message" => "Missing required fields"]);
+            exit;
+        }
 
-    try {
-        $stmt = $pdo->prepare("
+        try {
+            $stmt = $pdo->prepare("
             UPDATE events SET
                 event_name       = :event_name,
                 event_start_date = :event_start_date,
@@ -510,23 +510,23 @@ try {
             WHERE event_id = :event_id
         ");
 
-        $stmt->execute([
-            ':event_name'       => $event_name,
-            ':event_start_date' => $event_start_date,
-            ':event_start_time' => $event_start_time,
-            ':event_end_date'   => $event_end_date,
-            ':event_end_time'   => $event_end_time,
-            ':updated_at'       => $updated_at,
-            ':event_id'         => $event_id  // This was missing
-        ]);
+            $stmt->execute([
+                ':event_name'       => $event_name,
+                ':event_start_date' => $event_start_date,
+                ':event_start_time' => $event_start_time,
+                ':event_end_date'   => $event_end_date,
+                ':event_end_time'   => $event_end_time,
+                ':updated_at'       => $updated_at,
+                ':event_id'         => $event_id, // This was missing
+            ]);
 
-        echo json_encode(["success" => true, "message" => "Event updated successfully"]);
+            echo json_encode(["success" => true, "message" => "Event updated successfully"]);
 
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+        } catch (PDOException $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+        }
+        exit;
     }
-    exit;
-}
 
     if ($fun === "getUserEvents") {
         $userID = $_POST['userID'] ?? '';
@@ -621,108 +621,131 @@ try {
     }
 
     if ($fun === "guestRsvp") {
-        $guest_id            = generateGuestID();
-        $event_id            = $_POST['event_id'] ?? '';
-        $name                = $_POST['name'] ?? '';
-        $email               = $_POST['email'] ?? '';
-        $attending           = $_POST['attending'] ?? '';
-        $message             = $_POST['message'] ?? '';
-        $guestCount          = (int) ($_POST['guestCount'] ?? 0);
-        $totalRplyGuestCount = (int) ($_POST['totalRplyGuestCount'] ?? 0);
-        $totalEventLimit     = (int) ($_POST['totalEventLimit'] ?? 0);
+    $guest_id            = generateGuestID();
+    $event_id            = $_POST['event_id'] ?? '';
+    $name                = trim($_POST['name'] ?? '');
+    $email               = trim($_POST['email'] ?? '');
+    $attending           = $_POST['attending'] ?? '';
+    $message             = trim($_POST['message'] ?? '');
+    $guestCount          = (int) ($_POST['guestCount'] ?? 0);
+    $totalRplyGuestCount = (int) ($_POST['totalRplyGuestCount'] ?? 0);
+    $totalEventLimit     = (int) ($_POST['totalEventLimit'] ?? 0);
 
-        $totalGuests = ($attending === 'yes') ? ($guestCount + 1) : 0;
+    $totalGuests = ($attending === 'yes') ? ($guestCount + 1) : 0;
 
-        if (empty($event_id) || empty($name) || empty($email) || empty($attending)) {
+    // Validation
+    if (empty($event_id) || empty($name) || empty($email) || empty($attending)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing required fields: event_id, name, email, or attending",
+        ]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // === 1. Check capacity ===
+        $remainingSpots = $totalEventLimit - $totalRplyGuestCount;
+
+        if ($remainingSpots <= 0) {
             echo json_encode([
                 "success" => false,
-                "message" => "Missing required fields: event_id, name, email, or attending",
+                "message" => "Event is full — 0 guest slots left.",
             ]);
             exit;
         }
 
-        try {
-            $remainingSpots = $totalEventLimit - $totalRplyGuestCount;
-
-            if ($remainingSpots <= 0) {
-                echo json_encode([
-                    "success" => false,
-                    "message" => "Event is full — 0 guest slots left.",
-                ]);
-                exit;
-            }
-
-            if ($totalGuests > $remainingSpots) {
-                echo json_encode([
-                    "success" => false,
-                    "message" => "Only {$remainingSpots} guest spot(s) left. Please reduce your guest count.",
-                ]);
-                exit;
-            }
-
-            $checkStmt = $pdo->prepare("
-            SELECT guest_id FROM rsvp WHERE event_id = :event_id AND email = :email
-        ");
-            $checkStmt->execute([
-                ':event_id' => $event_id,
-                ':email'    => $email,
+        if ($totalGuests > $remainingSpots) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Only {$remainingSpots} guest spot(s) left. Please reduce your guest count.",
             ]);
-            $existingGuest = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            exit;
+        }
 
-            if ($existingGuest) {
-                $updateStmt = $pdo->prepare("
+        // === 2. Check if guest already RSVP'd ===
+        $checkStmt = $pdo->prepare("
+            SELECT guest_id FROM rsvp 
+            WHERE event_id = :event_id AND email = :email
+        ");
+        $checkStmt->execute([
+            ':event_id' => $event_id,
+            ':email'    => $email,
+        ]);
+        $existingGuest = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        // === 3. Insert or Update RSVP (no message) ===
+        if ($existingGuest) {
+            $updateStmt = $pdo->prepare("
                 UPDATE rsvp
                 SET name = :name,
                     attending = :attending,
                     guest_count = :guest_count,
-                    message = :message,
                     updated_at = NOW()
                 WHERE guest_id = :guest_id
             ");
-                $updateStmt->execute([
-                    ':name'        => $name,
-                    ':attending'   => $attending,
-                    ':guest_count' => $totalGuests,
-                    ':message'     => $message,
-                    ':guest_id'    => $existingGuest['guest_id'],
-                ]);
+            $updateStmt->execute([
+                ':name'        => $name,
+                ':attending'   => $attending,
+                ':guest_count' => $totalGuests,
+                ':guest_id'    => $existingGuest['guest_id'],
+            ]);
 
-                echo json_encode([
-                    "success"  => true,
-                    "message"  => "RSVP updated successfully!",
-                    "guest_id" => $existingGuest['guest_id'],
-                ]);
-            } else {
-                $stmt = $pdo->prepare("
-                INSERT INTO rsvp (guest_id, event_id, name, email, attending, guest_count, message, created_at)
-                VALUES (:guest_id, :event_id, :name, :email, :attending, :guest_count, :message, NOW())
+            $final_guest_id = $existingGuest['guest_id'];
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO rsvp 
+                (guest_id, event_id, name, email, attending, guest_count, created_at)
+                VALUES (:guest_id, :event_id, :name, :email, :attending, :guest_count, NOW())
             ");
+            $stmt->execute([
+                ':guest_id'    => $guest_id,
+                ':event_id'    => $event_id,
+                ':name'        => $name,
+                ':email'       => $email,
+                ':attending'   => $attending,
+                ':guest_count' => $totalGuests,
+            ]);
 
-                $stmt->execute([
-                    ':guest_id'    => $guest_id,
-                    ':event_id'    => $event_id,
-                    ':name'        => $name,
-                    ':email'       => $email,
-                    ':attending'   => $attending,
-                    ':guest_count' => $totalGuests,
-                    ':message'     => $message,
-                ]);
+            $final_guest_id = $guest_id;
+        }
 
-                echo json_encode([
-                    "success"  => true,
-                    "message"  => "RSVP submitted successfully!",
-                    "guest_id" => $guest_id,
-                ]);
-            }
-
-        } catch (PDOException $e) {
-            echo json_encode([
-                "success" => false,
-                "message" => "Database error: " . $e->getMessage(),
+        // === 4. Save Message to rsvp_messages (if not empty) ===
+        if (!empty($message)) {
+            $msgStmt = $pdo->prepare("
+                INSERT INTO rsvp_messages 
+                (event_id, guest_id, guest_name, guest_email, message, created_at)
+                VALUES (:event_id, :guest_id, :guest_name, :guest_email, :message, NOW())
+                ON DUPLICATE KEY UPDATE 
+                    message = VALUES(message),
+                    created_at = NOW()
+            ");
+            $msgStmt->execute([
+                ':event_id'     => $event_id,
+                ':guest_id'     => $final_guest_id,
+                ':guest_name'   => $name,
+                ':guest_email'  => $email,
+                ':message'      => $message,
             ]);
         }
 
-        exit;
+        $pdo->commit();
+
+        echo json_encode([
+            "success"  => true,
+            "message"  => $existingGuest ? "RSVP updated!" : "RSVP submitted!",
+            "guest_id" => $final_guest_id,
+        ]);
+
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
     }
 
     if ($fun === "getRSVPResponses") {
@@ -2428,7 +2451,7 @@ try {
 
     if ($fun === "removeGuests") {
         $guest_ids = $_POST['guest_ids'] ?? '';
-    
+
         if (empty($guest_ids)) {
             echo json_encode([
                 "success" => false,
@@ -2439,17 +2462,17 @@ try {
 
         try {
             $guest_ids_array = explode(',', $guest_ids);
-            $placeholders = str_repeat('?,', count($guest_ids_array) - 1) . '?';
-            
+            $placeholders    = str_repeat('?,', count($guest_ids_array) - 1) . '?';
+
             $stmt = $pdo->prepare("
-                SELECT rr.guest_id, rr.email, rr.name, e.event_name 
-                FROM rsvp rr 
-                JOIN events e ON rr.event_id = e.event_id 
+                SELECT rr.guest_id, rr.email, rr.name, e.event_name
+                FROM rsvp rr
+                JOIN events e ON rr.event_id = e.event_id
                 WHERE rr.guest_id IN ($placeholders)
             ");
             $stmt->execute($guest_ids_array);
             $guests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             if (empty($guests)) {
                 echo json_encode([
                     "success" => false,
@@ -2458,31 +2481,31 @@ try {
                 exit;
             }
 
-            $eventName = $guests[0]['event_name'] ?? 'the event';
+            $eventName     = $guests[0]['event_name'] ?? 'the event';
             $deletedGuests = [];
 
             // Send notification email to each guest before deleting
-            $SENDGRID_API_KEY = "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"; 
-            $fromEmail = "bugbusters929@gmail.com";          
-            $fromName  = "Eventa (no-reply)";
+            $SENDGRID_API_KEY = "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";
+            $fromEmail        = "bugbusters929@gmail.com";
+            $fromName         = "Eventa (no-reply)";
 
             $emailSuccessCount = 0;
-            $emailFailedCount = 0;
+            $emailFailedCount  = 0;
 
             foreach ($guests as $guest) {
-                $guestEmail = $guest['email'];
-                $guestName = $guest['name'];
+                $guestEmail      = $guest['email'];
+                $guestName       = $guest['name'];
                 $deletedGuests[] = $guestName;
 
                 // Send removal notification email
                 $emailData = [
                     "personalizations" => [[
-                        "to" => [["email" => $guestEmail, "name" => $guestName]],
+                        "to"      => [["email" => $guestEmail, "name" => $guestName]],
                         "subject" => "Update Regarding Your Invitation to {$eventName}",
                     ]],
-                    "from" => ["email" => $fromEmail, "name" => $fromName],
+                    "from"    => ["email" => $fromEmail, "name" => $fromName],
                     "content" => [[
-                        "type" => "text/html",
+                        "type"  => "text/html",
                         "value" => "
                         <html>
                         <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;'>
@@ -2494,7 +2517,7 @@ try {
                                     </p>
                                 </div>
                                 <p style='color: #666; font-size: 14px;'>
-                                    We regret to inform you that your registration for this event has been removed. 
+                                    We regret to inform you that your registration for this event has been removed.
                                 </p>
                                 <hr style='border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
                                 <p style='color: #999; font-size: 12px;'>
@@ -2502,8 +2525,8 @@ try {
                                 </p>
                             </div>
                         </body>
-                        </html>"
-                    ]]
+                        </html>",
+                    ]],
                 ];
 
                 $ch = curl_init();
@@ -2511,13 +2534,13 @@ try {
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, [
                     "Authorization: Bearer $SENDGRID_API_KEY",
-                    "Content-Type: application/json"
+                    "Content-Type: application/json",
                 ]);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
                 $response = curl_exec($ch);
-                $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
 
                 if ($status == 202) {
@@ -2543,17 +2566,17 @@ try {
                 }
 
                 echo json_encode([
-                    "success" => true,
-                    "message" => $message,
-                    "deleted_count" => $deletedCount,
-                    "notification_sent" => $emailSuccessCount,
+                    "success"             => true,
+                    "message"             => $message,
+                    "deleted_count"       => $deletedCount,
+                    "notification_sent"   => $emailSuccessCount,
                     "notification_failed" => $emailFailedCount,
-                    "deleted_guests" => $deletedGuests
+                    "deleted_guests"      => $deletedGuests,
                 ]);
             } else {
                 echo json_encode([
                     "success" => false,
-                    "message" => "No guests were removed"
+                    "message" => "No guests were removed",
                 ]);
             }
 
@@ -2565,6 +2588,97 @@ try {
         }
         exit;
     }
+
+    if ($fun === "getGuestInsights") {
+        $event_id = $_POST['event_id'] ?? '';
+
+        if (empty($event_id)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Missing event ID",
+            ]);
+            exit;
+        }
+
+        try {
+            // 1. Get event name
+            $stmtEvent = $pdo->prepare("SELECT event_name FROM events WHERE event_id = :event_id");
+            $stmtEvent->execute([":event_id" => $event_id]);
+            $event = $stmtEvent->fetch(PDO::FETCH_ASSOC);
+
+            // 2. Get RSVPs + guest messages
+            $stmt = $pdo->prepare("
+            SELECT
+                r.guest_id,
+                r.event_id,
+                r.name,
+                r.email,
+                r.attending,
+                r.guest_count,
+                r.created_at,
+                rm.id AS msg_id,
+                rm.message AS guest_message,
+                rm.reply,
+                rm.replied_at
+            FROM rsvp r
+            LEFT JOIN rsvp_messages rm
+                ON r.guest_id = rm.guest_id
+                AND r.event_id = rm.event_id
+            WHERE r.event_id = :event_id
+            ORDER BY r.created_at DESC
+        ");
+            $stmt->execute([":event_id" => $event_id]);
+            $guests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                "success" => true,
+                "guests"  => $guests,
+                "event"   => $event,
+            ]);
+        } catch (PDOException $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database error: " . $e->getMessage(),
+            ]);
+        }
+        exit;
+    }
+
+    if ($fun === "replyToGuestMessage") {
+    $msg_id = $_POST['msg_id'] ?? '';
+    $reply  = trim($_POST['reply'] ?? '');
+
+    if (empty($msg_id) || empty($reply)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing message ID or reply",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE rsvp_messages
+            SET reply = :reply, replied_at = NOW()
+            WHERE id = :msg_id
+        ");
+        $success = $stmt->execute([
+            ":reply"  => $reply,
+            ":msg_id" => $msg_id,
+        ]);
+
+        echo json_encode([
+            "success" => $success,
+            "message" => $success ? "Reply sent" : "Failed to update",
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
 
 } catch (Exception $e) {
     error_log("Error in query.php: " . $e->getMessage());
