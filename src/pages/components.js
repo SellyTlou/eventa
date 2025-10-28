@@ -26,7 +26,9 @@ import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
 import Support from '../pages/support';
-import AttendanceStats from './planner/attendance_stats';import SecurityQuestionsModal from './SecurityQuestionsModal';
+import AttendanceStats from './planner/attendance_stats';
+import SecurityQuestionsModal from './SecurityQuestionsModal';
+import GuestInsights from './planner/guest_insights';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
