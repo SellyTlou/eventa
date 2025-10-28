@@ -18,8 +18,65 @@ function ActiveEventDetails() {
     const [eventEndTime, setEventEndTime] = useState("13:15");
     const [timezone, setTimezone] = useState("Africa/Johannesburg");
     const [eventLocation, setEventLocation] = useState("");
-    const [eventUrl, setEventUrl] = useState("myevent");
-    const [error, setError] = useState("");
+    const [errors, setErrors] = useState({});
+    const [touched, setTouched] = useState({});
+
+    // Validation rules (removed eventUrl validation)
+    const validationRules = {
+        eventName: {
+            required: true,
+            minLength: 2,
+            maxLength: 100,
+            pattern: /^[a-zA-Z0-9\s\-_'",.!&()@]+$/,
+            message: "Event name must be 2-100 characters long and can only contain letters, numbers, spaces, and basic punctuation"
+        },
+        eventStartDate: {
+            required: true,
+            futureDate: true,
+            message: "Event start date must be in the future"
+        },
+        eventStartTime: {
+            required: true,
+            message: "Event start time is required"
+        },
+        eventEndDate: {
+            required: true,
+            futureDate: true,
+            afterStartDate: true,
+            message: "Event end date must be after start date"
+        },
+        eventEndTime: {
+            required: true,
+            afterStartTime: true,
+            message: "Event end time must be after start time"
+        },
+        timezone: {
+            required: true,
+            message: "Timezone is required"
+        },
+        eventLocation: {
+            maxLength: 200,
+            message: "Location cannot exceed 200 characters"
+        }
+    };
+
+    // Helper function to get today's date in YYYY-MM-DD format
+    const getTodayDate = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
+    // Helper function to get minimum end date
+    const getMinEndDate = () => {
+        if (eventStartDate) {
+            const startDate = new Date(eventStartDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Return the later date between start date and today
+            return startDate > today ? eventStartDate : getTodayDate();
+        }
+        return getTodayDate();
+    };
 
     // Load saved data on component mount
     useEffect(() => {
@@ -31,8 +88,139 @@ function ActiveEventDetails() {
         if (savedData.eventEndTime) setEventEndTime(savedData.eventEndTime);
         if (savedData.timezone) setTimezone(savedData.timezone);
         if (savedData.eventLocation) setEventLocation(savedData.eventLocation);
-        if (savedData.eventUrl) setEventUrl(savedData.eventUrl);
     }, []);
+
+    // Validation functions (removed eventUrl validation)
+    const validateField = (name, value, allValues = {}) => {
+        const rules = validationRules[name];
+        if (!rules) return "";
+
+        // Required validation
+        if (rules.required && (!value || value.trim() === "")) {
+            return "This field is required";
+        }
+
+        // Min length validation
+        if (rules.minLength && value && value.length < rules.minLength) {
+            return `Must be at least ${rules.minLength} characters long`;
+        }
+
+        // Max length validation
+        if (rules.maxLength && value && value.length > rules.maxLength) {
+            return `Cannot exceed ${rules.maxLength} characters`;
+        }
+
+        // Pattern validation
+        if (rules.pattern && value && !rules.pattern.test(value)) {
+            return rules.message;
+        }
+
+        // Future date validation - enhanced
+        if (rules.futureDate && value) {
+            const inputDate = new Date(value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (inputDate < today) {
+                return "Event date cannot be in the past";
+            }
+        }
+
+        // Date comparison validation - enhanced
+        if (rules.afterStartDate && value && allValues.eventStartDate) {
+            const startDate = new Date(allValues.eventStartDate);
+            const endDate = new Date(value);
+            if (endDate < startDate) {
+                return "End date cannot be before start date";
+            }
+            
+            // Also check if end date is in the past
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (endDate < today) {
+                return "End date cannot be in the past";
+            }
+        }
+
+        // Time comparison validation
+        if (rules.afterStartTime && value && allValues.eventStartTime && 
+            allValues.eventStartDate && allValues.eventEndDate) {
+            
+            const startDateTime = new Date(`${allValues.eventStartDate}T${allValues.eventStartTime}`);
+            const endDateTime = new Date(`${allValues.eventEndDate}T${value}`);
+            
+            if (startDateTime.getTime() === endDateTime.getTime()) {
+                return "End time cannot be the same as start time";
+            }
+            
+            if (endDateTime <= startDateTime) {
+                return "End time must be after start time";
+            }
+        }
+
+        return "";
+    };
+
+    const validateStep = (step, subStep = null) => {
+        const newErrors = {};
+
+        if (step === 1) {
+            const eventNameError = validateField("eventName", eventName);
+            if (eventNameError) newErrors.eventName = eventNameError;
+        }
+
+        if (step === 2) {
+            if (subStep === 1) {
+                const allValues = {
+                    eventStartDate,
+                    eventStartTime,
+                    eventEndDate,
+                    eventEndTime
+                };
+
+                const startDateError = validateField("eventStartDate", eventStartDate);
+                if (startDateError) newErrors.eventStartDate = startDateError;
+
+                const startTimeError = validateField("eventStartTime", eventStartTime, allValues);
+                if (startTimeError) newErrors.eventStartTime = startTimeError;
+
+                const endDateError = validateField("eventEndDate", eventEndDate, allValues);
+                if (endDateError) newErrors.eventEndDate = endDateError;
+
+                const endTimeError = validateField("eventEndTime", eventEndTime, allValues);
+                if (endTimeError) newErrors.eventEndTime = endTimeError;
+
+                const timezoneError = validateField("timezone", timezone);
+                if (timezoneError) newErrors.timezone = timezoneError;
+            }
+
+            if (subStep === 2) {
+                const locationError = validateField("eventLocation", eventLocation);
+                if (locationError) newErrors.eventLocation = locationError;
+            }
+            // Removed subStep === 3 (URL validation)
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleBlur = (fieldName) => {
+        setTouched(prev => ({ ...prev, [fieldName]: true }));
+        
+        // Validate individual field on blur
+        const allValues = {
+            eventStartDate,
+            eventStartTime,
+            eventEndDate,
+            eventEndTime,
+            eventName,
+            eventLocation,
+            timezone
+        };
+        
+        const error = validateField(fieldName, allValues[fieldName], allValues);
+        setErrors(prev => ({ ...prev, [fieldName]: error }));
+    };
 
     const getStepClass = (step) => {
         if (step === currentStep) {
@@ -45,55 +233,55 @@ function ActiveEventDetails() {
     };
 
     const handleNext = () => {
-        setError("");
+        // Mark all fields in current step as touched
+        const newTouched = { ...touched };
+        if (currentStep === 1) {
+            newTouched.eventName = true;
+        } else if (currentStep === 2) {
+            if (step2SubStep === 1) {
+                newTouched.eventStartDate = true;
+                newTouched.eventStartTime = true;
+                newTouched.eventEndDate = true;
+                newTouched.eventEndTime = true;
+                newTouched.timezone = true;
+            } else if (step2SubStep === 2) {
+                newTouched.eventLocation = true;
+            }
+            // Removed subStep === 3
+        }
+        setTouched(newTouched);
+
+        // Validate current step
+        const isValid = validateStep(currentStep, step2SubStep);
+        if (!isValid) return;
 
         if (currentStep === 1) {
-            if (!eventName.trim()) {
-                setError("Please enter the event name.");
-                return;
-            }
-
-            // Save step 1 data
             if (saveStep1Data(eventName)) {
                 setCurrentStep(2);
             } else {
-                setError("Failed to save event data. Please try again.");
+                setErrors({ general: "Failed to save event data. Please try again." });
             }
         }
         else if (currentStep === 2) {
             if (step2SubStep === 1) {
-                if (!eventStartDate || !eventStartTime || !eventEndDate || !eventEndTime || !timezone) {
-                    setError("Please fill in all date, time, and timezone fields.");
-                    return;
-                }
                 setStep2SubStep(2);
             }
             else if (step2SubStep === 2) {
-                // Location is optional, so we can proceed even if empty
-                setStep2SubStep(3);
-            }
-            else if (step2SubStep === 3) {
-                if (!eventUrl.trim()) {
-                    setError("Please enter a URL for your event.");
-                    return;
-                }
-
-                // Save all step 2 data
                 const step2Data = {
                     eventStartDate,
                     eventStartTime,
                     eventEndDate,
                     eventEndTime,
                     timezone,
-                    eventLocation,
-                    eventUrl
+                    eventLocation
+                    // Removed eventUrl
                 };
 
                 if (saveStep2Data(step2Data)) {
                     setCurrentStep(3);
                     setStep2SubStep(1);
                 } else {
-                    setError("Failed to save event details. Please try again.");
+                    setErrors({ general: "Failed to save event details. Please try again." });
                 }
             }
         }
@@ -118,18 +306,17 @@ function ActiveEventDetails() {
 
     const handleSkip = () => {
         if (currentStep === 2) {
-            if (step2SubStep < 3) {
+            if (step2SubStep < 2) { // Changed from 3 to 2
                 setStep2SubStep(step2SubStep + 1);
             } else {
-                // Save data before moving to next step
                 const step2Data = {
                     eventStartDate,
                     eventStartTime,
                     eventEndDate,
                     eventEndTime,
                     timezone,
-                    eventLocation,
-                    eventUrl
+                    eventLocation
+                    // Removed eventUrl
                 };
 
                 if (saveStep2Data(step2Data)) {
@@ -140,10 +327,13 @@ function ActiveEventDetails() {
         }
     };
 
+    // Helper function to check if field should show error
+    const shouldShowError = (fieldName) => {
+        return touched[fieldName] && errors[fieldName];
+    };
+
     return (
         <div>
-            {/* Header Bar with Logo and Back Button */}
-
             <LoginNav />
             <button
                 className="eventa-back-btn"
@@ -175,26 +365,30 @@ function ActiveEventDetails() {
                     {/* Step 1: Event Name */}
                     {currentStep === 1 && (
                         <div className="event-step">
-                            {error && <div className="form-error" style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+                            {errors.general && <div className="form-error">{errors.general}</div>}
                             <h2 className="step-title">What's the name of your Event</h2>
                             <p className="step-subtitle">Type the name of your Event</p>
                             <div className="form-group-event">
                                 <input
                                     type="text"
-                                    className="form-control-event"
+                                    className={`form-control-event ${shouldShowError('eventName') ? 'error' : ''}`}
                                     id="eventName"
                                     placeholder="e.g., mfana's Birthday Party"
                                     value={eventName}
                                     onChange={(e) => setEventName(e.target.value)}
+                                    onBlur={() => handleBlur('eventName')}
                                 />
+                                {shouldShowError('eventName') && (
+                                    <div className="field-error">{errors.eventName}</div>
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {/* Step 2: Event Details with sub-steps */}
+                    {/* Step 2: Event Details with sub-steps (removed URL sub-step) */}
                     {currentStep === 2 && (
                         <div className="event-step">
-                            {error && <div className="form-error" style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+                            {errors.general && <div className="form-error">{errors.general}</div>}
                             <h2 className="step-title">Event Details</h2>
                             {step2SubStep === 1 && (
                                 <>
@@ -206,21 +400,30 @@ function ActiveEventDetails() {
                                             <label htmlFor="eventStartDate">EVENT START - Date</label>
                                             <input
                                                 type="date"
-                                                className="form-control-event"
+                                                className={`form-control-event ${shouldShowError('eventStartDate') ? 'error' : ''}`}
                                                 id="eventStartDate"
                                                 value={eventStartDate}
                                                 onChange={(e) => setEventStartDate(e.target.value)}
+                                                onBlur={() => handleBlur('eventStartDate')}
+                                                min={getTodayDate()}
                                             />
+                                            {shouldShowError('eventStartDate') && (
+                                                <div className="field-error">{errors.eventStartDate}</div>
+                                            )}
                                         </div>
                                         <div className="datetime-group">
                                             <label htmlFor="eventStartTime">Time</label>
                                             <input
                                                 type="time"
-                                                className="form-control-event"
+                                                className={`form-control-event ${shouldShowError('eventStartTime') ? 'error' : ''}`}
                                                 id="eventStartTime"
                                                 value={eventStartTime}
                                                 onChange={(e) => setEventStartTime(e.target.value)}
+                                                onBlur={() => handleBlur('eventStartTime')}
                                             />
+                                            {shouldShowError('eventStartTime') && (
+                                                <div className="field-error">{errors.eventStartTime}</div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="datetime-row">
@@ -228,36 +431,49 @@ function ActiveEventDetails() {
                                             <label htmlFor="eventEndDate">EVENT END - Date</label>
                                             <input
                                                 type="date"
-                                                className="form-control-event"
+                                                className={`form-control-event ${shouldShowError('eventEndDate') ? 'error' : ''}`}
                                                 id="eventEndDate"
                                                 value={eventEndDate}
                                                 onChange={(e) => setEventEndDate(e.target.value)}
+                                                onBlur={() => handleBlur('eventEndDate')}
+                                                min={getMinEndDate()}
                                             />
+                                            {shouldShowError('eventEndDate') && (
+                                                <div className="field-error">{errors.eventEndDate}</div>
+                                            )}
                                         </div>
                                         <div className="datetime-group">
                                             <label htmlFor="eventEndTime">Time</label>
                                             <input
                                                 type="time"
-                                                className="form-control-event"
+                                                className={`form-control-event ${shouldShowError('eventEndTime') ? 'error' : ''}`}
                                                 id="eventEndTime"
                                                 value={eventEndTime}
                                                 onChange={(e) => setEventEndTime(e.target.value)}
+                                                onBlur={() => handleBlur('eventEndTime')}
                                             />
+                                            {shouldShowError('eventEndTime') && (
+                                                <div className="field-error">{errors.eventEndTime}</div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="form-group-event">
                                         <label htmlFor="timezone">TIMEZONE</label>
                                         <select
-                                            className="form-control-event"
+                                            className={`form-control-event ${shouldShowError('timezone') ? 'error' : ''}`}
                                             id="timezone"
                                             value={timezone}
                                             onChange={(e) => setTimezone(e.target.value)}
+                                            onBlur={() => handleBlur('timezone')}
                                         >
                                             <option value="Africa/Johannesburg">Africa/Johannesburg</option>
                                             <option value="UTC">UTC</option>
                                             <option value="Europe/London">Europe/London</option>
                                             <option value="America/New_York">America/New_York</option>
                                         </select>
+                                        {shouldShowError('timezone') && (
+                                            <div className="field-error">{errors.timezone}</div>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -267,39 +483,21 @@ function ActiveEventDetails() {
                                     <div className="form-group-event">
                                         <input
                                             type="text"
-                                            className="form-control-event"
+                                            className={`form-control-event ${shouldShowError('eventLocation') ? 'error' : ''}`}
                                             id="eventLocation"
                                             placeholder="Venue or Address"
                                             value={eventLocation}
                                             onChange={(e) => setEventLocation(e.target.value)}
+                                            onBlur={() => handleBlur('eventLocation')}
                                         />
+                                        {shouldShowError('eventLocation') && (
+                                            <div className="field-error">{errors.eventLocation}</div>
+                                        )}
                                         <p className="text-muted small mt-1">Not sure yet? You can add location later.</p>
                                     </div>
                                 </>
                             )}
-                            {step2SubStep === 3 && (
-                                <>
-                                    <p className="step-subtitle">Customize your Evenda URL link</p>
-                                    <div className="form-group-event">
-                                        <input
-                                            type="text"
-                                            className="form-control-event"
-                                            id="eventUrl"
-                                            placeholder="myevent"
-                                            value={eventUrl}
-                                            onChange={(e) => setEventUrl(e.target.value)}
-                                        />
-                                        <div className="url-preview">
-                                            <span className="url-preview-prefix">https://</span>
-                                            <span className="url-preview-value">{eventUrl || "myevent"}</span>
-                                            <span className="url-preview-prefix">evenda.com</span>
-                                        </div>
-                                        <p className="text-muted small mt-1">
-                                            This is the link you'll give to your guests so they can RSVP to your event.
-                                        </p>
-                                    </div>
-                                </>
-                            )}
+                            {/* Removed step2SubStep === 3 (URL step) */}
                         </div>
                     )}
 
@@ -316,12 +514,10 @@ function ActiveEventDetails() {
                                 <p><strong>Name:</strong> {eventName}</p>
                                 <p><strong>When:</strong> {eventStartDate} {eventStartTime} to {eventEndDate} {eventEndTime}</p>
                                 <p><strong>Where:</strong> {eventLocation || "Not specified"}</p>
-                                <p><strong>URL:</strong> https://{eventUrl || "myevent"}.evenda.com</p>
                             </div>
                         </div>
                     )}
                 </div>
-
 
                 <div className="create-event-footer">
                     <div>
@@ -330,7 +526,7 @@ function ActiveEventDetails() {
                                 Back
                             </button>
                         )}
-                        {currentStep === 2 && step2SubStep < 3 && (
+                        {currentStep === 2 && step2SubStep < 2 && ( // Changed from 3 to 2
                             <button className="btn-event btn-event-skip" onClick={handleSkip}>
                                 Skip for now
                             </button>
@@ -340,8 +536,7 @@ function ActiveEventDetails() {
                         <button className="btn-event btn-event-next" onClick={handleNext}>
                             {currentStep === 1 && "NEXT: EVENT DETAILS"}
                             {currentStep === 2 && step2SubStep === 1 && "NEXT: LOCATION"}
-                            {currentStep === 2 && step2SubStep === 2 && "NEXT: EVENTA URL"}
-                            {currentStep === 2 && step2SubStep === 3 && "NEXT: CHOOSE THEME"}
+                            {currentStep === 2 && step2SubStep === 2 && "NEXT: CHOOSE THEME"} {/* Updated text */}
                             {currentStep === 3 && "CHOOSE A THEME"}
                         </button>
                     </div>

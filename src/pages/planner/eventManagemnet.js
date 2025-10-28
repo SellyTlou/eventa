@@ -80,7 +80,7 @@ const RSVPResponses = () => {
             const response = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
             const data = await response.json();
             if (data.success && data.status) {
-                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+                setEventStatus(data.status.published === 1 ? "Published" : "Unpublished");
             }
             else {
                 setEventStatus("Unknown");

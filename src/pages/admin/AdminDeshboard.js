@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import "../../App.css";
 import "../../index.css";
+import "../../alert.css"
 import { Footer } from "../components";
 import activityQueue from "../activityQueue";
+
 
 function AdminDashboard() {
     const [activeTab, setActiveTab] = useState("dashboard");
@@ -14,12 +16,13 @@ function AdminDashboard() {
         inactive_users: 0 
     });
     const [systemActivities, setSystemActivities] = useState([]);
+    const [alert, setAlert] = useState({ show: false, message: '', type: '' });
     const [invitationAnalytics, setInvitationAnalytics] = useState([]);
     const [pricingPlans, setPricingPlans] = useState([]);
     const [usersData, setUsersData] = useState([]);
     const [revenueData, setRevenueData] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [adminUserId, setAdminUserId] = useState("ADMIN-003");
+    const [adminUserId, setAdminUserId] = useState(null);
     const [adminProfile, setAdminProfile] = useState(null);
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [profileImage, setProfileImage] = useState(null);
@@ -27,25 +30,79 @@ function AdminDashboard() {
     const [showBackupModal, setShowBackupModal] = useState(false);
     const [generating, setGenerating] = useState(false);
     const [reportForm, setReportForm] = useState({
-    report_type: 'users',
-    date_range: 'all',
-    format: 'pdf'
-});
-const [downloadUrl, setDownloadUrl] = useState('');
-const [actionMessage, setActionMessage] = useState('');   
-const [showLogsModal, setShowLogsModal] = useState(false);
-const [allActivities, setAllActivities] = useState([]);
-const [logsLoading, setLogsLoading] = useState(false);
-const [logsSearch, setLogsSearch] = useState("");
-const [logsFilter, setLogsFilter] = useState("all");  
+        report_type: 'users',
+        date_range: 'all',
+        format: 'csv'
+    });
+    const [downloadUrl, setDownloadUrl] = useState('');
+    const [actionMessage, setActionMessage] = useState('');   
+    const [showLogsModal, setShowLogsModal] = useState(false);
+    const [allActivities, setAllActivities] = useState([]);
+    const [logsLoading, setLogsLoading] = useState(false);
+    const [logsSearch, setLogsSearch] = useState("");
+    const [logsFilter, setLogsFilter] = useState("all");
+    const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+    const [newAdminData, setNewAdminData] = useState({
+        name: '',
+        lastname: '',
+        email: '',
+        password: ''
+    });
+
+    const printAlert = (message, type = 'info') => {
+        setAlert({ show: true, message, type });
+
+        setTimeout(() => {
+            setAlert({ show: false, message: '', type: '' });
+        }, 5000);
+    };
+
+    // ADD THIS NEW STATE
+    const [isInitialized, setIsInitialized] = useState(false);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
-    
-    // Create refs for the profile trigger and dropdown
     const profileTriggerRef = useRef(null);
     const profileDropdownRef = useRef(null);
 
     // Silent logging function
+    const createAdmin = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'createAdmin');
+            formData.append('requesting_user_id', adminUserId);
+            formData.append('admin_user_id', adminUserId);
+            formData.append('name', newAdminData.name);
+            formData.append('lastname', newAdminData.lastname);
+            formData.append('email', newAdminData.email);
+            formData.append('password', newAdminData.password);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('Admin user created successfully!');
+                setShowCreateAdminModal(false);
+                setNewAdminData({
+                    name: '',
+                    lastname: '',
+                    email: '',
+                    password: ''
+                });
+                // Refresh users data if needed
+                fetchUsersData();
+            } else {
+                alert('Error creating admin: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error creating admin:', error);
+            alert('Error creating admin user');
+        }
+    };
+
     const logActivity = (action, description, userId = null) => {
         activityQueue.enqueue({
             userId: userId || adminUserId,
@@ -55,22 +112,23 @@ const [logsFilter, setLogsFilter] = useState("all");
     };
 
     // Reset forms when modals open
-useEffect(() => {
-    if (showReportModal) {
-        setReportForm({
-            report_type: 'users',
-            date_range: 'all'
-        });
-        setActionMessage('');
-    }
-}, [showReportModal]);
+    useEffect(() => {
+        if (showReportModal) {
+            setReportForm({
+                report_type: 'users',
+                date_range: 'all',
+                format: 'csv'
+            });
+            setActionMessage('');
+        }
+    }, [showReportModal]);
 
-useEffect(() => {
-    if (showBackupModal) {
-        setActionMessage('');
-        setDownloadUrl('');
-    }
-}, [showBackupModal]);
+    useEffect(() => {
+        if (showBackupModal) {
+            setActionMessage('');
+            setDownloadUrl('');
+        }
+    }, [showBackupModal]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -94,28 +152,72 @@ useEffect(() => {
         };
     }, [showProfileDropdown]);
 
+    // UPDATED: Initialize admin identity from localStorage with loading state
     useEffect(() => {
+        try {
+            const userJson = localStorage.getItem('user');
+            if (userJson) {
+                const userObj = JSON.parse(userJson);
+                if (userObj && userObj.user_id) {
+                    setAdminUserId(userObj.user_id);
+                    setAdminProfile({
+                        name: userObj.name,
+                        lastname: userObj.lastname,
+                        email: userObj.email,
+                        role: userObj.role,
+                    });
+                    
+                    // Load profile image from localStorage
+                    const savedImage = localStorage.getItem('adminProfileImage');
+                    if (savedImage) setProfileImage(savedImage);
+                    
+                    console.log('Admin initialized with user ID:', userObj.user_id);
+                }
+            }
+            // MARK AS INITIALIZED REGARDLESS - EVEN IF NO USER FOUND
+            setIsInitialized(true);
+        } catch (err) {
+            console.error('Error initializing admin from storage:', err);
+            setIsInitialized(true); // Even on error, mark as initialized
+        }
+    }, []);
+
+    // UPDATED: Only fetch data when we have both adminUserId AND isInitialized
+    useEffect(() => {
+        if (!adminUserId || !isInitialized) {
+            console.log('Skipping data fetch - waiting for initialization. adminUserId:', adminUserId, 'isInitialized:', isInitialized);
+            return;
+        }
+
+        console.log('Starting data fetch with adminUserId:', adminUserId);
+
         window.fetchDashboardData = fetchDashboardData;
         window.fetchUsersData = fetchUsersData;
+
+        // Fetch profile and initial data
         fetchAdminProfile();
+        fetchDashboardData();
+        fetchUsersData();
+        fetchPricingPlans();
+        fetchInvitationAnalytics();
+        fetchRevenueData();
 
         // Log admin dashboard access
         logActivity('Admin Dashboard Accessed', 'Administrator accessed the system dashboard');
 
-        // Load profile image from localStorage
-        const savedImage = localStorage.getItem('adminProfileImage');
-        if (savedImage) {
-            setProfileImage(savedImage);
-        }
-        
         return () => {
             window.fetchDashboardData = null;
             window.fetchUsersData = null;
         };
-    }, []);
+    }, [adminUserId, isInitialized]); // Added isInitialized dependency
 
     // Fetch admin profile
     const fetchAdminProfile = async () => {
+        if (!adminUserId) {
+            console.log('Skipping fetchAdminProfile: adminUserId not set');
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('function', 'getAdminProfile');
@@ -138,33 +240,38 @@ useEffect(() => {
         }
     };
 
-    // Fetch data based on active tab
+    // UPDATED: Fetch data based on active tab with initialization check
     useEffect(() => {
         const fetchData = async () => {
+            if (!adminUserId || !isInitialized) {
+                console.log('Skipping tab data fetch - not initialized');
+                return;
+            }
+
             setLoading(true);
             try {
                 switch(activeTab) {
                     case "dashboard":
                         await fetchDashboardData();
                         await fetchSystemActivities();
-                        logActivity('Dashboard Tab Viewed', 'Administrator viewed dashboard statistics');
+                        //logActivity('Dashboard Tab Viewed', 'Administrator viewed dashboard statistics');
                         break;
                     case "invitations":
                         await fetchInvitationAnalytics();
-                        logActivity('Invitations Tab Viewed', 'Administrator viewed invitation analytics');
+                       // logActivity('Invitations Tab Viewed', 'Administrator viewed invitation analytics');
                         break;
                     case "pricing":
                         await fetchPricingPlans();
                         await fetchRevenueData();
-                        logActivity('Pricing Tab Viewed', 'Administrator viewed pricing management');
+                        //logActivity('Pricing Tab Viewed', 'Administrator viewed pricing management');
                         break;
                     case "users":
                         await fetchUsersData();
-                        logActivity('Users Tab Viewed', 'Administrator viewed user management');
+                       // logActivity('Users Tab Viewed', 'Administrator viewed user management');
                         break;
                     case "profile":
                         await fetchAdminProfile();
-                        logActivity('Profile Tab Viewed', 'Administrator viewed profile settings');
+                        //logActivity('Profile Tab Viewed', 'Administrator viewed profile settings');
                         break;
                     default:
                         break;
@@ -178,9 +285,14 @@ useEffect(() => {
         };
 
         fetchData();
-    }, [activeTab]);
+    }, [activeTab, adminUserId, isInitialized]); // Added dependencies
 
     const fetchDashboardData = async () => {
+        if (!adminUserId) {
+            console.log('Skipping fetchDashboardData: adminUserId not set');
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('function', 'getDashboardStats');
@@ -197,7 +309,7 @@ useEffect(() => {
                     setDashboardData(data.stats);
                 } else if (data.message && data.message.includes("Unauthorized")) {
                     console.error("Admin access denied:", data.message);
-                    alert("Admin access denied. Please log in as administrator.");
+                    // Don't show alert here to avoid popups
                 }
             }
         } catch (error) {
@@ -206,6 +318,11 @@ useEffect(() => {
     };
 
     const fetchSystemActivities = async () => {
+        if (!adminUserId) {
+            console.log('Skipping fetchSystemActivities: adminUserId not set');
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('function', 'getSystemActivity');
@@ -247,52 +364,62 @@ useEffect(() => {
     };
 
     // Generate report function
- const generateReport = async () => {
-    try {
-        setGenerating(true);
-        setActionMessage('Generating report...');
-
-        const formData = new FormData();
-        formData.append('function', 'generateReport');
-        formData.append('admin_user_id', adminUserId);
-        formData.append('report_type', reportForm.report_type);
-        formData.append('date_range', reportForm.date_range);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            setActionMessage('Report generated! Downloading...');
-            
-            // Download the CSV file
-            const downloadUrl = `${API_BASE_URL}/reports/${data.filename}`;
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = data.filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            setShowReportModal(false);
-            setActionMessage('');
-            
-        } else {
-            setActionMessage('Error: ' + data.message);
+    const generateReport = async () => {
+        if (!adminUserId) {
+            alert('Admin user ID not available');
+            return;
         }
-    } catch (error) {
-        console.error('Error generating report:', error);
-        setActionMessage('Error generating report');
-    } finally {
-        setGenerating(false);
-    }
-};
+
+        try {
+            setGenerating(true);
+            setActionMessage('Generating report...');
+
+            const formData = new FormData();
+            formData.append('function', 'generateReport');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('report_type', reportForm.report_type);
+            formData.append('date_range', reportForm.date_range);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                setActionMessage('Report generated! Downloading...');
+                
+                // Download the CSV file
+                const downloadUrl = `${API_BASE_URL}/reports/${data.filename}`;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = data.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setShowReportModal(false);
+                setActionMessage('');
+                
+            } else {
+                setActionMessage('Error: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error generating report:', error);
+            setActionMessage('Error generating report');
+        } finally {
+            setGenerating(false);
+        }
+    };
 
     // Run backup function
     const runBackup = async () => {
+        if (!adminUserId) {
+            alert('Admin user ID not available');
+            return;
+        }
+
         try {
             setGenerating(true);
             setActionMessage('Creating database backup...');
@@ -336,6 +463,11 @@ useEffect(() => {
     };
 
     const fetchInvitationAnalytics = async () => {
+        if (!adminUserId) {
+            console.log('Skipping fetchInvitationAnalytics: adminUserId not set');
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('function', 'getInvitationAnalytics');
@@ -352,7 +484,6 @@ useEffect(() => {
                     setInvitationAnalytics(data.analytics);
                 } else if (data.message && data.message.includes("Unauthorized")) {
                     console.error("Admin access denied:", data.message);
-                    alert("Admin access denied. Please log in as administrator.");
                 }
             }
         } catch (error) {
@@ -361,6 +492,11 @@ useEffect(() => {
     };
 
     const fetchPricingPlans = async () => {
+        if (!adminUserId) {
+            console.log('Skipping fetchPricingPlans: adminUserId not set');
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('function', 'getAllPackages');
@@ -374,10 +510,17 @@ useEffect(() => {
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    setPricingPlans(data.packages);
+                    // Normalize package structure (backend uses packagetb fields)
+                    const normalized = (data.packages || []).map(p => ({
+                        package_id: p.package_id || p.id || p.packageId,
+                        package_type: p.package_type || p.type || p.packageType || '',
+                        max_guests: p.max_guests || p.maxGuests || p.guests || 0,
+                        max_events: p.max_events || p.maxEvents || p.events || 0,
+                        price: p.price || p.cost || p.amount || 0
+                    }));
+                    setPricingPlans(normalized);
                 } else if (data.message && data.message.includes("Unauthorized")) {
                     console.error("Admin access denied:", data.message);
-                    alert("Admin access denied. Please log in as administrator.");
                 }
             }
         } catch (error) {
@@ -386,6 +529,11 @@ useEffect(() => {
     };
 
     const fetchRevenueData = async () => {
+        if (!adminUserId) {
+            console.log('Skipping fetchRevenueData: adminUserId not set');
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('function', 'getRevenueData');
@@ -410,6 +558,11 @@ useEffect(() => {
     };
 
     const fetchUsersData = async () => {
+        if (!adminUserId) {
+            console.log('Skipping fetchUsersData: adminUserId not set');
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
@@ -421,17 +574,22 @@ useEffect(() => {
             });
             
            if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                setUsersData(data.users); // ✅ This updates the state that gets passed as props
+                const data = await response.json();
+                if (data.success) {
+                    setUsersData(data.users); // ✅ This updates the state that gets passed as props
+                }
             }
-        }
         } catch (error) {
             console.error('Error fetching users data:', error);
         }
     };
 
     const fetchAllSystemActivities = async () => {
+        if (!adminUserId) {
+            alert('Admin user ID not available');
+            return;
+        }
+
         try {
             setLogsLoading(true);
             setShowLogsModal(true);
@@ -541,6 +699,19 @@ useEffect(() => {
                         <i className="bi bi-gear"></i>
                         Settings
                     </button>
+
+                    {/* Create Admin (moved into dropdown) */}
+                    <button 
+                        className="dropdown-item"
+                        onClick={() => {
+                            setShowProfileDropdown(false);
+                            setShowCreateAdminModal(true);
+                        }}
+                    >
+                        <i className="bi bi-person-plus"></i>
+                        Create New Admin
+                    </button>
+
                     <div className="dropdown-divider"></div>
                     <button 
                         className="dropdown-item logout-btn"
@@ -668,6 +839,17 @@ useEffect(() => {
         }));
     }, [systemActivities]);
 
+    // UPDATED: Show loading while initializing
+    if (!isInitialized) {
+        return (
+            <div className="admin-dashboard-page">
+                <div className="admin-dashboard-container">
+                    <div className="loading">Initializing Admin Dashboard...</div>
+                </div>
+            </div>
+        );
+    }
+
     // Render different content based on active tab
     const renderContent = () => {
         if (loading) {
@@ -768,6 +950,18 @@ useEffect(() => {
     return (
         <>
             <div className="admin-dashboard-page">
+                 {/* Add Alert Component */}
+            {alert.show && (
+                <div className={`alert alert-${alert.type}`}>
+                    {alert.message}
+                    <button 
+                        className="alert-close"
+                        onClick={() => setAlert({ show: false, message: '', type: '' })}
+                    >
+                        <i className="bi bi-x"></i>
+                    </button>
+                </div>
+            )}
                 <div className="admin-dashboard-container">
                     {/* Sidebar Navigation */}
                     <aside className="admin-dashboard-sidebar">
@@ -908,8 +1102,8 @@ useEffect(() => {
                                             value={reportForm.format}
                                             onChange={(e) => setReportForm(prev => ({...prev, format: e.target.value}))}
                                         >
-                                            <option value="pdf">PDF</option>
-                                            <option value="csv">CSV</option>
+                                            <option value="csv">PDF</option>
+                                            <option value="pdf">CSV</option>
                                             <option value="excel">Excel</option>
                                         </select>
                                     </div>
@@ -1116,6 +1310,80 @@ useEffect(() => {
                 </div>
             )}
 
+            {/* Create Admin Modal (AdminDashboard level) */}
+            {showCreateAdminModal && (
+                <div className="modal-overview-new" onClick={() => setShowCreateAdminModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <h2>Create New Admin User</h2>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowCreateAdminModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                createAdmin();
+                            }}>
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
+                                    <label>First Name</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        value={newAdminData.name}
+                                        onChange={(e) => setNewAdminData({...newAdminData, name: e.target.value})}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
+                                    <label>Last Name</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        value={newAdminData.lastname}
+                                        onChange={(e) => setNewAdminData({...newAdminData, lastname: e.target.value})}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
+                                    <label>Email</label>
+                                    <input 
+                                        type="email" 
+                                        className="form-control" 
+                                        value={newAdminData.email}
+                                        onChange={(e) => setNewAdminData({...newAdminData, email: e.target.value})}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
+                                    <label>Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="form-control" 
+                                        value={newAdminData.password}
+                                        onChange={(e) => setNewAdminData({...newAdminData, password: e.target.value})}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginTop: '20px' }}>
+                                    <button type="submit" className="btn btn-primary">
+                                        Create Admin User
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Footer />
         </>
     );
@@ -1130,11 +1398,20 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
         email: '',
         username: '',
         title: 'Administrator',
-        language: 'English'
+        language: 'English',
+        password: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
+    const [showPasswords, setShowPasswords] = useState({
+        current: false,
+        new: false,
+        confirm: false
     });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
+    const [changingPassword, setChangingPassword] = useState(false);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
@@ -1166,6 +1443,67 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
         setFormData(prev => ({
             ...prev,
             [field]: value
+        }));
+    };
+
+    const handlePasswordChange = async () => {
+        // Validate passwords
+        if (formData.newPassword !== formData.confirmPassword) {
+            setMessage('New passwords do not match');
+            setMessageType('error');
+            return;
+        }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+        if (!passwordRegex.test(formData.newPassword)) {
+            setMessage('New password must be at least 6 characters long and contain uppercase, lowercase, number and special character');
+            setMessageType('error');
+            return;
+        }
+
+        try {
+            setChangingPassword(true);
+            const formDataToSend = new FormData();
+            formDataToSend.append('function', 'changeAdminPassword');
+            formDataToSend.append('admin_user_id', adminUserId);
+            formDataToSend.append('current_password', formData.password);
+            formDataToSend.append('new_password', formData.newPassword);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formDataToSend
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setMessage('Password changed successfully!');
+                setMessageType('success');
+                setFormData(prev => ({
+                    ...prev,
+                    password: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                }));
+                logActivity('Password Changed', 'Administrator changed their password');
+            } else {
+                setMessage(data.message || 'Failed to change password');
+                setMessageType('error');
+                logActivity('Password Change Failed', `Failed to change password: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error changing password:', error);
+            setMessage('Error changing password');
+            setMessageType('error');
+            logActivity('Password Change Error', `Password change error: ${error.message}`);
+        } finally {
+            setChangingPassword(false);
+        }
+    };
+
+    const togglePasswordVisibility = (field) => {
+        setShowPasswords(prev => ({
+            ...prev,
+            [field]: !prev[field]
         }));
     };
 
@@ -1329,10 +1667,116 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                                         disabled
                                         className="disabled"
                                     />
-                                    <button className="btn-text" disabled={!editMode}>
+                                    <button 
+                                        className="btn-text" 
+                                        disabled={!editMode}
+                                        onClick={() => setChangingPassword(true)}
+                                    >
                                         Change
                                     </button>
                                 </div>
+
+                                {/* Password Change Modal */}
+                                {changingPassword && (
+                                    <div className="modal">
+                                        <div className="modal-content">
+                                            <div className="modal-header">
+                                                <h4>Change Password</h4>
+                                                <button 
+                                                    className="close-btn"
+                                                    onClick={() => setChangingPassword(false)}
+                                                >
+                                                    &times;
+                                                </button>
+                                            </div>
+                                            <div className="modal-body">
+                                                <div className="form-group">
+                                                    <label>Current Password</label>
+                                                    <div className="password-input">
+                                                        <input 
+                                                            type={showPasswords.current ? "text" : "password"}
+                                                            value={formData.password}
+                                                            onChange={(e) => handleInputChange('password', e.target.value)}
+                                                            className="form-control"
+                                                        />
+                                                        <button 
+                                                            type="button" 
+                                                            className="password-toggle"
+                                                            onClick={() => setShowPasswords(prev => ({
+                                                                ...prev,
+                                                                current: !prev.current
+                                                            }))}
+                                                        >
+                                                            <i className={`bi bi-eye${showPasswords.current ? '-slash' : ''}`}></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>New Password</label>
+                                                    <div className="password-input">
+                                                        <input 
+                                                            type={showPasswords.new ? "text" : "password"}
+                                                            value={formData.newPassword}
+                                                            onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                                                            className="form-control"
+                                                        />
+                                                        <button 
+                                                            type="button" 
+                                                            className="password-toggle"
+                                                            onClick={() => setShowPasswords(prev => ({
+                                                                ...prev,
+                                                                new: !prev.new
+                                                            }))}
+                                                        >
+                                                            <i className={`bi bi-eye${showPasswords.new ? '-slash' : ''}`}></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Confirm New Password</label>
+                                                    <div className="password-input">
+                                                        <input 
+                                                            type={showPasswords.confirm ? "text" : "password"}
+                                                            value={formData.confirmPassword}
+                                                            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                                                            className="form-control"
+                                                        />
+                                                        <button 
+                                                            type="button" 
+                                                            className="password-toggle"
+                                                            onClick={() => setShowPasswords(prev => ({
+                                                                ...prev,
+                                                                confirm: !prev.confirm
+                                                            }))}
+                                                        >
+                                                            <i className={`bi bi-eye${showPasswords.confirm ? '-slash' : ''}`}></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {message && (
+                                                    <div className={`alert alert-${messageType}`}>
+                                                        {message}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="modal-footer">
+                                                <button 
+                                                    className="btn btn-secondary" 
+                                                    onClick={() => setChangingPassword(false)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button 
+                                                    className="btn btn-primary" 
+                                                    onClick={handlePasswordChange}
+                                                    disabled={loading}
+                                                >
+                                                    {loading ? 'Saving...' : 'Save Changes'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>Full Name *</label>
@@ -1587,7 +2031,6 @@ const handleExport = async () => {
     const viewEventDetails = (event) => {
         setSelectedEvent(event);
         setShowEventModal(true);
-        logActivity('Event Details Viewed', `Viewed invitation analytics for: ${event.eventName}`);
     };
 
     const refreshData = async () => {
@@ -1597,7 +2040,6 @@ const handleExport = async () => {
             fetchInvitationAnalytics()
         ]);
         setLoading(false);
-        logActivity('Invitation Data Refreshed', 'Refreshed invitation analytics data');
     };
 
     // Sort and filter analytics
@@ -1942,8 +2384,13 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
         price: ''
     });
     const [allPlans, setAllPlans] = useState(plans);
+
+    // Keep local plans in sync when parent prop `plans` changes
+    useEffect(() => {
+        setAllPlans(Array.isArray(plans) ? plans : []);
+    }, [plans]);
     const [paymentHistory, setPaymentHistory] = useState([]);
-    const [revenueAnalytics, setRevenueAnalytics] = useState(null);
+    const [revenueData, setRevenueData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [showManualPayment, setShowManualPayment] = useState(false);
     const [manualPaymentForm, setManualPaymentForm] = useState({
@@ -2021,12 +2468,18 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    setRevenueAnalytics(data.analytics);
+                    setRevenueData(data.analytics);
                 }
             }
-        } catch (error) {
-            console.error('Error fetching revenue analytics:', error);
-        }
+        }  catch (error) {
+        console.error('Revenue analytics endpoint not available:', error);
+        // Provide fallback data
+        setRevenueData({
+            total_revenue: 0,
+            current_month_revenue: 0,
+            payment_status_counts: []
+        });
+    }
     };
 
     const fetchUsers = async () => {
@@ -2110,8 +2563,8 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
             const query = searchQuery.toLowerCase().trim();
             filtered = filtered.filter(payment => 
                 (payment.user_name && payment.user_name.toLowerCase().includes(query)) ||
-                (payment.user_email && payment.user_email.toLowerCase().includes(query)) ||
-                (payment.transaction_id && payment.transaction_id.toLowerCase().includes(query)) ||
+                (payment.user_email && payment.payment.toLowerCase().includes(query)) ||
+                (payment.payment_id && payment.payment_id.toLowerCase().includes(query)) ||
                 (payment.package_type && payment.package_type.toLowerCase().includes(query))
             );
         }
@@ -2184,7 +2637,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
     const viewPaymentDetails = (payment) => {
         setSelectedPayment(payment);
         setShowPaymentModal(true);
-        logActivity('Payment Details Viewed', `Viewed payment details for transaction: ${payment.transaction_id}`);
+        logActivity('Payment Details Viewed', `Viewed payment details for transaction: ${payment.payment_id}`);
     };
 
     const startEditing = (plan) => {
@@ -2530,7 +2983,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                             <div className="revenue-content">
                                 <h3>Total Revenue</h3>
                                 <p className="revenue-amount">
-                                    {revenueAnalytics ? formatCurrency(revenueAnalytics.total_revenue) : 'Loading...'}
+                                    {revenueData ? formatCurrency(revenueData.total_revenue) : 'Loading...'}
                                 </p>
                                 <span className="revenue-trend">All time</span>
                             </div>
@@ -2543,7 +2996,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                             <div className="revenue-content">
                                 <h3>This Month</h3>
                                 <p className="revenue-amount">
-                                    {revenueAnalytics ? formatCurrency(revenueAnalytics.current_month_revenue) : 'Loading...'}
+                                    {revenueData ? formatCurrency(revenueData.current_month_revenue) : 'Loading...'}
                                 </p>
                                 <span className="revenue-trend">Current month</span>
                             </div>
@@ -2556,8 +3009,8 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                             <div className="revenue-content">
                                 <h3>Pending Payments</h3>
                                 <p className="revenue-amount">
-                                    {revenueAnalytics ? 
-                                        revenueAnalytics.payment_status_counts.find(s => s.payment_status === 'pending')?.count || 0 
+                                    {revenueData ? 
+                                        revenueData.payment_status_counts.find(s => s.payment_status === 'pending')?.count || 0 
                                         : 'Loading...'
                                     }
                                 </p>
@@ -2606,7 +3059,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                     <option value="completed">Completed</option>
                                     <option value="pending">Pending</option>
                                     <option value="failed">Failed</option>
-                                    <option value="refunded">Refunded</option>
                                 </select>
                                 
                                 <select 
@@ -2706,15 +3158,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                                     <i className="bi bi-check"></i>
                                                 </button>
                                             )}
-                                            {payment.payment_status === 'completed' && (
-                                                <button 
-                                                    className="btn-icon warning"
-                                                    onClick={() => updatePaymentStatus(payment.payment_id, 'refunded')}
-                                                    title="Mark as Refunded"
-                                                >
-                                                    <i className="bi bi-arrow-counterclockwise"></i>
-                                                </button>
-                                            )}
+
                                             <button 
                                                 className="btn-icon info"
                                                 onClick={() => viewPaymentDetails(payment)}
@@ -2843,7 +3287,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                 </div>
                                 <div className="payment-title">
                                     <h2>Payment Details</h2>
-                                    <p>Transaction ID: {selectedPayment.transaction_id}</p>
+                                    <p>Payment ID: {selectedPayment.payment_id}</p>
                                 </div>
                             </div>
                             <button 
@@ -2931,15 +3375,8 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                     </div>
                                 </div>
 
-                                <div className="detail-card-new billing-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-arrow-repeat"></i>
-                                    </div>
-                                    <div className="detail-content-new">
-                                        <label>Billing Cycle</label>
-                                        <p>{selectedPayment.billing_cycle}</p>
-                                    </div>
-                                </div>
+
+            
                             </div>
 
                             {/* Payment Actions */}
@@ -2954,18 +3391,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity }) => {
                                     >
                                         <i className="bi bi-check-circle"></i>
                                         Mark as Completed
-                                    </button>
-                                )}
-                                {selectedPayment.payment_status === 'completed' && (
-                                    <button 
-                                        className="action-btn-new warning"
-                                        onClick={() => {
-                                            updatePaymentStatus(selectedPayment.payment_id, 'refunded');
-                                            setShowPaymentModal(false);
-                                        }}
-                                    >
-                                        <i className="bi bi-arrow-counterclockwise"></i>
-                                        Mark as Refunded
                                     </button>
                                 )}
                                 <button 
@@ -3358,6 +3783,8 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
                 </div>
             </div>
 
+            
+
             {/* User Details Modal */}
             {showUserModal && selectedUser && (
                 <div className="modal-overview-new" onClick={() => setShowUserModal(false)}>
@@ -3454,7 +3881,5 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
         </div>
     );
 };
-
-
 
 export default AdminDashboard;

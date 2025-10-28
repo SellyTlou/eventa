@@ -67,7 +67,7 @@ try {
         ]]
     ];
 
-    // ✅ Send request to SendGrid API
+    // Send request to SendGrid API
     $ch = curl_init("https://api.sendgrid.com/v3/mail/send");
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
