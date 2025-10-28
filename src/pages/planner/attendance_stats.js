@@ -1,337 +1,653 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from "react-router-dom";
+import { logOut } from "../components";
+import { Pie, Bar } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    ArcElement,
+    Tooltip,
+    Legend,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title
+} from 'chart.js';
 import './attendance_stats.css';
+import './main.css';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 const AttendanceStats = () => {
-    const [stats, setStats] = useState({
-        overall: {},
-        events: [],
-        monthlyTrend: [],
-        allEvents: []
-    });
-    const [filters, setFilters] = useState({
-        startDate: new Date().toISOString().split('T')[0].slice(0, 8) + '01',
-        endDate: new Date().toISOString().split('T')[0],
-        eventId: ''
-    });
+    const [eventData, setEventData] = useState(null);
+    const [rsvpData, setRsvpData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+    const [user, setUser] = useState(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [eventStatus, setEventStatus] = useState("");
+    const [globalStats, setGlobalStats] = useState({
+        overall: { total_events: 0, total_rsvps: 0, total_capacity: 0, overall_attendance_rate: 0 },
+        events: [],
+        monthlyTrend: []
+    });
+
+    const dropdownRef = useRef(null);
+    const navigate = useNavigate();
+
+    const printAlert = (message, type = "info") => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => setAlert({ show: false, message: "", type: "" }), 5000);
+    };
+
+    const toggleDropdown = () => setDropdownOpen(prev => !prev);
 
     useEffect(() => {
-        fetchStats();
-        fetchAllEvents();
+        const storedUser = localStorage.getItem("user");
+        if (!storedUser) return logOut();
+        setUser(JSON.parse(storedUser));
+
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const fetchStats = async () => {
+    useEffect(() => {
+        const eventId = localStorage.getItem("selectedEventId");
+        if (!eventId) {
+            printAlert("No event selected. Redirecting to events dashboard.", "warning");
+            navigate("/eventsDashboard");
+            return;
+        }
+        fetchEventData(eventId);
+        fetchRSVPData(eventId);
+        fetchEventStatusByID(eventId);
+        fetchAttendanceStats();
+    }, [navigate]);
+
+    const fetchEventData = async (eventId) => {
         try {
-            setLoading(true);
-            const params = new URLSearchParams(filters);
-            const response = await fetch(`/api/attendance/stats?${params}`);
-            
-            if (!response.ok) {
-                throw new Error('Failed to fetch statistics');
-            }
-            
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getEventById");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
             const data = await response.json();
-            setStats(data);
-        } catch (err) {
-            setError('Failed to fetch statistics');
-            console.error('Error fetching stats:', err);
+
+            if (data.success && data.events) {
+                setEventData(data.events);
+            } else {
+                printAlert("Failed to load event data", "error");
+            }
+        } catch (error) {
+            console.error("Error fetching event data:", error);
+            printAlert("Error loading event data", "error");
+        }
+    };
+
+    const fetchRSVPData = async (eventId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getRSVPResponses");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+
+            console.log("RSVP API Response:", data); // Debug log
+
+            if (data.success && data.responses) {
+                // Use the actual responses from API
+                setRsvpData(data.responses);
+                if (data.event) {
+                    setEventData(prev => ({ ...prev, ...data.event }));
+                }
+            } else {
+                printAlert("No RSVP data available", "warning");
+                setRsvpData([]);
+            }
+        } catch (error) {
+            console.error("Error fetching RSVP data:", error);
+            printAlert("Error loading RSVP data", "error");
+            setRsvpData([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchAllEvents = async () => {
+    const fetchEventStatusByID = async (eventId) => {
         try {
-            const response = await fetch('/api/events');
-            
-            if (!response.ok) {
-                throw new Error('Failed to fetch events');
-            }
-            
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getEventStatusByID");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
             const data = await response.json();
-            setStats(prev => ({ ...prev, allEvents: data }));
-        } catch (err) {
-            console.error('Error fetching events:', err);
+            if (data.success && data.status) {
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+            } else {
+                setEventStatus("Unknown");
+            }
+        } catch {
+            setEventStatus("Unknown");
         }
     };
 
-    const handleFilterChange = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+    const fetchAttendanceStats = async () => {
+        try {
+            // You can keep mock data for global stats or implement real API later
+            const mockStats = {
+                overall: {
+                    total_events: 12,
+                    total_rsvps: 345,
+                    total_capacity: 500,
+                    overall_attendance_rate: 69
+                },
+                events: [
+                    { event_id: '1', event_name: 'Tech Conference 2024', event_start_date: '2024-01-15', event_location: 'Convention Center', guest_limit: 100, rsvp_count: 85, attendance_count: 78, capacity_utilization: 78, attendance_rate: 91.8 },
+                    { event_id: '2', event_name: 'Music Festival', event_start_date: '2024-01-20', event_location: 'Central Park', guest_limit: 500, rsvp_count: 450, attendance_count: 380, capacity_utilization: 76, attendance_rate: 84.4 }
+                ],
+                monthlyTrend: [
+                    { month: '2024-01', total_attendance: 458, total_rsvps: 535 },
+                    { month: '2023-12', total_attendance: 320, total_rsvps: 400 },
+                    { month: '2023-11', total_attendance: 280, total_rsvps: 350 },
+                    { month: '2023-10', total_attendance: 195, total_rsvps: 250 },
+                    { month: '2023-09', total_attendance: 150, total_rsvps: 200 }
+                ]
+            };
+            setGlobalStats(mockStats);
+        } catch (error) {
+            console.error("Error fetching attendance stats:", error);
+        }
     };
 
-    const handleApplyFilters = () => {
-        fetchStats();
+    // === COMPUTE STATS FROM REAL RSVP DATA ===
+    const computeStats = () => {
+        if (!rsvpData.length) return {
+            attending: 0, notAttending: 0, maybe: 0, totalGuests: 0,
+            totalResponses: 0, responseRate: 0, responseTimeline: [],
+            weeklyTimeline: [], monthlyTimeline: [], guestDistribution: []
+        };
+
+        // Process RSVP responses
+        const attending = rsvpData.filter(r => r.attending === 'Yes').length;
+        const notAttending = rsvpData.filter(r => r.attending === 'No').length;
+        const maybe = rsvpData.filter(r => r.attending === 'Maybe').length;
+
+        const totalGuests = rsvpData.reduce((sum, r) => {
+            const guestCount = parseInt(r.guest_count || 0, 10);
+            return sum + (guestCount > 0 ? guestCount : 1); // Assume at least 1 guest per RSVP
+        }, 0);
+
+        const totalResponses = rsvpData.length;
+
+        // Calculate response rate based on event capacity or fixed number
+        const invitationsSent = eventData?.guest_limit || 150;
+        const responseRate = Math.round((totalResponses / invitationsSent) * 100);
+
+        // DAILY Timeline (last 30 days)
+        const last30Days = Array.from({ length: 30 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (29 - i)); // Last 30 days including today
+            return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        });
+
+        const dailyTimelineMap = {};
+        last30Days.forEach(date => dailyTimelineMap[date] = 0);
+
+        rsvpData.forEach(r => {
+            if (r.created_at) {
+                const responseDate = new Date(r.created_at).toISOString().split('T')[0];
+                if (dailyTimelineMap[responseDate] !== undefined) {
+                    dailyTimelineMap[responseDate]++;
+                }
+            }
+        });
+
+        const responseTimeline = Object.entries(dailyTimelineMap)
+            .map(([date, count]) => ({ date, count }));
+
+        // WEEKLY Timeline (last 12 weeks)
+        const weeklyTimelineMap = {};
+        const last12Weeks = Array.from({ length: 12 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (7 * (11 - i))); // Last 12 weeks
+            const year = date.getFullYear();
+            const week = getWeekNumber(date);
+            return `${year}-W${week.toString().padStart(2, '0')}`;
+        });
+
+        last12Weeks.forEach(week => weeklyTimelineMap[week] = 0);
+
+        rsvpData.forEach(r => {
+            if (r.created_at) {
+                const responseDate = new Date(r.created_at);
+                const year = responseDate.getFullYear();
+                const week = getWeekNumber(responseDate);
+                const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
+
+                if (weeklyTimelineMap[weekKey] !== undefined) {
+                    weeklyTimelineMap[weekKey]++;
+                }
+            }
+        });
+
+        const weeklyTimeline = Object.entries(weeklyTimelineMap)
+            .map(([week, count]) => ({ week, count }));
+
+        // MONTHLY Timeline (last 6 months)
+        const monthlyTimelineMap = {};
+        const last6Months = Array.from({ length: 6 }, (_, i) => {
+            const date = new Date();
+            date.setMonth(date.getMonth() - (5 - i)); // Last 6 months
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            return `${year}-${month}`;
+        });
+
+        last6Months.forEach(month => monthlyTimelineMap[month] = 0);
+
+        rsvpData.forEach(r => {
+            if (r.created_at) {
+                const responseDate = new Date(r.created_at);
+                const year = responseDate.getFullYear();
+                const month = (responseDate.getMonth() + 1).toString().padStart(2, '0');
+                const monthKey = `${year}-${month}`;
+
+                if (monthlyTimelineMap[monthKey] !== undefined) {
+                    monthlyTimelineMap[monthKey]++;
+                }
+            }
+        });
+
+        const monthlyTimeline = Object.entries(monthlyTimelineMap)
+            .map(([month, count]) => ({ month, count }));
+
+        // Guest distribution - only for attending guests
+        const distributionMap = { 1: 0, 2: 0, 3: 0, '4+': 0 };
+
+        rsvpData.forEach(r => {
+            if (r.attending === 'Yes') {
+                const guestCount = parseInt(r.guest_count || 1, 10);
+                if (guestCount === 1) {
+                    distributionMap[1]++;
+                } else if (guestCount === 2) {
+                    distributionMap[2]++;
+                } else if (guestCount === 3) {
+                    distributionMap[3]++;
+                } else {
+                    distributionMap['4+']++;
+                }
+            }
+        });
+
+        const guestDistribution = Object.entries(distributionMap)
+            .map(([count, freq]) => ({ count, freq }))
+            .filter(d => d.freq > 0);
+
+        return {
+            attending,
+            notAttending,
+            maybe,
+            totalGuests,
+            totalResponses,
+            responseRate,
+            responseTimeline,
+            weeklyTimeline,
+            monthlyTimeline,
+            guestDistribution
+        };
     };
 
-    const getAttendanceClass = (rate) => {
-        if (rate >= 70) return 'attendance-high';
-        if (rate >= 40) return 'attendance-medium';
-        return 'attendance-low';
+    // Helper function to get week number
+    const getWeekNumber = (date) => {
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+        return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
     };
+
+    const stats = computeStats();
+
+    // === CHART DATA ===
+    const pieData = {
+        labels: ['Attending', 'Not Attending', 'Maybe'],
+        datasets: [{
+            data: [stats.attending, stats.notAttending, stats.maybe],
+            backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+            borderWidth: 1,
+            borderColor: '#fff'
+        }],
+    };
+
+    const barGuestData = {
+        labels: stats.guestDistribution.map(d => `${d.count} Guest${d.count !== '1' ? 's' : ''}`),
+        datasets: [{
+            label: 'Number of RSVPs',
+            data: stats.guestDistribution.map(d => d.freq),
+            backgroundColor: '#3b82f6',
+            borderRadius: 4
+        }],
+    };
+
+    const barTimelineData = {
+        labels: stats.responseTimeline.map(d => {
+            const date = new Date(d.date);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }),
+        datasets: [{
+            label: 'Daily Responses',
+            data: stats.responseTimeline.map(d => d.count),
+            backgroundColor: '#8b5cf6',
+            borderRadius: 4
+        }],
+    };
+
+    // Weekly Timeline (Last 12 weeks)
+    const weeklyTimelineData = {
+        labels: stats.weeklyTimeline.map(w => {
+            const [year, week] = w.week.split('-W');
+            return `Week ${week}, ${year}`;
+        }),
+        datasets: [{
+            label: 'Weekly Responses',
+            data: stats.weeklyTimeline.map(w => w.count),
+            backgroundColor: '#ec4899',
+            borderRadius: 4
+        }],
+    };
+
+    // Monthly Timeline (Last 6 months)
+    const monthlyTimelineData = {
+        labels: stats.monthlyTimeline.map(m => {
+            const [year, month] = m.month.split('-');
+            return new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }),
+        datasets: [{
+            label: 'Monthly Responses',
+            data: stats.monthlyTimeline.map(m => m.count),
+            backgroundColor: '#f59e0b',
+            borderRadius: 4
+        }],
+    };
+
+    // // Historical trend (you can keep your existing mock data or replace with real data)
+    // const monthlyTrendData = {
+    //     labels: globalStats.monthlyTrend.map(m => {
+    //         const [year, month] = m.month.split('-');
+    //         return new Date(year, month - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    //     }),
+    //     datasets: [
+    //         {
+    //             label: 'Attendance',
+    //             data: globalStats.monthlyTrend.map(m => m.total_attendance),
+    //             backgroundColor: '#10b981',
+    //             borderRadius: 4
+    //         },
+    //         {
+    //             label: 'RSVPs',
+    //             data: globalStats.monthlyTrend.map(m => m.total_rsvps),
+    //             backgroundColor: '#3b82f6',
+    //             borderRadius: 4
+    //         }
+    //     ],
+    // };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true } },
+            tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(0,0,0,0.8)' }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.1)' } },
+            x: { grid: { display: false } }
+        }
+    };
+
+    const pieOptions = {
+        ...chartOptions,
+        plugins: {
+            ...chartOptions.plugins,
+            tooltip: {
+                callbacks: {
+                    label: context => {
+                        const label = context.label || '';
+                        const value = context.raw;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = total ? Math.round((value / total) * 100) : 0;
+                        return `${label}: ${value} (${percentage}%)`;
+                    }
+                }
+            }
+        }
+    };
+
+    // Navigation functions
+    const goToHome = () => navigate("/eventsDashboard");
+    const goToInvitations = () => navigate("/invitationPage");
+    const goToManage = () => navigate("/manage_my_event");
+    const goToProfile = () => navigate("/Profile");
+    const goToRSVPResponses = () => navigate("/eventManagement");
+    const goToGuestInsights = () => navigate("/guest_insights");
+    const goToAttendanceStats = () => navigate("/attendance_stats");
 
     if (loading) {
         return (
             <div className="loading-container">
-                <div className="spinner"></div>
-                <p>Loading statistics...</p>
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading attendance statistics...</p>
             </div>
         );
     }
 
     return (
-        <div className="attendance-stats">
-            <div className="stats-header">
-                <h1>Attendance Statistics</h1>
-            </div>
-
-            {/* Filters */}
-            <div className="stats-card filters-card">
-                <div className="filters-grid">
-                    <div className="filter-group">
-                        <label htmlFor="startDate">Start Date</label>
-                        <input
-                            type="date"
-                            id="startDate"
-                            value={filters.startDate}
-                            onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                            className="form-control"
-                        />
-                    </div>
-                    <div className="filter-group">
-                        <label htmlFor="endDate">End Date</label>
-                        <input
-                            type="date"
-                            id="endDate"
-                            value={filters.endDate}
-                            onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                            className="form-control"
-                        />
-                    </div>
-                    <div className="filter-group">
-                        <label htmlFor="eventId">Event</label>
-                        <select
-                            id="eventId"
-                            value={filters.eventId}
-                            onChange={(e) => handleFilterChange('eventId', e.target.value)}
-                            className="form-control"
-                        >
-                            <option value="">All Events</option>
-                            {stats.allEvents.map(event => (
-                                <option key={event.event_id} value={event.event_id}>
-                                    {event.event_name} - {event.event_start_date}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <button 
-                            onClick={handleApplyFilters}
-                            className="btn btn-primary filter-btn"
-                        >
-                            <i className="fas fa-filter"></i> Apply Filters
-                        </button>
-                    </div>
+        <div className="dashboard-container">
+            {/* Custom alert box */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
                 </div>
-            </div>
-
-            {error && (
-                <div className="alert alert-danger">{error}</div>
             )}
 
-            {/* Overall Statistics */}
-            <div className="stats-grid">
-                <div className="stats-card">
-                    <div className="stat-item text-center">
-                        <div className="stat-number text-primary">
-                            {stats.overall.total_events || 0}
-                        </div>
-                        <div className="stat-label">Total Events</div>
-                    </div>
-                </div>
-                <div className="stats-card">
-                    <div className="stat-item text-center">
-                        <div className="stat-number text-info">
-                            {stats.overall.total_rsvps || 0}
-                        </div>
-                        <div className="stat-label">Total RSVPs</div>
-                    </div>
-                </div>
-                <div className="stats-card">
-                    <div className="stat-item text-center">
-                        <div className="stat-number text-success">
-                            {stats.overall.total_capacity || 0}
-                        </div>
-                        <div className="stat-label">Total Capacity</div>
-                    </div>
-                </div>
-                <div className="stats-card">
-                    <div className="stat-item text-center">
-                        <div className={`stat-number ${getAttendanceClass(stats.overall.overall_attendance_rate || 0)}`}>
-                            {stats.overall.overall_attendance_rate || 0}%
-                        </div>
-                        <div className="stat-label">Attendance Rate</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Charts */}
-            <div className="charts-grid">
-                <div className="stats-card">
-                    <div className="card-header">
-                        <h5>Monthly Attendance Trend</h5>
-                    </div>
-                    <div className="chart-container">
-                        <MonthlyTrendChart data={stats.monthlyTrend} />
-                    </div>
-                </div>
-                <div className="stats-card">
-                    <div className="card-header">
-                        <h5>Capacity Utilization</h5>
-                    </div>
-                    <div className="chart-container">
-                        <UtilizationChart data={stats.events.slice(0, 5)} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Event-wise Statistics */}
-            <div className="stats-card">
-                <div className="card-header">
-                    <h5>Event-wise Attendance Details</h5>
-                </div>
-                <div className="table-container">
-                    <EventsTable data={stats.events} getAttendanceClass={getAttendanceClass} />
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Chart Components
-const MonthlyTrendChart = ({ data }) => {
-    if (!data || data.length === 0) {
-        return <div className="no-data">No data available</div>;
-    }
-
-    const maxAttendance = Math.max(...data.map(m => m.total_attendance || 0));
-    const maxRSVPs = Math.max(...data.map(m => m.total_rsvps || 0));
-    const maxValue = Math.max(maxAttendance, maxRSVPs);
-
-    return (
-        <div className="simple-chart">
-            <div className="chart-bars">
-                {data.map((month, index) => (
-                    <div key={index} className="chart-bar-container">
-                        <div className="chart-bar-label">{month.month}</div>
-                        <div className="chart-bar-wrapper">
-                            <div 
-                                className="chart-bar attendance-bar"
-                                style={{ 
-                                    height: `${maxValue > 0 ? ((month.total_attendance || 0) / maxValue) * 100 : 0}%` 
-                                }}
-                                title={`Attendance: ${month.total_attendance || 0}`}
-                            ></div>
-                            <div 
-                                className="chart-bar rsvp-bar"
-                                style={{ 
-                                    height: `${maxValue > 0 ? ((month.total_rsvps || 0) / maxValue) * 100 : 0}%` 
-                                }}
-                                title={`RSVPs: ${month.total_rsvps || 0}`}
-                            ></div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <div className="chart-legend">
-                <div className="legend-item">
-                    <div className="legend-color attendance-color"></div>
-                    <span>Attendance</span>
-                </div>
-                <div className="legend-item">
-                    <div className="legend-color rsvp-color"></div>
-                    <span>RSVPs</span>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const UtilizationChart = ({ data }) => {
-    if (!data || data.length === 0) {
-        return <div className="no-data">No data available</div>;
-    }
-
-    return (
-        <div className="simple-chart">
-            <div className="chart-bars horizontal">
-                {data.map((event, index) => (
-                    <div key={index} className="chart-bar-container horizontal">
-                        <div className="chart-bar-label" title={event.event_name}>
-                            {event.event_name.length > 20 
-                                ? event.event_name.substring(0, 20) + '...' 
-                                : event.event_name
-                            }
-                        </div>
-                        <div className="chart-bar-wrapper horizontal">
-                            <div 
-                                className="chart-bar utilization-bar"
-                                style={{ width: `${Math.min(event.capacity_utilization || 0, 100)}%` }}
-                            >
-                                <span className="bar-label">{event.capacity_utilization || 0}%</span>
+            {/* HEADER */}
+            <div className="dashboard-header">
+                <h1>Evenda</h1>
+                <div className="header-tabs">
+                    <button className="upgrade-btn">Upgrade</button>
+                    <button className="status-btn status-success">Published</button>
+                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
+                        <i className="bi bi-person-circle"></i>
+                        <span>{user?.name || "Guest"}</span>
+                        <i className="bi bi-chevron-bar-down"></i>
+                        {dropdownOpen && (
+                            <div className="dropdown-menu show">
+                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
+                                <button className="dropdown-item"><i className="bi bi-gear"></i>Settings</button>
+                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
                             </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* SIDEBAR */}
+            <div className="dashboard-sidebar">
+                <div className="sidebar-header"><h3>Event Management</h3></div>
+                <div className="sidebar-section">
+                    <h4>Event Planning</h4>
+                    <ul>
+                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
+                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
+                        <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
+                        <li onClick={goToRSVPResponses}><i className="bi bi-list-check"></i>RSVP Responses</li>
+                    </ul>
+                </div>
+                <div className="sidebar-section">
+                    <h4>Event Analytics</h4>
+                    <ul>
+                        <li className="active" onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
+                        <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
+                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
+                    </ul>
+                </div>
+            </div>
+
+            {/* MAIN CONTENT */}
+            <div className="attendance-content">
+                <div className="content-header">
+                    <h1>Attendance Statistics</h1>
+                    <p>Comprehensive overview of your event attendance and RSVP data</p>
+                    {eventData && (
+                        <p className="event-info">
+                            Event: <strong>{eventData.event_name}</strong> |
+                            Capacity: <strong>{eventData.guest_limit || 100} guests</strong> |
+                            Total Invitations Sent: <strong>{eventData.guest_limit || 150}</strong>
+                        </p>
+                    )}
+                </div>
+
+                {/* Stats Cards */}
+                <div className="stats-overview">
+                    <div className="stat-card primary">
+                        <div className="stat-icon"><i className="bi bi-people-fill"></i></div>
+                        <div className="stat-content"><h3>{stats.totalResponses}</h3><p>Total RSVPs</p></div>
+                    </div>
+                    <div className="stat-card success">
+                        <div className="stat-icon"><i className="bi bi-check-circle-fill"></i></div>
+                        <div className="stat-content"><h3>{stats.attending}</h3><p>Confirmed Attendance</p></div>
+                    </div>
+                    <div className="stat-card warning">
+                        <div className="stat-icon"><i className="bi bi-question-circle-fill"></i></div>
+                        <div className="stat-content"><h3>{stats.maybe}</h3><p>Maybe Attending</p></div>
+                    </div>
+                    <div className="stat-card danger">
+                        <div className="stat-icon"><i className="bi bi-x-circle-fill"></i></div>
+                        <div className="stat-content"><h3>{stats.notAttending}</h3><p>Not Attending</p></div>
+                    </div>
+                    <div className="stat-card info">
+                        <div className="stat-icon"><i className="bi bi-graph-up-arrow"></i></div>
+                        <div className="stat-content"><h3>{stats.responseRate}%</h3><p>Response Rate</p></div>
+                    </div>
+                </div>
+
+                {/* Charts */}
+                {/* Charts */}
+                <div className="charts-grid">
+                    <div className="chart-card">
+                        <div className="chart-header">
+                            <h3>Response Breakdown</h3>
+                            <span className="chart-subtitle">Distribution of RSVP responses</span>
+                        </div>
+                        <div className="chart-wrapper">
+                            <Pie data={pieData} options={pieOptions} />
                         </div>
                     </div>
-                ))}
+
+                    <div className="chart-card">
+                        <div className="chart-header">
+                            <h3>Guests per RSVP</h3>
+                            <span className="chart-subtitle">Number of guests per confirmed RSVP</span>
+                        </div>
+                        <div className="chart-wrapper">
+                            <Bar data={barGuestData} options={chartOptions} />
+                        </div>
+                    </div>
+
+                    <div className="chart-card full-width">
+                        <div className="chart-header">
+                            <h3>Daily Response Timeline</h3>
+                            <span className="chart-subtitle">RSVP responses over the last 30 days</span>
+                        </div>
+                        <div className="chart-wrapper">
+                            <Bar data={barTimelineData} options={chartOptions} />
+                        </div>
+                    </div>
+
+                    <div className="chart-card full-width">
+                        <div className="chart-header">
+                            <h3>Weekly Response Trend</h3>
+                            <span className="chart-subtitle">RSVP responses over the last 12 weeks</span>
+                        </div>
+                        <div className="chart-wrapper">
+                            <Bar data={weeklyTimelineData} options={chartOptions} />
+                        </div>
+                    </div>
+
+                    <div className="chart-card full-width">
+                        <div className="chart-header">
+                            <h3>Monthly Response Trend</h3>
+                            <span className="chart-subtitle">RSVP responses over the last 6 months</span>
+                        </div>
+                        <div className="chart-wrapper">
+                            <Bar data={monthlyTimelineData} options={chartOptions} />
+                        </div>
+                    </div>
+
+                    {/* <div className="chart-card full-width">
+                        <div className="chart-header">
+                            <h3>Historical Performance</h3>
+                            <span className="chart-subtitle">Attendance vs RSVPs across all events</span>
+                        </div>
+                        <div className="chart-wrapper">
+                            <Bar data={monthlyTrendData} options={chartOptions} />
+                        </div>
+                    </div> */}
+                </div>
+
+                {/* Additional Stats */}
+                <div className="additional-stats">
+                    <div className="stats-card">
+                        <h4>Response Rate</h4>
+                        <div className="progress-stat">
+                            <div className="progress-bar">
+                                <div className="progress-fill" style={{ width: `${stats.responseRate}%` }}></div>
+                            </div>
+                            <span>{stats.responseRate}%</span>
+                        </div>
+                        <p>Based on {eventData?.guest_limit || 150} invitations sent</p>
+                    </div>
+                    <div className="stats-card">
+                        <h4>Total Guests</h4>
+                        <div className="big-number">{stats.totalGuests}</div>
+                        <p>Including additional guests</p>
+                    </div>
+                    <div className="stats-card">
+                        <h4>Event Capacity</h4>
+                        <div className="capacity-info">
+                            <span className="current">{stats.attending}</span>
+                            <span className="separator">/</span>
+                            <span className="total">{eventData?.guest_limit || 100}</span>
+                        </div>
+                        <p>Current attendance vs capacity</p>
+                    </div>
+                </div>
             </div>
         </div>
-    );
-};
-
-// Events Table Component
-const EventsTable = ({ data, getAttendanceClass }) => {
-    if (!data || data.length === 0) {
-        return <div className="no-data">No events found for the selected filters</div>;
-    }
-
-    return (
-        <table className="stats-table">
-            <thead>
-                <tr>
-                    <th>Event Name</th>
-                    <th>Date</th>
-                    <th>Location</th>
-                    <th>Capacity</th>
-                    <th>RSVPs</th>
-                    <th>Attended</th>
-                    <th>Utilization</th>
-                    <th>Rate</th>
-                </tr>
-            </thead>
-            <tbody>
-                {data.map(event => (
-                    <tr key={event.event_id}>
-                        <td>{event.event_name}</td>
-                        <td>{event.event_start_date}</td>
-                        <td>{event.event_location}</td>
-                        <td>{event.guest_limit}</td>
-                        <td>{event.rsvp_count}</td>
-                        <td>{event.attendance_count}</td>
-                        <td>
-                            <span className={getAttendanceClass(event.capacity_utilization || 0)}>
-                                {event.capacity_utilization || 0}%
-                            </span>
-                        </td>
-                        <td>
-                            <span className={getAttendanceClass(event.attendance_rate || 0)}>
-                                {event.attendance_rate || 0}%
-                            </span>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
     );
 };
 

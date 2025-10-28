@@ -192,6 +192,7 @@ export function SessionHandler() {
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
+                <Route path="/guest_insights" element={<GuestInsights />} />
             </Routes>
 
             <SessionWarningModal
@@ -594,8 +595,6 @@ export function LoginNav() {
 
     );
 }
-
-
 
 export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [isLogin, setIsLogin] = useState(defaultMode === "login");
