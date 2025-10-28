@@ -3716,3 +3716,31 @@ Package Payment Page
 .packagePayment-content .payment-popup {
     animation: popupFadeIn 0.3s ease-out;
 }
+
+/* Add these styles to your main.css */
+
+.form-control-event.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.field-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.form-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+/* Optional: Add smooth transitions */
+.form-control-event {
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}

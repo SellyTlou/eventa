@@ -5760,11 +5760,7 @@ body,
   border: 1px solid #fecaca;
 }
 
-.status-refunded {
-  background: #e0e7ff;
-  color: #3730a3;
-  border: 1px solid #c7d2fe;
-}
+
 
 .payment-table .actions {
   display: flex;
@@ -7463,3 +7459,62 @@ body,
 }
 
 
+/* Add to your existing CSS file */
+
+/* Error states */
+.form-control-event.error {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.field-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.error-icon {
+  font-size: 0.75rem;
+}
+
+.form-error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+/* Password requirements styling */
+.password-requirements {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+  border-left: 3px solid #007bff;
+}
+
+.password-requirements ul {
+  margin: 0.25rem 0 0 0;
+  padding-left: 1.25rem;
+}
+
+.password-requirements li {
+  font-size: 0.75rem;
+  color: #6c757d;
+  transition: color 0.15s ease-in-out;
+}
+
+.password-requirements li.valid {
+  color: #28a745;
+  text-decoration: line-through;
+}
+
+/* Smooth transitions */
+.form-control-event {
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}

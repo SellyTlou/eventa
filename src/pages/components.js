@@ -26,8 +26,7 @@ import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
 import Support from '../pages/support';
-import AttendanceStats from './planner/attendance_stats';
-import GuestInsights from './planner/guest_insights';
+import AttendanceStats from './planner/attendance_stats';import SecurityQuestionsModal from './SecurityQuestionsModal';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -904,7 +903,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 className="toggle-password"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
-                                {showPassword ? "🙈" : "👁️"}
+                                {showPassword ? "🙈" : "👁"}
                             </span>
                         </div>
                     </div>

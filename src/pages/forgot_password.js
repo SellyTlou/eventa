@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import "./forgot_password.css";
+import SecurityQuestionsModal from "./SecurityQuestionsModal";
 
 const ForgotPassword = () => {
     const [searchParams] = useSearchParams();
@@ -10,6 +11,8 @@ const ForgotPassword = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [showSecurityModal, setShowSecurityModal] = useState(false);
+    const [securityVerified, setSecurityVerified] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -28,8 +31,19 @@ const ForgotPassword = () => {
         return regex.test(password);
     };
 
+    const handleSecurityQuestionsVerified = () => {
+        setSecurityVerified(true);
+        setShowSecurityModal(false);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!securityVerified) {
+            // Show security questions modal first
+            setShowSecurityModal(true);
+            return;
+        }
 
         if (!password || !confirmPassword) {
             alert("Please fill in all fields.");
@@ -81,9 +95,33 @@ const ForgotPassword = () => {
 
     return (
         <div className="forgot-container">
+            {/* Security Questions Modal */}
+            <SecurityQuestionsModal
+                isOpen={showSecurityModal}
+                onClose={() => setShowSecurityModal(false)}
+                onSave={handleSecurityQuestionsVerified}
+                mode="reset"
+                email={email}
+            />
+
             <div className="forgot-card">
                 <h2>Reset Password</h2>
                 <p>Enter a new password for: <strong>{email}</strong></p>
+                
+                {!securityVerified && (
+                    <div className="security-required-notice">
+                        <i className="bi bi-shield-lock"></i>
+                        <span>You must verify your identity with security questions before resetting your password.</span>
+                    </div>
+                )}
+
+                {securityVerified && (
+                    <div className="security-verified-notice">
+                        <i className="bi bi-check-circle"></i>
+                        <span>Security questions verified successfully. You can now set your new password.</span>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit}>
                     <div className="form-group password-group">
                         <label>New Password</label>
@@ -95,6 +133,7 @@ const ForgotPassword = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 minLength="6"
+                                disabled={!securityVerified || loading}
                             />
                             <span
                                 className="toggle-password"
@@ -115,6 +154,7 @@ const ForgotPassword = () => {
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
                                 minLength="6"
+                                disabled={!securityVerified || loading}
                             />
                             <span
                                 className="toggle-password"
@@ -125,9 +165,19 @@ const ForgotPassword = () => {
                         </div>
                     </div>
 
-                    <button type="submit" className="reset-btn" disabled={loading}>
-                        {loading ? "Resetting..." : "Reset Password"}
-                    </button>
+                    {!securityVerified ? (
+                        <button 
+                            type="button" 
+                            className="verify-security-btn"
+                            onClick={() => setShowSecurityModal(true)}
+                        >
+                            Verify Security Questions
+                        </button>
+                    ) : (
+                        <button type="submit" className="reset-btn" disabled={loading}>
+                            {loading ? "Resetting..." : "Reset Password"}
+                        </button>
+                    )}
                 </form>
 
                 {loading && <div className="loader"></div>}
@@ -137,4 +187,3 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
- 
