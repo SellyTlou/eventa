@@ -55,7 +55,7 @@ function Index() {
         setIsLoginOpen(true);
     }
 
-    
+
 
     const [activeTab, setActiveTab] = useState("Invitations");
     const [managementStartIndex, setManagementStartIndex] = useState(0);
@@ -180,16 +180,16 @@ function Index() {
                             </div>
                         </div>
                         <div className="btn-container">
-                    <button 
-                        className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
-                         Get Started For Free
-                    </button>                            
-                  <button className="btn btn-demo">Book a Demo</button>
+                            <button
+                                className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
+                                Get Started For Free
+                            </button>
+                            {/*<button className="btn btn-demo">Book a Demo</button>*/}
                         </div>
                     </div>
                 </section>
 
-                <section className="homeFeatures"> 
+                <section className="homeFeatures">
                     <div className="popular-events">
                         <div className="container">
                             <h2 className="mb-4">Popular Events</h2>
@@ -211,14 +211,14 @@ function Index() {
                                             </div>
                                             <div className="card-content">
                                                 <p>{event.description}</p>
-                                                <button 
-    className="btn btn-view" 
-    onClick={() => window.location.href = "/createevent"}
-  >
-    Get Started
-  </button>
+                                                <button
+                                                    className="btn btn-view"
+                                                    onClick={() => window.location.href = "/createevent"}
+                                                >
+                                                    Get Started
+                                                </button>
                                             </div>
-                                        </div> 
+                                        </div>
                                     ))}
                                 </div>
                                 <button className="slider-btn" onClick={handleNext}>
@@ -246,7 +246,7 @@ function Index() {
                         <div className="ManagementsGuid-header text-content">
                             <h2>Comprehensive Event Management</h2>
                             <p>
-                                Planning an event has never been this easy! Evendi helps you manage guest lists, send invites, set up seating charts, 
+                                Planning an event has never been this easy! Evendi helps you manage guest lists, send invites, set up seating charts,
                                 and schedule reminders so you can focus on enjoying the celebration.
                             </p>
                         </div>
@@ -344,7 +344,7 @@ function Index() {
                                     <p>We're working hard to bring you this feature</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowMaintenance(false)}
                             >
@@ -360,7 +360,7 @@ function Index() {
                                 <h3>Coming Soon!</h3>
                                 <p>This feature is currently being developed and will be available in our next update.</p>
                                 <p>We appreciate your patience as we work to make Eventa even better!</p>
-                                
+
                                 <div className="maintenance-tips">
                                     <h4>In the meantime, you can:</h4>
                                     <ul>
@@ -370,9 +370,9 @@ function Index() {
                                     </ul>
                                 </div>
                             </div>
-                            
+
                             <div className="modal-actions-new">
-                                <button 
+                                <button
                                     className="action-btn-new primary"
                                     onClick={() => setShowMaintenance(false)}
                                 >

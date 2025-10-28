@@ -26,7 +26,7 @@ import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
 import Support from '../pages/support';
-import SecurityQuestionsModal from './SecurityQuestionsModal';
+import AttendanceStats from './planner/attendance_stats';import SecurityQuestionsModal from './SecurityQuestionsModal';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -191,7 +191,7 @@ export function SessionHandler() {
                 <Route path="/email_verify" element={<EmailVerify />} />
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
                 <Route path="/support" element={<Support />} />
-
+                <Route path="/attendance_stats" element={<AttendanceStats />} />
             </Routes>
 
             <SessionWarningModal
@@ -342,10 +342,10 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                         </div>
                         <div className="col-md-3  btns-container">
                             <button className="btn signin-btn" onClick={onLoginClick}>
-                                <i className="bi bi-person-fill me-2"></i> Sign In
+                                <i className="bi bi-person-fill "></i> Sign In
                             </button>
                             <button className="btn signup-btn" onClick={onSignupClick}>
-                                <i className="bi bi-person-plus-fill me-2"></i> Sign Up
+                                <i className="bi bi-person-plus-fill "></i> Sign Up
                             </button>
                         </div>
                     </div>
@@ -595,6 +595,8 @@ export function LoginNav() {
     );
 }
 
+
+
 export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [isLogin, setIsLogin] = useState(defaultMode === "login");
     const [formData, setFormData] = useState({
@@ -614,11 +616,24 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
     const navigate = useNavigate();
 
+    // ✅ Automatically switch mode when popup opens with a different defaultMode
+    useEffect(() => {
+        setIsLogin(defaultMode === "login");
+        setFormData({
+            name: '',
+            email: '',
+            lastname: '',
+            password: '',
+            confirmPassword: ''
+        });
+        setNeedsVerification(false);
+        setUnverifiedEmail('');
+    }, [defaultMode, isOpen]);
+
     if (!isOpen) return null;
 
     const printAlert = (message, type = 'info') => {
         setAlert({ show: true, message, type });
-
         setTimeout(() => {
             setAlert({ show: false, message: '', type: '' });
         }, 5000);
@@ -645,6 +660,9 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         }
     };
 
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     const saveSecurityQuestions = async (userId, answers) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -671,20 +689,9 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         }
     };
 
-    const handleSecurityQuestionsSave = async (answers) => {
-    setSecurityAnswers(answers);
-    setShowSecurityModal(false);
-    // Continue with registration after security questions are set
-    try {
-        await completeRegistration(answers);
-    } catch (error) {
-        console.error("Error during registration:", error);
-        printAlert("Registration failed. Please try again.", 'error');
-    }
-};
-
-    const completeRegistration = async (answers = null) => {
-    try {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
         const API_URL = process.env.REACT_APP_API_URL;
         const formDataToSend = new FormData();
 
@@ -713,35 +720,16 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         const result = await response.json();
         console.log("API Response:", result);
 
-        if (result.success) {
-            if (isLogin) {
-                localStorage.setItem("user", JSON.stringify(result.user));
-
-                const isAdmin = result.user.role == "admin" ||
-                    (result.user.role && result.user.role.includes("admin"));
-
-                if (isAdmin) {
-                    navigate("/adminDashboard");
+            if (result.success) {
+                if (isLogin) {
+                    localStorage.setItem("user", JSON.stringify(result.user));
+                    const isAdmin = result.user.role === "admin" || (result.user.role && result.user.role.includes("admin"));
+                    navigate(isAdmin ? "/adminDashboard" : "/eventsDashboard");
+                    onClose();
+                    printAlert("Login successful!", 'success');
                 } else {
-                    navigate("/eventsDashboard");
-                }
-
-                onClose();
-                printAlert("Login successful!", 'success');
-            } else {
-                // For registration, save security questions if answers were provided
-                if (answers && result.user && result.user.user_id) {
-                    const securityResult = await saveSecurityQuestions(result.user.user_id, answers);
-                    if (!securityResult.success) {
-                        console.error("Failed to save security questions:", securityResult.message);
-                    }
-                } else if (answers) {
-                    console.error("Cannot save security questions: user_id is undefined", result);
-                }
-
-                printAlert("Account created successfully! Sending verification email...", 'success');
-
-                const verificationResult = await sendVerificationEmail(formData.email, formData.name);
+                    printAlert("Account created successfully! Sending verification email...", 'success');
+                    const verificationResult = await sendVerificationEmail(formData.email, formData.name);
 
                 if (verificationResult.success) {
                     printAlert("Verification email sent! Please check your inbox.", 'success');
@@ -815,7 +803,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             });
 
             const result = await response.json();
-
             if (result.success) {
                 printAlert("Verification email sent successfully! Please check your inbox.", 'success');
                 setNeedsVerification(false);
@@ -850,12 +837,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             });
 
             const data = await resp.json();
-
-            if (data.success) {
-                printAlert(data.message, 'success');
-            } else {
-                printAlert(data.message, 'error');
-            }
+            printAlert(data.message, data.success ? 'success' : 'error');
         } catch (err) {
             console.error("Error:", err);
             printAlert("Something went wrong. Please try again later.", 'error');
@@ -878,9 +860,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         setSecurityAnswers(null);
     };
 
-    const closeAlert = () => {
-        setAlert({ show: false, message: '', type: '' });
-    };
+    const closeAlert = () => setAlert({ show: false, message: '', type: '' });
 
     if (loading && !showSecurityModal) {
         return (
@@ -895,18 +875,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
     return (
         <div className="login-popup-overlay" onClick={onClose}>
-            {/* Security Questions Modal */}
-            <SecurityQuestionsModal
-                isOpen={showSecurityModal}
-                onClose={() => {
-                    setShowSecurityModal(false);
-                    setLoading(false);
-                }}
-                onSave={handleSecurityQuestionsSave}
-                mode="registration"
-            />
-
-            {/* Regular Alerts */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <div className="alert-content">
@@ -929,33 +897,35 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
                 <form onSubmit={handleSubmit} className="login-form">
                     {!isLogin && (
-                        <div className="form-group">
-                            <label htmlFor="name">Firstname</label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                required={!isLogin}
-                                placeholder="Enter your Firstname"
-                            />
-                        </div>
+                        <>
+                            <div className="form-group">
+                                <label htmlFor="name">Firstname</label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="Enter your Firstname"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="lastname">Lastname</label>
+                                <input
+                                    type="text"
+                                    id="lastname"
+                                    name="lastname"
+                                    value={formData.lastname}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="Enter your Lastname"
+                                />
+                            </div>
+                        </>
                     )}
-                    {!isLogin && (
-                        <div className="form-group">
-                            <label htmlFor="lastname">Lastname</label>
-                            <input
-                                type="text"
-                                id="lastname"
-                                name="lastname"
-                                value={formData.lastname}
-                                onChange={handleInputChange}
-                                required={!isLogin}
-                                placeholder="Enter your Lastname"
-                            />
-                        </div>
-                    )}
+
                     <div className="form-group">
                         <label htmlFor="email">Email Address</label>
                         <input
@@ -974,7 +944,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         <div className="password-input-wrapper">
                             <input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="Enter new password"
+                                placeholder="Enter your password"
                                 id="password"
                                 name="password"
                                 value={formData.password}
@@ -1000,7 +970,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleInputChange}
-                                required={!isLogin}
+                                required
                                 placeholder="Confirm your password"
                                 minLength="6"
                             />
@@ -1019,7 +989,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         </div>
                     )}
 
-                    {/* Resend Verification Link - Hidden by default, shows when needsVerification is true */}
                     {needsVerification && (
                         <div className="verification-resend-section">
                             <div className="verification-error-message">

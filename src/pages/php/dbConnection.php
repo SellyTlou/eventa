@@ -2,10 +2,10 @@
 class Database
 {
 
-    /* private $host = "sql104.infinityfree.com";
-    private $user = "if0_40051875";
-    private $pass = "SellyTlou";
-    private $dbname = "if0_40051875_evendadb";
+    /* private $host = "sql109.infinityfree.com";
+    private $user = "if0_40261617";
+    private $pass = "AnaniasNdou";
+    private $dbname = "if0_40261617_evendidb";
     private $port = 3306;
      */
 

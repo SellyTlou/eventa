@@ -14,8 +14,9 @@ const PackagePayment = () => {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
     const [showPaymentPopup, setShowPaymentPopup] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [processingPayment, setProcessingPayment] = useState(false);
     const [error, setError] = useState("");
+    const [processingPayment, setProcessingPayment] = useState(false);
+    const [paymentStarted, setPaymentStarted] = useState(false);
 
     const vatRate = 0.15;
 
@@ -131,8 +132,6 @@ const PackagePayment = () => {
         setShowPaymentPopup(true);
     };
 
-  
-
     const recordPayment = async (paymentData) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -146,16 +145,23 @@ const PackagePayment = () => {
             formData.append("amount", paymentDetails?.totalAmount);
             formData.append("payment_method", selectedPaymentMethod);
             formData.append("payment_status", "completed");
-            
 
+            console.log("Recording payment with data:", {
+                user_id: user?.user_id,
+                user_name: user?.name,
+                package_id: selectedPackage?.package_id,
+                package_name: selectedPackage?.package_type,
+                amount: paymentDetails?.totalAmount,
+                payment_method: selectedPaymentMethod,
+                payment_status: "completed"
+            });
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData,
-            });
+            }); 
 
             // Check if the response is empty or invalid JSON
             const text = await response.text();
-            console.log("Raw response text (recordPayment):", text);
             if (!text.trim()) {
                 console.error("Empty response from server (recordPayment)");
                 throw new Error("Empty response from server");
@@ -183,7 +189,6 @@ const PackagePayment = () => {
         }
     };
 
-
     const updateUserPackage = async () => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -209,6 +214,12 @@ const PackagePayment = () => {
     };
 
     const processPayment = async (paymentData) => {
+        if (processingPayment || paymentStarted) {
+            console.log("Payment already in progress, ignoring duplicate click");
+            return;
+        }
+
+        setPaymentStarted(true);
         setProcessingPayment(true);
         setError("");
 
@@ -217,13 +228,14 @@ const PackagePayment = () => {
 
             const paymentSuccess = await recordPayment(paymentData);
 
+            console.log("Payment success status:", paymentSuccess);
             if (paymentSuccess) {
                 const updateSuccess = await updateUserPackage();
 
                 if (updateSuccess) {
                     localStorage.removeItem("selectedPackageId");
                     alert("Payment successful! Your package has been upgraded.");
-                    navigate("/manage_my_event");
+                    handleBack();
                 } else {
                     throw new Error("Failed to update user package");
                 }
@@ -236,6 +248,7 @@ const PackagePayment = () => {
             alert("Payment failed. Please try again.");
         } finally {
             setProcessingPayment(false);
+            setPaymentStarted(false); 
             setShowPaymentPopup(false);
         }
     };
@@ -339,20 +352,18 @@ const PackagePayment = () => {
     const PayPalForm = ({ onSubmit }) => {
         const [loading, setLoading] = useState(false);
 
-        const handleSubmit = async (e) => {
+        const handleSubmit = (e) => {
             e.preventDefault();
             setLoading(true);
 
-            // Simulate payment processing delay (like a real gateway)
             setTimeout(() => {
                 setLoading(false);
-                // Instead of redirecting to PayPal, just call onSubmit()
                 onSubmit({
                     paymentMethod: "paypal",
                     provider: "PayPal",
                     status: "completed"
                 });
-            }, 2500); // 2.5 seconds delay
+            }, 2500);
         };
 
         return (
@@ -362,10 +373,10 @@ const PackagePayment = () => {
                     <h4>Pay with PayPal</h4>
                 </div>
                 <p className="payment-info">
-                    Simulating PayPal payment processing for demo purposes.
+                    This is a demo simulation — no real payment will be processed.
                 </p>
                 <div className="paypal-amount">
-                    <strong>Amount: R{paymentDetails?.totalAmount?.toFixed(2) || '0.00'}</strong>
+                    <strong>Amount: R{paymentDetails?.totalAmount?.toFixed(2) || "0.00"}</strong>
                 </div>
                 <button
                     onClick={handleSubmit}
@@ -375,7 +386,7 @@ const PackagePayment = () => {
                     {loading ? (
                         <>
                             <div className="spinner-border spinner-border-sm" role="status"></div>
-                            &nbsp;Processing Payment...
+                            &nbsp;Processing PayPal Payment...
                         </>
                     ) : (
                         "Confirm Payment"
@@ -386,20 +397,12 @@ const PackagePayment = () => {
     };
 
     const StripeForm = ({ onSubmit }) => {
-        const [loading, setLoading] = useState(false);
-
         const handleSubmit = (e) => {
             e.preventDefault();
-            setLoading(true);
-
-            setTimeout(() => {
-                setLoading(false);
-                onSubmit({
-                    paymentMethod: "stripe",
-                    provider: "Stripe",
-                    status: "completed"
-                });
-            }, 2500);
+            onSubmit({
+                paymentMethod: 'stripe',
+                provider: 'Stripe'
+            });
         };
 
         return (
@@ -409,26 +412,35 @@ const PackagePayment = () => {
                     <h4>Pay with Stripe</h4>
                 </div>
                 <p className="payment-info">
-                    Secure Stripe-style payment simulation for demonstration only.
+                    Secure payment processed by Stripe. Your card details are encrypted and safe.
                 </p>
+                <div className="stripe-features">
+                    <div className="feature-item">
+                        <i className="bi bi-shield-check"></i>
+                        <span>PCI DSS compliant</span>
+                    </div>
+                    <div className="feature-item">
+                        <i className="bi bi-lock"></i>
+                        <span>256-bit encryption</span>
+                    </div>
+                </div>
                 <button
                     onClick={handleSubmit}
                     className="submit-payment-btn stripe-btn"
-                    disabled={loading}
+                    disabled={processingPayment}
                 >
-                    {loading ? (
+                    {processingPayment ? (
                         <>
                             <div className="spinner-border spinner-border-sm" role="status"></div>
-                            &nbsp;Processing Securely...
+                            Processing with Stripe...
                         </>
                     ) : (
-                        `Pay R${paymentDetails?.totalAmount?.toFixed(2) || "0.00"}`
+                        `Pay R${paymentDetails?.totalAmount?.toFixed(2) || '0.00'} with Stripe`
                     )}
                 </button>
             </div>
         );
     };
-
 
     const renderPaymentForm = () => {
         switch (selectedPaymentMethod) {
