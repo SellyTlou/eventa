@@ -1,13 +1,13 @@
 <?php
-
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/php_errors.log');
-
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Origin: http://localhost:3000"); // Allow React dev server
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Credentials: true");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 require_once "dbConnection.php";
 
@@ -91,9 +91,6 @@ function generateCSVReport($data, $filePath)
     fclose($file);
     return $filePath;
 }
-
-function generateExcelReport($data, $filePath) {
-    return generateCSVReport($data, str_replace('.xlsx', '.csv', $filePath));
 function generateExcelReport($data, $filePath)
 {
     // Simple CSV implementation (you can use PHPExcel for real Excel files)
