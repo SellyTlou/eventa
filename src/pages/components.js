@@ -611,8 +611,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
     const [needsVerification, setNeedsVerification] = useState(false);
     const [unverifiedEmail, setUnverifiedEmail] = useState('');
-    const [showSecurityModal, setShowSecurityModal] = useState(false);
-    const [securityAnswers, setSecurityAnswers] = useState(null);
 
     const navigate = useNavigate();
 
@@ -663,30 +661,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-    const saveSecurityQuestions = async (userId, answers) => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "saveSecurityQuestions");
-            formData.append("user_id", userId);
-            formData.append("question1", "What was the name of your first pet?");
-            formData.append("answer1", answers.answer1);
-            formData.append("question2", "What city were you born in?");
-            formData.append("answer2", answers.answer2);
-            formData.append("question3", "What is your mother's maiden name?");
-            formData.append("answer3", answers.answer3);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData
-            });
-
-            const result = await response.json();
-            return result;
-        } catch (err) {
-            console.error("Error saving security questions:", err);
-            return { success: false, message: "Failed to save security questions" };
-        }
     };
 
     const handleSubmit = async (e) => {
@@ -705,20 +679,21 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 setLoading(false);
                 return;
             }
-            formDataToSend.append("function", "eventAccConfirm");
+            formDataToSend.append("function", "register");
             formDataToSend.append("name", formData.name);
             formDataToSend.append("lastname", formData.lastname);
             formDataToSend.append("email", formData.email);
             formDataToSend.append("password", formData.password);
         }
 
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formDataToSend
-        });
+        try {
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formDataToSend
+            });
 
-        const result = await response.json();
-        console.log("API Response:", result);
+            const result = await response.json();
+            console.log("API Response:", result);
 
             if (result.success) {
                 if (isLogin) {
@@ -731,61 +706,35 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     printAlert("Account created successfully! Sending verification email...", 'success');
                     const verificationResult = await sendVerificationEmail(formData.email, formData.name);
 
-                if (verificationResult.success) {
-                    printAlert("Verification email sent! Please check your inbox.", 'success');
-                } else {
-                    printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
+                    if (verificationResult.success) {
+                        printAlert("Verification email sent! Please check your inbox.", 'success');
+                    } else {
+                        printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
+                    }
+
+                    setFormData({
+                        name: '',
+                        email: '',
+                        lastname: '',
+                        password: '',
+                        confirmPassword: ''
+                    });
+                    setIsLogin(true);
                 }
-
-                setFormData({
-                    name: '',
-                    email: '',
-                    lastname: '',
-                    password: '',
-                    confirmPassword: ''
-                });
-                setIsLogin(true);
-            }
-        } else {
-            if (result.needsVerification) {
-                setNeedsVerification(true);
-                setUnverifiedEmail(formData.email);
-                printAlert(result.message, 'error');
             } else {
-                printAlert(result.message || "Something went wrong!", 'error');
+                if (result.needsVerification) {
+                    setNeedsVerification(true);
+                    setUnverifiedEmail(formData.email);
+                    printAlert(result.message, 'error');
+                } else {
+                    printAlert(result.message || "Something went wrong!", 'error');
+                }
             }
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        printAlert("Server error, please try again later.", 'error');
-    } finally {
-        setLoading(false);
-    }
-};
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    const handleSubmit = async (e) => {
-        setLoading(true);
-        e.preventDefault();
-
-        if (isLogin) {
-            // For login, proceed directly
-            await completeRegistration();
-        } else {
-            // For registration, show security questions modal first
-            if (formData.password !== formData.confirmPassword) {
-                printAlert("Passwords don't match!", 'error');
-                setLoading(false);
-                return;
-            }
-            setShowSecurityModal(true);
+        } catch (error) {
+            console.error("Error:", error);
+            printAlert("Server error, please try again later.", 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -857,12 +806,11 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         });
         setNeedsVerification(false);
         setUnverifiedEmail('');
-        setSecurityAnswers(null);
     };
 
     const closeAlert = () => setAlert({ show: false, message: '', type: '' });
 
-    if (loading && !showSecurityModal) {
+    if (loading) {
         return (
             <div className="loading-container">
                 <div className="spinner-border text-info" role="status">
@@ -956,7 +904,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 className="toggle-password"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
-                                {showPassword ? "🙈" : "👁️"}
+                                {showPassword ? "🙈" : "👁"}
                             </span>
                         </div>
                     </div>

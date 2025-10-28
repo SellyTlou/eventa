@@ -218,36 +218,85 @@ function CreateEvent() {
         const startTimeError = validateField("eventStartTime", eventStartTime, allValues);
         if (startTimeError) newErrors.eventStartTime = startTimeError;
 
-        const success = saveStep2Data(step2Data);
-        if (!success) {
-          setError("Failed to save event details. Please try again.");
-          return;
-        }
+        const endDateError = validateField("eventEndDate", eventEndDate, allValues);
+        if (endDateError) newErrors.eventEndDate = endDateError;
+
+        const endTimeError = validateField("eventEndTime", eventEndTime, allValues);
+        if (endTimeError) newErrors.eventEndTime = endTimeError;
+
+        const timezoneError = validateField("timezone", timezone);
+        if (timezoneError) newErrors.timezone = timezoneError;
+      }
+
+      if (subStep === 2) {
+        const locationError = validateField("eventLocation", eventLocation);
+        if (locationError) newErrors.eventLocation = locationError;
       }
     }
 
-    // Step 3: Account Information
-    if (currentStep === 3) {
-      if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
-        setError("Please fill in all account fields.");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-      }
+    if (step === 3) {
+      const allValues = { password };
+      
+      const fullNameError = validateField("fullName", firstname + " " + lastname);
+      if (fullNameError) newErrors.fullName = fullNameError;
 
-      try {
-        const formData = new FormData();
-        formData.append("function", "eventAccConfirm");
-        formData.append("name", fullName.trim());
-        formData.append("email", email.trim());
-        formData.append("password", password);
+      const emailError = validateField("email", email);
+      if (emailError) newErrors.email = emailError;
 
-        const response = await fetch("https://eventa.xo.je/api/query.php", {
-          method: "POST",
-          body: formData,
-        });
+      const passwordError = validateField("password", password);
+      if (passwordError) newErrors.password = passwordError;
+
+      const confirmPasswordError = validateField("confirmPassword", confirmPassword, allValues);
+      if (confirmPasswordError) newErrors.confirmPassword = confirmPasswordError;
+    }
+
+    setFieldErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleBlur = (fieldName) => {
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
+    
+    const allValues = {
+      eventStartDate,
+      eventStartTime,
+      eventEndDate,
+      eventEndTime,
+      eventName,
+      eventLocation,
+      timezone,
+      fullName: firstname + " " + lastname,
+      email,
+      password,
+      confirmPassword
+    };
+    
+    const error = validateField(fieldName, allValues[fieldName], allValues);
+    setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
+  };
+
+  const handleSecurityQuestionsSave = (answers) => {
+    setSecurityAnswers(answers);
+    setShowSecurityModal(false);
+    // Continue with registration
+    completeRegistration();
+  };
+
+  const completeRegistration = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("function", "eventAccConfirm");
+      formData.append("name", firstname.trim());
+      formData.append("lastname", lastname.trim());
+      formData.append("email", email.trim());
+      formData.append("password", password);
+
+      const API_URL = process.env.REACT_APP_API_URL;
+
+      const response = await fetch(`${API_URL}/query.php`, {
+        method: "POST",
+        body: formData,
+      });
 
       const result = await response.json();
       console.log(result);
@@ -610,9 +659,28 @@ function CreateEvent() {
                   type="text"
                   className={`form-control-event ${shouldShowError('fullName') ? 'error' : ''}`}
                   id="fullName"
-                  placeholder="Your full name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your Firstname"
+                  value={firstname}
+                  onChange={(e) => setFirstname(e.target.value)}
+                  onBlur={() => handleBlur('fullName')}
+                />
+                {shouldShowError('fullName') && (
+                  <div className="field-error">
+                    <span className="error-icon">⚠</span>
+                    {fieldErrors.fullName}
+                  </div>
+                )}
+              </div>
+              <div className="form-group-event">
+                <label htmlFor="lastname">Lastname</label>
+                <input
+                  type="text"
+                  className={`form-control-event ${shouldShowError('fullName') ? 'error' : ''}`}
+                  id="lastname"
+                  placeholder="Your Lastname"
+                  value={lastname}
+                  onChange={(e) => setLastname(e.target.value)}
+                  onBlur={() => handleBlur('fullName')}
                 />
               </div>
               <div className="form-group-event">
