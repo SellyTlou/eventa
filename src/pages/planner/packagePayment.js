@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./main.css"; // Verify this path is correct
-import"../../alert.css";
+import "../../alert.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut } from "../components"; // Verify this import path
 
@@ -10,7 +10,7 @@ const PackagePayment = () => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-
+    const [eventStatus, setEventStatus] = useState("");
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
     const [showPaymentPopup, setShowPaymentPopup] = useState(false);
@@ -20,15 +20,15 @@ const PackagePayment = () => {
     const [paymentStarted, setPaymentStarted] = useState(false);
 
     const vatRate = 0.15;
-     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
-    
-        const printAlert = (message, type = "info") => {
-            setAlert({ show: true, message, type });
-            setTimeout(() => {
-                setAlert({ show: false, message: "", type: "" });
-            }, 5000);
-        };
-    
+    const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+
+    const printAlert = (message, type = "info") => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => {
+            setAlert({ show: false, message: "", type: "" });
+        }, 5000);
+    };
+
 
     // Memoized calculation function
     const calculatePaymentDetails = useCallback(() => {
@@ -117,6 +117,8 @@ const PackagePayment = () => {
     }, [searchParams, navigate]);
 
     useEffect(() => {
+        const id = localStorage.getItem("selectedEventId")
+        fetchEventStatusByID(id);
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setDropdownOpen(false);
@@ -126,7 +128,6 @@ const PackagePayment = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
     const navigationHandlers = {
         home: () => navigate("/eventsDashboard"),
@@ -170,7 +171,7 @@ const PackagePayment = () => {
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData,
-            }); 
+            });
 
             // Check if the response is empty or invalid JSON
             const text = await response.text();
@@ -262,7 +263,7 @@ const PackagePayment = () => {
             printAlert("Payment failed. Please try again.", "error");
         } finally {
             setProcessingPayment(false);
-            setPaymentStarted(false); 
+            setPaymentStarted(false);
             setShowPaymentPopup(false);
         }
     };
@@ -469,6 +470,40 @@ const PackagePayment = () => {
         }
     };
 
+    const fetchEventStatusByID = async (eventId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getEventStatusByID");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            console.log("Event Status data:", data);
+            if (data.success && data.status) {
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+            } else {
+                setEventStatus("Unknown");
+            }
+        } catch (err) {
+            console.error("Failed to fetch event status:", err);
+            return "unknown";
+        }
+    }
+
+    const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
+    const goToHome = () => navigate("/eventsDashboard");
+    const goToEventManagement = () => navigate(`/eventManagement`);
+    const goToInvitations = () => navigate(`/invitationPage`);
+    const goToManage = () => navigate(`/manage_my_event`);
+    const goToGuestInsights = () => navigate("/guest_insights");
+    const goToAttendanceStats = () => navigate("/attendance_stats");
+    const goToProfile = () => navigate("/Profile");
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -497,9 +532,8 @@ const PackagePayment = () => {
     }
 
     return (
-        
+
         <div className="dashboard-container">
-            
             {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
@@ -517,45 +551,45 @@ const PackagePayment = () => {
                 </div>
             )}
 
-            {/* Header and sidebar remain the same */}
-            <div className="dashboard-header">
-                <h1>evenda</h1>
-                <div className="header-tabs">
-                    <div
-                        ref={dropdownRef}
-                        className={`profile-container ${dropdownOpen ? "open" : ""}`}
-                        onClick={toggleDropdown}
-                    >
-                        <i className="bi bi-person-circle"></i>
-                        <span>{user ? user.name : "Guest"}</span>
-                        <i className="bi bi-chevron-bar-down"></i>
 
+            {/* HEADER */}
+            <div className="dashboard-header">
+                <h1>Evenda</h1>
+                <div className="header-tabs">
+                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>
+                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
+                        <i className="bi bi-person-circle"></i>
+                        <span>{user?.name || "Guest"}</span>
+                        <i className="bi bi-chevron-bar-down"></i>
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
-                                <button className="dropdown-item">
-                                    <i className="bi bi-person"></i>Profile
-                                </button>
-                                <button className="dropdown-item">
-                                    <i className="bi bi-gear"></i>Settings
-                                </button>
-                                <button className="dropdown-item" onClick={logOut}>
-                                    <i className="bi bi-box-arrow-right"></i>Logout
-                                </button>
+                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
+                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
+            {/* SIDEBAR */}
             <div className="dashboard-sidebar">
-                <h3>DASHBOARD</h3>
-                <ul>
-                    <li onClick={navigationHandlers.home}>Home</li>
-                    <li onClick={navigationHandlers.eventManagement}>Overview</li>
-                    <li onClick={navigationHandlers.manage} className="active">Publish</li>
-                    <li onClick={navigationHandlers.invitations}>Invitations</li>
-                    <li>Preview</li>
-                </ul>
+                <div className="sidebar-header"><h3>Event Management</h3></div>
+                <div className="sidebar-section">
+                    <h4>Event Planning</h4>
+                    <ul>
+                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
+                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
+                        <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
+                        <li className="active" onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
+                    </ul>
+                </div>
+                <div className="sidebar-section">
+                    <h4>Event Analytics</h4>
+                    <ul>
+                        <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
+                        <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
+                    </ul>
+                </div>
             </div>
 
             <div className="packagePayment-content container">

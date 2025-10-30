@@ -2551,24 +2551,25 @@ Event Dashboard page - Redesigned
     }
 }
 
-
 /********************
 Manage my Event page
 ********************/
 .manage-my-event-content {
     overflow: hidden;
     padding: 30px;
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     position: relative;
+    min-height: 100vh;
 }
 
 /* Section Title */
 .manage-my-event-content .section-title {
     color: #2c3e50;
-    font-size: 2rem;
+    font-size: 2.2rem;
     margin-bottom: 30px;
     text-align: center;
     font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Details Grid */
@@ -2582,48 +2583,58 @@ Manage my Event page
 /* Details Cards */
 .manage-my-event-content .details-card {
     background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     padding: 0;
     overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .manage-my-event-content .details-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
 }
 
 /* Card Header */
 .manage-my-event-content .card-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 20px 25px;
+    padding: 25px 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
 }
 
 .manage-my-event-content .card-header h3 {
     margin: 0;
-    font-size: 1.4rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.manage-my-event-content .save-guest-limit-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 20px;
+    border-radius: 25px;
     font-weight: 600;
-}
-
-.manage-my-event-content .edit-icon {
     cursor: pointer;
-    font-size: 1.2rem;
-    opacity: 0.8;
-    transition: opacity 0.3s ease;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
 }
 
-.manage-my-event-content .edit-icon:hover {
-    opacity: 1;
+.manage-my-event-content .save-guest-limit-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
 }
 
 /* Card Content */
 .manage-my-event-content .card-content {
-    padding: 25px;
+    padding: 30px;
 }
 
 /* Event Details */
@@ -2634,6 +2645,16 @@ Manage my Event page
     margin-bottom: 20px;
     padding-bottom: 20px;
     border-bottom: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+}
+
+.manage-my-event-content .detail-item:hover {
+    background: #f8f9fa;
+    margin-left: -10px;
+    margin-right: -10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 8px;
 }
 
 .manage-my-event-content .detail-item:last-child {
@@ -2645,53 +2666,20 @@ Manage my Event page
     font-weight: 600;
     color: #555;
     min-width: 120px;
+    font-size: 0.95rem;
 }
 
 .manage-my-event-content .detail-value {
     color: #333;
     text-align: right;
     flex: 1;
-}
-
-.manage-my-event-content .description-text {
-    line-height: 1.5;
-    color: #666;
-}
-
-/* Guests Progress */
-.manage-my-event-content .guests-progress {
-    margin-top: 25px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 12px;
-}
-
-.manage-my-event-content .progress-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    font-weight: 600;
-    color: #555;
-}
-
-.manage-my-event-content .progress-bar {
-    width: 100%;
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.manage-my-event-content .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #28a745, #20c997);
-    border-radius: 4px;
-    transition: width 0.5s ease;
+    font-weight: 500;
 }
 
 /* Current Plan Card */
 .manage-my-event-content .current-plan-card {
     border: 3px solid transparent;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
 }
 
 .manage-my-event-content .current-plan-card.unavailable {
@@ -2699,21 +2687,24 @@ Manage my Event page
 }
 
 .manage-my-event-content .plan-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
+    padding: 8px 16px;
+    border-radius: 25px;
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .manage-my-event-content .plan-badge.available {
-    background: #d4edda;
-    color: #155724;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 }
 
 .manage-my-event-content .plan-badge.unavailable {
-    background: #f8d7da;
-    color: #721c24;
+    background: linear-gradient(135deg, #dc3545, #e83e8c);
+    color: white;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
 }
 
 .manage-my-event-content .plan-main-info {
@@ -2724,17 +2715,21 @@ Manage my Event page
 }
 
 .manage-my-event-content .plan-name {
-    font-size: 1.8rem;
+    font-size: 2rem;
     color: #2c3e50;
     margin: 0 0 10px 0;
-    font-weight: 700;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .manage-my-event-content .plan-price {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
     color: #667eea;
     margin: 0;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 /* Plan Features */
@@ -2746,21 +2741,24 @@ Manage my Event page
     display: flex;
     align-items: center;
     margin-bottom: 20px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    transition: background 0.3s ease;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .manage-my-event-content .feature-item:hover {
-    background: #e9ecef;
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    transform: translateX(5px);
 }
 
 .manage-my-event-content .feature-icon {
-    font-size: 1.5rem;
-    margin-right: 15px;
-    width: 40px;
+    font-size: 1.8rem;
+    margin-right: 20px;
+    width: 50px;
     text-align: center;
+    filter: grayscale(0.3);
 }
 
 .manage-my-event-content .feature-details {
@@ -2771,14 +2769,15 @@ Manage my Event page
     display: block;
     color: #666;
     font-size: 0.9rem;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    font-weight: 500;
 }
 
 .manage-my-event-content .feature-value {
     display: block;
     color: #333;
-    font-size: 1.2rem;
-    font-weight: 700;
+    font-size: 1.3rem;
+    font-weight: 800;
 }
 
 .manage-my-event-content .feature-value.zero-events {
@@ -2787,25 +2786,27 @@ Manage my Event page
 
 /* Upgrade Alert */
 .manage-my-event-content .upgrade-alert {
-    background: #fff3cd;
-    border: 1px solid #ffeaa7;
-    border-radius: 10px;
-    padding: 15px;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 1px solid #ffd43b;
+    border-radius: 15px;
+    padding: 20px;
     margin-bottom: 20px;
     display: flex;
     align-items: flex-start;
+    box-shadow: 0 4px 15px rgba(255, 212, 59, 0.2);
 }
 
 .manage-my-event-content .alert-icon {
-    margin-right: 10px;
-    font-size: 1.2rem;
+    margin-right: 15px;
+    font-size: 1.4rem;
 }
 
 .manage-my-event-content .upgrade-alert p {
     margin: 0;
     color: #856404;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    font-weight: 500;
 }
 
 /* Plan Footer */
@@ -2816,24 +2817,27 @@ Manage my Event page
 .manage-my-event-content .renewal-date {
     color: #666;
     font-size: 0.9rem;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    font-style: italic;
 }
 
 .manage-my-event-content .upgrade-btn {
     background: linear-gradient(135deg, #28a745, #20c997);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 600;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
     width: 100%;
+    font-size: 1rem;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 }
 
 .manage-my-event-content .upgrade-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
 }
 
 /* Publish Button */
@@ -2844,24 +2848,27 @@ Manage my Event page
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 15px 40px;
+    padding: 18px 50px;
     border-radius: 50px;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    letter-spacing: 0.5px;
 }
 
 .manage-my-event-content .publish-event-btn:hover:not(.disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
 }
 
 .manage-my-event-content .publish-event-btn.disabled {
-    background: #6c757d;
+    background: linear-gradient(135deg, #6c757d, #495057);
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.7;
+    transform: none;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
 }
 
 .manage-my-event-content .publish-event-btn.disabled:hover .tooltip {
@@ -2877,14 +2884,15 @@ Manage my Event page
     transform: translateX(-50%) translateY(-5px);
     background: #333;
     color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 0.8rem;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.85rem;
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
     pointer-events: none;
+    font-weight: 500;
 }
 
 .manage-my-event-content .tooltip:after {
@@ -2893,7 +2901,7 @@ Manage my Event page
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border: 5px solid transparent;
+    border: 6px solid transparent;
     border-top-color: #333;
 }
 
@@ -2901,18 +2909,19 @@ Manage my Event page
 .manage-my-event-content .package-slider {
     position: relative;
     background: white;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    margin-bottom: 30px;
+    padding: 40px 30px;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    margin-bottom: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .manage-my-event-content .package-cards {
     display: flex;
-    gap: 20px;
+    gap: 25px;
     overflow-x: auto;
     scroll-behavior: smooth;
-    padding: 10px 0;
+    padding: 20px 10px;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -2922,289 +2931,213 @@ Manage my Event page
 }
 
 .manage-my-event-content .package-card {
-    min-width: 280px;
+    min-width: 300px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 25px;
-    border-radius: 12px;
+    padding: 30px;
+    border-radius: 20px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 3px solid transparent;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
 .manage-my-event-content .package-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
 }
 
 .manage-my-event-content .package-card.active {
     border-color: #ffd700;
     background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    box-shadow: 0 12px 35px rgba(255, 215, 0, 0.4);
 }
 
 .manage-my-event-content .package-card h3 {
-    font-size: 1.4rem;
-    margin-bottom: 15px;
+    font-size: 1.6rem;
+    margin-bottom: 20px;
     text-align: center;
+    font-weight: 700;
 }
 
 .manage-my-event-content .package-card p {
-    margin-bottom: 8px;
-    font-size: 0.95rem;
+    margin-bottom: 12px;
+    font-size: 1rem;
+    opacity: 0.9;
 }
 
 .manage-my-event-content .view-details-btn {
     width: 100%;
     background: rgba(255, 255, 255, 0.2);
     color: white;
-    border: 2px solid white;
-    padding: 10px;
-    border-radius: 6px;
-    margin-top: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    padding: 12px;
+    border-radius: 10px;
+    margin-top: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
 }
 
 .manage-my-event-content .view-details-btn:hover {
     background: white;
     color: #667eea;
+    transform: translateY(-2px);
 }
 
 .manage-my-event-content .slide-btn {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: #007bff;
+    background: linear-gradient(135deg, #007bff, #0056b3);
     color: white;
     border: none;
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 20px;
     z-index: 10;
-    transition: background 0.3s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
 }
 
 .manage-my-event-content .slide-btn:hover {
-    background: #0056b3;
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-50%) scale(1.1);
 }
 
 .manage-my-event-content .slide-btn.left {
-    left: 10px;
+    left: 15px;
 }
 
 .manage-my-event-content .slide-btn.right {
-    right: 10px;
-}
-
-.manage-my-event-content .package-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.manage-my-event-content .package-popup {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: relative;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.manage-my-event-content .close-popup {
-    position: absolute;
-    top: 15px;
     right: 15px;
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-}
-
-.manage-my-event-content .close-popup:hover {
-    color: #333;
-}
-
-.manage-my-event-content .package-popup h2 {
-    color: #333;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.manage-my-event-content .package-details p {
-    margin-bottom: 10px;
-    color: #555;
-}
-
-.manage-my-event-content .features-list {
-    margin-top: 20px;
-}
-
-.manage-my-event-content .features-list h4 {
-    color: #333;
-    margin-bottom: 10px;
-}
-
-.manage-my-event-content .features-list ul {
-    list-style-type: none;
-    padding-left: 0;
-}
-
-.manage-my-event-content .features-list li {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-    color: #666;
-}
-
-.manage-my-event-content .features-list li:before {
-    content: "✓";
-    color: #28a745;
-    margin-right: 10px;
-}
-
-.manage-my-event-content .choose-package-btn {
-    width: 100%;
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    border: none;
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 20px;
-    transition: all 0.3s ease;
-}
-
-.manage-my-event-content .choose-package-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
 }
 
 /* Event Details Section */
 .manage-my-event-content .eventDetails-section {
     background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 30px;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    margin-bottom: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Guest Limit Section */
 .manage-my-event-content .guest-limit-section {
-    margin-top: 25px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
+    margin-top: 30px;
+    padding: 25px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .manage-my-event-content .guest-limit-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .manage-my-event-content .guest-limit-label {
-    font-weight: 600;
-    color: #333;
-    font-size: 1rem;
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 1.1rem;
 }
 
 .manage-my-event-content .guest-limit-display {
     display: flex;
     align-items: baseline;
-    gap: 4px;
+    gap: 5px;
 }
 
 .manage-my-event-content .guest-count {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 2rem;
+    font-weight: 800;
     color: #667eea;
+    text-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
 
 .manage-my-event-content .guest-max {
     color: #666;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    font-weight: 500;
 }
 
 .manage-my-event-content .guest-limit-slider {
     position: relative;
     width: 100%;
-    height: 12px;
+    height: 16px;
     background: #e9ecef;
-    border-radius: 6px;
+    border-radius: 10px;
     cursor: pointer;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .manage-my-event-content .guest-limit-progress {
     position: absolute;
     height: 100%;
     background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 6px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     transition: width 0.1s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
 .manage-my-event-content .guest-limit-handle {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     background: white;
-    border: 3px solid #667eea;
+    border: 4px solid #667eea;
     border-radius: 50%;
-    margin-right: -10px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    margin-right: -12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     transition: all 0.2s ease;
 }
 
 .manage-my-event-content .guest-limit-slider:hover .guest-limit-handle {
-    transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: scale(1.2);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .manage-my-event-content .guest-limit-input {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 15px;
+    margin-bottom: 15px;
 }
 
 .manage-my-event-content .guest-limit-input label {
-    font-weight: 500;
+    font-weight: 600;
     color: #555;
-    font-size: 0.9rem;
+    font-size: 1rem;
     white-space: nowrap;
 }
 
 .manage-my-event-content .guest-limit-input input {
-    width: 80px;
-    padding: 8px 12px;
+    width: 100px;
+    padding: 12px 15px;
     border: 2px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 14px;
+    border-radius: 10px;
+    font-size: 1rem;
     text-align: center;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    background: white;
 }
 
 .manage-my-event-content .guest-limit-input input:focus {
     outline: none;
     border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: scale(1.05);
 }
 
 .manage-my-event-content .guest-limit-info {
@@ -3213,27 +3146,150 @@ Manage my Event page
 
 .manage-my-event-content .guest-limit-info small {
     color: #666;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-style: italic;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .manage-my-event-content .guest-limit-input {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .manage-my-event-content .guest-limit-input input {
-        width: 100%;
-    }
+/* Package Popup Styles */
+.manage-my-event-content .package-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
 }
 
+.manage-my-event-content .package-popup {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.manage-my-event-content .close-popup {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.manage-my-event-content .close-popup:hover {
+    color: #333;
+    transform: scale(1.1);
+}
+
+.manage-my-event-content .package-popup h2 {
+    color: #2c3e50;
+    margin-bottom: 25px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.8rem;
+}
+
+.manage-my-event-content .package-details p {
+    margin-bottom: 12px;
+    color: #555;
+    font-size: 1rem;
+}
+
+.manage-my-event-content .features-list {
+    margin-top: 25px;
+}
+
+.manage-my-event-content .features-list h4 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.manage-my-event-content .features-list ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.manage-my-event-content .features-list li {
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+    color: #666;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.manage-my-event-content .features-list li:hover {
+    background: #f8f9fa;
+    padding-left: 10px;
+    border-radius: 5px;
+}
+
+.manage-my-event-content .features-list li:before {
+    content: "✓";
+    color: #28a745;
+    margin-right: 12px;
+    font-weight: bold;
+}
+
+.manage-my-event-content .choose-package-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 25px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.manage-my-event-content .choose-package-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+}
+
+/* Update Event Button */
+.manage-my-event-content .update-event-btn {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
+.manage-my-event-content .update-event-btn:hover {
+    background: linear-gradient(135deg, #ee5a24, #ff6b6b);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
 /* Responsive Design */
 @media (max-width: 1024px) {
     .manage-my-event-content .details-grid {
         grid-template-columns: 1fr;
-        gap: 20px;
+        gap: 25px;
     }
 }
 
@@ -3243,45 +3299,58 @@ Manage my Event page
     }
 
     .manage-my-event-content .section-title {
-        font-size: 1.6rem;
+        font-size: 1.8rem;
     }
 
     .manage-my-event-content .card-header {
-        padding: 15px 20px;
+        padding: 20px 25px;
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
     }
 
     .manage-my-event-content .card-header h3 {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
     }
 
     .manage-my-event-content .card-content {
-        padding: 20px;
+        padding: 25px;
     }
 
     .manage-my-event-content .detail-item {
         flex-direction: column;
         align-items: flex-start;
+        gap: 5px;
     }
 
     .manage-my-event-content .detail-value {
         text-align: left;
-        margin-top: 5px;
     }
 
     .manage-my-event-content .plan-name {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
     }
 
     .manage-my-event-content .plan-price {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
     }
 
     .manage-my-event-content .package-card {
-        min-width: 250px;
+        min-width: 280px;
     }
 
     .manage-my-event-content .slide-btn {
         display: none;
+    }
+
+    .manage-my-event-content .guest-limit-input {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .manage-my-event-content .guest-limit-input input {
+        width: 100%;
     }
 }
 
@@ -3291,12 +3360,13 @@ Manage my Event page
     }
 
     .manage-my-event-content .section-title {
-        font-size: 1.4rem;
+        font-size: 1.5rem;
     }
 
     .manage-my-event-content .feature-item {
         flex-direction: column;
         text-align: center;
+        padding: 15px;
     }
 
     .manage-my-event-content .feature-icon {
@@ -3305,11 +3375,18 @@ Manage my Event page
     }
 
     .manage-my-event-content .publish-event-btn {
-        padding: 12px 30px;
-        font-size: 1rem;
+        padding: 15px 35px;
+        font-size: 1.1rem;
+    }
+
+    .manage-my-event-content .eventDetails-section {
+        padding: 25px 20px;
+    }
+
+    .manage-my-event-content .package-slider {
+        padding: 25px 20px;
     }
 }
-
 /*****************************
 Package Payment Page
 ******************************/
