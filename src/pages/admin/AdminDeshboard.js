@@ -42,6 +42,7 @@ function AdminDashboard() {
     const [logsSearch, setLogsSearch] = useState("");
     const [logsFilter, setLogsFilter] = useState("all");
     const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [newAdminData, setNewAdminData] = useState({
         name: '',
         lastname: '',
@@ -103,6 +104,10 @@ function AdminDashboard() {
         }
     };
 
+    const triggerRefresh = () => {
+        setRefreshTrigger(prev => prev + 1);
+    };
+
     const logActivity = (action, description, userId = null) => {
         activityQueue.enqueue({
             userId: userId || adminUserId,
@@ -110,6 +115,30 @@ function AdminDashboard() {
             description: description
         });
     };
+
+     useEffect(() => {
+        console.log('Refresh triggered:', refreshTrigger);
+        
+        // Refresh data based on active tab
+        switch(activeTab) {
+            case "dashboard":
+                fetchDashboardData();
+                fetchSystemActivities();
+                break;
+            case "invitations":
+                fetchInvitationAnalytics();
+                break;
+            case "pricing":
+                fetchPricingPlans();
+                fetchRevenueData();
+                break;
+            case "users":
+                fetchUsersData();
+                break;
+            default:
+                break;
+        }
+    }, [refreshTrigger, activeTab]);
 
     // Reset forms when modals open
     useEffect(() => {
@@ -857,6 +886,8 @@ function AdminDashboard() {
         }
 
         switch(activeTab) {
+            case "event-management":
+                return <EventManagementTabContent adminUserId={adminUserId} logActivity={logActivity} triggerRefresh={triggerRefresh} />;
             case "invitations":
                 return <InvitationsTabContent analytics={invitationAnalytics} logActivity={logActivity} adminUserId={adminUserId} />;
             case "pricing":
@@ -964,43 +995,50 @@ function AdminDashboard() {
             )}
                 <div className="admin-dashboard-container">
                     {/* Sidebar Navigation */}
-                    <aside className="admin-dashboard-sidebar">
-                        <div className="admin-dashboard-logo">
-                            <h2>System Management</h2>
-                        </div>
-                        <nav className="admin-dashboard-nav">
-                            <ul>
-                                <li 
-                                    className={`admin-dashboard-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("dashboard")}
-                                >
-                                    <i className="bi bi-speedometer2"></i>
-                                    <span>Dashboard</span>
-                                </li>
-                                <li 
-                                    className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("invitations")}
-                                >
-                                    <i className="bi bi-envelope"></i>
-                                    <span>Invitations</span>
-                                </li>
-                                <li 
-                                    className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("pricing")}
-                                >
-                                    <i className="bi bi-tags"></i>
-                                    <span>Pricing Plans</span>
-                                </li>
-                                <li 
-                                    className={`admin-dashboard-nav-item ${activeTab === "users" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("users")}
-                                >
-                                    <i className="bi bi-people"></i>
-                                    <span>User Management</span>
-                                </li>
-                            </ul>
-                        </nav>
-                    </aside>
+                   <aside className="admin-dashboard-sidebar">
+    <div className="admin-dashboard-logo">
+        <h2>System Management</h2>
+    </div>
+    <nav className="admin-dashboard-nav">
+        <ul>
+            <li 
+                className={`admin-dashboard-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
+                onClick={() => setActiveTab("dashboard")}
+            >
+                <i className="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </li>
+            <li 
+                className={`admin-dashboard-nav-item ${activeTab === "event-management" ? "active" : ""}`}
+                onClick={() => setActiveTab("event-management")}
+            >
+                <i className="bi bi-shield-check"></i>
+                <span>Event Management</span>
+            </li>
+            <li 
+                className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
+                onClick={() => setActiveTab("invitations")}
+            >
+                <i className="bi bi-envelope"></i>
+                <span>Invitations</span>
+            </li>
+            <li 
+                className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
+                onClick={() => setActiveTab("pricing")}
+            >
+                <i className="bi bi-tags"></i>
+                <span>Pricing Plans</span>
+            </li>
+            <li 
+                className={`admin-dashboard-nav-item ${activeTab === "users" ? "active" : ""}`}
+                onClick={() => setActiveTab("users")}
+            >
+                <i className="bi bi-people"></i>
+                <span>User Management</span>
+            </li>
+        </ul>
+    </nav>
+</aside>
 
                     {/* Main Content Area */}
                     <main className="admin-dashboard-main">
@@ -1925,29 +1963,6 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId }) => {
             setLoading(false);
         }
     };
- /*   const fetchEnhancedAnalytics = async () => {
-        try {
-            const formData = new FormData();
-            formData.append('function', 'getEnhancedInvitationAnalytics');
-            formData.append('admin_user_id', adminUserId);
-            
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    setEnhancedAnalytics(data.analytics);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching enhanced analytics:', error);
-        }
-    };
-    
-*/
 
     const fetchUsers = async () => {
         try {
@@ -3882,4 +3897,555 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
     );
 };
 
+// Add this component to your AdminDashboard.js file
+
+const EventManagementTabContent = ({ adminUserId, logActivity, triggerRefresh }) => {
+    const [activeSection, setActiveSection] = useState('reported');
+    const [reportedEvents, setReportedEvents] = useState([]);
+    const [allEvents, setAllEvents] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showUnpublishedModal, setShowUnpublishedModal] = useState(false);
+    const [deleteForm, setDeleteForm] = useState({
+        reason: '',
+        custom_reason: '',
+        block_user: false,
+        violation_severity: 'medium'
+    });
+
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
+    const violationReasons = [
+        { value: 'inappropriate_content', label: 'Inappropriate Content/Images', points: 3 },
+        { value: 'spam', label: 'Spam/Fake Event', points: 2 },
+        { value: 'copyright', label: 'Copyright Infringement', points: 4 },
+        { value: 'harassment', label: 'Harassment/Hate Speech', points: 5 },
+        { value: 'illegal', label: 'Illegal Activities', points: 5 },
+        { value: 'other', label: 'Other Violation', points: 1 }
+    ];
+
+    useEffect(() => {
+        if (activeSection === 'reported') {
+            fetchReportedEvents();
+        } else {
+            fetchAllEvents();
+        }
+    }, [activeSection]);
+
+    const fetchReportedEvents = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'getReportedEvents');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                setReportedEvents(data.reportedEvents);
+            }
+        } catch (error) {
+            console.error('Error fetching reported events:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+   const fetchAllEvents = async () => {
+    try {
+        setLoading(true);
+        const formData = new FormData();
+        formData.append('function', 'getAllEvents');
+        formData.append('admin_user_id', adminUserId);
+        
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        // Add better error handling
+        const text = await response.text();
+        console.log('Raw response:', text); // This will show what's actually being returned
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Failed to parse JSON. Raw response:', text);
+            // Check if it's an HTML error page
+            if (text.includes('<br />') || text.includes('<b>')) {
+                throw new Error('Server returned HTML error page instead of JSON');
+            } else {
+                throw new Error('Invalid JSON response from server');
+            }
+        }
+        
+        if (data.success) {
+            setAllEvents(data.events);
+        } else {
+            console.error('API Error:', data.message);
+            setAllEvents([]); // Set empty array on error
+        }
+    } catch (error) {
+        console.error('Error fetching all events:', error);
+        setAllEvents([]); // Set empty array on error
+    } finally {
+        setLoading(false);
+    }
+};
+
+const handleDeleteEvent = async () => {
+        if (!selectedEvent) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('function', 'adminDeleteEvent');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('event_id', selectedEvent.event_id);
+            formData.append('reason', deleteForm.reason);
+            formData.append('custom_reason', deleteForm.custom_reason);
+            formData.append('block_user', deleteForm.block_user ? '1' : '0');
+            formData.append('violation_severity', deleteForm.violation_severity);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseError) {
+                console.error('Delete response parse error:', text);
+                throw new Error('Invalid response from server');
+            }
+            
+            if (data.success) {
+                alert('Event deleted successfully' + (deleteForm.block_user ? ' and user blocked' : ''));
+                setShowDeleteModal(false);
+                setSelectedEvent(null);
+                setDeleteForm({
+                    reason: '',
+                    custom_reason: '',
+                    block_user: false,
+                    violation_severity: 'medium'
+                });
+                
+                // Refresh current tab data
+                if (activeSection === 'reported') {
+                    fetchReportedEvents();
+                } else {
+                    fetchAllEvents();
+                }
+                
+                // Trigger global refresh - this will update ALL tabs
+                if (triggerRefresh) {
+                    triggerRefresh();
+                }
+                
+                logActivity('Event Deleted', `Deleted event ${selectedEvent.event_name} for reason: ${deleteForm.reason}`);
+            } else {
+                throw new Error(data.message || 'Failed to delete event');
+            }
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            alert('Error deleting event: ' + error.message);
+        }
+    };
+    const openDeleteModal = (event) => {
+        setSelectedEvent(event);
+        setShowDeleteModal(true);
+    };
+
+    const dismissReport = async (reportId) => {
+        try {
+            const formData = new FormData();
+            formData.append('function', 'dismissEventReport');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('report_id', reportId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                fetchReportedEvents();
+                logActivity('Report Dismissed', 'Dismissed an event report as invalid');
+                alert('Report dismissed successfully');
+            } else {
+                alert('Error dismissing report: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error dismissing report:', error);
+            alert('Error dismissing report');
+        }
+    };
+
+    const getViolationLabel = (type) => {
+        const violation = violationReasons.find(v => v.value === type);
+        return violation ? violation.label : type;
+    };
+
+   const viewEventPreview = (event) => {
+    // Check if event is published
+    if (!event.published || event.published === 0 || event.status === 'draft') {
+        // Show modal message for unpublished events
+        setSelectedEvent(event);
+        setShowUnpublishedModal(true);
+        return;
+    }
+    
+    // Open event in new tab for preview - use the correct URL
+    window.open(`/rsvpForm?event_id=${event.event_id}`, '_blank');
+};
+
+    return (
+        <div className="admin-tab-content">
+            <div className="admin-content-header">
+                <h2>Event Management</h2>
+                <div className="header-actions">
+                    <div className="tab-buttons">
+                        <button 
+                            className={`tab-button ${activeSection === 'reported' ? 'active' : ''}`}
+                            onClick={() => setActiveSection('reported')}
+                        >
+                            Reported Events
+                            {reportedEvents.length > 0 && (
+                                <span className="badge">{reportedEvents.length}</span>
+                            )}
+                        </button>
+                        <button 
+                            className={`tab-button ${activeSection === 'all' ? 'active' : ''}`}
+                            onClick={() => setActiveSection('all')}
+                        >
+                            All Events
+                        </button>
+                    </div>
+                    <button 
+                        className="btn btn-outline" 
+                        onClick={activeSection === 'reported' ? fetchReportedEvents : fetchAllEvents}
+                        disabled={loading}
+                    >
+                        <i className="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            {loading && <div className="loading">Loading events...</div>}
+
+            {activeSection === 'reported' && (
+                <div className="reported-events-section">
+                    <div className="section-header">
+                        <h3>Pending Event Reports</h3>
+                        <p>Review and take action on reported events</p>
+                    </div>
+
+                    {reportedEvents.length === 0 ? (
+                        <div className="no-data">
+                            <i className="bi bi-check-circle"></i>
+                            <p>No pending event reports</p>
+                        </div>
+                    ) : (
+                        <div className="reported-events-grid">
+                            {reportedEvents.map(report => (
+                                <div key={report.id} className="reported-event-card">
+                                    <div className="event-header">
+                                        <h4>{report.event_name}</h4>
+                                        <span className="report-date">
+                                            Reported: {new Date(report.reported_at).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="event-details">
+                                        <div className="detail-row">
+                                            <label>Event Owner:</label>
+                                            <span>{report.event_owner_name}</span>
+                                        </div>
+                                        <div className="detail-row">
+                                            <label>Reported By:</label>
+                                            <span>{report.reporter_name || 'Anonymous'} {report.reporter_email && `(${report.reporter_email})`}</span>
+                                        </div>
+                                        <div className="detail-row">
+                                            <label>Violation Type:</label>
+                                            <span className={`violation-type ${report.violation_type}`}>
+                                                {getViolationLabel(report.violation_type)}
+                                            </span>
+                                        </div>
+                                        <div className="detail-row">
+                                            <label>Description:</label>
+                                            <span>{report.description || 'No additional details provided'}</span>
+                                        </div>
+                                        <div className="detail-row">
+                                            <label>Event Created:</label>
+                                            <span>{new Date(report.event_created_at).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+
+                                    {report.event_image && (
+                                        <div className="event-preview">
+                                            <label>Event Image:</label>
+                                            <img src={report.event_image} alt="Event preview" className="event-image-preview" />
+                                        </div>
+                                    )}
+
+                                    <div className="action-buttons">
+                                        <button 
+                                            className="btn btn-danger"
+                                            onClick={() => openDeleteModal(report)}
+                                        >
+                                            <i className="bi bi-trash"></i> Review & Delete
+                                        </button>
+                                        <button 
+                                            className="btn btn-outline"
+                                            onClick={() => dismissReport(report.id)}
+                                        >
+                                            <i className="bi bi-x-circle"></i> Dismiss Report
+                                        </button>
+                                        <button 
+    className={`btn btn-secondary ${!report.published ? 'disabled' : ''}`}
+    onClick={() => viewEventPreview(report)}
+    disabled={!report.published}
+    title={!report.published ? "Event not published - cannot preview" : "View Event"}
+>
+    <i className="bi bi-eye"></i> View Event
+</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeSection === 'all' && (
+                <div className="all-events-section">
+                    <div className="section-header">
+                        <h3>All Events</h3>
+                        <p>Manage all events in the system</p>
+                    </div>
+
+                    <div className="events-table">
+    <div className="table-header">
+        <span>Event Name</span>
+        <span>Owner</span>
+        <span>Created</span>
+        <span>Status</span>
+        <span>Reports</span>
+        <span>Actions</span>
+    </div>
+    
+    {allEvents.map(event => (
+        <div key={event.event_id} className="table-row">
+            <span className="event-name">{event.event_name}</span>
+            <span>{event.user_name}</span>
+            <span>{new Date(event.created_at).toLocaleDateString()}</span>
+            <span>
+                <span className={`status-badge ${event.published ? 'active' : 'draft'}`}>
+                    {event.published ? 'Published' : 'Draft'}
+                </span>
+            </span>
+            <span>
+                {event.report_count > 0 ? (
+                    <span className="report-count warning">{event.report_count} reports</span>
+                ) : (
+                    <span className="report-count">No reports</span>
+                )}
+            </span>
+            <span className="actions">
+                <button 
+                    className={`btn-icon view-btn ${!event.published ? 'disabled' : ''}`}
+                    onClick={() => viewEventPreview(event)}
+                    disabled={!event.published}
+                    title={!event.published ? "Event not published - cannot preview" : "View Event"}
+                >
+                    <i className="bi bi-eye"></i>
+                </button>
+                <button 
+                    className="btn-icon delete-btn"
+                    onClick={() => openDeleteModal(event)}
+                >
+                    <i className="bi bi-trash"></i>
+                </button>
+            </span>
+        </div>
+    ))}
+
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Event Modal */}
+            {showDeleteModal && selectedEvent && (
+                <div className="modal-overlay-new" onClick={() => setShowDeleteModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large warning">
+                                    <i className="bi bi-exclamation-triangle"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Delete Event</h2>
+                                    <p>Review and confirm event deletion</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowDeleteModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="delete-warning">
+                                <div className="warning-header">
+                                    <i className="bi bi-exclamation-circle"></i>
+                                    <h4>You are about to delete an event</h4>
+                                </div>
+                                <p><strong>Event:</strong> {selectedEvent.event_name}</p>
+                                <p><strong>Owner:</strong> {selectedEvent.event_owner_name || selectedEvent.user_name}</p>
+                                {selectedEvent.violation_type && (
+                                    <p><strong>Reported For:</strong> {getViolationLabel(selectedEvent.violation_type)}</p>
+                                )}
+                            </div>
+
+                            <div className="form-group-new">
+                                <label>Deletion Reason *</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={deleteForm.reason}
+                                    onChange={(e) => setDeleteForm(prev => ({...prev, reason: e.target.value}))}
+                                    required
+                                >
+                                    <option value="">Select a reason</option>
+                                    {violationReasons.map(reason => (
+                                        <option key={reason.value} value={reason.value}>
+                                            {reason.label} ({reason.points} points)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {deleteForm.reason === 'other' && (
+                                <div className="form-group-new">
+                                    <label>Custom Reason *</label>
+                                    <textarea 
+                                        className="form-textarea-new"
+                                        value={deleteForm.custom_reason}
+                                        onChange={(e) => setDeleteForm(prev => ({...prev, custom_reason: e.target.value}))}
+                                        placeholder="Please specify the reason for deletion..."
+                                        required
+                                    />
+                                </div>
+                            )}
+
+                            <div className="form-group-new">
+                                <label>Violation Severity</label>
+                                <select 
+                                    className="form-select-new"
+                                    value={deleteForm.violation_severity}
+                                    onChange={(e) => setDeleteForm(prev => ({...prev, violation_severity: e.target.value}))}
+                                >
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+
+                            <div className="form-check-new">
+                                <label className="checkbox-label">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={deleteForm.block_user}
+                                        onChange={(e) => setDeleteForm(prev => ({...prev, block_user: e.target.checked}))}
+                                    />
+                                    <span className="checkmark"></span>
+                                    Also block event owner from creating new events
+                                </label>
+                                <small className="checkbox-help">
+                                    User will be prevented from creating new events and may lose access to certain features
+                                </small>
+                            </div>
+
+                            <div className="modal-actions-new">
+                                <button 
+                                    className="action-btn-new danger"
+                                    onClick={handleDeleteEvent}
+                                    disabled={!deleteForm.reason || (deleteForm.reason === 'other' && !deleteForm.custom_reason)}
+                                >
+                                    <i className="bi bi-trash"></i>
+                                    Delete Event{deleteForm.block_user ? ' & Block User' : ''}
+                                </button>
+                                <button 
+                                    className="action-btn-new secondary"
+                                    onClick={() => setShowDeleteModal(false)}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Unpublished Event Modal */}
+{showUnpublishedModal && selectedEvent && (
+    <div className="modal-overlay-new" onClick={() => setShowUnpublishedModal(false)}>
+        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+                <div className="modal-title-section">
+                    <div className="modal-icon-large warning">
+                        <i className="bi bi-eye-slash"></i>
+                    </div>
+                    <div className="modal-title">
+                        <h2>Event Not Published</h2>
+                        <p>This event is not available for viewing</p>
+                    </div>
+                </div>
+                <button 
+                    className="close-btn-new"
+                    onClick={() => setShowUnpublishedModal(false)}
+                >
+                    <i className="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div className="modal-body-new">
+                <div className="unpublished-warning">
+                    <div className="warning-icon">
+                        <i className="bi bi-info-circle"></i>
+                    </div>
+                    <div className="warning-content">
+                        <h4>Event Preview Unavailable</h4>
+                        <p>The event "<strong>{selectedEvent.event_name}</strong>" is currently in <span className="status-draft">draft</span> status and has not been published yet.</p>
+                        <p>You can only preview events that have been published by the event organizer.</p>
+                    </div>
+                </div>
+
+                <div className="modal-actions-new">
+                    <button 
+                        className="action-btn-new primary"
+                        onClick={() => setShowUnpublishedModal(false)}
+                    >
+                        <i className="bi bi-check-circle"></i>
+                        Understood
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
+        </div>
+    );
+};
 export default AdminDashboard;
