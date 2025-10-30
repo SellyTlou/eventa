@@ -26,7 +26,10 @@ import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
 import Support from '../pages/support';
-import AttendanceStats from './planner/attendance_stats';import SecurityQuestionsModal from './SecurityQuestionsModal';
+import AttendanceStats from './planner/attendance_stats';
+import GuestInsights from './planner/guest_insights';
+import SecurityQuestionsModal from './SecurityQuestionsModal';
+import ReportEvent  from './ReportEvent';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -193,6 +196,8 @@ export function SessionHandler() {
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
                 <Route path="/guest_insights" element={<GuestInsights />} />
+                <Route path="/report-event" element={<ReportEvent />} />
+
             </Routes>
 
             <SessionWarningModal
@@ -610,27 +615,16 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
     const [needsVerification, setNeedsVerification] = useState(false);
     const [unverifiedEmail, setUnverifiedEmail] = useState('');
+    const [showSecurityModal, setShowSecurityModal] = useState(false);
+    const [securityAnswers, setSecurityAnswers] = useState(null);
 
     const navigate = useNavigate();
-
-    // ✅ Automatically switch mode when popup opens with a different defaultMode
-    useEffect(() => {
-        setIsLogin(defaultMode === "login");
-        setFormData({
-            name: '',
-            email: '',
-            lastname: '',
-            password: '',
-            confirmPassword: ''
-        });
-        setNeedsVerification(false);
-        setUnverifiedEmail('');
-    }, [defaultMode, isOpen]);
 
     if (!isOpen) return null;
 
     const printAlert = (message, type = 'info') => {
         setAlert({ show: true, message, type });
+
         setTimeout(() => {
             setAlert({ show: false, message: '', type: '' });
         }, 5000);
@@ -657,14 +651,58 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         }
     };
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const saveSecurityQuestions = async (userId, answers) => {
+    console.log("Saving security questions for user:", userId, "Answers:", answers);
+    
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "saveSecurityQuestions");
+        formData.append("user_id", userId);
+        formData.append("question1", "What was the name of your first pet?");
+        formData.append("answer1", answers.answer1);
+        formData.append("question2", "What city were you born in?");
+        formData.append("answer2", answers.answer2);
+        formData.append("question3", "What is your mother's maiden name?");
+        formData.append("answer3", answers.answer3);
+
+        console.log("Sending security questions to:", `${API_URL}/query.php`);
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseText = await response.text();
+        console.log("Raw security questions response:", responseText);
+
+        if (!responseText.trim()) {
+            throw new Error("Empty response from server for security questions");
+        }
+
+        const result = JSON.parse(responseText);
+        console.log("Security questions save response:", result);
+        
+        return result;
+    } catch (err) {
+        console.error("Error saving security questions:", err);
+        return { success: false, message: "Failed to save security questions: " + err.message };
+    }
+};
+
+    const handleSecurityQuestionsSave = async (answers) => {
+        setSecurityAnswers(answers);
+        setShowSecurityModal(false);
+        // Continue with registration after security questions are set
+        await completeRegistration(answers);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+    const completeRegistration = async (answers = null) => {
+    try {
         const API_URL = process.env.REACT_APP_API_URL;
         const formDataToSend = new FormData();
 
@@ -678,62 +716,132 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 setLoading(false);
                 return;
             }
-            formDataToSend.append("function", "register");
+            formDataToSend.append("function", "eventAccConfirm");
             formDataToSend.append("name", formData.name);
             formDataToSend.append("lastname", formData.lastname);
             formDataToSend.append("email", formData.email);
             formDataToSend.append("password", formData.password);
         }
 
+        console.log("Sending registration request to:", API_URL);
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formDataToSend
+        });
+
+        // Check if response is OK and has content
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseText = await response.text();
+        console.log("Raw API response:", responseText);
+
+        // Check if response is empty
+        if (!responseText.trim()) {
+            throw new Error("Empty response from server");
+        }
+
+        let result;
         try {
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formDataToSend
-            });
+            result = JSON.parse(responseText);
+        } catch (jsonError) {
+            console.error("JSON parse error:", jsonError);
+            console.error("Raw response that failed to parse:", responseText);
+            throw new Error("Invalid JSON response from server");
+        }
 
-            const result = await response.json();
-            console.log("API Response:", result);
+        console.log("Parsed API Response:", result);
 
-            if (result.success) {
-                if (isLogin) {
-                    localStorage.setItem("user", JSON.stringify(result.user));
-                    const isAdmin = result.user.role === "admin" || (result.user.role && result.user.role.includes("admin"));
-                    navigate(isAdmin ? "/adminDashboard" : "/eventsDashboard");
-                    onClose();
-                    printAlert("Login successful!", 'success');
+        if (result.success) {
+            if (isLogin) {
+                localStorage.setItem("user", JSON.stringify(result.user));
+
+                const isAdmin = result.user.role == "admin" ||
+                    (result.user.role && result.user.role.includes("admin"));
+
+                if (isAdmin) {
+                    navigate("/adminDashboard");
                 } else {
-                    printAlert("Account created successfully! Sending verification email...", 'success');
-                    const verificationResult = await sendVerificationEmail(formData.email, formData.name);
-
-                    if (verificationResult.success) {
-                        printAlert("Verification email sent! Please check your inbox.", 'success');
-                    } else {
-                        printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
-                    }
-
-                    setFormData({
-                        name: '',
-                        email: '',
-                        lastname: '',
-                        password: '',
-                        confirmPassword: ''
-                    });
-                    setIsLogin(true);
+                    navigate("/eventsDashboard");
                 }
+
+                onClose();
+                printAlert("Login successful!", 'success');
             } else {
-                if (result.needsVerification) {
-                    setNeedsVerification(true);
-                    setUnverifiedEmail(formData.email);
-                    printAlert(result.message, 'error');
-                } else {
-                    printAlert(result.message || "Something went wrong!", 'error');
+                // For registration, save security questions if answers were provided
+                if (answers && result.user && result.user.user_id) {
+                    const securityResult = await saveSecurityQuestions(result.user.user_id, answers);
+                    if (!securityResult.success) {
+                        console.error("Failed to save security questions:", securityResult.message);
+                        // Don't fail the registration if security questions fail
+                        printAlert("Account created but security questions failed to save", 'warning');
+                    }
+                } else if (answers) {
+                    console.error("Cannot save security questions: user_id is undefined", result);
+                    printAlert("Account created but security questions failed to save", 'warning');
                 }
+
+                printAlert("Account created successfully! Sending verification email...", 'success');
+
+                const verificationResult = await sendVerificationEmail(formData.email, formData.name);
+
+                if (verificationResult.success) {
+                    printAlert("Verification email sent! Please check your inbox.", 'success');
+                } else {
+                    printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
+                }
+
+                setFormData({
+                    name: '',
+                    email: '',
+                    lastname: '',
+                    password: '',
+                    confirmPassword: ''
+                });
+                setIsLogin(true);
             }
-        } catch (error) {
-            console.error("Error:", error);
-            printAlert("Server error, please try again later.", 'error');
-        } finally {
-            setLoading(false);
+        } else {
+            if (result.needsVerification) {
+                setNeedsVerification(true);
+                setUnverifiedEmail(formData.email);
+                printAlert(result.message, 'error');
+            } else {
+                printAlert(result.message || "Something went wrong!", 'error');
+            }
+        }
+    } catch (error) {
+        console.error("Registration Error:", error);
+        printAlert(`Registration failed: ${error.message}`, 'error');
+    } finally {
+        setLoading(false);
+    }
+};
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleSubmit = async (e) => {
+        setLoading(true);
+        e.preventDefault();
+
+        if (isLogin) {
+            // For login, proceed directly
+            await completeRegistration();
+        } else {
+            // For registration, show security questions modal first
+            if (formData.password !== formData.confirmPassword) {
+                printAlert("Passwords don't match!", 'error');
+                setLoading(false);
+                return;
+            }
+            setShowSecurityModal(true);
         }
     };
 
@@ -751,6 +859,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             });
 
             const result = await response.json();
+
             if (result.success) {
                 printAlert("Verification email sent successfully! Please check your inbox.", 'success');
                 setNeedsVerification(false);
@@ -785,7 +894,12 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             });
 
             const data = await resp.json();
-            printAlert(data.message, data.success ? 'success' : 'error');
+
+            if (data.success) {
+                printAlert(data.message, 'success');
+            } else {
+                printAlert(data.message, 'error');
+            }
         } catch (err) {
             console.error("Error:", err);
             printAlert("Something went wrong. Please try again later.", 'error');
@@ -805,11 +919,14 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         });
         setNeedsVerification(false);
         setUnverifiedEmail('');
+        setSecurityAnswers(null);
     };
 
-    const closeAlert = () => setAlert({ show: false, message: '', type: '' });
+    const closeAlert = () => {
+        setAlert({ show: false, message: '', type: '' });
+    };
 
-    if (loading) {
+    if (loading && !showSecurityModal) {
         return (
             <div className="loading-container">
                 <div className="spinner-border text-info" role="status">
@@ -822,6 +939,18 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
     return (
         <div className="login-popup-overlay" onClick={onClose}>
+            {/* Security Questions Modal */}
+            <SecurityQuestionsModal
+                isOpen={showSecurityModal}
+                onClose={() => {
+                    setShowSecurityModal(false);
+                    setLoading(false);
+                }}
+                onSave={handleSecurityQuestionsSave}
+                mode="registration"
+            />
+
+            {/* Regular Alerts */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <div className="alert-content">
@@ -844,35 +973,33 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
                 <form onSubmit={handleSubmit} className="login-form">
                     {!isLogin && (
-                        <>
-                            <div className="form-group">
-                                <label htmlFor="name">Firstname</label>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    required
-                                    placeholder="Enter your Firstname"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label htmlFor="lastname">Lastname</label>
-                                <input
-                                    type="text"
-                                    id="lastname"
-                                    name="lastname"
-                                    value={formData.lastname}
-                                    onChange={handleInputChange}
-                                    required
-                                    placeholder="Enter your Lastname"
-                                />
-                            </div>
-                        </>
+                        <div className="form-group">
+                            <label htmlFor="name">Firstname</label>
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                required={!isLogin}
+                                placeholder="Enter your Firstname"
+                            />
+                        </div>
                     )}
-
+                    {!isLogin && (
+                        <div className="form-group">
+                            <label htmlFor="lastname">Lastname</label>
+                            <input
+                                type="text"
+                                id="lastname"
+                                name="lastname"
+                                value={formData.lastname}
+                                onChange={handleInputChange}
+                                required={!isLogin}
+                                placeholder="Enter your Lastname"
+                            />
+                        </div>
+                    )}
                     <div className="form-group">
                         <label htmlFor="email">Email Address</label>
                         <input
@@ -891,7 +1018,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         <div className="password-input-wrapper">
                             <input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="Enter your password"
+                                placeholder="Enter new password"
                                 id="password"
                                 name="password"
                                 value={formData.password}
@@ -903,7 +1030,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 className="toggle-password"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
-                                {showPassword ? "🙈" : "👁"}
+                                {showPassword ? "🙈" : "👁️"}
                             </span>
                         </div>
                     </div>
@@ -917,7 +1044,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleInputChange}
-                                required
+                                required={!isLogin}
                                 placeholder="Confirm your password"
                                 minLength="6"
                             />
@@ -936,6 +1063,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         </div>
                     )}
 
+                    {/* Resend Verification Link - Hidden by default, shows when needsVerification is true */}
                     {needsVerification && (
                         <div className="verification-resend-section">
                             <div className="verification-error-message">
@@ -979,3 +1107,4 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         </div>
     );
 }
+

@@ -50,7 +50,11 @@ try {
     $eventName     = $event['event_name'];
     $eventDate     = $event['event_start_date'];
     $eventLocation = $event['event_location'];
-$rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email=" . urlencode($user_email);
+    $rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email=" . urlencode($user_email);
+    
+    // Add report link
+    $reportLink = "$API_URL/report-event?event_id=" . urlencode($eventId);
+
     // === SendGrid Setup ===
     $SENDGRID_API_KEY = "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"; 
     $fromEmail = "bugbusters929@gmail.com";          
@@ -73,6 +77,16 @@ $rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email="
                     <p><strong>Date:</strong> " . date('F j, Y', strtotime($eventDate)) . "</p>
                     <p><strong>Location:</strong> {$eventLocation}</p>
                     <a href='{$rsvpLink}' style='display:inline-block;margin-top:20px;padding:12px 24px;background:#8b6a35;color:#fff;text-decoration:none;border-radius:6px;'>RSVP Now</a>
+                    
+                    <!-- Report Event Link -->
+                    <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;'>
+                        <p style='font-size: 12px; color: #888;'>
+                            If you believe this event contains inappropriate content, you can 
+                            <a href='{$reportLink}' style='color: #888; text-decoration: underline;'>
+                                report this event
+                            </a>.
+                        </p>
+                    </div>
                 </div>
             </body>
             </html>"
@@ -112,3 +126,4 @@ $rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email="
         "message" => "Error: " . $e->getMessage(),
     ]);
 }
+?>
