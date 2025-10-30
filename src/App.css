@@ -7904,3 +7904,79 @@ body,
     white-space: nowrap;
     z-index: 1000;
 }
+
+/* Password Field with Change Button */
+
+
+.password-field-with-button {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.password-field-with-button input {
+    flex: 1;
+}
+
+.btn-change-password {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.btn-change-password:hover {
+    background: #0056b3;
+}
+
+.btn-change-password:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.password-input-new {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-new input {
+    padding-right: 40px;
+    width: 100%;
+}
+
+.password-toggle-new {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+}
+
+.password-requirements {
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+}
+
+.spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
