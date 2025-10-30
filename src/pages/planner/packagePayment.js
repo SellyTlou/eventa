@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./main.css"; // Verify this path is correct
+import"../../alert.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut } from "../components"; // Verify this import path
 
@@ -19,6 +20,15 @@ const PackagePayment = () => {
     const [paymentStarted, setPaymentStarted] = useState(false);
 
     const vatRate = 0.15;
+     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+    
+        const printAlert = (message, type = "info") => {
+            setAlert({ show: true, message, type });
+            setTimeout(() => {
+                setAlert({ show: false, message: "", type: "" });
+            }, 5000);
+        };
+    
 
     // Memoized calculation function
     const calculatePaymentDetails = useCallback(() => {
@@ -79,7 +89,9 @@ const PackagePayment = () => {
                 const storedUser = localStorage.getItem("user");
 
                 if (!storedUser) {
+                    printAlert("Session expired. Please log in again.", "error");
                     logOut();
+                    navigate("/");
                     return;
                 }
 
@@ -234,7 +246,8 @@ const PackagePayment = () => {
 
                 if (updateSuccess) {
                     localStorage.removeItem("selectedPackageId");
-                    alert("Payment successful! Your package has been upgraded.");
+                    //alert("Payment successful! Your package has been upgraded.");
+                    printAlert("Payment successful! Your package has been upgraded.", "success");
                     handleBack();
                 } else {
                     throw new Error("Failed to update user package");
@@ -245,7 +258,8 @@ const PackagePayment = () => {
         } catch (error) {
             console.error("Payment processing error:", error);
             setError("An error occurred during payment processing. Please try again.");
-            alert("Payment failed. Please try again.");
+            //alert("Payment failed. Please try again.");
+            printAlert("Payment failed. Please try again.", "error");
         } finally {
             setProcessingPayment(false);
             setPaymentStarted(false); 
@@ -483,7 +497,26 @@ const PackagePayment = () => {
     }
 
     return (
+        
         <div className="dashboard-container">
+            
+            {/* Custom alert box */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
+
             {/* Header and sidebar remain the same */}
             <div className="dashboard-header">
                 <h1>evenda</h1>

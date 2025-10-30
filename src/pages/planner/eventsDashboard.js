@@ -27,14 +27,21 @@ const EventsDashboard = () => {
     const [editedEvent, setEditedEvent] = useState({});
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
+    // Cancel modal states
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelEventId, setCancelEventId] = useState(null);
+    const [cancelEventName, setCancelEventName] = useState("");
+    const [cancelMessage, setCancelMessage] = useState("");
+    const [affectedGuests, setAffectedGuests] = useState([]);
+    const [sendingMessage, setSendingMessage] = useState(false);
+    const [showMessageStep, setShowMessageStep] = useState(false);
+
     const itemsPerPage = 6;
     const navigate = useNavigate();
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
-        setTimeout(() => {
-            setAlert({ show: false, message: "", type: "" });
-        }, 5000);
+        setTimeout(() => setAlert({ show: false, message: "", type: "" }), 5000);
     };
 
     const isEventCancelled = (event) => {
@@ -42,23 +49,33 @@ const EventsDashboard = () => {
     };
 
     const isEventPublished = (event) => {
-        if (isEventCancelled(event)) {
-            return false;
-        }
-        return event.is_published === true || event.published === 1 || event.published === '1' ||
-            event.status === 'published' || event.status === true || event.status === 1 || event.status === '1';
+        if (isEventCancelled(event)) return false;
+        return (
+            event.is_published === true ||
+            event.published === 1 ||
+            event.published === "1" ||
+            event.status === "published" ||
+            event.status === true ||
+            event.status === 1 ||
+            event.status === "1"
+        );
     };
 
     const getMinDate = () => {
         const today = new Date();
-        return today.toISOString().split('T')[0];
+        return today.toISOString().split("T")[0];
     };
 
+    /* -------------------------------------------------------------
+       FETCH EVENTS + RSVP STATS
+    ------------------------------------------------------------- */
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
             setLoading(false);
+            printAlert("Session expired. Please log in again.", "error");
             logOut();
+            navigate("/");
             return;
         }
 
@@ -76,7 +93,6 @@ const EventsDashboard = () => {
                     method: "POST",
                     body: formData
                 });
-
                 const data = await response.json();
 
                 if (data.success && Array.isArray(data.events)) {
@@ -90,48 +106,44 @@ const EventsDashboard = () => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
 
-                    const upcomingEvents = uniqueEvents.filter(event => {
-                        const eventDate = new Date(event.event_start_date || event.created_at);
-                        eventDate.setHours(0, 0, 0, 0);
-                        return eventDate >= today && !isEventCancelled(event);
+                    const upcomingEvents = uniqueEvents.filter((event) => {
+                        const evDate = new Date(event.event_start_date || event.created_at);
+                        evDate.setHours(0, 0, 0, 0);
+                        return evDate >= today && !isEventCancelled(event);
                     });
 
-                    const pastEvents = uniqueEvents.filter(event => {
-                        const eventDate = new Date(event.event_start_date || event.created_at);
-                        eventDate.setHours(0, 0, 0, 0);
-                        return eventDate < today && !isEventCancelled(event);
+                    const pastEvents = uniqueEvents.filter((event) => {
+                        const evDate = new Date(event.event_start_date || event.created_at);
+                        evDate.setHours(0, 0, 0, 0);
+                        return evDate < today && !isEventCancelled(event);
                     });
 
-                    const canceledEvents = uniqueEvents.filter(event => isEventCancelled(event));
+                    const canceledEvents = uniqueEvents.filter(isEventCancelled);
 
-                    const upcomingEventHeap = new PriorityQueue({
+                    const upcomingHeap = new PriorityQueue({
                         comparator: (a, b) => {
-                            const dateA = new Date(a.event_start_date || a.created_at);
-                            const dateB = new Date(b.event_start_date || b.created_at);
-                            return dateA - dateB;
+                            const dA = new Date(a.event_start_date || a.created_at);
+                            const dB = new Date(b.event_start_date || b.created_at);
+                            return dA - dB;
                         }
                     });
+                    upcomingEvents.forEach((e) => upcomingHeap.queue(e));
 
-                    upcomingEvents.forEach(event => upcomingEventHeap.queue(event));
+                    const sortedUpcoming = [];
+                    while (upcomingHeap.length > 0) sortedUpcoming.push(upcomingHeap.dequeue());
 
-                    const sortedUpcomingEvents = [];
-                    while (upcomingEventHeap.length > 0) {
-                        sortedUpcomingEvents.push(upcomingEventHeap.dequeue());
-                    }
-
-                    const sortedPastEvents = pastEvents.sort((a, b) => {
-                        const dateA = new Date(a.event_start_date || a.created_at);
-                        const dateB = new Date(b.event_start_date || b.created_at);
-                        return dateB - dateA;
+                    const sortedPast = pastEvents.sort((a, b) => {
+                        const dA = new Date(a.event_start_date || a.created_at);
+                        const dB = new Date(b.event_start_date || b.created_at);
+                        return dB - dA;
                     });
 
-                    const finalSortedEvents = [...sortedUpcomingEvents, ...sortedPastEvents, ...canceledEvents];
-                    const soonestUpcomingEvent = sortedUpcomingEvents[0] || null;
-                    setSoonestEvent(soonestUpcomingEvent);
-
-                    setEvents(finalSortedEvents);
-                    setFilteredEvents(finalSortedEvents);
-                    fetchRSVPStatsForEvents(finalSortedEvents);
+                    const finalSorted = [...sortedUpcoming, ...sortedPast, ...canceledEvents];
+                    const soonest = sortedUpcoming[0] || null;
+                    setSoonestEvent(soonest);
+                    setEvents(finalSorted);
+                    setFilteredEvents(finalSorted);
+                    fetchRSVPStatsForEvents(finalSorted);
                 }
             } catch (error) {
                 console.error("Failed to fetch events:", error);
@@ -142,49 +154,180 @@ const EventsDashboard = () => {
         };
 
         fetchEvents();
-    }, []);
+    }, [navigate]);
 
     const fetchRSVPStatsForEvents = async (eventsArray) => {
         const stats = {};
-        await Promise.all(eventsArray.map(async (event) => {
-            try {
-                const API_URL = process.env.REACT_APP_API_URL;
-                const formData = new FormData();
-                formData.append("function", "getRSVPResponses");
-                formData.append("event_id", event.event_id);
+        await Promise.all(
+            eventsArray.map(async (event) => {
+                try {
+                    const API_URL = process.env.REACT_APP_API_URL;
+                    const formData = new FormData();
+                    formData.append("function", "getRSVPResponses");
+                    formData.append("event_id", event.event_id);
 
-                const response = await fetch(`${API_URL}/query.php`, {
-                    method: "POST",
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (data.success && Array.isArray(data.responses)) {
-                    const uniqueEmails = new Set();
-                    const uniqueResponses = data.responses.filter(r => {
-                        if (uniqueEmails.has(r.email)) return false;
-                        uniqueEmails.add(r.email);
-                        return true;
+                    const response = await fetch(`${API_URL}/query.php`, {
+                        method: "POST",
+                        body: formData
                     });
+                    const data = await response.json();
 
-                    stats[event.event_id] = {
-                        yes: uniqueResponses.filter(r => r.attending.toLowerCase() === "yes").length || 0,
-                        no: uniqueResponses.filter(r => r.attending.toLowerCase() === "no").length || 0,
-                        maybe: uniqueResponses.filter(r => r.attending.toLowerCase() === "maybe").length || 0
-                    };
-                } else {
-                    stats[event.event_id] = { yes: 0, no: 0, maybe: 0 };
+                    if (data.success && Array.isArray(data.responses)) {
+                        const uniqueEmails = new Set();
+                        const uniq = data.responses.filter((r) => {
+                            if (uniqueEmails.has(r.email)) return false;
+                            uniqueEmails.add(r.email);
+                            return true;
+                        });
+
+                        stats[event.event_id] = {
+                            yes: uniq.filter((r) => r.attending.toLowerCase() === "yes").length || 0,
+                            no: uniq.filter((r) => r.attending.toLowerCase() === "no").length || 0,
+                            maybe: uniq.filter((r) => r.attending.toLowerCase() === "maybe").length || 0,
+                            guests: uniq.filter((r) =>
+                                ["yes", "maybe"].includes(r.attending.toLowerCase())
+                            )
+                        };
+                    } else {
+                        stats[event.event_id] = { yes: 0, no: 0, maybe: 0, guests: [] };
+                    }
+                } catch (err) {
+                    stats[event.event_id] = { yes: 0, no: 0, maybe: 0, guests: [] };
                 }
-            } catch (err) {
-                stats[event.event_id] = { yes: 0, no: 0, maybe: 0 };
-            }
-        }));
+            })
+        );
         setRsvpStats(stats);
     };
 
+    /* -------------------------------------------------------------
+       CANCEL EVENT PROCESS
+    ------------------------------------------------------------- */
+    const initiateCancel = (eventId, eventName) => {
+        const ev = events.find((e) => e.event_id === eventId);
+        if (!ev) return;
+
+        const stats = rsvpStats[eventId] || { guests: [] };
+        const yesMaybeGuests = stats.guests || [];
+
+        setCancelEventId(eventId);
+        setCancelEventName(eventName);
+        setAffectedGuests(yesMaybeGuests);
+        setCancelMessage(
+            `Dear guest,\n\nWe regret to inform you that "${eventName}" has been cancelled.\n\nWe apologize for any inconvenience.\n\nBest regards,\nThe Event Team`
+        );
+        setShowMessageStep(false);
+        setSendingMessage(false);
+        setShowCancelModal(true);
+    };
+
+    const handleCancelConfirmation = () => {
+        if (affectedGuests.length > 0) {
+            // Show message step if there are guests to notify
+            setShowMessageStep(true);
+        } else {
+            // No guests, proceed directly to cancel
+            performCancel();
+        }
+    };
+
+    const performCancelWithMessage = async () => {
+        if (!cancelMessage.trim()) {
+            printAlert("Please enter a message", "warning");
+            return;
+        }
+
+        setSendingMessage(true);
+
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+
+            // Use the exact same structure as your sendMessage function
+            const formData = new FormData();
+            formData.append("function", "sendGuestMessage");
+            formData.append("message", cancelMessage);
+            formData.append("API_URL", API_URL);
+            formData.append("event_id", cancelEventId);
+
+            // Handle guest_ids - use all affected guests (Yes/Maybe RSVPs)
+            const guestIds = affectedGuests.map(g => g.guest_id).join(",");
+            formData.append("guest_ids", guestIds);
+
+            const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const recipientCount = affectedGuests.length;
+                printAlert("Cancellation message sent to " + recipientCount + " guest(s)", "success");
+
+                // Now cancel the event after successful message sending
+                await performCancel();
+            } else {
+                printAlert("Failed to send cancellation message: " + data.message, "error");
+                setSendingMessage(false);
+            }
+        } catch (error) {
+            printAlert("Error sending cancellation message", "error");
+            setSendingMessage(false);
+        }
+    };
+
+    const performCancel = async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "cancelEvent");
+            formData.append("event_id", cancelEventId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                printAlert("Event cancelled successfully!", "success");
+                const updated = events.map((e) =>
+                    e.event_id === cancelEventId ? { ...e, status: "cancelled" } : e
+                );
+                setEvents(updated);
+                setFilteredEvents(updated);
+                setSoonestEvent(
+                    updated.filter(
+                        (e) =>
+                            !isEventCancelled(e) &&
+                            new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
+                    )[0] || null
+                );
+            } else {
+                printAlert(`Failed to cancel: ${data.message}`, "error");
+            }
+        } catch (error) {
+            printAlert("Error cancelling event.", "error");
+        } finally {
+            resetCancelModal();
+        }
+    };
+
+    const resetCancelModal = () => {
+        setShowCancelModal(false);
+        setCancelEventId(null);
+        setCancelEventName("");
+        setCancelMessage("");
+        setAffectedGuests([]);
+        setSendingMessage(false);
+        setShowMessageStep(false);
+        setShowMenuId(null);
+    };
+
+    /* -------------------------------------------------------------
+       DELETE EVENT (Simple confirmation)
+    ------------------------------------------------------------- */
     const deleteEvent = async (eventId, eventName) => {
-        if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) return;
+        if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`))
+            return;
         setDeletingEventId(eventId);
 
         try {
@@ -197,58 +340,34 @@ const EventsDashboard = () => {
                 method: "POST",
                 body: formData
             });
-
             const data = await response.json();
+
             if (data.success) {
-                const updatedEvents = events.filter(event => event.event_id !== eventId);
-                setEvents(updatedEvents);
-                setFilteredEvents(updatedEvents);
-                setSoonestEvent(updatedEvents.filter(e => !isEventCancelled(e) && new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0))[0] || null);
+                const updated = events.filter((e) => e.event_id !== eventId);
+                setEvents(updated);
+                setFilteredEvents(updated);
+                setSoonestEvent(
+                    updated.filter(
+                        (e) =>
+                            !isEventCancelled(e) &&
+                            new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
+                    )[0] || null
+                );
                 printAlert("Event deleted successfully!", "success");
             } else {
-                printAlert(`Failed to delete event: ${data.message}`, "error");
+                printAlert(`Failed to delete: ${data.message}`, "error");
             }
         } catch (error) {
-            printAlert("An error occurred while deleting", "error");
+            printAlert("Error deleting event.", "error");
         } finally {
             setDeletingEventId(null);
             setShowMenuId(null);
         }
     };
 
-    const cancelEvent = async (eventId, eventName) => {
-        if (!window.confirm(`Are you sure you want to cancel "${eventName}"?`)) return;
-
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "cancelEvent");
-            formData.append("event_id", eventId);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                printAlert("Event canceled successfully!", "success");
-                const updatedEvents = events.map(event =>
-                    event.event_id === eventId ? { ...event, status: "cancelled" } : event
-                );
-                setEvents(updatedEvents);
-                setFilteredEvents(updatedEvents);
-                setSoonestEvent(updatedEvents.filter(e => !isEventCancelled(e) && new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0))[0] || null);
-            } else {
-                printAlert(`Failed to cancel event: ${data.message}`, "error");
-            }
-        } catch (error) {
-            printAlert("An error occurred while canceling", "error");
-        } finally {
-            setShowMenuId(null);
-        }
-    };
-
+    /* -------------------------------------------------------------
+       OTHER ACTIONS
+    ------------------------------------------------------------- */
     const reactivateEvent = async (eventId, eventName) => {
         if (!window.confirm(`Are you sure you want to reactivate "${eventName}"?`)) return;
 
@@ -262,21 +381,29 @@ const EventsDashboard = () => {
                 method: "POST",
                 body: formData
             });
-
             const data = await response.json();
+
             if (data.success) {
-                printAlert("Event reactivated successfully!", "success");
-                const updatedEvents = events.map(event =>
-                    event.event_id === eventId ? { ...event, status: event.is_published ? "published" : "draft" } : event
+                printAlert("Event reactivated!", "success");
+                const updated = events.map((e) =>
+                    e.event_id === eventId
+                        ? { ...e, status: e.is_published ? "published" : "draft" }
+                        : e
                 );
-                setEvents(updatedEvents);
-                setFilteredEvents(updatedEvents);
-                setSoonestEvent(updatedEvents.filter(e => !isEventCancelled(e) && new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0))[0] || null);
+                setEvents(updated);
+                setFilteredEvents(updated);
+                setSoonestEvent(
+                    updated.filter(
+                        (e) =>
+                            !isEventCancelled(e) &&
+                            new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
+                    )[0] || null
+                );
             } else {
-                printAlert(`Failed to reactivate event: ${data.message}`, "error");
+                printAlert(`Failed: ${data.message}`, "error");
             }
         } catch (error) {
-            printAlert("An error occurred while reactivating", "error");
+            printAlert("Error reactivating event.", "error");
         } finally {
             setShowMenuId(null);
         }
@@ -286,8 +413,12 @@ const EventsDashboard = () => {
         setSelectedEvent(event);
         setEditedEvent({
             ...event,
-            event_start_date: event.event_start_date ? new Date(event.event_start_date).toISOString().split('T')[0] : "",
-            event_end_date: event.event_end_date ? new Date(event.event_end_date).toISOString().split('T')[0] : ""
+            event_start_date: event.event_start_date
+                ? new Date(event.event_start_date).toISOString().split("T")[0]
+                : "",
+            event_end_date: event.event_end_date
+                ? new Date(event.event_end_date).toISOString().split("T")[0]
+                : ""
         });
         setShowEditModal(true);
         setShowMenuId(null);
@@ -330,48 +461,74 @@ const EventsDashboard = () => {
                 method: "POST",
                 body: formData
             });
-
             const data = await response.json();
+
             if (data.success) {
                 printAlert("Event updated successfully!", "success");
-                const updatedEvents = events.map(event =>
-                    event.event_id === selectedEvent.event_id ? { ...event, ...editedEvent } : event
+                const updated = events.map((e) =>
+                    e.event_id === selectedEvent.event_id ? { ...e, ...editedEvent } : e
                 );
-                setEvents(updatedEvents);
-                setFilteredEvents(updatedEvents);
-                setSoonestEvent(updatedEvents.filter(e => !isEventCancelled(e) && new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0))[0] || null);
+                setEvents(updated);
+                setFilteredEvents(updated);
+                setSoonestEvent(
+                    updated.filter(
+                        (e) =>
+                            !isEventCancelled(e) &&
+                            new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
+                    )[0] || null
+                );
                 setShowEditModal(false);
             } else {
-                printAlert(`Failed to update event: ${data.message}`, "error");
+                printAlert(`Failed: ${data.message}`, "error");
             }
         } catch (error) {
-            printAlert(`An error occurred while updating: ${error.message}`, "error");
+            printAlert(`Error updating: ${error.message}`, "error");
         }
     };
 
-    const publishedEventsCount = events.filter(event => isEventPublished(event) && !isEventCancelled(event)).length;
-    const unpublishedEventsCount = events.filter(event => !isEventPublished(event) && !isEventCancelled(event)).length;
-    const cancelledEventsCount = events.filter(event => isEventCancelled(event)).length;
+    /* -------------------------------------------------------------
+       EVENT CLICK – BLOCK CANCELLED
+    ------------------------------------------------------------- */
+    const handleEventClick = (eventId) => {
+        const event = events.find((e) => e.event_id === eventId);
+        if (isEventCancelled(event)) {
+            printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
+            return;
+        }
+        localStorage.setItem("selectedEventId", eventId);
+        navigate("/eventManagement");
+    };
+
+    /* -------------------------------------------------------------
+       FILTERS & RENDER HELPERS
+    ------------------------------------------------------------- */
+    const publishedEventsCount = events.filter(
+        (e) => isEventPublished(e) && !isEventCancelled(e)
+    ).length;
+    const unpublishedEventsCount = events.filter(
+        (e) => !isEventPublished(e) && !isEventCancelled(e)
+    ).length;
+    const cancelledEventsCount = events.filter(isEventCancelled).length;
 
     useEffect(() => {
         let result = [...events];
 
         if (filters.searchQuery.trim() !== "") {
-            const query = filters.searchQuery.toLowerCase();
-            result = result.filter(event => event.event_name.toLowerCase().includes(query));
+            const q = filters.searchQuery.toLowerCase();
+            result = result.filter((e) => e.event_name.toLowerCase().includes(q));
         }
 
         if (activeTab !== "all") {
-            result = result.filter(event => {
-                const published = isEventPublished(event);
-                const cancelled = isEventCancelled(event);
+            result = result.filter((e) => {
+                const pub = isEventPublished(e);
+                const can = isEventCancelled(e);
                 switch (activeTab) {
                     case "published":
-                        return published && !cancelled;
+                        return pub && !can;
                     case "unpublished":
-                        return !published && !cancelled;
+                        return !pub && !can;
                     case "cancelled":
-                        return cancelled;
+                        return can;
                     default:
                         return true;
                 }
@@ -381,25 +538,26 @@ const EventsDashboard = () => {
         if (filters.dateRange !== "all") {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-
-            result = result.filter(event => {
-                const eventDate = new Date(event.event_start_date || event.created_at);
-                eventDate.setHours(0, 0, 0, 0);
+            result = result.filter((e) => {
+                const evDate = new Date(e.event_start_date || e.created_at);
+                evDate.setHours(0, 0, 0, 0);
                 switch (filters.dateRange) {
                     case "today":
-                        return eventDate.toDateString() === today.toDateString();
-                    case "week":
-                        const oneWeekAgo = new Date();
-                        oneWeekAgo.setDate(today.getDate() - 7);
-                        return eventDate >= oneWeekAgo;
-                    case "month":
-                        const oneMonthAgo = new Date();
-                        oneMonthAgo.setMonth(today.getMonth() - 1);
-                        return eventDate >= oneMonthAgo;
+                        return evDate.toDateString() === today.toDateString();
+                    case "week": {
+                        const weekAgo = new Date();
+                        weekAgo.setDate(today.getDate() - 7);
+                        return evDate >= weekAgo;
+                    }
+                    case "month": {
+                        const monthAgo = new Date();
+                        monthAgo.setMonth(today.getMonth() - 1);
+                        return evDate >= monthAgo;
+                    }
                     case "upcoming":
-                        return eventDate >= today;
+                        return evDate >= today;
                     case "past":
-                        return eventDate < today;
+                        return evDate < today;
                     default:
                         return true;
                 }
@@ -407,9 +565,9 @@ const EventsDashboard = () => {
         }
 
         result.sort((a, b) => {
-            const dateA = new Date(a.event_start_date || a.created_at);
-            const dateB = new Date(b.event_start_date || b.created_at);
-            return filters.sortBy === "latest" ? dateB - dateA : dateA - dateB;
+            const dA = new Date(a.event_start_date || a.created_at);
+            const dB = new Date(b.event_start_date || b.created_at);
+            return filters.sortBy === "latest" ? dB - dA : dA - dB;
         });
 
         setFilteredEvents(result);
@@ -419,31 +577,31 @@ const EventsDashboard = () => {
     const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
     const canLoadMore = filteredEvents.length > displayedEvents.length;
 
-    const loadMoreEvents = () => setCurrentPage(prev => prev + 1);
-    const handleFilterChange = (filterType, value) => setFilters(prev => ({ ...prev, [filterType]: value }));
-    const handleEventClick = (eventId) => {
-        localStorage.setItem("selectedEventId", eventId);
-        navigate("/eventManagement");
-    };
+    const loadMoreEvents = () => setCurrentPage((p) => p + 1);
+    const handleFilterChange = (type, value) =>
+        setFilters((prev) => ({ ...prev, [type]: value }));
     const createEvent = () => navigate("/activeEventDetails");
 
     const formatDateTime = (date, time) => {
-        if (!date) return 'TBD';
-        const dateObj = new Date(date);
+        if (!date) return "TBD";
+        const d = new Date(date);
         if (time) {
-            const [hours, minutes] = time.split(':').map(Number);
-            dateObj.setHours(hours, minutes);
+            const [h, m] = time.split(":").map(Number);
+            d.setHours(h, m);
         }
-        return dateObj.toLocaleString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        return d.toLocaleString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
         });
     };
 
+    /* -------------------------------------------------------------
+       RENDER
+    ------------------------------------------------------------- */
     if (loading) {
         return (
             <>
@@ -474,8 +632,10 @@ const EventsDashboard = () => {
                     </div>
                 </div>
             )}
+
             <section className="eventsDashboard">
                 <div className="container">
+                    {/* HEADER */}
                     <div className="dashboard-header">
                         <div className="header-content">
                             <h1 className="dashboard-title">Events Dashboard</h1>
@@ -486,6 +646,7 @@ const EventsDashboard = () => {
                         </button>
                     </div>
 
+                    {/* NEXT EVENT CARD */}
                     {soonestEvent && !isEventCancelled(soonestEvent) && (
                         <div className="next-event-card">
                             <div className="next-event-icon">
@@ -501,18 +662,31 @@ const EventsDashboard = () => {
                         </div>
                     )}
 
+                    {/* TABS + FILTERS */}
                     <div className="dashboard-controls">
                         <div className="events-tabs">
-                            <button className={`tab-btn ${activeTab === "all" ? "active" : ""}`} onClick={() => setActiveTab("all")}>
+                            <button
+                                className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
+                                onClick={() => setActiveTab("all")}
+                            >
                                 <i className="bi bi-grid-3x3-gap"></i> All ({events.length})
                             </button>
-                            <button className={`tab-btn ${activeTab === "published" ? "active" : ""}`} onClick={() => setActiveTab("published")}>
+                            <button
+                                className={`tab-btn ${activeTab === "published" ? "active" : ""}`}
+                                onClick={() => setActiveTab("published")}
+                            >
                                 <i className="bi bi-check-circle"></i> Published ({publishedEventsCount})
                             </button>
-                            <button className={`tab-btn ${activeTab === "unpublished" ? "active" : ""}`} onClick={() => setActiveTab("unpublished")}>
+                            <button
+                                className={`tab-btn ${activeTab === "unpublished" ? "active" : ""}`}
+                                onClick={() => setActiveTab("unpublished")}
+                            >
                                 <i className="bi bi-pencil-square"></i> Draft ({unpublishedEventsCount})
                             </button>
-                            <button className={`tab-btn ${activeTab === "cancelled" ? "active" : ""}`} onClick={() => setActiveTab("cancelled")}>
+                            <button
+                                className={`tab-btn ${activeTab === "cancelled" ? "active" : ""}`}
+                                onClick={() => setActiveTab("cancelled")}
+                            >
                                 <i className="bi bi-slash-circle"></i> Cancelled ({cancelledEventsCount})
                             </button>
                         </div>
@@ -557,10 +731,13 @@ const EventsDashboard = () => {
                         </div>
                     </div>
 
+                    {/* STATS */}
                     <div className="stats-overview">
                         <div className="stat-card">
                             <div className="stat-icon"><i className="bi bi-people"></i></div>
-                            <div className="stat-value">{Object.values(rsvpStats).reduce((sum, s) => sum + s.yes, 0)}</div>
+                            <div className="stat-value">
+                                {Object.values(rsvpStats).reduce((s, st) => s + st.yes, 0)}
+                            </div>
                             <div className="stat-label">Total Attending</div>
                         </div>
                         <div className="stat-card">
@@ -575,21 +752,24 @@ const EventsDashboard = () => {
                         </div>
                     </div>
 
+                    {/* EVENTS GRID */}
                     <div className="events-grid">
                         {displayedEvents.length > 0 ? (
                             displayedEvents.map((event) => {
                                 const published = isEventPublished(event);
                                 const cancelled = isEventCancelled(event);
-                                const eventDate = new Date(event.event_start_date || event.created_at);
+                                const evDate = new Date(event.event_start_date || event.created_at);
                                 const today = new Date();
                                 today.setHours(0, 0, 0, 0);
-                                eventDate.setHours(0, 0, 0, 0);
-                                const isUpcoming = eventDate >= today;
+                                evDate.setHours(0, 0, 0, 0);
+                                const isUpcoming = evDate >= today;
+                                const stats = rsvpStats[event.event_id] || { yes: 0, no: 0, maybe: 0 };
 
                                 return (
                                     <div className="event-card-wrapper" key={event.event_id}>
+                                        {/* Status badges */}
                                         {!cancelled && (
-                                            <div className={`event-status-badge ${published ? 'published' : 'draft'}`}>
+                                            <div className={`event-status-badge ${published ? "published" : "draft"}`}>
                                                 <i className={`bi ${published ? "bi-check-circle-fill" : "bi-pencil-square"}`}></i>
                                                 <span>{published ? "Published" : "Draft"}</span>
                                             </div>
@@ -600,10 +780,12 @@ const EventsDashboard = () => {
                                                 <span>Cancelled</span>
                                             </div>
                                         )}
-                                        <div className={`event-date-badge ${isUpcoming ? 'upcoming' : 'past'}`}>
+                                        <div className={`event-date-badge ${isUpcoming ? "upcoming" : "past"}`}>
                                             <i className={`bi ${isUpcoming ? "bi-arrow-up-right" : "bi-arrow-down-left"}`}></i>
                                             <span>{isUpcoming ? "Upcoming" : "Past"}</span>
                                         </div>
+
+                                        {/* Menu */}
                                         <button
                                             className="event-menu-toggle"
                                             onClick={(e) => {
@@ -614,57 +796,75 @@ const EventsDashboard = () => {
                                         >
                                             <i className="bi bi-three-dots-vertical"></i>
                                         </button>
+
                                         {showMenuId === event.event_id && (
                                             <div className="context-menu">
                                                 <button className="menu-item" onClick={() => handleEdit(event)}>
                                                     <i className="bi bi-pencil"></i> Edit Event
                                                 </button>
                                                 {cancelled ? (
-                                                    <button className="menu-item success" onClick={() => reactivateEvent(event.event_id, event.event_name)}>
-                                                        <i className="bi bi-arrow-clockwise"></i> Reactivate Event
+                                                    <button
+                                                        className="menu-item success"
+                                                        onClick={() => reactivateEvent(event.event_id, event.event_name)}
+                                                    >
+                                                        <i className="bi bi-arrow-clockwise"></i> Reactivate
                                                     </button>
                                                 ) : (
-                                                    <button className="menu-item danger" onClick={() => cancelEvent(event.event_id, event.event_name)}>
-                                                        <i className="bi bi-slash-circle"></i> Cancel Event
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            className="menu-item warning"
+                                                            onClick={() => initiateCancel(event.event_id, event.event_name)}
+                                                        >
+                                                            <i className="bi bi-slash-circle"></i> Cancel Event
+                                                        </button>
+                                                        <div className="menu-divider"></div>
+                                                        <button
+                                                            className="menu-item delete"
+                                                            onClick={() => deleteEvent(event.event_id, event.event_name)}
+                                                            disabled={deletingEventId === event.event_id}
+                                                        >
+                                                            {deletingEventId === event.event_id ? (
+                                                                <>
+                                                                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                                                                        <span className="visually-hidden">Deleting...</span>
+                                                                    </div>
+                                                                    Deleting...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <i className="bi bi-trash"></i> Delete
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </>
                                                 )}
-                                                <div className="menu-divider"></div>
-                                                <button
-                                                    className="menu-item delete"
-                                                    onClick={() => deleteEvent(event.event_id, event.event_name)}
-                                                    disabled={deletingEventId === event.event_id}
-                                                >
-                                                    {deletingEventId === event.event_id ? (
-                                                        <>
-                                                            <div className="spinner-border spinner-border-sm me-2" role="status">
-                                                                <span className="visually-hidden">Deleting...</span>
-                                                            </div>
-                                                            Deleting...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <i className="bi bi-trash"></i> Delete
-                                                        </>
-                                                    )}
-                                                </button>
                                             </div>
                                         )}
-                                        <div className="event-card" onClick={() => handleEventClick(event.event_id)}>
+
+                                        {/* Card – click blocked if cancelled */}
+                                        <div
+                                            className="event-card"
+                                            onClick={() => handleEventClick(event.event_id)}
+                                            style={{
+                                                cursor: cancelled ? "not-allowed" : "pointer",
+                                                opacity: cancelled ? 0.7 : 1
+                                            }}
+                                        >
                                             <div className="event-media">
                                                 <img
                                                     src={event.event_image || "/api/placeholder/400/250"}
                                                     alt={event.event_name}
-                                                    onError={(e) => {
-                                                        e.target.src = "/api/placeholder/400/250";
-                                                    }}
+                                                    onError={(e) => (e.target.src = "/api/placeholder/400/250")}
                                                     className={cancelled ? "cancelled-image" : ""}
                                                 />
                                                 <div className="event-overlay">
                                                     <i className="bi bi-calendar3-event"></i>
                                                 </div>
                                             </div>
+
                                             <div className="event-body">
                                                 <h3 className="event-title">{event.event_name}</h3>
+
                                                 <div className="event-datetime">
                                                     <div className="date-group">
                                                         <i className="bi bi-calendar"></i>
@@ -677,22 +877,26 @@ const EventsDashboard = () => {
                                                         </div>
                                                     )}
                                                 </div>
+
                                                 <div className="rsvp-metrics">
                                                     <div className="metric yes">
-                                                        <div className="metric-number">{rsvpStats[event.event_id]?.yes ?? 0}</div>
+                                                        <div className="metric-number">{stats.yes}</div>
                                                         <div className="metric-label">Yes</div>
                                                     </div>
                                                     <div className="metric maybe">
-                                                        <div className="metric-number">{rsvpStats[event.event_id]?.maybe ?? 0}</div>
+                                                        <div className="metric-number">{stats.maybe}</div>
                                                         <div className="metric-label">Maybe</div>
                                                     </div>
                                                     <div className="metric no">
-                                                        <div className="metric-number">{rsvpStats[event.event_id]?.no ?? 0}</div>
+                                                        <div className="metric-number">{stats.no}</div>
                                                         <div className="metric-label">No</div>
                                                     </div>
                                                 </div>
+
                                                 <div className="event-footer">
-                                                    <button className={`action-btn ${published && !cancelled ? 'primary' : 'secondary'} ${cancelled ? 'disabled' : ''}`}>
+                                                    <button
+                                                        className={`action-btn ${published && !cancelled ? "primary" : "secondary"} ${cancelled ? "disabled" : ""}`}
+                                                    >
                                                         {cancelled ? (
                                                             <>
                                                                 <i className="bi bi-eye"></i> View Details
@@ -727,6 +931,7 @@ const EventsDashboard = () => {
                         )}
                     </div>
 
+                    {/* LOAD MORE */}
                     {canLoadMore && (
                         <div className="load-more-section">
                             <button className="load-more-btn" onClick={loadMoreEvents}>
@@ -737,6 +942,7 @@ const EventsDashboard = () => {
                     )}
                 </div>
 
+                {/* EDIT MODAL */}
                 {showEditModal && (
                     <div className="modal-backdrop">
                         <div className="modal-container">
@@ -815,6 +1021,113 @@ const EventsDashboard = () => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* CANCEL MODAL */}
+                {showCancelModal && (
+                    <div className="modal-backdrop">
+                        <div className="modal-container">
+                            <div className="modal-header">
+                                <h2><i className="bi bi-exclamation-triangle"></i> Cancel Event</h2>
+                                <button className="modal-close" onClick={resetCancelModal}>
+                                    <i className="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            {!showMessageStep ? (
+                                /* STEP 1: Initial Confirmation with RSVP Stats */
+                                <div className="modal-body">
+                                    <div className="confirmation-warning">
+                                        <i className="bi bi-exclamation-circle"></i>
+                                        <h3>Are you sure you want to cancel this event?</h3>
+                                        <p>
+                                            You are about to cancel: <strong>"{cancelEventName}"</strong>
+                                        </p>
+
+                                        <div className="rsvp-stats-summary">
+                                            <h4>Current RSVP Responses:</h4>
+                                            <div className="rsvp-stats">
+                                                <div className="rsvp-stat yes">
+                                                    <span className="stat-label">Yes:</span>
+                                                    <span className="stat-value">{rsvpStats[cancelEventId]?.yes || 0}</span>
+                                                </div>
+                                                <div className="rsvp-stat maybe">
+                                                    <span className="stat-label">Maybe:</span>
+                                                    <span className="stat-value">{rsvpStats[cancelEventId]?.maybe || 0}</span>
+                                                </div>
+                                                <div className="rsvp-stat no">
+                                                    <span className="stat-label">No:</span>
+                                                    <span className="stat-value">{rsvpStats[cancelEventId]?.no || 0}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p className="warning-text">
+                                            {affectedGuests.length > 0
+                                                ? `${affectedGuests.length} guest(s) who RSVP'd Yes or Maybe will be notified.`
+                                                : "No guests to notify."
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* STEP 2: Message Input */
+                                <div className="modal-body">
+                                    <div className="message-section">
+                                        <h3>Send Cancellation Message</h3>
+                                        <p>
+                                            <strong>{affectedGuests.length}</strong> guest(s) who RSVP'd <strong>Yes</strong> or <strong>Maybe</strong> will receive this message:
+                                        </p>
+                                        <div className="form-group">
+                                            <textarea
+                                                value={cancelMessage}
+                                                onChange={(e) => setCancelMessage(e.target.value)}
+                                                rows={6}
+                                                placeholder="Enter your cancellation message..."
+                                                className="message-textarea"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="modal-actions">
+                                {!showMessageStep ? (
+                                    <>
+                                        <button type="button" className="btn-secondary" onClick={resetCancelModal}>
+                                            No, Keep Event
+                                        </button>
+                                        <button type="button" className="btn-warning" onClick={handleCancelConfirmation}>
+                                            Yes, Cancel Event
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button type="button" className="btn-secondary" onClick={() => setShowMessageStep(false)}>
+                                            Back
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn-warning"
+                                            onClick={performCancelWithMessage}
+                                            disabled={sendingMessage}
+                                        >
+                                            {sendingMessage ? (
+                                                <>
+                                                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                                                        <span className="visually-hidden">Sending...</span>
+                                                    </div>
+                                                    Sending & Cancelling...
+                                                </>
+                                            ) : (
+                                                "Send Message & Cancel Event"
+                                            )}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}

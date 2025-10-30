@@ -71,7 +71,12 @@ const RSVPResponses = () => {
 
     useEffect(function () {
         var storedUser = localStorage.getItem("user");
-        if (!storedUser) return logOut();
+        if (!storedUser) {
+            printAlert("Session expired. Please log in again.", "error");
+            logOut();
+            navigate("/");
+            return;
+        }
         setUser(JSON.parse(storedUser));
 
         var handleClickOutside = function (event) {
@@ -123,25 +128,31 @@ const RSVPResponses = () => {
         }
     };
 
-    var fetchEventStatusByID = async function (eventId) {
+
+    const fetchEventStatusByID = async (eventId) => {
         try {
-            var API_URL = process.env.REACT_APP_API_URL;
-            var formData = new FormData();
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
             formData.append("function", "getEventStatusByID");
             formData.append("event_id", eventId);
 
-            var response = await fetch(API_URL + "/query.php", { method: "POST", body: formData });
-            var data = await response.json();
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            console.log("Event Status data:", data);
             if (data.success && data.status) {
                 setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
             } else {
                 setEventStatus("Unknown");
             }
-        } catch {
-            setEventStatus("Unknown");
+        } catch (err) {
+            console.error("Failed to fetch event status:", err);
+            return "unknown";
         }
-    };
-
+    }
     useEffect(function () {
         if (!bst) return;
         var results = bst.searchPartial(searchTerm);
@@ -248,6 +259,7 @@ const RSVPResponses = () => {
             var formData = new FormData();
             formData.append("function", "sendGuestMessage");
             formData.append("message", messageContent);
+            formData.append("API_URL", API_URL);
             formData.append("event_id", eventId);
 
             // Handle guest_ids properly for both bulk and individual
@@ -284,6 +296,7 @@ const RSVPResponses = () => {
             printAlert("Error sending message", "error");
         }
     };
+    
     var openIndividualMessage = function (guest) {
         setSelectedGuestForMessage(guest);
         setMessageType("individual");
@@ -358,8 +371,7 @@ const RSVPResponses = () => {
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    <button className="upgrade-btn">Upgrade</button>
-                    <button className="status-btn status-success">Published</button>
+                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>
                     <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
                         <span>{user?.name || "Guest"}</span>
@@ -392,7 +404,6 @@ const RSVPResponses = () => {
                     <ul>
                         <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
                         <li onClick={goToGuest}><i className="bi bi-people"></i>Guest Insights</li>
-                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
                     </ul>
                 </div>
             </div>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Profile.css";
-import "../../App.css"
 import '../../alert.css';
 import { logOut } from "../components";
 
@@ -60,7 +59,8 @@ const Profile = () => {
         setLoading(true);
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
-          navigate("/login");
+          logOut();
+          navigate("/");
           return;
         }
 
@@ -370,6 +370,7 @@ const Profile = () => {
 
   return (
     <>
+
       {/* Custom Alert Popup */}
       {alert.show && (
         <div className={`custom-alert ${alert.type}`}>
@@ -385,20 +386,19 @@ const Profile = () => {
         </div>
       )}
 
+      {/* HEADER */}
       <div className="dashboard-header">
         <h1>Evenda</h1>
         <div className="header-tabs">
-          <button onClick={goToHome}>Home</button>
-
           <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
             <i className="bi bi-person-circle"></i>
-            <span>{user ? user.name : "Guest"}</span>
+            <span>{user?.name || "Guest"}</span>
             <i className="bi bi-chevron-bar-down"></i>
             {dropdownOpen && (
               <div className="dropdown-menu show">
-                <button className="dropdown-item" onClick={goToProfile}>Profile</button>
-                <button className="dropdown-item">Settings</button>
-                <button className="dropdown-item" onClick={logOut}>Logout</button>
+                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
+                <button className="dropdown-item"><i className="bi bi-gear"></i>Settings</button>
+                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
               </div>
             )}
           </div>
@@ -407,9 +407,9 @@ const Profile = () => {
 
       <section className="profilePage">
         <div className="container">
-        <button className="btn-event btn-event-back" onClick={handleBack}>
-                    Back
-                </button>
+          <button className="btn-event btn-event-back" onClick={handleBack}>
+            Back
+          </button>
 
           <div className="profile-layout">
             {/* Sidebar */}
@@ -521,7 +521,7 @@ const Profile = () => {
                     )}
                   </div>
 
-                 
+
 
                   {emailChanged && isEditing && (
                     <div className="email-change-warning">
