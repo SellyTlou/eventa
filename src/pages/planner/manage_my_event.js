@@ -19,9 +19,11 @@ const Manage_my_event = () => {
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [showPackagePopup, setShowPackagePopup] = useState(false);
     const [guestLimit, setGuestLimit] = useState(0);
+    const [originalGuestLimit, setOriginalGuestLimit] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [availablePackages, setAvailablePackages] = useState([]);
     const [currentPlan, setCurrentPlan] = useState(null);
+    const [showUpdateButton, setShowUpdateButton] = useState(false);
 
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
@@ -90,6 +92,15 @@ const Manage_my_event = () => {
         };
     }, [isDragging]);
 
+    // Check if guest limit has changed
+    useEffect(() => {
+        if (guestLimit !== originalGuestLimit) {
+            setShowUpdateButton(true);
+        } else {
+            setShowUpdateButton(false);
+        }
+    }, [guestLimit, originalGuestLimit]);
+
     const fetchUserPackage = async (userId) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -109,10 +120,8 @@ const Manage_my_event = () => {
 
             if (data.success && data.userPackage) {
                 setUserPackage(data.userPackage);
-
                 fetchPackageDetails(data.userPackage.package_id, data.userPackage);
             } else {
-
                 setCurrentPlan({
                     hasPackage: false,
                     message: "You don't have an active package yet."
@@ -165,7 +174,6 @@ const Manage_my_event = () => {
         }
     };
 
-
     const fetchAvailablePackages = async () => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -183,7 +191,6 @@ const Manage_my_event = () => {
             console.log("Available packages:", data);
 
             if (data.success && data.packages) {
-                // Format packages to match frontend structure
                 const formattedPackages = data.packages.map(pkg => ({
                     id: pkg.package_id,
                     name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
@@ -196,12 +203,10 @@ const Manage_my_event = () => {
             }
         } catch (err) {
             console.error("Error fetching available packages:", err);
-            // Fallback to empty array
             setAvailablePackages([]);
         }
     };
 
-    // Helper function to get features based on package type
     const getPackageFeatures = (packageType) => {
         const featuresMap = {
             'basic': [
@@ -280,7 +285,6 @@ const Manage_my_event = () => {
             if (data.success && data.events && data.events.length > 0) {
                 const event = data.events[0];
 
-                // Format the date and time for display
                 const formatDate = (dateString) => {
                     if (!dateString) return "Not set";
                     try {
@@ -319,6 +323,7 @@ const Manage_my_event = () => {
 
                 setEventDetails(formattedEventDetails);
                 setGuestLimit(event.guest_limit || 0);
+                setOriginalGuestLimit(event.guest_limit || 0);
 
             } else {
                 console.error("No event found:", data.message);
@@ -332,6 +337,7 @@ const Manage_my_event = () => {
                     guest_limit: 0
                 });
                 setGuestLimit(0);
+                setOriginalGuestLimit(0);
             }
 
         } catch (err) {
@@ -346,12 +352,13 @@ const Manage_my_event = () => {
                 guest_limit: 0
             });
             setGuestLimit(0);
+            setOriginalGuestLimit(0);
         } finally {
             setLoading(false);
         }
     };
 
-    const goToUpgradePlan = () => navigate("/upgrade_plan");
+    const goToUpgradePlan = () => navigate("/upgrade_package");
     const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
     const goToHome = () => navigate("/eventsDashboard");
     const goToEventManagement = () => navigate(`/eventManagement`);
@@ -378,6 +385,13 @@ const Manage_my_event = () => {
         setSelectedPackage(null);
     };
 
+    const handleUpdateEvent = () => {
+        if (guestLimit === 0) {
+            printAlert("Please select a guest limit greater than 0.", "warning");
+            return;
+        }
+        updateEventGuestLimit();
+    };
 
     const handlePublishEvent = () => {
         if (guestLimit === 0) {
@@ -393,6 +407,33 @@ const Manage_my_event = () => {
         }
     };
 
+    const updateEventGuestLimit = async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "updateEventGuestLimit");
+            formData.append("event_id", event_id);
+            formData.append("guest_limit", guestLimit);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setOriginalGuestLimit(guestLimit);
+                setShowUpdateButton(false);
+                printAlert("Guest limit updated successfully!", "success");
+            } else {
+                printAlert("Failed to update guest limit. Please try again.", "error");
+            }
+        } catch (err) {
+            console.error("Error updating guest limit:", err);
+            printAlert("Error updating guest limit. Please try again.", "error");
+        }
+    };
 
     const updateEventStatus = async () => {
         try {
@@ -412,6 +453,8 @@ const Manage_my_event = () => {
 
             if (data.success) {
                 setEventStatus("Published");
+                setOriginalGuestLimit(guestLimit);
+                setShowUpdateButton(false);
                 printAlert("Event published successfully!", "success");
             } else {
                 printAlert("Failed to publish event. Please try again.", "error");
@@ -478,8 +521,6 @@ const Manage_my_event = () => {
         const newGuestLimit = Math.max(0, Math.min(maxGuests, value));
         setGuestLimit(newGuestLimit);
     };
-
-
 
     const renderCurrentPlanCard = () => {
         if (!currentPlan) {
@@ -602,7 +643,7 @@ const Manage_my_event = () => {
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    <button className="upgrade-btn">Upgrade</button>
+                    <button className="upgrade-btn" onClick={goToUpgradePlan}>Upgrade</button>
                     <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
                         <span>{user?.name || "Guest"}</span>
@@ -610,7 +651,6 @@ const Manage_my_event = () => {
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
                                 <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                                <button className="dropdown-item"><i className="bi bi-gear"></i>Settings</button>
                                 <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
                             </div>
                         )}
@@ -627,7 +667,7 @@ const Manage_my_event = () => {
                         <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
                         <li className="active" onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
                         <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
-                        <li  onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
+                        <li onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
                     </ul>
                 </div>
                 <div className="sidebar-section">
@@ -668,7 +708,11 @@ const Manage_my_event = () => {
                             <div className="details-card event-details-card">
                                 <div className="card-header">
                                     <h3>Event Details</h3>
-                                    <span className="edit-icon">✏️</span>
+                                    {showUpdateButton && (
+                                        <button className="update-event-btn" onClick={handleUpdateEvent}>
+                                            Update Event
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="card-content">
                                     <div className="detail-item">
@@ -743,18 +787,21 @@ const Manage_my_event = () => {
                             {renderCurrentPlanCard()}
                         </div>
 
-                        <button
-                            className={`publish-event-btn ${!currentPlan?.hasPackage || currentPlan?.available_events === 0 ? 'disabled' : ''}`}
-                            onClick={handlePublishEvent}
-                            disabled={!currentPlan?.hasPackage || currentPlan?.available_events === 0}
-                        >
-                            {eventStatus === "Published" ? "Update Event" : "Publish Event"}
-                            {(!currentPlan?.hasPackage || currentPlan?.available_events === 0) && (
-                                <span className="tooltip">
-                                    {!currentPlan?.hasPackage ? "No active package" : "No available events left"}
-                                </span>
-                            )}
-                        </button>
+                        {/* Only show Publish button when event is not published AND no guest limit changes */}
+                        {eventStatus !== "Published" && !showUpdateButton && (
+                            <button
+                                className={`publish-event-btn ${!currentPlan?.hasPackage || currentPlan?.available_events === 0 ? 'disabled' : ''}`}
+                                onClick={handlePublishEvent}
+                                disabled={!currentPlan?.hasPackage || currentPlan?.available_events === 0}
+                            >
+                                Publish Event
+                                {(!currentPlan?.hasPackage || currentPlan?.available_events === 0) && (
+                                    <span className="tooltip">
+                                        {!currentPlan?.hasPackage ? "No active package" : "No available events left"}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
 

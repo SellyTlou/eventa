@@ -293,7 +293,6 @@ const InvitationPage = () => {
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
                                 <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                                <button className="dropdown-item"><i className="bi bi-gear"></i>Settings</button>
                                 <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
                             </div>
                         )}

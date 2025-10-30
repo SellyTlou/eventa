@@ -63,7 +63,6 @@ const UpgradePackage = () => {
     const goToProfile = () => {
         navigate("/Profile");
     }
-    const goToHome = () => navigate("/eventsDashboard");
     const handleBack = () => { navigate(-1); };
 
     const fetchPackages = async () => {
@@ -198,7 +197,6 @@ const UpgradePackage = () => {
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    <button onClick={goToHome}>Home</button>
 
                     <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
@@ -207,7 +205,6 @@ const UpgradePackage = () => {
                         {dropdownOpen && (
                             <div className="dropdown-menu show">
                                 <button className="dropdown-item" onClick={goToProfile}>Profile</button>
-                                <button className="dropdown-item">Settings</button>
                                 <button className="dropdown-item" onClick={logOut}>Logout</button>
                             </div>
                         )}

@@ -247,12 +247,12 @@ try {
                     $update = $pdo->prepare("UPDATE users SET session = 1 WHERE user_id = :id");
                     $update->execute([":id" => $user['user_id']]);
 
-                    // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                    // $logStmt->execute([
-                    //     ':user_id'     => $user['user_id'],
-                    //     ':action'      => 'User Login',
-                    //     ':description' => "User {$user['name']} logged into the system",
-                    // ]);
+                    $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                    $logStmt->execute([
+                        ':user_id'     => $user['user_id'],
+                        ':action'      => 'User Login',
+                        ':description' => "User {$user['name']} logged into the system",
+                    ]);
 
                     echo json_encode([
                         "success" => true,
@@ -286,6 +286,13 @@ try {
             $stmt = $pdo->prepare("UPDATE users SET session = 0 WHERE user_id = :id");
             $stmt->execute([':id' => $id]);
 
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $id,
+                ':action'      => 'User Logout',
+                ':description' => "User with ID {$id} logged out of the system at " . date('Y-m-d H:i:s'),
+            ]);
+
             echo json_encode(["success" => true, "message" => "Logged out successfully"]);
         } catch (PDOException $e) {
             echo json_encode(["success" => false, "message" => $e->getMessage()]);
@@ -296,7 +303,7 @@ if ($fun === "eventAccConfirm") {
     $name     = trim($_POST['name']);
     $email    = trim($_POST['email']);
     $password = $_POST['password'];
-    $userID   = generateUserID($pdo);
+    $userID   = generateUserID($pdo$pdo);
     $lastname = $_POST['lastname'] ?? ''; // FIXED: Added missing variable
 
         try {
@@ -333,6 +340,13 @@ if ($fun === "eventAccConfirm") {
 
             $update = $pdo->prepare("UPDATE users SET session = 1 WHERE user_id = :id");
             $update->execute([":id" => $userID]);
+
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $userID,
+                ':action'      => 'User Registered',
+                ':description' => "New user registered: {$name} {$lastname} ({$email})",
+            ]);
 
             echo json_encode([
                 "success" => true,
@@ -424,13 +438,13 @@ if ($fun === "eventAccConfirm") {
                     ':user_id'          => $userID,
                 ]);
 
-                // LOG THE ACTIVITY - Event updated
-                // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                // $logStmt->execute([
-                //     ':user_id'     => $userID,
-                //     ':action'      => 'Event Updated',
-                //     ':description' => "Event '{$eventName}' was updated",
-                // ]);
+                //LOG THE ACTIVITY - Event updated
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $userID,
+                    ':action'      => 'Event Updated',
+                    ':description' => "Event '{$eventName}' was updated",
+                ]);
             } else {
                 // Insert new event
                 $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
@@ -456,13 +470,13 @@ if ($fun === "eventAccConfirm") {
                     ':updated_at'       => $createdAt,
                 ]);
 
-                // LOG THE ACTIVITY - Event created
-                // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                // $logStmt->execute([
-                //     ':user_id'     => $userID,
-                //     ':action'      => 'Event Created',
-                //     ':description' => "New event '{$eventName}' created by {$userName}",
-                // ]);
+                //LOG THE ACTIVITY - Event created
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $userID,
+                    ':action'      => 'Event Created',
+                    ':description' => "New event '{$eventName}' created by {$userName}",
+                ]);
             }
 
             echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
@@ -520,6 +534,12 @@ if ($fun === "eventAccConfirm") {
                 ':event_end_time'   => $event_end_time,
                 ':updated_at'       => $updated_at,
                 ':event_id'         => $event_id, // This was missing
+            ]);
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $userID,
+                ':action'      => 'Event Updated',
+                ':description' => "Event '{$event_name}' was updated at {$updated_at}",
             ]);
 
             echo json_encode(["success" => true, "message" => "Event updated successfully"]);
@@ -865,6 +885,13 @@ if ($fun === "eventAccConfirm") {
         $stmt = $pdo->prepare("UPDATE events SET is_deleted = 1 WHERE event_id = :event_id");
         $stmt->execute([":event_id" => $event_id]);
 
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $user_id,
+                ':action'      => 'Event Deleted',
+                ':description' => "Event with ID '{$event_id}' was deleted at " . date('Y-m-d H:i:s'),
+            ]);
+
         echo json_encode(["success" => true]);
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
@@ -969,6 +996,14 @@ if ($fun === "eventAccConfirm") {
             $stmt->execute([$name, $lastname, $email, $verified, $userID]);
 
             if ($stmt->rowCount() > 0) {
+
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $userID,
+                    ':action'      => 'Profile Updated',
+                    ':description' => "User profile for '{$name} {$lastname}' was updated at " . date('Y-m-d H:i:s'),
+                ]);
+
                 echo json_encode([
                     "success" => true,
                     "message" => "Profile updated successfully",
@@ -1171,6 +1206,14 @@ if ($fun === "eventAccConfirm") {
 
                 echo json_encode(["success" => true, "message" => "New package assigned successfully"]);
             }
+
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $user_id,
+                ':action'      => 'Package Updated',
+                ':description' => "User package for user ID '{$user_id}' was updated to package ID '{$package_id}' at " . date('Y-m-d H:i:s'),
+            ]);
+
         } catch (Exception $e) {
             echo json_encode(["success" => false, "message" => $e->getMessage()]);
         }
@@ -1455,47 +1498,47 @@ if ($fun === "eventAccConfirm") {
         exit;
     }
 
-    // if ($fun === "logSystemActivity") {
-    //     $action      = $_POST['action'] ?? '';
-    //     $description = $_POST['description'] ?? '';
-    //     $userId      = $_POST['user_id'] ?? null;
+    if ($fun === "logSystemActivity") {
+        $action      = $_POST['action'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $userId      = $_POST['user_id'] ?? null;
 
-    //     try {
-    //         // Insert into queue table
-    //         $stmt = $pdo->prepare("
-    //         INSERT INTO system_activity (user_id, action, description)
-    //         VALUES (:user_id, :action, :description)
-    //     ");
+        try {
+            // Insert into queue table
+            $stmt = $pdo->prepare("
+            INSERT INTO system_activity (user_id, action, description)
+            VALUES (:user_id, :action, :description)
+        ");
 
-    //         $stmt->execute([
-    //             ':user_id'     => $userId,
-    //             ':action'      => $action,
-    //             ':description' => $description,
-    //         ]);
+            $stmt->execute([
+                ':user_id'     => $userId,
+                ':action'      => $action,
+                ':description' => $description,
+            ]);
 
-    //         echo json_encode(["success" => true, "message" => "Activity queued"]);
+            echo json_encode(["success" => true, "message" => "Activity queued"]);
 
-    //     } catch (PDOException $e) {
-    //         // Fallback: Direct insert
-    //         try {
-    //             $stmt = $pdo->prepare("
-    //             INSERT INTO system_activity (user_id, action, description, created_at)
-    //             VALUES (:user_id, :action, :description, NOW())
-    //         ");
+        } catch (PDOException $e) {
+            // Fallback: Direct insert
+            try {
+                $stmt = $pdo->prepare("
+                INSERT INTO system_activity (user_id, action, description, created_at)
+                VALUES (:user_id, :action, :description, NOW())
+            ");
 
-    //             $stmt->execute([
-    //                 ':user_id'     => $userId,
-    //                 ':action'      => $action,
-    //                 ':description' => $description,
-    //             ]);
+                $stmt->execute([
+                    ':user_id'     => $userId,
+                    ':action'      => $action,
+                    ':description' => $description,
+                ]);
 
-    //             echo json_encode(["success" => true, "message" => "Activity logged directly"]);
-    //         } catch (PDOException $e2) {
-    //             echo json_encode(["success" => false, "message" => "Failed to log activity"]);
-    //         }
-    //     }
-    //     exit;
-    // }
+                echo json_encode(["success" => true, "message" => "Activity logged directly"]);
+            } catch (PDOException $e2) {
+                echo json_encode(["success" => false, "message" => "Failed to log activity"]);
+            }
+        }
+        exit;
+    }
 
     if ($fun === "updateAdminProfile") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -1627,6 +1670,13 @@ if ($fun === "eventAccConfirm") {
             echo json_encode([
                 "success" => true,
                 "message" => "Package updated successfully",
+            ]);
+
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $adminUserId,
+                ':action'      => 'Package Updated',
+                ':description' => "Package ID '{$packageId}' was updated to type '{$packageType}' at " . date('Y-m-d H:i:s'),
             ]);
 
         } catch (PDOException $e) {
@@ -1811,6 +1861,14 @@ if ($fun === "eventAccConfirm") {
                 "success" => true,
                 "message" => "Password updated successfully.",
             ]);
+
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $user['user_id'],
+                ':action'      => 'Password Reset',
+                ':description' => "Password for user '{$user['email']}' was reset at " . date('Y-m-d H:i:s'),
+            ]);
+
             exit;
 
         } catch (PDOException $e) {
@@ -1850,6 +1908,13 @@ if ($fun === "eventAccConfirm") {
             $new_password_hash = password_hash($new_password, PASSWORD_DEFAULT);
             $updateStmt        = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
             $updateStmt->execute([$new_password_hash, $user_id]);
+
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $user_id,
+                ':action'      => 'Password Changed',
+                ':description' => "User ID '{$user_id}' changed their password at " . date('Y-m-d H:i:s'),
+            ]);
 
             echo json_encode(["success" => true, "message" => "Password changed successfully"]);
 
@@ -1896,6 +1961,13 @@ if ($fun === "eventAccConfirm") {
             $updateStmt->execute([$email]);
 
             if ($updateStmt->rowCount() > 0) {
+
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $user['user_id'],
+                    ':action'      => 'Email Verified',
+                    ':description' => "Email for user ID '{$user['user_id']}' was verified at " . date('Y-m-d H:i:s'),
+                ]);
                 echo json_encode([
                     "success" => true,
                     "message" => "Email verified successfully!",
@@ -2371,6 +2443,7 @@ if ($fun === "eventAccConfirm") {
         }
         exit;
     }
+
     if ($fun === 'recordPayment') {
         $user_id        = $_POST['user_id'] ?? '';
         $user_name      = $_POST['user_name'] ?? '';
@@ -2383,22 +2456,101 @@ if ($fun === "eventAccConfirm") {
         $payment_id = generateSimpleTransactionId($pdo);
 
         try {
-            $stmt = $pdo->prepare("CALL ProcessPayment(:user_id, :amount, :package_id, :payment_id, :payment_method, :payment_status)");
+            // Start transaction
+            $pdo->beginTransaction();
+
+            // 1. Validate package
+            $stmt = $pdo->prepare("SELECT package_type, max_events, max_guests, price FROM packagetb WHERE package_id = ?");
+            $stmt->execute([$package_id]);
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (! $package) {
+                throw new Exception('Invalid package_id');
+            }
+
+            // 2. Validate user and get user name
+            $stmt = $pdo->prepare("SELECT CONCAT(name, ' ', COALESCE(lastname,'')) as full_name FROM users WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (! $user) {
+                throw new Exception('User not found');
+            }
+
+            // 3. Insert payment record
+            $stmt = $pdo->prepare("INSERT INTO payment_history (
+            payment_id, user_id, user_name, package_id, package_name,
+            amount, payment_status, payment_method, payment_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
             $stmt->execute([
-                ':user_id'        => $user_id,
-                ':amount'         => $amount,
-                ':package_id'     => $package_id,
-                ':payment_id'     => $payment_id,
-                ':payment_method' => $payment_method,
-                ':payment_status' => $payment_status,
+                $payment_id,
+                $user_id,
+                $user['full_name'],
+                $package_id,
+                $package['package_type'], // Using package_type as package_name
+                $amount,
+                $payment_status,
+                $payment_method,
             ]);
+
+            // 4. Check if user_packages exists and create/update
+            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM user_packages WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $userPackageExists = $stmt->fetch(PDO::FETCH_ASSOC)['count'] > 0;
+
+            if (! $userPackageExists) {
+                // Create new user package
+                $user_package_id = 'PCK-' . strtoupper(substr(md5(uniqid()), 0, 6)) . '-' . time();
+
+                $stmt = $pdo->prepare("INSERT INTO user_packages (
+                user_package_id, user_id, package_id, event_limit, event_used, created_at
+            ) VALUES (?, ?, ?, ?, 0, NOW())");
+
+                $stmt->execute([
+                    $user_package_id,
+                    $user_id,
+                    $package_id,
+                    $package['max_events'],
+                ]);
+            } else {
+                // Update existing user package
+                $stmt = $pdo->prepare("UPDATE user_packages
+                SET package_id = ?, event_limit = ?, updated_at = NOW()
+                WHERE user_id = ?");
+
+                $stmt->execute([
+                    $package_id,
+                    $package['max_events'],
+                    $user_id,
+                ]);
+            }
+
+            // 5. Assign new package to ALL user events
+            $stmt = $pdo->prepare("UPDATE events
+            SET package_id = ?, updated_at = NOW()
+            WHERE user_id = ?");
+            $stmt->execute([$package_id, $user_id]);
+
+            // 6. Log system activity
+            $stmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description, created_at)
+            VALUES (?, 'Payment Made', ?, NOW())");
+
+            $description = "Payment of {$amount} for {$package['package_type']} ({$package_id}) by {$user['full_name']}";
+            $stmt->execute([$user_id, $description]);
+
+            // Commit transaction
+            $pdo->commit();
 
             echo json_encode([
                 "success"    => true,
                 "message"    => "Payment processed successfully",
                 "payment_id" => $payment_id,
             ]);
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $pdo->rollBack();
+
             echo json_encode([
                 "success" => false,
                 "message" => "Database error: " . $e->getMessage(),
@@ -2421,6 +2573,14 @@ if ($fun === "eventAccConfirm") {
             $stmt->execute([$event_id]);
 
             if ($stmt->rowCount() > 0) {
+
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $event_id, // Assuming system action, no specific user
+                    ':action'      => 'Event Cancelled',
+                    ':description' => "Event ID '{$event_id}' was cancelled at " . date('Y-m-d H:i:s'),
+                ]);
+
                 echo json_encode(["success" => true, "message" => "Event cancelled successfully"]);
             } else {
                 echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
@@ -2445,10 +2605,61 @@ if ($fun === "eventAccConfirm") {
             $stmt->execute([$event_id]);
 
             if ($stmt->rowCount() > 0) {
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $event_id, // Assuming system action, no specific user
+                    ':action'      => 'Event Reactivated',
+                    ':description' => "Event ID '{$event_id}' was reactivated at " . date('Y-m-d H:i:s'),
+                ]);
+
                 echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
             } else {
                 echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
             }
+
+        } catch (PDOException $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($fun === "updateEvent") {
+        $event_id         = $_POST['event_id'] ?? '';
+        $event_name       = $_POST['event_name'] ?? '';
+        $event_start_date = $_POST['event_start_date'] ?? '';
+        $event_start_time = $_POST['event_start_time'] ?? '';
+        $venue            = $_POST['venue'] ?? '';
+
+        if (empty($event_id) || empty($event_name) || empty($event_date) || empty($event_time) || empty($venue) || empty($guest_limit)) {
+            echo json_encode(["success" => false, "message" => "Missing required fields"]);
+            exit;
+        }
+
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE events
+                SET event_name = :event_name,
+                    event_date = :event_date,
+                    event_time = :event_time,
+                    venue = :venue,
+                WHERE event_id = :event_id
+            ");
+
+            $stmt->execute([
+                ':event_name' => $event_name,
+                ':event_date' => $event_date,
+                ':event_time' => $event_time,
+                ':venue'      => $venue,
+                ':event_id'   => $event_id,
+            ]);
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $event_id, // Assuming system action, no specific user
+                ':action'      => 'Event Updated',
+                ':description' => "Event ID '{$event_id}' was updated at " . date('Y-m-d H:i:s'),
+            ]);
+
+            echo json_encode(["success" => true, "message" => "Event updated successfully"]);
 
         } catch (PDOException $e) {
             echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
@@ -2571,6 +2782,13 @@ if ($fun === "eventAccConfirm") {
                 if ($emailFailedCount > 0) {
                     $message .= " (Failed to send emails to $emailFailedCount guest(s))";
                 }
+
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $adminUserId,
+                    ':action'      => 'Guests Removed',
+                    ':description' => "Removed {$deletedCount} guest(s) from event invitations at " . date('Y-m-d H:i:s'),
+                ]);
 
                 echo json_encode([
                     "success"             => true,
@@ -3127,6 +3345,236 @@ if ($fun === "eventAccConfirm") {
                 "message" => "Password changed successfully",
             ]);
 
+        } catch (PDOException $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($fun === "checkGuestEmailExists") {
+        $event_id = $_POST['event_id'] ?? '';
+        $email    = trim(strtolower($_POST['email'] ?? ''));
+
+        if (empty($event_id) || empty($email)) {
+            echo json_encode(["exists" => false]);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("
+        SELECT 1 FROM rsvp
+        WHERE event_id = :event_id AND LOWER(email) = :email
+    ");
+        $stmt->execute([':event_id' => $event_id, ':email' => $email]);
+        $exists = $stmt->fetchColumn() !== false;
+
+        echo json_encode(["exists" => $exists]);
+        exit;
+    }
+
+    if ($fun === "getGuestMessageByEmail") {
+        $event_id = $_POST['event_id'] ?? '';
+        $email    = trim(strtolower($_POST['email'] ?? ''));
+
+        if (empty($event_id) || empty($email)) {
+            echo json_encode(["success" => false, "message" => "Missing data"]);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $stmt = $pdo->prepare("
+            SELECT r.guest_id, r.name, r.email,
+                   e.event_name, e.event_start_date AS event_date,
+                   e.event_start_time AS event_time, e.event_location AS location
+            FROM rsvp r
+            JOIN events e ON r.event_id = e.event_id
+            WHERE r.event_id = :event_id AND LOWER(r.email) = :email
+        ");
+            $stmt->execute([':event_id' => $event_id, ':email' => $email]);
+            $rsvp = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (! $rsvp) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "No RSVP found for this email."]);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("
+            SELECT id AS msg_id, message, reply, created_at, replied_at
+            FROM rsvp_messages
+            WHERE guest_id = :guest_id AND event_id = :event_id
+        ");
+            $stmt->execute([':guest_id' => $rsvp['guest_id'], ':event_id' => $event_id]);
+            $thread = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $messages = [];
+
+            if (! $thread) {
+                $stmt = $pdo->prepare("
+                INSERT INTO rsvp_messages
+                (guest_id, event_id, guest_name, guest_email, message, created_at)
+                VALUES (:guest_id, :event_id, :name, :email, '', NOW())
+            ");
+                $stmt->execute([
+                    ':guest_id' => $rsvp['guest_id'],
+                    ':event_id' => $event_id,
+                    ':name'     => $rsvp['name'],
+                    ':email'    => $rsvp['email'],
+                ]);
+                $msg_id = $pdo->lastInsertId();
+            } else {
+                $msg_id = $thread['msg_id'];
+
+                // === COLLECT ALL MESSAGES WITH TIMESTAMPS ===
+                $all_messages = [];
+
+                // Guest messages
+                if ($thread['message']) {
+                    $lines = explode("\n\n", $thread['message']);
+                    foreach ($lines as $line) {
+                        if (preg_match('/^\[Guest\]: (.+) \| (.+)$/', $line, $m)) {
+                            $all_messages[] = [
+                                'text'   => $m[1],
+                                'sender' => 'guest',
+                                'time'   => $m[2],
+                            ];
+                        }
+                    }
+                }
+
+                // Admin replies
+                if ($thread['reply']) {
+                    $lines = explode("\n\n", $thread['reply']);
+                    foreach ($lines as $line) {
+                        if (preg_match('/^\[Organizer\]: (.+) \| (.+)$/', $line, $m)) {
+                            $all_messages[] = [
+                                'text'   => $m[1],
+                                'sender' => 'organizer',
+                                'time'   => $m[2],
+                            ];
+                        }
+                    }
+                }
+
+                // === SORT BY TIMESTAMP ===
+                usort($all_messages, function ($a, $b) {
+                    return strtotime($a['time']) - strtotime($b['time']);
+                });
+
+                $messages = $all_messages;
+            }
+
+            $pdo->commit();
+
+            echo json_encode([
+                "success" => true,
+                "event"   => [
+                    "event_name" => $rsvp['event_name'],
+                    "event_date" => $rsvp['event_date'],
+                    "event_time" => $rsvp['event_time'],
+                    "location"   => $rsvp['location'],
+                ],
+                "guest"   => [
+                    'guest_id' => $rsvp['guest_id'],
+                    'name'     => $rsvp['name'],
+                    'email'    => $rsvp['email'],
+                    'msg_id'   => $msg_id,
+                    'messages' => $messages,
+                ],
+            ]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($fun === "guestSendMessage") {
+        $msg_id  = $_POST['msg_id'] ?? '';
+        $message = trim($_POST['message'] ?? '');
+
+        if (empty($msg_id) || empty($message)) {
+            echo json_encode(["success" => false, "message" => "Missing data"]);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $timestamp = date('Y-m-d H:i:s');
+            $line      = "[Guest]: $message | $timestamp";
+
+            $stmt = $pdo->prepare("
+            UPDATE rsvp_messages
+            SET message = CONCAT(
+                IFNULL(message, ''),
+                IF(LENGTH(IFNULL(message,'')) > 0, '\n\n', ''),
+                :line
+            )
+            WHERE id = :msg_id
+        ");
+            $stmt->execute([':line' => $line, ':msg_id' => $msg_id]);
+
+            if ($stmt->rowCount() > 0) {
+                $pdo->commit();
+                echo json_encode(["success" => true]);
+            } else {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Not found"]);
+            }
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Failed"]);
+        }
+        exit;
+    }
+
+    if ($fun === "organizerReplyToGuest") {
+        $msg_id = $_POST['msg_id'] ?? '';
+        $reply  = trim($_POST['reply'] ?? '');
+
+        if (empty($msg_id) || empty($reply)) {
+            echo json_encode(["success" => false, "message" => "Missing data"]);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $timestamp = date('Y-m-d H:i:s');
+            $line      = "[Organizer]: $reply | $timestamp";
+
+            $stmt = $pdo->prepare("
+            UPDATE rsvp_messages
+            SET reply = CONCAT(
+                IFNULL(reply, ''),
+                IF(LENGTH(IFNULL(reply,'')) > 0, '\n\n', ''),
+                :line
+            ),
+            replied_at = NOW()
+            WHERE id = :msg_id
+        ");
+            $stmt->execute([':line' => $line, ':msg_id' => $msg_id]);
+
+            if ($stmt->rowCount() > 0) {
+                $pdo->commit();
+                echo json_encode(["success" => true]);
+            } else {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Not found"]);
+            }
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Failed"]);
+        }
+        exit;
+    }
+
+} catch (Exception $e) {
+    error_log("Error in query.php: " . $e->getMessage());
+    echo json_encode(["success" => false, "message" => $e->getMessage()]);
+}
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
