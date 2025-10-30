@@ -31,7 +31,8 @@ const UpgradePackage = () => {
                 setLoading(true);
                 const storedUser = localStorage.getItem("user");
                 if (!storedUser) {
-                    navigate("/login");
+                    logOut();
+                    navigate("/");
                     return;
                 }
                 const user = JSON.parse(storedUser);

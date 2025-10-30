@@ -29,6 +29,7 @@ import Support from '../pages/support';
 import AttendanceStats from './planner/attendance_stats';
 import SecurityQuestionsModal from './SecurityQuestionsModal';
 import GuestInsights from './planner/guest_insights';
+import GuestMessageView from './guestMessageView';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -195,6 +196,8 @@ export function SessionHandler() {
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
                 <Route path="/guest_insights" element={<GuestInsights />} />
+                <Route path="/guestMessageView" element={<GuestMessageView />} />
+                <Route path="/SecurityQuestionsModel" element={<SecurityQuestionsModal />} />
             </Routes>
 
             <SessionWarningModal

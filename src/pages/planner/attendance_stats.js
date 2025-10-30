@@ -43,7 +43,12 @@ const AttendanceStats = () => {
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
-        if (!storedUser) return logOut();
+        if (!storedUser) {
+            printAlert("Session expired. Please log in again.", "error");
+            logOut();
+            navigate("/");
+            return;
+        }
         setUser(JSON.parse(storedUser));
 
         const handleClickOutside = (event) => {
@@ -478,8 +483,7 @@ const AttendanceStats = () => {
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    <button className="upgrade-btn">Upgrade</button>
-                    <button className="status-btn status-success">Published</button>
+                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>
                     <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
                         <span>{user?.name || "Guest"}</span>
@@ -512,7 +516,6 @@ const AttendanceStats = () => {
                     <ul>
                         <li className="active" onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
                         <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
-                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
                     </ul>
                 </div>
             </div>

@@ -1,13 +1,13 @@
 <?php
-
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/php_errors.log');
-
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Origin: http://localhost:3000"); // Allow React dev server
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Credentials: true");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 require_once "dbConnection.php";
 
@@ -90,7 +90,6 @@ function generateCSVReport($data, $filePath)
     fclose($file);
     return $filePath;
 }
-
 function generateExcelReport($data, $filePath)
 {
     return generateCSVReport($data, $filePath);
@@ -2349,6 +2348,7 @@ try {
         }
         exit;
     }
+    
     if ($fun === 'recordPayment') {
         $user_id        = $_POST['user_id'] ?? '';
         $user_name      = $_POST['user_name'] ?? '';
@@ -2771,7 +2771,6 @@ try {
         exit;
     }
 
-// Add missing revenue analytics endpoint
     if ($fun === "getRevenueAnalytics") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
 
@@ -3102,6 +3101,228 @@ try {
         }
         exit;
     }
+    
+    if ($fun === "checkGuestEmailExists") {
+    $event_id = $_POST['event_id'] ?? '';
+    $email    = trim(strtolower($_POST['email'] ?? ''));
+
+    if (empty($event_id) || empty($email)) {
+        echo json_encode(["exists" => false]);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT 1 FROM rsvp 
+        WHERE event_id = :event_id AND LOWER(email) = :email
+    ");
+    $stmt->execute([':event_id' => $event_id, ':email' => $email]);
+    $exists = $stmt->fetchColumn() !== false;
+
+    echo json_encode(["exists" => $exists]);
+    exit;
+    }
+    
+    if ($fun === "getGuestMessageByEmail") {
+    $event_id = $_POST['event_id'] ?? '';
+    $email    = trim(strtolower($_POST['email'] ?? ''));
+
+    if (empty($event_id) || empty($email)) {
+        echo json_encode(["success" => false, "message" => "Missing data"]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("
+            SELECT r.guest_id, r.name, r.email,
+                   e.event_name, e.event_start_date AS event_date,
+                   e.event_start_time AS event_time, e.event_location AS location
+            FROM rsvp r
+            JOIN events e ON r.event_id = e.event_id
+            WHERE r.event_id = :event_id AND LOWER(r.email) = :email
+        ");
+        $stmt->execute([':event_id' => $event_id, ':email' => $email]);
+        $rsvp = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$rsvp) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "No RSVP found for this email."]);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT id AS msg_id, message, reply, created_at, replied_at
+            FROM rsvp_messages
+            WHERE guest_id = :guest_id AND event_id = :event_id
+        ");
+        $stmt->execute([':guest_id' => $rsvp['guest_id'], ':event_id' => $event_id]);
+        $thread = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $messages = [];
+
+        if (!$thread) {
+            $stmt = $pdo->prepare("
+                INSERT INTO rsvp_messages
+                (guest_id, event_id, guest_name, guest_email, message, created_at)
+                VALUES (:guest_id, :event_id, :name, :email, '', NOW())
+            ");
+            $stmt->execute([
+                ':guest_id' => $rsvp['guest_id'],
+                ':event_id' => $event_id,
+                ':name'     => $rsvp['name'],
+                ':email'    => $rsvp['email'],
+            ]);
+            $msg_id = $pdo->lastInsertId();
+        } else {
+            $msg_id = $thread['msg_id'];
+
+            // === COLLECT ALL MESSAGES WITH TIMESTAMPS ===
+            $all_messages = [];
+
+            // Guest messages
+            if ($thread['message']) {
+                $lines = explode("\n\n", $thread['message']);
+                foreach ($lines as $line) {
+                    if (preg_match('/^\[Guest\]: (.+) \| (.+)$/', $line, $m)) {
+                        $all_messages[] = [
+                            'text'   => $m[1],
+                            'sender' => 'guest',
+                            'time'   => $m[2],
+                        ];
+                    }
+                }
+            }
+
+            // Admin replies
+            if ($thread['reply']) {
+                $lines = explode("\n\n", $thread['reply']);
+                foreach ($lines as $line) {
+                    if (preg_match('/^\[Organizer\]: (.+) \| (.+)$/', $line, $m)) {
+                        $all_messages[] = [
+                            'text'   => $m[1],
+                            'sender' => 'organizer',
+                            'time'   => $m[2],
+                        ];
+                    }
+                }
+            }
+
+            // === SORT BY TIMESTAMP ===
+            usort($all_messages, function($a, $b) {
+                return strtotime($a['time']) - strtotime($b['time']);
+            });
+
+            $messages = $all_messages;
+        }
+
+        $pdo->commit();
+
+        echo json_encode([
+            "success" => true,
+            "event"   => [
+                "event_name" => $rsvp['event_name'],
+                "event_date" => $rsvp['event_date'],
+                "event_time" => $rsvp['event_time'],
+                "location"   => $rsvp['location'],
+            ],
+            "guest"   => [
+                'guest_id' => $rsvp['guest_id'],
+                'name'     => $rsvp['name'],
+                'email'    => $rsvp['email'],
+                'msg_id'   => $msg_id,
+                'messages' => $messages,
+            ],
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+    }
+    exit;
+    }
+
+
+    if ($fun === "guestSendMessage") {
+    $msg_id  = $_POST['msg_id'] ?? '';
+    $message = trim($_POST['message'] ?? '');
+
+    if (empty($msg_id) || empty($message)) {
+        echo json_encode(["success" => false, "message" => "Missing data"]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $timestamp = date('Y-m-d H:i:s');
+        $line      = "[Guest]: $message | $timestamp";
+
+        $stmt = $pdo->prepare("
+            UPDATE rsvp_messages
+            SET message = CONCAT(
+                IFNULL(message, ''),
+                IF(LENGTH(IFNULL(message,'')) > 0, '\n\n', ''),
+                :line
+            )
+            WHERE id = :msg_id
+        ");
+        $stmt->execute([':line' => $line, ':msg_id' => $msg_id]);
+
+        if ($stmt->rowCount() > 0) {
+            $pdo->commit();
+            echo json_encode(["success" => true]);
+        } else {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Not found"]);
+        }
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Failed"]);
+    }
+    exit;
+    }
+
+    if ($fun === "organizerReplyToGuest") {
+    $msg_id = $_POST['msg_id'] ?? '';
+    $reply  = trim($_POST['reply'] ?? '');
+
+    if (empty($msg_id) || empty($reply)) {
+        echo json_encode(["success" => false, "message" => "Missing data"]);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $timestamp = date('Y-m-d H:i:s');
+        $line      = "[Organizer]: $reply | $timestamp";
+
+        $stmt = $pdo->prepare("
+            UPDATE rsvp_messages
+            SET reply = CONCAT(
+                IFNULL(reply, ''),
+                IF(LENGTH(IFNULL(reply,'')) > 0, '\n\n', ''),
+                :line
+            ),
+            replied_at = NOW()
+            WHERE id = :msg_id
+        ");
+        $stmt->execute([':line' => $line, ':msg_id' => $msg_id]);
+
+        if ($stmt->rowCount() > 0) {
+            $pdo->commit();
+            echo json_encode(["success" => true]);
+        } else {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Not found"]);
+        }
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Failed"]);
+    }
+    exit;
+    }
+
 
 } catch (Exception $e) {
     error_log("Error in query.php: " . $e->getMessage());

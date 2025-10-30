@@ -10,7 +10,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 function useHistory(initialState) {
     const [history, setHistory] = useState([initialState]);
     const [index, setIndex] = useState(0);
-      
+
 
     const state = history[index];
 
@@ -399,7 +399,7 @@ const Sidebar = ({
                 {/* Export */}
                 <div className="control-section">
                     <button className="save-btn" onClick={downloadImage}>
-                        💾 Export Postcard
+                        💾 Save PostCard
                     </button>
                 </div>
             </div>
@@ -1882,8 +1882,9 @@ export default function PostcardEditor() {
             const eventData = getEventDataFromStorage();
 
             if (!user || !eventData) {
-                alert("User or event data not found. Please try again.");
-                                setLoading(false);
+                //alert("User or event data not found. Please try again.");
+                printAlert("User or event data not found. Please try again.", "error");
+                setLoading(false);
                 return false;
             }
 
@@ -1915,19 +1916,21 @@ export default function PostcardEditor() {
             const result = await response.json();
 
             if (result.success) {
-                alert("Event saved successfully!");
+                printAlert("Event saved successfully!", "success");
                 return true;
             } else {
-                alert("Failed to save event: " + result.message);
+                //alert("Failed to save event: " + result.message);
+                printAlert("Failed to save event.", "error");
                 return false;
             }
         } catch (error) {
             console.error("Error saving event:", error);
-            alert("Error saving event. Please try again.");
+            //alert("Error saving event. Please try again.");
+            printAlert("Error saving event. Please try again.", "error");
             return false;
-        }finally {
-                setLoading(false);
-            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     const downloadImage = async () => {
@@ -1950,20 +1953,21 @@ export default function PostcardEditor() {
                 const success = await saveEventToDatabase(uri);
 
                 if (success) {
-                    const confirmDownload = window.confirm("Event saved successfully! Would you like to download the image as well?");
-                    if (confirmDownload) {
-                        const link = document.createElement("a");
-                        link.download = `${templateId || 'postcard'}-design.png`;
-                        link.href = uri;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }
+                    // const confirmDownload = window.confirm("Event saved successfully! Would you like to download the image as well?");
+                    // if (confirmDownload) {
+                    //     const link = document.createElement("a");
+                    //     link.download = `${templateId || 'postcard'}-design.png`;
+                    //     link.href = uri;
+                    //     document.body.appendChild(link);
+                    //     link.click();
+                    //     document.body.removeChild(link);
+                    // }
                     goToEventDashboard();
                 }
             } catch (error) {
                 console.error("Error processing image:", error);
-                alert("Failed to process image. Please try again.");
+                //alert("Failed to process image. Please try again.");
+                printAlert("Failed to process image. Please try again.", "error");
             }
         }, 100);
     };
@@ -1971,7 +1975,7 @@ export default function PostcardEditor() {
     const goToEventDashboard = () => {
         navigate("/eventsDashboard");
     };
-  const handleCanvasClick = (e) => {
+    const handleCanvasClick = (e) => {
         const clickedOnEmpty = e.target === e.target.getStage();
         if (clickedOnEmpty) {
             setSelectedId(null);
@@ -2092,20 +2096,46 @@ export default function PostcardEditor() {
         }
     }, [])
 
+    const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+
+    const printAlert = (message, type = "info") => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => {
+            setAlert({ show: false, message: "", type: "" });
+        }, 5000);
+    };
+
+
     if (loading) {
-            return (
-                <>
-                    <div className="loading-container">
-                        <div className="spinner-border text-info" role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                        <div className="loading-text">Saving your event..-</div>
+        return (
+            <>
+                <div className="loading-container">
+                    <div className="spinner-border text-info" role="status">
+                        <span className="visually-hidden">Loading...</span>
                     </div>
-                </>
-            );
-        }
+                    <div className="loading-text">Saving your event..-</div>
+                </div>
+            </>
+        );
+    }
     return (
         <div className="editor-container">
+            {/* Custom alert box */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
             {/* Left Sidebar */}
             <Sidebar
                 selectedId={selectedId}

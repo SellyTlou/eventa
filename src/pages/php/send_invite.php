@@ -39,7 +39,7 @@ try {
     $stmt->execute([$eventId]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$event) {
+    if (! $event) {
         echo json_encode([
             "success" => false,
             "message" => "Event not found",
@@ -50,20 +50,21 @@ try {
     $eventName     = $event['event_name'];
     $eventDate     = $event['event_start_date'];
     $eventLocation = $event['event_location'];
-$rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email=" . urlencode($user_email);
+    $rsvpLink      = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email=" . urlencode($user_email);
+    $mesageLink    = "$API_URL/guestMessageView?event_id=" . urlencode($eventId);
     // === SendGrid Setup ===
-    $SENDGRID_API_KEY = "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"; 
-    $fromEmail = "bugbusters929@gmail.com";          
-    $fromName  = "Eventa (no-reply)";
+    $SENDGRID_API_KEY = "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";
+    $fromEmail        = "bugbusters929@gmail.com";
+    $fromName         = "Eventa (no-reply)";
 
     $emailData = [
         "personalizations" => [[
-            "to" => [["email" => $guestEmail, "name" => $guestName]],
+            "to"      => [["email" => $guestEmail, "name" => $guestName]],
             "subject" => "Invitation to $eventName",
         ]],
-        "from" => ["email" => $fromEmail, "name" => $fromName],
-        "content" => [[
-            "type" => "text/html",
+        "from"             => ["email" => $fromEmail, "name" => $fromName],
+        "content"          => [[
+            "type"  => "text/html",
             "value" => "
             <html>
             <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;'>
@@ -72,11 +73,12 @@ $rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email="
                     <h2>{$eventName}</h2>
                     <p><strong>Date:</strong> " . date('F j, Y', strtotime($eventDate)) . "</p>
                     <p><strong>Location:</strong> {$eventLocation}</p>
+                    <a href='{$mesageLink}'style = 'display:inline-block;margin-top:20px;padding:12px 24px;background:#75cc54;color:#fff;text-decoration:none;border-radius:6px;'> Message Now </a>
                     <a href='{$rsvpLink}' style='display:inline-block;margin-top:20px;padding:12px 24px;background:#8b6a35;color:#fff;text-decoration:none;border-radius:6px;'>RSVP Now</a>
                 </div>
             </body>
-            </html>"
-        ]]
+            </html>",
+        ]],
     ];
 
     $ch = curl_init();
@@ -84,25 +86,25 @@ $rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email="
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Authorization: Bearer $SENDGRID_API_KEY",
-        "Content-Type: application/json"
+        "Content-Type: application/json",
     ]);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
     $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
     if ($status == 202) {
         echo json_encode([
-            "success" => true,
-            "message" => "Invitation sent successfully to $guestEmail",
-            "rsvpLink" => $rsvpLink
+            "success"  => true,
+            "message"  => "Invitation sent successfully to $guestEmail",
+            "rsvpLink" => $rsvpLink,
         ]);
     } else {
         echo json_encode([
             "success" => false,
-            "message" => "SendGrid Error (HTTP $status): $response"
+            "message" => "SendGrid Error (HTTP $status): $response",
         ]);
     }
 

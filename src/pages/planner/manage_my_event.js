@@ -45,7 +45,10 @@ const Manage_my_event = () => {
             fetchAvailablePackages();
         }
         if (!storedUser) {
+            printAlert("Session expired. Please log in again.", "error");
             logOut();
+            navigate("/");
+            return;
         }
         if (!id) {
             navigate("/eventsDashboard");
@@ -600,8 +603,7 @@ const Manage_my_event = () => {
                 <h1>Evenda</h1>
                 <div className="header-tabs">
                     <button className="upgrade-btn">Upgrade</button>
-                    <button className="status-btn status-success">Published</button>
-                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
+                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
                         <span>{user?.name || "Guest"}</span>
                         <i className="bi bi-chevron-bar-down"></i>
@@ -633,7 +635,6 @@ const Manage_my_event = () => {
                     <ul>
                         <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
                         <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
-                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
                     </ul>
                 </div>
             </div>

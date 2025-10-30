@@ -1,8 +1,10 @@
+// GuestInsights.js (FINAL – UNREAD + AUTO-SCROLL)
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { logOut } from "../components";
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import './main.css';    
 import './guest_insights.css';
 import '../../alert.css';
 
@@ -18,6 +20,7 @@ const GuestInsights = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
     const [selectedGuests, setSelectedGuests] = useState([]);
+    const [eventStatus, setEventStatus] = useState("Unknown");
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, guest: null });
 
     // Modal
@@ -25,10 +28,9 @@ const GuestInsights = () => {
     const [modalGuest, setModalGuest] = useState(null);
     const [replyText, setReplyText] = useState("");
 
+    const messagesEndRef = useRef(null);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
-
-    // Queue (array)
     const [messageQueue, setMessageQueue] = useState([]);
 
     const printAlert = (message, type = "info") => {
@@ -38,10 +40,15 @@ const GuestInsights = () => {
 
     const toggleDropdown = () => setDropdownOpen(prev => !prev);
 
-    // --- USER & CLICK OUTSIDE ---
+    
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
-        if (!storedUser) return logOut();
+        if (!storedUser) {
+            printAlert("Session expired. Please log in again.", "error");
+            logOut();
+            navigate("/");
+            return;
+        } 
         setUser(JSON.parse(storedUser));
 
         const handleClickOutside = (e) => {
@@ -53,7 +60,7 @@ const GuestInsights = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // --- FETCH EVENT & GUESTS ---
+    
     useEffect(() => {
         const eventId = localStorage.getItem("selectedEventId");
         if (!eventId) {
@@ -62,8 +69,40 @@ const GuestInsights = () => {
             return;
         }
         fetchEventData(eventId);
+        fetchEventStatusByID(eventId);
         fetchGuestInsights(eventId);
     }, [navigate]);
+
+   
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+
+    const fetchEventStatusByID = async (eventId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getEventStatusByID");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            console.log("Event Status data:", data);
+            if (data.success && data.status) {
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+            } else {
+                setEventStatus("Unknown");
+            }
+        } catch (err) {
+            console.error("Failed to fetch event status:", err);
+            return "unknown";
+        }
+    }
 
     const fetchEventData = async (eventId) => {
         try {
@@ -77,108 +116,131 @@ const GuestInsights = () => {
         } catch (err) { console.error(err); }
     };
 
+
     const fetchGuestInsights = async (eventId) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
-            if (!API_URL) {
-                printAlert("REACT_APP_API_URL not set in .env", "error");
-                return;
-            }
-
             const formData = new FormData();
             formData.append("function", "getGuestInsights");
             formData.append("event_id", eventId);
 
             const res = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
-
-            if (!res.ok) {
-                const text = await res.text();
-                console.error("HTTP Error:", res.status, text);
-                printAlert(`Server error: ${res.status}`, "error");
-                return;
-            }
+            if (!res.ok) return printAlert(`Server error: ${res.status}`, "error");
 
             const data = await res.json();
 
             if (data.success && data.guests) {
-                const guestsWithMsg = data.guests.filter(g => g.guest_message);
-                const guestsWithoutMsg = data.guests.filter(g => !g.guest_message);
+                const processed = data.guests.map(g => {
+                    const thread = [];
 
-                const unreplied = guestsWithMsg
-                    .filter(g => !g.reply)
-                    .sort((a, b) => new Date(a.message_created_at) - new Date(b.message_created_at));
+                    // Guest messages
+                    if (g.guest_message) {
+                        g.guest_message.split('\n\n').forEach(m => {
+                            if (m.includes('[Guest]:')) {
+                                const text = m.replace(/^\[Guest\]: (.+) \| .+$/, '$1');
+                                const time = m.replace(/^.+ \| (.+)$/, '$1');
+                                thread.push({ text, time, sender: 'guest' });
+                            }
+                        });
+                    }
 
-                const replied = guestsWithMsg
-                    .filter(g => g.reply)
-                    .sort((a, b) => new Date(b.replied_at) - new Date(a.replied_at));
+                    // Organizer replies
+                    if (g.reply) {
+                        g.reply.split('\n\n').forEach(m => {
+                            if (m.includes('[Organizer]:')) {
+                                const text = m.replace(/^\[Organizer\]: (.+) \| .+$/, '$1');
+                                const time = m.replace(/^.+ \| (.+)$/, '$1');
+                                thread.push({ text, time, sender: 'organizer' });
+                            }
+                        });
+                    }
 
-                const finalOrder = [...unreplied, ...replied, ...guestsWithoutMsg];
+                    // Sort chronologically
+                    thread.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
+                    // Last sender
+                    const lastMessage = thread.length ? thread[thread.length - 1] : null;
+                    const lastSender = lastMessage?.sender ?? null;
+
+                    // Unread = guest sent last message
+                    const has_unread = lastSender === 'guest';
+
+                    return { ...g, thread, has_unread, lastSender };
+                });
+
+                const unreplied = processed.filter(g => g.has_unread);
+                const replied = processed.filter(g => g.lastSender === 'organizer' && g.guest_message);
+                const noMsg = processed.filter(g => !g.guest_message);
+
+                const finalOrder = [...unreplied, ...replied, ...noMsg];
                 setMessageQueue(finalOrder);
                 setGuests(finalOrder);
-            } else {
-                printAlert(data.message || "No data returned", "error");
             }
         } catch (err) {
-            console.error("Fetch error:", err);
-            printAlert("Network error: Check console", "error");
+            printAlert("Network error", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    // --- SEND REPLY ---
+
     const sendReply = async () => {
-        if (!replyText.trim()) return;
+        if (!replyText.trim() || !modalGuest?.msg_id) return;
+
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            formData.append("function", "replyToGuestMessage");
+            formData.append("function", "organizerReplyToGuest");
             formData.append("msg_id", modalGuest.msg_id);
-            formData.append("reply", replyText);
+            formData.append("reply", replyText.trim());
 
             const res = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
             const result = await res.json();
 
             if (result.success) {
-                const now = new Date().toISOString();
-                const updatedGuest = { ...modalGuest, reply: replyText, replied_at: now };
+                const now = new Date();
+                const newMsg = {
+                    text: replyText.trim(),
+                    time: now.toISOString(),
+                    sender: 'organizer'
+                };
 
-                const updatedQueue = messageQueue.filter(g => g.msg_id !== modalGuest.msg_id);
-                updatedQueue.push(updatedGuest);
+                const updatedGuest = {
+                    ...modalGuest,
+                    thread: [...modalGuest.thread, newMsg],
+                    reply: `[Organizer]: ${replyText.trim()} | ${now.toISOString()}`,
+                    replied_at: now.toISOString(),
+                    has_unread: false,
+                    lastSender: 'organizer'
+                };
 
-                setMessageQueue(updatedQueue);
-                setGuests(updatedQueue);
-
-                setModalOpen(false);
+                const updated = guests.map(g => g.msg_id === modalGuest.msg_id ? updatedGuest : g);
+                setGuests(updated);
+                setMessageQueue(updated);
+                setModalGuest(updatedGuest);
                 setReplyText("");
-                printAlert("Reply sent! Moved to end.", "success");
+                printAlert("Reply sent!", "success");
+
+                // Scroll to the new message
+                setTimeout(scrollToBottom, 100);
             } else {
-                printAlert(result.message || "Failed to send", "error");
+                printAlert(result.message || "Failed", "error");
             }
         } catch (err) {
-            printAlert("Failed to send reply", "error");
+            printAlert("Network error", "error");
         }
     };
 
-    // --- DELETE GUEST ---
+
     const deleteGuest = async (guestId) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
             formData.append("function", "deleteGuest");
             formData.append("guest_id", guestId);
-
             const res = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
             const result = await res.json();
-
-            if (result.success) {
-                printAlert("Guest deleted", "success");
-                return true;
-            } else {
-                printAlert(result.message || "Failed to delete", "error");
-                return false;
-            }
+            return result.success;
         } catch (err) {
             printAlert("Network error", "error");
             return false;
@@ -187,51 +249,56 @@ const GuestInsights = () => {
 
     const handleDelete = async () => {
         if (!deleteConfirm.guest) return;
-
         const success = await deleteGuest(deleteConfirm.guest.guest_id);
         if (success) {
-            const updatedQueue = messageQueue.filter(g => g.guest_id !== deleteConfirm.guest.guest_id);
-            setMessageQueue(updatedQueue);
-            setGuests(updatedQueue);
+            const updated = messageQueue.filter(g => g.guest_id !== deleteConfirm.guest.guest_id);
+            setMessageQueue(updated);
+            setGuests(updated);
         }
-
         setDeleteConfirm({ show: false, guest: null });
     };
 
-    // --- BULK DELETE ---
+  
     const handleBulkDelete = async () => {
         if (!window.confirm(`Delete ${selectedGuests.length} guest(s)?`)) return;
-
         const formData = new FormData();
         formData.append("function", "removeGuests");
         formData.append("guest_ids", selectedGuests.join(","));
 
         try {
-            const res = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: "POST", body: formData });
             const result = await res.json();
-
             if (result.success) {
-                printAlert(`Deleted ${result.deleted_count} guest(s)`, "success");
+                printAlert(`Deleted ${result.deleted_count}`, "success");
                 const updated = messageQueue.filter(g => !selectedGuests.includes(g.guest_id));
                 setMessageQueue(updated);
                 setGuests(updated);
                 setSelectedGuests([]);
             } else {
-                printAlert(result.message || "Bulk delete failed", "error");
+                printAlert(result.message || "Failed", "error");
             }
         } catch (err) {
             printAlert("Network error", "error");
         }
     };
 
-    // --- MODAL ---
+
     const openModal = (guest) => {
         setModalGuest(guest);
-        setReplyText(guest.reply || "");
+        setReplyText("");
         setModalOpen(true);
+
+        // Mark as read (remove badge)
+        if (guest.has_unread) {
+            const updated = messageQueue.map(g =>
+                g.guest_id === guest.guest_id ? { ...g, has_unread: false } : g
+            );
+            setMessageQueue(updated);
+            setGuests(updated);
+        }
+
+        // Scroll after render
+        setTimeout(scrollToBottom, 100);
     };
 
     const closeModal = () => {
@@ -240,7 +307,6 @@ const GuestInsights = () => {
         setReplyText("");
     };
 
-    // --- FILTER & STATS ---
     const filteredGuests = messageQueue.filter(g => {
         const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             g.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -267,7 +333,6 @@ const GuestInsights = () => {
     };
     const pieOptions = { responsive: true, plugins: { legend: { position: 'bottom' } } };
 
-    // --- SELECTION ---
     const toggleSelect = (guestId) => {
         setSelectedGuests(prev =>
             prev.includes(guestId) ? prev.filter(x => x !== guestId) : [...prev, guestId]
@@ -281,7 +346,6 @@ const GuestInsights = () => {
         }
     };
 
-    // --- NAVIGATION ---
     const goToHome = () => navigate("/eventsDashboard");
     const goToManage = () => navigate("/manage_my_event");
     const goToInvitations = () => navigate("/invitationPage");
@@ -300,9 +364,9 @@ const GuestInsights = () => {
         );
     }
 
+  
     return (
         <div className="dashboard-container">
-            {/* ALERT */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i className={`fas ${alert.type === "error" ? "fa-times-circle" : alert.type === "success" ? "fa-check-circle" : "fa-info-circle"}`}></i>
@@ -314,9 +378,7 @@ const GuestInsights = () => {
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    <button className="upgrade-btn">Upgrade</button>
-                    <button className="status-btn status-success">Published</button>
-                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
+                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
                         <span>{user?.name || "Guest"}</span>
                         <i className="bi bi-chevron-bar-down"></i>
@@ -348,7 +410,6 @@ const GuestInsights = () => {
                     <ul>
                         <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
                         <li className="active"><i className="bi bi-people"></i>Guest Insights</li>
-                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
                     </ul>
                 </div>
             </div>
@@ -360,7 +421,6 @@ const GuestInsights = () => {
                     <p>View guest questions, respond, and manage engagement</p>
                 </div>
 
-                {/* SUMMARY CARDS */}
                 <div className="insights-summary">
                     <div className="summary-card">
                         <i className="bi bi-people"></i>
@@ -378,7 +438,6 @@ const GuestInsights = () => {
                     </div>
                 </div>
 
-                {/* FILTERS + BULK DELETE */}
                 <div className="filters-bar">
                     <input
                         type="text"
@@ -398,7 +457,6 @@ const GuestInsights = () => {
                     </button>
                 </div>
 
-                {/* BULK DELETE BUTTON */}
                 {selectedGuests.length > 0 && (
                     <div style={{ marginBottom: '1rem' }}>
                         <button onClick={handleBulkDelete} className="bulk-delete-btn">
@@ -407,7 +465,6 @@ const GuestInsights = () => {
                     </div>
                 )}
 
-                {/* TABLE */}
                 <div className="guest-table-container">
                     <table className="guest-table">
                         <thead>
@@ -424,22 +481,22 @@ const GuestInsights = () => {
                         <tbody>
                             {filteredGuests.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#718096' }}>
+                                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#718096' }}>
                                         No guests found
                                     </td>
                                 </tr>
                             ) : (
                                 filteredGuests.map(g => {
-                                    const truncated = g.guest_message
-                                        ? g.guest_message.length > 50
-                                            ? g.guest_message.substring(0, 50) + "..."
-                                            : g.guest_message
-                                        : "-";
+                                    const latestText = g.thread?.[0]?.text ?? '';
+                                    const truncated = latestText.length > 50 ? latestText.substring(0, 50) + "..." : latestText;
 
                                     return (
                                         <tr key={`${g.guest_id}-${g.event_id}`}>
                                             <td><input type="checkbox" checked={selectedGuests.includes(g.guest_id)} onChange={() => toggleSelect(g.guest_id)} /></td>
-                                            <td>{g.name}</td>
+                                            <td>
+                                                {g.name}
+                                                {g.has_unread && <span className="unread-badge">1</span>}
+                                            </td>
                                             <td><a href={`mailto:${g.email}`} className="email-link">{g.email}</a></td>
                                             <td>
                                                 <span className={`status-badge ${g.attending.toLowerCase()}`}>
@@ -448,12 +505,12 @@ const GuestInsights = () => {
                                             </td>
                                             <td>{g.guest_count}</td>
                                             <td className="message-cell">
-                                                {g.guest_message ? (
+                                                {g.thread?.length ? (
                                                     <span
                                                         className="truncated-message"
                                                         onClick={() => openModal(g)}
                                                         style={{ cursor: 'pointer', color: '#667eea' }}
-                                                        title="Click to view full message"
+                                                        title="Click to view full chat"
                                                     >
                                                         {truncated}
                                                     </span>
@@ -464,9 +521,9 @@ const GuestInsights = () => {
                                                     <button
                                                         className="action-btn"
                                                         onClick={() => openModal(g)}
-                                                        title={g.reply ? "View Reply" : "Reply"}
+                                                        title={g.lastSender === 'guest' ? "Reply" : "View Chat"}
                                                     >
-                                                        {g.reply ? "View" : "Reply"}
+                                                        {g.lastSender === 'guest' ? "Reply" : "View"}
                                                     </button>
                                                 )}
                                                 <button
@@ -486,7 +543,7 @@ const GuestInsights = () => {
                 </div>
             </div>
 
-            {/* DELETE CONFIRM MODAL */}
+            {/* DELETE CONFIRM */}
             {deleteConfirm.show && (
                 <div className="modal-overlay" onClick={() => setDeleteConfirm({ show: false, guest: null })}>
                     <div className="modal-content confirm-delete" onClick={e => e.stopPropagation()}>
@@ -506,49 +563,54 @@ const GuestInsights = () => {
                 </div>
             )}
 
-            {/* REPLY MODAL */}
+            {/* CHAT MODAL – AUTO-SCROLL + REPLY ONLY WHEN GUEST LAST */}
             {modalOpen && modalGuest && (
                 <div className="modal-overlay" onClick={closeModal}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <div className="modal-content chat-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Guest Message</h3>
+                            <h3>Chat with {modalGuest.name}</h3>
                             <button className="modal-close" onClick={closeModal}>×</button>
                         </div>
-                        <div className="modal-body">
-                            <p><strong>From:</strong> {modalGuest.name} ({modalGuest.email})</p>
-                            <div className="message-box">
-                                <p><strong>Question:</strong></p>
-                                <p style={{ whiteSpace: 'pre-wrap', margin: '0.5rem 0' }}>{modalGuest.guest_message}</p>
-                            </div>
-                            {modalGuest.reply && (
-                                <div className="reply-box">
-                                    <p><strong>Your Reply:</strong></p>
-                                    <p style={{
-                                        whiteSpace: 'pre-wrap',
-                                        margin: '0.5rem 0',
-                                        background: '#f8f9fa',
-                                        padding: '0.75rem',
-                                        borderRadius: '0.375rem'
-                                    }}>
-                                        {modalGuest.reply}
-                                    </p>
-                                </div>
-                            )}
-                            {!modalGuest.reply && (
-                                <div className="reply-input">
-                                    <textarea
-                                        value={replyText}
-                                        onChange={e => setReplyText(e.target.value)}
-                                        placeholder="Type your reply here..."
-                                        rows="4"
-                                    />
-                                    <div className="modal-actions">
-                                        <button onClick={sendReply} className="send-reply">Send Reply</button>
-                                        <button onClick={closeModal} className="cancel-reply">Cancel</button>
+
+                        <div className="chat-messages">
+                            {modalGuest.thread?.map((msg, i, arr) => {
+                                const prevSender = i > 0 ? arr[i - 1].sender : null;
+                                const isSame = prevSender === msg.sender;
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`message-bubble ${msg.sender === 'guest' ? 'guest' : 'organizer'}`}
+                                        style={{ marginTop: isSame ? '2px' : '12px' }}
+                                    >
+                                        <div className="message-text">{msg.text}</div>
+                                        <div className="message-time">
+                                            {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })}
+                            {/* Invisible anchor for scrolling */}
+                            <div ref={messagesEndRef} />
                         </div>
+
+                        {/* REPLY INPUT – ONLY WHEN GUEST SENT LAST */}
+                        {(
+                            <div className="reply-input-area">
+                                <textarea
+                                    value={replyText}
+                                    onChange={e => setReplyText(e.target.value)}
+                                    placeholder="Type your reply..."
+                                    rows={3}
+                                />
+                                <button
+                                    onClick={sendReply}
+                                    className="send-reply-btn"
+                                    disabled={!replyText.trim()}
+                                >
+                                    Send
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

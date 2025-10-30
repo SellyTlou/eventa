@@ -58,7 +58,12 @@ const InvitationPage = () => {
         }
 
         if (!id) navigate("/eventsDashboard");
-        if (!storedUser) logOut();
+        if (!storedUser) {
+            printAlert("Session expired. Please log in again.", "error");
+            logOut();
+            navigate("/");
+            return;
+        }
 
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -281,9 +286,7 @@ const InvitationPage = () => {
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
-                    <button className="upgrade-btn">Upgrade</button>
-                    <button className="status-btn status-success">Published</button>
-                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
+                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
                         <i className="bi bi-person-circle"></i>
                         <span>{user?.name || "Guest"}</span>
                         <i className="bi bi-chevron-bar-down"></i>
@@ -315,7 +318,6 @@ const InvitationPage = () => {
                     <ul>
                         <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
                         <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
-                        <li><i className="bi bi-calendar-check"></i>Event Performance</li>
                     </ul>
                 </div>
             </div>

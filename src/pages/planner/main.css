@@ -1481,13 +1481,13 @@ Event Dashboard page - Redesigned
     cursor: context-menu;
 }
 
-.dashboard-container .header-tabs .status-success {
+.dashboard-container .header-tabs .status-published {
     background-color: #4caf50;
     color: white;
 }
 
-.dashboard-container .header-tabs .status-failed {
-    background-color: #f44336;
+.dashboard-container .header-tabs .status-unpublished {
+    background-color: #ff0000;
     color: white;
 }
 
