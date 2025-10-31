@@ -393,54 +393,134 @@ function AdminDashboard() {
     };
 
     // Generate report function
-    const generateReport = async () => {
-        if (!adminUserId) {
-            alert('Admin user ID not available');
-            return;
+ const generateReport = async () => {
+    if (!adminUserId) {
+        alert('Admin user ID not available');
+        return;
+    }
+
+    try {
+        setGenerating(true);
+        setActionMessage('Generating report...');
+
+        // Based on report type, we'll generate different data
+        let csvContent = "";
+        let filename = `${reportForm.report_type}_report_${new Date().getTime()}.csv`;
+
+        switch(reportForm.report_type) {
+            case 'users':
+                csvContent = generateUsersCSV();
+                break;
+            case 'events':
+                csvContent = generateEventsCSV();
+                break;
+            case 'revenue':
+                csvContent = generateRevenueCSV();
+                break;
+            case 'system':
+                csvContent = generateSystemCSV();
+                break;
+            default:
+                csvContent = "Report Type,Status\nUnknown,Not Available";
         }
 
-        try {
-            setGenerating(true);
-            setActionMessage('Generating report...');
+        // Download the CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        setShowReportModal(false);
+        setActionMessage('');
+        
+    } catch (error) {
+        console.error('Report generation error:', error);
+        setActionMessage('Error: ' + error.message);
+    } finally {
+        setGenerating(false);
+    }
+};
 
-            const formData = new FormData();
-            formData.append('function', 'generateReport');
-            formData.append('admin_user_id', adminUserId);
-            formData.append('report_type', reportForm.report_type);
-            formData.append('date_range', reportForm.date_range);
+    // CSV Generator Functions - Add these right after generateReport function
+const generateUsersCSV = () => {
+    let csv = "User ID,Full Name,Email,Role,Status,Created Date,Total Events\n";
+    
+    if (usersData && usersData.length > 0) {
+        usersData.forEach(user => {
+            const safeName = (user.name || '').replace(/"/g, '""');
+            const safeEmail = (user.email || '').replace(/"/g, '""');
             
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                setActionMessage('Report generated! Downloading...');
-                
-                // Download the CSV file
-                const downloadUrl = `${API_BASE_URL}/reports/${data.filename}`;
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = data.filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                setShowReportModal(false);
-                setActionMessage('');
-                
-            } else {
-                setActionMessage('Error: ' + data.message);
-            }
-        } catch (error) {
-            console.error('Error generating report:', error);
-            setActionMessage('Error generating report');
-        } finally {
-            setGenerating(false);
-        }
-    };
+            csv += `"${user.user_id || ''}","${safeName}","${safeEmail}","${user.role || 'event_planner'}","${user.status || 'active'}","${user.created_at || ''}","${user.total_events || 0}"\n`;
+        });
+    } else {
+        csv += "No user data available\n";
+    }
+    return csv;
+};
+
+const generateEventsCSV = () => {
+    let csv = "Event Name,Organizer,Start Date,End Date,Location,Status,RSVP Count\n";
+    
+    // Since we don't have events data loaded, we'll show a message
+    // You can modify this later to fetch events data
+    if (invitationAnalytics && invitationAnalytics.length > 0) {
+        invitationAnalytics.forEach(event => {
+            const safeName = (event.eventName || '').replace(/"/g, '""');
+            csv += `"${safeName}","${event.organizer || 'N/A'}","${event.startDate || 'N/A'}","${event.endDate || 'N/A'}","${event.location || 'N/A'}","${event.status || 'draft'}","${event.responded || 0}"\n`;
+        });
+    } else {
+        csv += "No event data available in current view\n";
+        csv += "Try switching to Events tab first to load event data\n";
+    }
+    return csv;
+};
+
+const generateRevenueCSV = () => {
+    let csv = "Package Type,Price,Max Events,Max Guests,Active Subscriptions\n";
+    
+    if (pricingPlans && pricingPlans.length > 0) {
+        pricingPlans.forEach(plan => {
+            const packageType = plan.package_type || 'Unknown';
+            csv += `"${packageType}","R ${plan.price || 0}","${plan.max_events || 0}","${plan.max_guests || 0}","${plan.active_subscriptions || 0}"\n`;
+        });
+        
+        // Add summary
+        csv += "\nSummary\n";
+        csv += `Total Packages,${pricingPlans.length}\n`;
+        csv += `Total Revenue Estimate,R ${pricingPlans.reduce((sum, plan) => sum + (parseFloat(plan.price) || 0), 0)}\n`;
+    } else {
+        csv += "No pricing data available\n";
+    }
+    return csv;
+};
+
+const generateSystemCSV = () => {
+    return `System Report
+Generated: ${new Date().toLocaleString()}
+
+Dashboard Statistics:
+Total Users,${dashboardData.total_users || 0}
+Active Users,${dashboardData.active_users || 0}
+Inactive Users,${dashboardData.inactive_users || 0}
+Active Events,${dashboardData.active_events || 0}
+Response Rate,${dashboardData.response_rate || 0}%
+
+Recent Activity Count,${systemActivities.length || 0}
+Pricing Plans Count,${pricingPlans.length || 0}
+Invitation Analytics Count,${invitationAnalytics.length || 0}
+
+Report Criteria:
+Report Type,${reportForm.report_type}
+Date Range,${reportForm.date_range}
+Format,CSV
+Generated By,${adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 'Admin'}`;
+};
 
     // Run backup function
     const runBackup = async () => {
@@ -887,7 +967,7 @@ function AdminDashboard() {
 
         switch(activeTab) {
             case "event-management":
-                return <EventManagementTabContent adminUserId={adminUserId} logActivity={logActivity} triggerRefresh={triggerRefresh} />;
+                return <EventManagementTabContent adminUserId={adminUserId} logActivity={logActivity} triggerRefresh={triggerRefresh} setDashboardData={setDashboardData} />;
             case "invitations":
                 return <InvitationsTabContent analytics={invitationAnalytics} logActivity={logActivity} adminUserId={adminUserId} />;
             case "pricing":
@@ -1134,17 +1214,17 @@ function AdminDashboard() {
                                         </select>
                                     </div>
                                     <div className="form-group-new">
-                                        <label>Format</label>
-                                        <select 
-                                            className="form-select-new"
-                                            value={reportForm.format}
-                                            onChange={(e) => setReportForm(prev => ({...prev, format: e.target.value}))}
-                                        >
-                                            <option value="csv">PDF</option>
-                                            <option value="pdf">CSV</option>
-                                            <option value="excel">Excel</option>
-                                        </select>
-                                    </div>
+    <label>Format</label>
+    <select 
+        className="form-select-new"
+        value={reportForm.format}
+        onChange={(e) => setReportForm(prev => ({...prev, format: e.target.value}))}
+    >
+        <option value="pdf">PDF</option>
+        <option value="csv">CSV</option>
+        <option value="excel">Excel</option>
+    </select>
+</div>
                                     <div className="modal-actions-new">
                                         <button 
                                             className="action-btn-new primary"
@@ -1484,59 +1564,167 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
         }));
     };
 
+    const handleLogout = async () => {
+    try {
+        // Call backend logout if needed
+        const formData = new FormData();
+        formData.append('function', 'logout');
+        formData.append('user_id', adminUserId);
+        
+        await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+    } catch (error) {
+        console.error('Logout API error:', error);
+    } finally {
+        // Clear all local storage
+        localStorage.removeItem('user');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        localStorage.removeItem('adminData');
+        sessionStorage.clear();
+        
+        // Redirect to login page
+        window.location.href = '/';
+    }
+};
+
     const handlePasswordChange = async () => {
-        // Validate passwords
-        if (formData.newPassword !== formData.confirmPassword) {
-            setMessage('New passwords do not match');
-            setMessageType('error');
-            return;
-        }
+    // Validate that all fields are filled
+    if (!formData.password || !formData.newPassword || !formData.confirmPassword) {
+        setMessage('All password fields are required');
+        setMessageType('error');
+        return;
+    }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
-        if (!passwordRegex.test(formData.newPassword)) {
-            setMessage('New password must be at least 6 characters long and contain uppercase, lowercase, number and special character');
-            setMessageType('error');
-            return;
-        }
+    // Validate passwords match
+    if (formData.newPassword !== formData.confirmPassword) {
+        setMessage('New passwords do not match');
+        setMessageType('error');
+        return;
+    }
 
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+    if (!passwordRegex.test(formData.newPassword)) {
+        setMessage('Password must be at least 6 characters long and contain uppercase, lowercase, number and special character');
+        setMessageType('error');
+        return;
+    }
+
+    // Prevent changing to the same password
+    if (formData.password === formData.newPassword) {
+        setMessage('New password cannot be the same as current password');
+        setMessageType('error');
+        return;
+    }
+
+    try {
+        setLoading(true);
+        setMessage(''); // Clear previous messages
+
+        const formDataToSend = new FormData();
+        formDataToSend.append('function', 'changeAdminPassword');
+        formDataToSend.append('admin_user_id', adminUserId);
+        formDataToSend.append('current_password', formData.password);
+        formDataToSend.append('new_password', formData.newPassword);
+
+        console.log('Sending password change request for admin:', adminUserId);
+
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formDataToSend
+        });
+
+        // Get raw response text first
+        const responseText = await response.text();
+        console.log('Raw password change response:', responseText);
+
+        let data;
         try {
-            setChangingPassword(true);
-            const formDataToSend = new FormData();
-            formDataToSend.append('function', 'changeAdminPassword');
-            formDataToSend.append('admin_user_id', adminUserId);
-            formDataToSend.append('current_password', formData.password);
-            formDataToSend.append('new_password', formData.newPassword);
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw new Error('Invalid response from server. Please try again.');
+        }
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formDataToSend
+        console.log('Parsed password change response:', data);
+
+        if (data.success) {
+            setMessage('Password changed successfully! You will be redirected to login.');
+            setMessageType('success');
+            
+            // Log the activity locally
+            logActivity('Password Changed', 'Administrator successfully changed their password');
+            
+            // Clear password fields
+            setFormData(prev => ({
+                ...prev,
+                password: '',
+                newPassword: '',
+                confirmPassword: ''
+            }));
+            
+            // Reset password visibility
+            setShowPasswords({
+                current: false,
+                new: false,
+                confirm: false
             });
 
-            const data = await response.json();
-            if (data.success) {
-                setMessage('Password changed successfully!');
-                setMessageType('success');
-                setFormData(prev => ({
-                    ...prev,
-                    password: '',
-                    newPassword: '',
-                    confirmPassword: ''
-                }));
-                logActivity('Password Changed', 'Administrator changed their password');
-            } else {
-                setMessage(data.message || 'Failed to change password');
-                setMessageType('error');
-                logActivity('Password Change Failed', `Failed to change password: ${data.message}`);
+            // Close modal after delay and redirect to login
+            setTimeout(() => {
+                setChangingPassword(false);
+                setMessage('');
+                setMessageType('');
+                
+                // Optional: Force logout and redirect to login page
+                const confirmLogout = window.confirm('Password changed successfully! For security, you need to login again. Click OK to continue.');
+                if (confirmLogout) {
+                    handleLogout();
+                }
+            }, 3000);
+            
+        } else {
+            // Handle specific error messages
+            let errorMessage = data.message || 'Failed to change password';
+            
+            // Provide more user-friendly error messages
+            if (errorMessage.includes('Current password is incorrect')) {
+                errorMessage = 'The current password you entered is incorrect. Please try again.';
+            } else if (errorMessage.includes('at least 6 characters')) {
+                errorMessage = 'New password must be at least 6 characters long.';
+            } else if (errorMessage.includes('Database error')) {
+                errorMessage = 'A database error occurred. Please contact system administrator.';
+            } else if (errorMessage.includes('Unauthorized')) {
+                errorMessage = 'You are not authorized to perform this action.';
             }
-        } catch (error) {
-            console.error('Error changing password:', error);
-            setMessage('Error changing password');
+            
+            setMessage(errorMessage);
             setMessageType('error');
-            logActivity('Password Change Error', `Password change error: ${error.message}`);
-        } finally {
-            setChangingPassword(false);
+            
+            // Log the failed attempt
+            logActivity('Password Change Failed', `Failed to change password: ${data.message}`);
         }
-    };
+    } catch (error) {
+        console.error('Error changing password:', error);
+        
+        let errorMessage = 'Network error: Unable to connect to server. ';
+        if (error.message.includes('Invalid response')) {
+            errorMessage += 'Please check if the server is running.';
+        } else {
+            errorMessage += 'Please try again later.';
+        }
+        
+        setMessage(errorMessage);
+        setMessageType('error');
+        
+        logActivity('Password Change Error', `Password change error: ${error.message}`);
+    } finally {
+        setLoading(false);
+    }
+};
 
     const togglePasswordVisibility = (field) => {
         setShowPasswords(prev => ({
@@ -1698,123 +1886,156 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                             </div>
                             <div className="form-group">
                                 <label>Password</label>
-                                <div className="password-field">
-                                    <input 
-                                        type="password" 
-                                        value="••••••••"
-                                        disabled
-                                        className="disabled"
-                                    />
-                                    <button 
-                                        className="btn-text" 
-                                        disabled={!editMode}
-                                        onClick={() => setChangingPassword(true)}
-                                    >
-                                        Change
-                                    </button>
-                                </div>
+    <div className="password-field-with-button">
+        <input 
+            type="password" 
+            value="••••••••"
+            disabled
+            className="disabled"
+        />
+        {editMode && (
+            <button 
+                type="button"
+                className="btn-change-password"
+                onClick={() => setChangingPassword(true)}
+            >
+                <i className="bi bi-key"></i> Change
+            </button>
+        )}
+                            </div>
 
-                                {/* Password Change Modal */}
                                 {changingPassword && (
-                                    <div className="modal">
-                                        <div className="modal-content">
-                                            <div className="modal-header">
-                                                <h4>Change Password</h4>
-                                                <button 
-                                                    className="close-btn"
-                                                    onClick={() => setChangingPassword(false)}
-                                                >
-                                                    &times;
-                                                </button>
-                                            </div>
-                                            <div className="modal-body">
-                                                <div className="form-group">
-                                                    <label>Current Password</label>
-                                                    <div className="password-input">
-                                                        <input 
-                                                            type={showPasswords.current ? "text" : "password"}
-                                                            value={formData.password}
-                                                            onChange={(e) => handleInputChange('password', e.target.value)}
-                                                            className="form-control"
-                                                        />
-                                                        <button 
-                                                            type="button" 
-                                                            className="password-toggle"
-                                                            onClick={() => setShowPasswords(prev => ({
-                                                                ...prev,
-                                                                current: !prev.current
-                                                            }))}
-                                                        >
-                                                            <i className={`bi bi-eye${showPasswords.current ? '-slash' : ''}`}></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="form-group">
-                                                    <label>New Password</label>
-                                                    <div className="password-input">
-                                                        <input 
-                                                            type={showPasswords.new ? "text" : "password"}
-                                                            value={formData.newPassword}
-                                                            onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                                                            className="form-control"
-                                                        />
-                                                        <button 
-                                                            type="button" 
-                                                            className="password-toggle"
-                                                            onClick={() => setShowPasswords(prev => ({
-                                                                ...prev,
-                                                                new: !prev.new
-                                                            }))}
-                                                        >
-                                                            <i className={`bi bi-eye${showPasswords.new ? '-slash' : ''}`}></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="form-group">
-                                                    <label>Confirm New Password</label>
-                                                    <div className="password-input">
-                                                        <input 
-                                                            type={showPasswords.confirm ? "text" : "password"}
-                                                            value={formData.confirmPassword}
-                                                            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                                                            className="form-control"
-                                                        />
-                                                        <button 
-                                                            type="button" 
-                                                            className="password-toggle"
-                                                            onClick={() => setShowPasswords(prev => ({
-                                                                ...prev,
-                                                                confirm: !prev.confirm
-                                                            }))}
-                                                        >
-                                                            <i className={`bi bi-eye${showPasswords.confirm ? '-slash' : ''}`}></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                {message && (
-                                                    <div className={`alert alert-${messageType}`}>
-                                                        {message}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="modal-footer">
-                                                <button 
-                                                    className="btn btn-secondary" 
-                                                    onClick={() => setChangingPassword(false)}
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button 
-                                                    className="btn btn-primary" 
-                                                    onClick={handlePasswordChange}
-                                                    disabled={loading}
-                                                >
-                                                    {loading ? 'Saving...' : 'Save Changes'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+    <div className="modal-overlay-new" onClick={() => setChangingPassword(false)}>
+        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+                <div className="modal-title-section">
+                    <div className="modal-icon-large">
+                        <i className="bi bi-key"></i>
+                    </div>
+                    <div className="modal-title">
+                        <h2>Change Password</h2>
+                        <p>Update your administrator password</p>
+                    </div>
+                </div>
+                <button 
+                    className="close-btn-new"
+                    onClick={() => setChangingPassword(false)}
+                    disabled={loading}
+                >
+                    <i className="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div className="modal-body-new">
+                <div className="form-group-new">
+                    <label>Current Password *</label>
+                    <div className="password-input-new">
+                        <input 
+                            type={showPasswords.current ? "text" : "password"}
+                            value={formData.password}
+                            onChange={(e) => handleInputChange('password', e.target.value)}
+                            placeholder="Enter your current password"
+                            className="form-control-new"
+                        />
+                        <button 
+                            type="button" 
+                            className="password-toggle-new"
+                            onClick={() => setShowPasswords(prev => ({
+                                ...prev,
+                                current: !prev.current
+                            }))}
+                        >
+                            <i className={`bi bi-eye${showPasswords.current ? '-slash' : ''}`}></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="form-group-new">
+                    <label>New Password *</label>
+                    <div className="password-input-new">
+                        <input 
+                            type={showPasswords.new ? "text" : "password"}
+                            value={formData.newPassword}
+                            onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                            placeholder="Enter new password"
+                            className="form-control-new"
+                        />
+                        <button 
+                            type="button" 
+                            className="password-toggle-new"
+                            onClick={() => setShowPasswords(prev => ({
+                                ...prev,
+                                new: !prev.new
+                            }))}
+                        >
+                            <i className={`bi bi-eye${showPasswords.new ? '-slash' : ''}`}></i>
+                        </button>
+                    </div>
+                    <small className="password-requirements">
+                        Password must be at least 6 characters with uppercase, lowercase, number and special character
+                    </small>
+                </div>
+
+                <div className="form-group-new">
+                    <label>Confirm New Password *</label>
+                    <div className="password-input-new">
+                        <input 
+                            type={showPasswords.confirm ? "text" : "password"}
+                            value={formData.confirmPassword}
+                            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                            placeholder="Confirm new password"
+                            className="form-control-new"
+                        />
+                        <button 
+                            type="button" 
+                            className="password-toggle-new"
+                            onClick={() => setShowPasswords(prev => ({
+                                ...prev,
+                                confirm: !prev.confirm
+                            }))}
+                        >
+                            <i className={`bi bi-eye${showPasswords.confirm ? '-slash' : ''}`}></i>
+                        </button>
+                    </div>
+                </div>
+
+                {message && (
+                    <div className={`message-new ${messageType}`}>
+                        {message}
+                    </div>
+                )}
+
+                <div className="modal-actions-new">
+                    <button 
+                        className="action-btn-new primary"
+                        onClick={handlePasswordChange}
+                        disabled={loading || !formData.password || !formData.newPassword || !formData.confirmPassword}
+                    >
+                        {loading ? (
+                            <>
+                                <div className="spinner-small"></div>
+                                Updating...
+                            </>
+                        ) : (
+                            <>
+                                <i className="bi bi-check-circle"></i>
+                                Update Password
+                            </>
+                        )}
+                    </button>
+                    <button 
+                        className="action-btn-new secondary"
+                        onClick={() => setChangingPassword(false)}
+                        disabled={loading}
+                    >
+                        <i className="bi bi-x-circle"></i>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
                             </div>
                             <div className="form-group">
                                 <label>Full Name *</label>
@@ -3899,7 +4120,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity }) => {
 
 // Add this component to your AdminDashboard.js file
 
-const EventManagementTabContent = ({ adminUserId, logActivity, triggerRefresh }) => {
+const EventManagementTabContent = ({ adminUserId, logActivity, triggerRefresh, setDashboardData }) => {
     const [activeSection, setActiveSection] = useState('reported');
     const [reportedEvents, setReportedEvents] = useState([]);
     const [allEvents, setAllEvents] = useState([]);
@@ -3956,50 +4177,48 @@ const EventManagementTabContent = ({ adminUserId, logActivity, triggerRefresh })
         }
     };
 
-   const fetchAllEvents = async () => {
-    try {
-        setLoading(true);
-        const formData = new FormData();
-        formData.append('function', 'getAllEvents');
-        formData.append('admin_user_id', adminUserId);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        // Add better error handling
-        const text = await response.text();
-        console.log('Raw response:', text); // This will show what's actually being returned
-        
-        let data;
+    const fetchAllEvents = async () => {
         try {
-            data = JSON.parse(text);
-        } catch (parseError) {
-            console.error('Failed to parse JSON. Raw response:', text);
-            // Check if it's an HTML error page
-            if (text.includes('<br />') || text.includes('<b>')) {
-                throw new Error('Server returned HTML error page instead of JSON');
-            } else {
-                throw new Error('Invalid JSON response from server');
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('function', 'getAllEvents');
+            formData.append('admin_user_id', adminUserId);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const text = await response.text();
+            console.log('Raw response:', text);
+            
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseError) {
+                console.error('Failed to parse JSON. Raw response:', text);
+                if (text.includes('<br />') || text.includes('<b>')) {
+                    throw new Error('Server returned HTML error page instead of JSON');
+                } else {
+                    throw new Error('Invalid JSON response from server');
+                }
             }
+            
+            if (data.success) {
+                setAllEvents(data.events);
+            } else {
+                console.error('API Error:', data.message);
+                setAllEvents([]);
+            }
+        } catch (error) {
+            console.error('Error fetching all events:', error);
+            setAllEvents([]);
+        } finally {
+            setLoading(false);
         }
-        
-        if (data.success) {
-            setAllEvents(data.events);
-        } else {
-            console.error('API Error:', data.message);
-            setAllEvents([]); // Set empty array on error
-        }
-    } catch (error) {
-        console.error('Error fetching all events:', error);
-        setAllEvents([]); // Set empty array on error
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
-const handleDeleteEvent = async () => {
+    const handleDeleteEvent = async () => {
         if (!selectedEvent) return;
 
         try {
@@ -4037,6 +4256,14 @@ const handleDeleteEvent = async () => {
                     violation_severity: 'medium'
                 });
                 
+                // ✅ SMART UPDATE: Decrease active events count in dashboard
+                if (setDashboardData) {
+                    setDashboardData(prev => ({
+                        ...prev,
+                        active_events: Math.max(0, (prev.active_events || 0) - 1)
+                    }));
+                }
+                
                 // Refresh current tab data
                 if (activeSection === 'reported') {
                     fetchReportedEvents();
@@ -4044,7 +4271,7 @@ const handleDeleteEvent = async () => {
                     fetchAllEvents();
                 }
                 
-                // Trigger global refresh - this will update ALL tabs
+                // Trigger global refresh
                 if (triggerRefresh) {
                     triggerRefresh();
                 }
@@ -4058,6 +4285,7 @@ const handleDeleteEvent = async () => {
             alert('Error deleting event: ' + error.message);
         }
     };
+
     const openDeleteModal = (event) => {
         setSelectedEvent(event);
         setShowDeleteModal(true);
@@ -4094,18 +4322,18 @@ const handleDeleteEvent = async () => {
         return violation ? violation.label : type;
     };
 
-   const viewEventPreview = (event) => {
-    // Check if event is published
-    if (!event.published || event.published === 0 || event.status === 'draft') {
-        // Show modal message for unpublished events
-        setSelectedEvent(event);
-        setShowUnpublishedModal(true);
-        return;
-    }
-    
-    // Open event in new tab for preview - use the correct URL
-    window.open(`/rsvpForm?event_id=${event.event_id}`, '_blank');
-};
+    const viewEventPreview = (event) => {
+        // Check if event is published
+        if (!event.published || event.published === 0 || event.status === 'draft') {
+            // Show modal message for unpublished events
+            setSelectedEvent(event);
+            setShowUnpublishedModal(true);
+            return;
+        }
+        
+        // Open event in new tab for preview
+        window.open(`/rsvpForm?event_id=${event.event_id}`, '_blank');
+    };
 
     return (
         <div className="admin-tab-content">
@@ -4210,13 +4438,13 @@ const handleDeleteEvent = async () => {
                                             <i className="bi bi-x-circle"></i> Dismiss Report
                                         </button>
                                         <button 
-    className={`btn btn-secondary ${!report.published ? 'disabled' : ''}`}
-    onClick={() => viewEventPreview(report)}
-    disabled={!report.published}
-    title={!report.published ? "Event not published - cannot preview" : "View Event"}
->
-    <i className="bi bi-eye"></i> View Event
-</button>
+                                            className={`btn btn-secondary ${!report.published ? 'disabled' : ''}`}
+                                            onClick={() => viewEventPreview(report)}
+                                            disabled={!report.published}
+                                            title={!report.published ? "Event not published - cannot preview" : "View Event"}
+                                        >
+                                            <i className="bi bi-eye"></i> View Event
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -4233,51 +4461,50 @@ const handleDeleteEvent = async () => {
                     </div>
 
                     <div className="events-table">
-    <div className="table-header">
-        <span>Event Name</span>
-        <span>Owner</span>
-        <span>Created</span>
-        <span>Status</span>
-        <span>Reports</span>
-        <span>Actions</span>
-    </div>
-    
-    {allEvents.map(event => (
-        <div key={event.event_id} className="table-row">
-            <span className="event-name">{event.event_name}</span>
-            <span>{event.user_name}</span>
-            <span>{new Date(event.created_at).toLocaleDateString()}</span>
-            <span>
-                <span className={`status-badge ${event.published ? 'active' : 'draft'}`}>
-                    {event.published ? 'Published' : 'Draft'}
-                </span>
-            </span>
-            <span>
-                {event.report_count > 0 ? (
-                    <span className="report-count warning">{event.report_count} reports</span>
-                ) : (
-                    <span className="report-count">No reports</span>
-                )}
-            </span>
-            <span className="actions">
-                <button 
-                    className={`btn-icon view-btn ${!event.published ? 'disabled' : ''}`}
-                    onClick={() => viewEventPreview(event)}
-                    disabled={!event.published}
-                    title={!event.published ? "Event not published - cannot preview" : "View Event"}
-                >
-                    <i className="bi bi-eye"></i>
-                </button>
-                <button 
-                    className="btn-icon delete-btn"
-                    onClick={() => openDeleteModal(event)}
-                >
-                    <i className="bi bi-trash"></i>
-                </button>
-            </span>
-        </div>
-    ))}
-
+                        <div className="table-header">
+                            <span>Event Name</span>
+                            <span>Owner</span>
+                            <span>Created</span>
+                            <span>Status</span>
+                            <span>Reports</span>
+                            <span>Actions</span>
+                        </div>
+                        
+                        {allEvents.map(event => (
+                            <div key={event.event_id} className="table-row">
+                                <span className="event-name">{event.event_name}</span>
+                                <span>{event.user_name}</span>
+                                <span>{new Date(event.created_at).toLocaleDateString()}</span>
+                                <span>
+                                    <span className={`status-badge ${event.published ? 'active' : 'draft'}`}>
+                                        {event.published ? 'Published' : 'Draft'}
+                                    </span>
+                                </span>
+                                <span>
+                                    {event.report_count > 0 ? (
+                                        <span className="report-count warning">{event.report_count} reports</span>
+                                    ) : (
+                                        <span className="report-count">No reports</span>
+                                    )}
+                                </span>
+                                <span className="actions">
+                                    <button 
+                                        className={`btn-icon view-btn ${!event.published ? 'disabled' : ''}`}
+                                        onClick={() => viewEventPreview(event)}
+                                        disabled={!event.published}
+                                        title={!event.published ? "Event not published - cannot preview" : "View Event"}
+                                    >
+                                        <i className="bi bi-eye"></i>
+                                    </button>
+                                    <button 
+                                        className="btn-icon delete-btn"
+                                        onClick={() => openDeleteModal(event)}
+                                    >
+                                        <i className="bi bi-trash"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -4399,53 +4626,55 @@ const handleDeleteEvent = async () => {
             )}
 
             {/* Unpublished Event Modal */}
-{showUnpublishedModal && selectedEvent && (
-    <div className="modal-overlay-new" onClick={() => setShowUnpublishedModal(false)}>
-        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-                <div className="modal-title-section">
-                    <div className="modal-icon-large warning">
-                        <i className="bi bi-eye-slash"></i>
-                    </div>
-                    <div className="modal-title">
-                        <h2>Event Not Published</h2>
-                        <p>This event is not available for viewing</p>
-                    </div>
-                </div>
-                <button 
-                    className="close-btn-new"
-                    onClick={() => setShowUnpublishedModal(false)}
-                >
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
+            {showUnpublishedModal && selectedEvent && (
+                <div className="modal-overlay-new" onClick={() => setShowUnpublishedModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large warning">
+                                    <i className="bi bi-eye-slash"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Event Not Published</h2>
+                                    <p>This event is not available for viewing</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="close-btn-new"
+                                onClick={() => setShowUnpublishedModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
 
-            <div className="modal-body-new">
-                <div className="unpublished-warning">
-                    <div className="warning-icon">
-                        <i className="bi bi-info-circle"></i>
-                    </div>
-                    <div className="warning-content">
-                        <h4>Event Preview Unavailable</h4>
-                        <p>The event "<strong>{selectedEvent.event_name}</strong>" is currently in <span className="status-draft">draft</span> status and has not been published yet.</p>
-                        <p>You can only preview events that have been published by the event organizer.</p>
-                    </div>
-                </div>
+                        <div className="modal-body-new">
+                            <div className="unpublished-warning">
+                                <div className="warning-icon">
+                                    <i className="bi bi-info-circle"></i>
+                                </div>
+                                <div className="warning-content">
+                                    <h4>Event Preview Unavailable</h4>
+                                    <p>The event "<strong>{selectedEvent.event_name}</strong>" is currently in <span className="status-draft">draft</span> status and has not been published yet.</p>
+                                    <p>You can only preview events that have been published by the event organizer.</p>
+                                </div>
+                            </div>
 
-                <div className="modal-actions-new">
-                    <button 
-                        className="action-btn-new primary"
-                        onClick={() => setShowUnpublishedModal(false)}
-                    >
-                        <i className="bi bi-check-circle"></i>
-                        Understood
-                    </button>
+                            <div className="modal-actions-new">
+                                <button 
+                                    className="action-btn-new primary"
+                                    onClick={() => setShowUnpublishedModal(false)}
+                                >
+                                    <i className="bi bi-check-circle"></i>
+                                    Understood
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-)}
+            )}
         </div>
     );
 };
+
+
 export default AdminDashboard;

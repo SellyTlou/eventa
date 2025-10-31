@@ -27,12 +27,10 @@ import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
 import Support from '../pages/support';
 import AttendanceStats from './planner/attendance_stats';
-
-import GuestInsights from './planner/guest_insights';
 import SecurityQuestionsModal from './SecurityQuestionsModal';
 import GuestInsights from './planner/guest_insights';
 import GuestMessageView from './guestMessageView';
-import ReportEvent  from './ReportEvent';
+import ReportEvent from './ReportEvent';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -199,7 +197,11 @@ export function SessionHandler() {
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
                 <Route path="/guest_insights" element={<GuestInsights />} />
-        </Routes>
+                {/* ADD MISSING ROUTES */}
+                <Route path="/guest-message" element={<GuestMessageView />} />
+                <Route path="/report-event" element={<ReportEvent />} />
+                <Route path="/security-questions" element={<SecurityQuestionsModal />} />
+            </Routes>
 
             <SessionWarningModal
                 show={showWarning}
@@ -1108,4 +1110,3 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         </div>
     );
 }
-

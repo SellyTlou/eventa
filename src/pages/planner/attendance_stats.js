@@ -525,13 +525,6 @@ const AttendanceStats = () => {
                 <div className="content-header">
                     <h1>Attendance Statistics</h1>
                     <p>Comprehensive overview of your event attendance and RSVP data</p>
-                    {eventData && (
-                        <p className="event-info">
-                            Event: <strong>{eventData.event_name}</strong> |
-                            Capacity: <strong>{eventData.guest_limit || 100} guests</strong> |
-                            Total Invitations Sent: <strong>{eventData.guest_limit || 150}</strong>
-                        </p>
-                    )}
                 </div>
 
                 {/* Stats Cards */}
