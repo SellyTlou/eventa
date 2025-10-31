@@ -44,7 +44,7 @@ const EventsDashboard = () => {
     const [affectedDeleteGuests, setAffectedDeleteGuests] = useState([]);
     const [sendingDeleteMessage, setSendingDeleteMessage] = useState(false);
     const [showDeleteMessageStep, setShowDeleteMessageStep] = useState(false);
-    const [user, setUserData] = useState("");
+    const [user, setUserData] = useState(null);
 
     const itemsPerPage = 6;
     const navigate = useNavigate();
@@ -76,10 +76,12 @@ const EventsDashboard = () => {
         return today.toISOString().split("T")[0];
     };
 
-
+    /* -------------------------------------------------------------
+       FETCH EVENTS + RSVP STATS
+    ------------------------------------------------------------- */
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
-        
+
         if (!storedUser) {
             setLoading(false);
             printAlert("Session expired. Please log in again.", "error");
@@ -90,10 +92,6 @@ const EventsDashboard = () => {
 
         const userdata = JSON.parse(storedUser);
         setUserData(userdata);
-       
-
-        fetchEvents();
-    }, [navigate]);
 
         const fetchEvents = async () => {
             try {
@@ -101,12 +99,17 @@ const EventsDashboard = () => {
                 const API_URL = process.env.REACT_APP_API_URL;
                 const formData = new FormData();
                 formData.append("function", "getUserEvents");
-                formData.append("userID", user.user_id);
+                formData.append("userID", userdata.user_id);
 
                 const response = await fetch(`${API_URL}/query.php`, {
                     method: "POST",
                     body: formData
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
 
                 if (data.success && Array.isArray(data.events)) {
@@ -158,10 +161,12 @@ const EventsDashboard = () => {
                     setEvents(finalSorted);
                     setFilteredEvents(finalSorted);
                     fetchRSVPStatsForEvents(finalSorted);
+                } else {
+                    printAlert("Failed to load events: " + (data.message || "Unknown error"), "error");
                 }
             } catch (error) {
                 console.error("Failed to fetch events:", error);
-                printAlert("Failed to load events", "error");
+                printAlert("Failed to load events. Please check your connection.", "error");
             } finally {
                 setLoading(false);
             }
@@ -184,6 +189,11 @@ const EventsDashboard = () => {
                         method: "POST",
                         body: formData
                     });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
                     const data = await response.json();
 
                     if (data.success && Array.isArray(data.responses)) {
@@ -206,6 +216,7 @@ const EventsDashboard = () => {
                         stats[event.event_id] = { yes: 0, no: 0, maybe: 0, guests: [] };
                     }
                 } catch (err) {
+                    console.error(`Error fetching RSVP stats for event ${event.event_id}:`, err);
                     stats[event.event_id] = { yes: 0, no: 0, maybe: 0, guests: [] };
                 }
             })
@@ -236,10 +247,8 @@ const EventsDashboard = () => {
 
     const handleCancelConfirmation = () => {
         if (affectedGuests.length > 0) {
-            // Show message step if there are guests to notify
             setShowMessageStep(true);
         } else {
-            // No guests, proceed directly to cancel
             performCancel();
         }
     };
@@ -254,15 +263,12 @@ const EventsDashboard = () => {
 
         try {
             const API_URL = process.env.REACT_APP_API_URL;
-
-            // Use the exact same structure as your sendMessage function
             const formData = new FormData();
             formData.append("function", "sendGuestMessage");
             formData.append("message", cancelMessage);
             formData.append("API_URL", API_URL);
             formData.append("event_id", cancelEventId);
 
-            // Handle guest_ids - use all affected guests (Yes/Maybe RSVPs)
             const guestIds = affectedGuests.map(g => g.guest_id).join(",");
             formData.append("guest_ids", guestIds);
 
@@ -270,19 +276,23 @@ const EventsDashboard = () => {
                 method: "POST",
                 body: formData
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.success) {
                 const recipientCount = affectedGuests.length;
                 printAlert("Cancellation message sent to " + recipientCount + " guest(s)", "success");
-
-                // Now cancel the event after successful message sending
                 await performCancel();
             } else {
                 printAlert("Failed to send cancellation message: " + data.message, "error");
                 setSendingMessage(false);
             }
         } catch (error) {
+            console.error("Error sending cancellation message:", error);
             printAlert("Error sending cancellation message", "error");
             setSendingMessage(false);
         }
@@ -299,6 +309,11 @@ const EventsDashboard = () => {
                 method: "POST",
                 body: formData
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.success) {
@@ -319,6 +334,7 @@ const EventsDashboard = () => {
                 printAlert(`Failed to cancel: ${data.message}`, "error");
             }
         } catch (error) {
+            console.error("Error cancelling event:", error);
             printAlert("Error cancelling event.", "error");
         } finally {
             resetCancelModal();
@@ -337,27 +353,102 @@ const EventsDashboard = () => {
     };
 
     /* -------------------------------------------------------------
-       DELETE EVENT (Simple confirmation)
+       DELETE EVENT – SAME UX AS CANCEL
     ------------------------------------------------------------- */
-    const deleteEvent = async (eventId, eventName) => {
-        if (!window.confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`))
+    const initiateDelete = (eventId, eventName) => {
+        const ev = events.find((e) => e.event_id === eventId);
+        if (!ev) return;
+
+        const stats = rsvpStats[eventId] || { guests: [] };
+        const yesMaybeGuests = stats.guests || [];
+
+        setDeleteEventId(eventId);
+        setDeleteEventName(eventName);
+        setAffectedDeleteGuests(yesMaybeGuests);
+        setDeleteMessage(
+            `Dear guest,\n\nWe regret to inform you that "${eventName}" has been permanently deleted.\n\nWe apologize for any inconvenience.\n\nBest regards,\nThe Event Team`
+        );
+        setShowDeleteMessageStep(false);
+        setSendingDeleteMessage(false);
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirmation = () => {
+        if (affectedDeleteGuests.length > 0) {
+            setShowDeleteMessageStep(true);
+        } else {
+            performDelete();
+        }
+    };
+
+    const performDeleteWithMessage = async () => {
+        if (!deleteMessage.trim()) {
+            printAlert("Please enter a message", "warning");
             return;
-        setDeletingEventId(eventId);
+        }
+
+        setSendingDeleteMessage(true);
 
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            formData.append("function", "deleteEvent");
-            formData.append("event_id", eventId);
+            formData.append("function", "sendGuestMessage");
+            formData.append("message", deleteMessage);
+            formData.append("API_URL", API_URL);
+            formData.append("event_id", deleteEventId);
 
-            const response = await fetch(`${API_URL}/query.php`, {
+            const guestIds = affectedDeleteGuests.map(g => g.guest_id).join(",");
+            formData.append("guest_ids", guestIds);
+
+            const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
                 method: "POST",
                 body: formData
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.success) {
-                const updated = events.filter((e) => e.event_id !== eventId);
+                const cnt = affectedDeleteGuests.length;
+                printAlert(`Deletion message sent to ${cnt} guest(s)`, "success");
+                await performDelete();
+            } else {
+                printAlert("Failed to send deletion message: " + data.message, "error");
+                setSendingDeleteMessage(false);
+            }
+        } catch (err) {
+            console.error("Error sending deletion message:", err);
+            printAlert("Error sending deletion message", "error");
+            setSendingDeleteMessage(false);
+        }
+    };
+
+    const performDelete = async () => {
+        setDeletingEventId(deleteEventId);
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "deleteEvent");
+            formData.append("event_id", deleteEventId);
+            formData.append("user_id", user?.user_id || "");
+
+            const resp = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            if (!resp.ok) {
+                throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+
+            const data = await resp.json();
+
+            if (data.success) {
+                printAlert("Event deleted successfully!", "success");
+                const updated = events.filter((e) => e.event_id !== deleteEventId);
                 setEvents(updated);
                 setFilteredEvents(updated);
                 setSoonestEvent(
@@ -367,16 +458,27 @@ const EventsDashboard = () => {
                             new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
                     )[0] || null
                 );
-                printAlert("Event deleted successfully!", "success");
             } else {
                 printAlert(`Failed to delete: ${data.message}`, "error");
             }
         } catch (error) {
+            console.error("Error deleting event:", error);
             printAlert("Error deleting event.", "error");
         } finally {
             setDeletingEventId(null);
-            setShowMenuId(null);
+            resetDeleteModal();
         }
+    };
+
+    const resetDeleteModal = () => {
+        setShowDeleteModal(false);
+        setDeleteEventId(null);
+        setDeleteEventName("");
+        setDeleteMessage("");
+        setAffectedDeleteGuests([]);
+        setSendingDeleteMessage(false);
+        setShowDeleteMessageStep(false);
+        setShowMenuId(null);
     };
 
     /* -------------------------------------------------------------
@@ -395,6 +497,11 @@ const EventsDashboard = () => {
                 method: "POST",
                 body: formData
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.success) {
@@ -417,6 +524,7 @@ const EventsDashboard = () => {
                 printAlert(`Failed: ${data.message}`, "error");
             }
         } catch (error) {
+            console.error("Error reactivating event:", error);
             printAlert("Error reactivating event.", "error");
         } finally {
             setShowMenuId(null);
@@ -475,6 +583,11 @@ const EventsDashboard = () => {
                 method: "POST",
                 body: formData
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.success) {
@@ -496,13 +609,11 @@ const EventsDashboard = () => {
                 printAlert(`Failed: ${data.message}`, "error");
             }
         } catch (error) {
+            console.error("Error updating event:", error);
             printAlert(`Error updating: ${error.message}`, "error");
         }
     };
 
-    /* -------------------------------------------------------------
-       EVENT CLICK – BLOCK CANCELLED
-    ------------------------------------------------------------- */
     const handleEventClick = (eventId) => {
         const event = events.find((e) => e.event_id === eventId);
         if (isEventCancelled(event)) {
@@ -633,17 +744,20 @@ const EventsDashboard = () => {
     return (
         <>
             <LoginNav />
+            {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
-                    <div className="alert-content">
-                        <span className="alert-message">{alert.message}</span>
-                        <button
-                            className="alert-close"
-                            onClick={() => setAlert({ show: false, message: "", type: "" })}
-                        >
-                            ×
-                        </button>
-                    </div>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
                 </div>
             )}
 
@@ -834,7 +948,7 @@ const EventsDashboard = () => {
                                                         <div className="menu-divider"></div>
                                                         <button
                                                             className="menu-item delete"
-                                                            onClick={() => deleteEvent(event.event_id, event.event_name)}
+                                                            onClick={() => initiateDelete(event.event_id, event.event_name)}
                                                             disabled={deletingEventId === event.event_id}
                                                         >
                                                             {deletingEventId === event.event_id ? (
@@ -1051,7 +1165,6 @@ const EventsDashboard = () => {
                             </div>
 
                             {!showMessageStep ? (
-                                /* STEP 1: Initial Confirmation with RSVP Stats */
                                 <div className="modal-body">
                                     <div className="confirmation-warning">
                                         <i className="bi bi-exclamation-circle"></i>
@@ -1081,13 +1194,11 @@ const EventsDashboard = () => {
                                         <p className="warning-text">
                                             {affectedGuests.length > 0
                                                 ? `${affectedGuests.length} guest(s) who RSVP'd Yes or Maybe will be notified.`
-                                                : "No guests to notify."
-                                            }
+                                                : "No guests to notify."}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
-                                /* STEP 2: Message Input */
                                 <div className="modal-body">
                                     <div className="message-section">
                                         <h3>Send Cancellation Message</h3>
@@ -1137,6 +1248,110 @@ const EventsDashboard = () => {
                                                 </>
                                             ) : (
                                                 "Send Message & Cancel Event"
+                                            )}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* DELETE MODAL – RE-USES CANCEL UI */}
+                {showDeleteModal && (
+                    <div className="modal-backdrop">
+                        <div className="modal-container">
+                            <div className="modal-header">
+                                <h2><i className="bi bi-trash"></i> Delete Event</h2>
+                                <button className="modal-close" onClick={resetDeleteModal}>
+                                    <i className="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            {!showDeleteMessageStep ? (
+                                <div className="modal-body">
+                                    <div className="confirmation-warning">
+                                        <i className="bi bi-exclamation-circle"></i>
+                                        <h3>Are you sure you want to delete this event?</h3>
+                                        <p>
+                                            You are about to <strong>permanently delete</strong>: <strong>"{deleteEventName}"</strong>
+                                        </p>
+
+                                        <div className="rsvp-stats-summary">
+                                            <h4>Current RSVP Responses:</h4>
+                                            <div className="rsvp-stats">
+                                                <div className="rsvp-stat yes">
+                                                    <span className="stat-label">Yes:</span>
+                                                    <span className="stat-value">{rsvpStats[deleteEventId]?.yes || 0}</span>
+                                                </div>
+                                                <div className="rsvp-stat maybe">
+                                                    <span className="stat-label">Maybe:</span>
+                                                    <span className="stat-value">{rsvpStats[deleteEventId]?.maybe || 0}</span>
+                                                </div>
+                                                <div className="rsvp-stat no">
+                                                    <span className="stat-label">No:</span>
+                                                    <span className="stat-value">{rsvpStats[deleteEventId]?.no || 0}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p className="warning-text">
+                                            {affectedDeleteGuests.length > 0
+                                                ? `${affectedDeleteGuests.length} guest(s) who RSVP'd Yes or Maybe will be notified.`
+                                                : "No guests to notify."}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="modal-body">
+                                    <div className="message-section">
+                                        <h3>Send Deletion Message</h3>
+                                        <p>
+                                            <strong>{affectedDeleteGuests.length}</strong> guest(s) who RSVP'd <strong>Yes</strong> or <strong>Maybe</strong> will receive this message:
+                                        </p>
+                                        <div className="form-group">
+                                            <textarea
+                                                value={deleteMessage}
+                                                onChange={(e) => setDeleteMessage(e.target.value)}
+                                                rows={6}
+                                                placeholder="Enter your deletion message..."
+                                                className="message-textarea"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="modal-actions">
+                                {!showDeleteMessageStep ? (
+                                    <>
+                                        <button type="button" className="btn-secondary" onClick={resetDeleteModal}>
+                                            No, Keep Event
+                                        </button>
+                                        <button type="button" className="btn-danger" onClick={handleDeleteConfirmation}>
+                                            Yes, Delete Event
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button type="button" className="btn-secondary" onClick={() => setShowDeleteMessageStep(false)}>
+                                            Back
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn-danger"
+                                            onClick={performDeleteWithMessage}
+                                            disabled={sendingDeleteMessage}
+                                        >
+                                            {sendingDeleteMessage ? (
+                                                <>
+                                                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                                                        <span className="visually-hidden">Sending...</span>
+                                                    </div>
+                                                    Sending & Deleting...
+                                                </>
+                                            ) : (
+                                                "Send Message & Delete Event"
                                             )}
                                         </button>
                                     </>

@@ -303,7 +303,7 @@ if ($fun === "eventAccConfirm") {
     $name     = trim($_POST['name']);
     $email    = trim($_POST['email']);
     $password = $_POST['password'];
-    $userID   = generateUserID($pdo$pdo);
+    $userID   = generateUserID($pdo);
     $lastname = $_POST['lastname'] ?? ''; // FIXED: Added missing variable
 
         try {
@@ -3571,15 +3571,6 @@ if ($fun === "eventAccConfirm") {
         exit;
     }
 
-} catch (Exception $e) {
-    error_log("Error in query.php: " . $e->getMessage());
-    echo json_encode(["success" => false, "message" => $e->getMessage()]);
-}
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
 
 
 if ($fun === "reportEvent") {
