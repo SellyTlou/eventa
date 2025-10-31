@@ -36,6 +36,16 @@ const EventsDashboard = () => {
     const [sendingMessage, setSendingMessage] = useState(false);
     const [showMessageStep, setShowMessageStep] = useState(false);
 
+    // Delete modal states (same UX as cancel)
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteEventId, setDeleteEventId] = useState(null);
+    const [deleteEventName, setDeleteEventName] = useState("");
+    const [deleteMessage, setDeleteMessage] = useState("");
+    const [affectedDeleteGuests, setAffectedDeleteGuests] = useState([]);
+    const [sendingDeleteMessage, setSendingDeleteMessage] = useState(false);
+    const [showDeleteMessageStep, setShowDeleteMessageStep] = useState(false);
+    const [user, setUserData] = useState("");
+
     const itemsPerPage = 6;
     const navigate = useNavigate();
 
@@ -66,11 +76,10 @@ const EventsDashboard = () => {
         return today.toISOString().split("T")[0];
     };
 
-    /* -------------------------------------------------------------
-       FETCH EVENTS + RSVP STATS
-    ------------------------------------------------------------- */
+
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
+        
         if (!storedUser) {
             setLoading(false);
             printAlert("Session expired. Please log in again.", "error");
@@ -79,7 +88,12 @@ const EventsDashboard = () => {
             return;
         }
 
-        const user = JSON.parse(storedUser);
+        const userdata = JSON.parse(storedUser);
+        setUserData(userdata);
+       
+
+        fetchEvents();
+    }, [navigate]);
 
         const fetchEvents = async () => {
             try {
