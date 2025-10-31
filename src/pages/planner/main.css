@@ -3285,6 +3285,59 @@ Manage my Event page
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
+/* Action Buttons Container */
+.manage-my-event-content .action-buttons-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Update Event Button (Large version) */
+.manage-my-event-content .update-event-btn-large {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    border: none;
+    padding: 18px 50px;
+    border-radius: 50px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+    letter-spacing: 0.5px;
+    position: relative;
+}
+
+.manage-my-event-content .update-event-btn-large:hover {
+    background: linear-gradient(135deg, #ee5a24, #ff6b6b);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(255, 107, 107, 0.5);
+}
+
+/* Publish Instruction */
+.manage-my-event-content .publish-instruction {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border: 2px solid #2196f3;
+    border-radius: 15px;
+    color: #1565c0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.manage-my-event-content .publish-instruction i {
+    color: #2196f3;
+    font-size: 1.3rem;
+}
 /* Responsive Design */
 @media (max-width: 1024px) {
     .manage-my-event-content .details-grid {

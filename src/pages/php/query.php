@@ -875,6 +875,7 @@ if ($fun === "eventAccConfirm") {
 
    if ($fun === "deleteEvent") {
     $event_id = $_POST['event_id'] ?? '';
+$user_id = $_POST['user_id'] ?? '';
 
     if (!$event_id) {
         echo json_encode(["success" => false, "message" => "Missing event ID"]);
@@ -2561,6 +2562,7 @@ if ($fun === "eventAccConfirm") {
 
     if ($fun === 'cancelEvent') {
         $event_id = $_POST['event_id'] ?? '';
+        $user_id =  $_POST['user_id'] ?? '';
 
         if (empty($event_id)) {
             echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -2576,7 +2578,7 @@ if ($fun === "eventAccConfirm") {
 
                 $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
                 $logStmt->execute([
-                    ':user_id'     => $event_id, // Assuming system action, no specific user
+                    ':user_id'     => $user_id, 
                     ':action'      => 'Event Cancelled',
                     ':description' => "Event ID '{$event_id}' was cancelled at " . date('Y-m-d H:i:s'),
                 ]);
@@ -2594,6 +2596,8 @@ if ($fun === "eventAccConfirm") {
 
     if ($fun === 'reactivateEvent') {
         $event_id = $_POST['event_id'] ?? '';
+$user_id = $_POST['user_id'] ?? '';
+
 
         if (empty($event_id)) {
             echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -2607,7 +2611,7 @@ if ($fun === "eventAccConfirm") {
             if ($stmt->rowCount() > 0) {
                 $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
                 $logStmt->execute([
-                    ':user_id'     => $event_id, // Assuming system action, no specific user
+                    ':user_id'     => $user_id, 
                     ':action'      => 'Event Reactivated',
                     ':description' => "Event ID '{$event_id}' was reactivated at " . date('Y-m-d H:i:s'),
                 ]);

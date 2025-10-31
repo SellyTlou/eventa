@@ -75,10 +75,8 @@ const EventsDashboard = () => {
         const today = new Date();
         return today.toISOString().split("T")[0];
     };
+  
 
-    /* -------------------------------------------------------------
-       FETCH EVENTS + RSVP STATS
-    ------------------------------------------------------------- */
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
 
@@ -90,90 +88,105 @@ const EventsDashboard = () => {
             return;
         }
 
-        const userdata = JSON.parse(storedUser);
-        setUserData(userdata);
+        try {
+            const userdata = JSON.parse(storedUser);
+            setUserData(userdata);
 
-        const fetchEvents = async () => {
-            try {
-                setLoading(true);
-                const API_URL = process.env.REACT_APP_API_URL;
-                const formData = new FormData();
-                formData.append("function", "getUserEvents");
-                formData.append("userID", userdata.user_id);
+            
+            if (userdata && userdata.user_id) {
+                fetchEvents(userdata.user_id);
+            } else {
+                console.error("Invalid user data:", userdata);
+                printAlert("Invalid user data. Please log in again.", "error");
+                logOut();
+                navigate("/");
+            }
+        } catch (error) {
+            console.error("Error parsing user data:", error);
+            printAlert("Error loading user data. Please log in again.", "error");
+            logOut();
+            navigate("/");
+        }
+    }, [navigate]); 
 
-                const response = await fetch(`${API_URL}/query.php`, {
-                    method: "POST",
-                    body: formData
+    const fetchEvents = async (userId) => {
+        try {
+            setLoading(true);
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getUserEvents");
+            formData.append("userID", userId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success && Array.isArray(data.events)) {
+                const uniqueEvents = [];
+                data.events.forEach((event) => {
+                    if (!uniqueEvents.some((e) => e.event_id === event.event_id)) {
+                        uniqueEvents.push(event);
+                    }
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-                const data = await response.json();
+                const upcomingEvents = uniqueEvents.filter((event) => {
+                    const evDate = new Date(event.event_start_date || event.created_at);
+                    evDate.setHours(0, 0, 0, 0);
+                    return evDate >= today && !isEventCancelled(event);
+                });
 
-                if (data.success && Array.isArray(data.events)) {
-                    const uniqueEvents = [];
-                    data.events.forEach((event) => {
-                        if (!uniqueEvents.some((e) => e.event_id === event.event_id)) {
-                            uniqueEvents.push(event);
-                        }
-                    });
+                const pastEvents = uniqueEvents.filter((event) => {
+                    const evDate = new Date(event.event_start_date || event.created_at);
+                    evDate.setHours(0, 0, 0, 0);
+                    return evDate < today && !isEventCancelled(event);
+                });
 
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
+                const canceledEvents = uniqueEvents.filter(isEventCancelled);
 
-                    const upcomingEvents = uniqueEvents.filter((event) => {
-                        const evDate = new Date(event.event_start_date || event.created_at);
-                        evDate.setHours(0, 0, 0, 0);
-                        return evDate >= today && !isEventCancelled(event);
-                    });
-
-                    const pastEvents = uniqueEvents.filter((event) => {
-                        const evDate = new Date(event.event_start_date || event.created_at);
-                        evDate.setHours(0, 0, 0, 0);
-                        return evDate < today && !isEventCancelled(event);
-                    });
-
-                    const canceledEvents = uniqueEvents.filter(isEventCancelled);
-
-                    const upcomingHeap = new PriorityQueue({
-                        comparator: (a, b) => {
-                            const dA = new Date(a.event_start_date || a.created_at);
-                            const dB = new Date(b.event_start_date || b.created_at);
-                            return dA - dB;
-                        }
-                    });
-                    upcomingEvents.forEach((e) => upcomingHeap.queue(e));
-
-                    const sortedUpcoming = [];
-                    while (upcomingHeap.length > 0) sortedUpcoming.push(upcomingHeap.dequeue());
-
-                    const sortedPast = pastEvents.sort((a, b) => {
+                const upcomingHeap = new PriorityQueue({
+                    comparator: (a, b) => {
                         const dA = new Date(a.event_start_date || a.created_at);
                         const dB = new Date(b.event_start_date || b.created_at);
-                        return dB - dA;
-                    });
+                        return dA - dB;
+                    }
+                });
+                upcomingEvents.forEach((e) => upcomingHeap.queue(e));
 
-                    const finalSorted = [...sortedUpcoming, ...sortedPast, ...canceledEvents];
-                    const soonest = sortedUpcoming[0] || null;
-                    setSoonestEvent(soonest);
-                    setEvents(finalSorted);
-                    setFilteredEvents(finalSorted);
-                    fetchRSVPStatsForEvents(finalSorted);
-                } else {
-                    printAlert("Failed to load events: " + (data.message || "Unknown error"), "error");
-                }
-            } catch (error) {
-                console.error("Failed to fetch events:", error);
-                printAlert("Failed to load events. Please check your connection.", "error");
-            } finally {
-                setLoading(false);
+                const sortedUpcoming = [];
+                while (upcomingHeap.length > 0) sortedUpcoming.push(upcomingHeap.dequeue());
+
+                const sortedPast = pastEvents.sort((a, b) => {
+                    const dA = new Date(a.event_start_date || a.created_at);
+                    const dB = new Date(b.event_start_date || b.created_at);
+                    return dB - dA;
+                });
+
+                const finalSorted = [...sortedUpcoming, ...sortedPast, ...canceledEvents];
+                const soonest = sortedUpcoming[0] || null;
+                setSoonestEvent(soonest);
+                setEvents(finalSorted);
+                setFilteredEvents(finalSorted);
+                fetchRSVPStatsForEvents(finalSorted);
+            } else {
+                printAlert("Failed to load events: " + (data.message || "Unknown error"), "error");
             }
-        };
-
-        fetchEvents();
-    }, [navigate]);
+        } catch (error) {
+            console.error("Failed to fetch events:", error);
+            printAlert("Failed to load events. Please check your connection.", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchRSVPStatsForEvents = async (eventsArray) => {
         const stats = {};
@@ -304,6 +317,7 @@ const EventsDashboard = () => {
             const formData = new FormData();
             formData.append("function", "cancelEvent");
             formData.append("event_id", cancelEventId);
+            formData.append("user_id", user.user_id);
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -433,7 +447,7 @@ const EventsDashboard = () => {
             const formData = new FormData();
             formData.append("function", "deleteEvent");
             formData.append("event_id", deleteEventId);
-            formData.append("user_id", user?.user_id || "");
+            formData.append("user_id", user.user_id);
 
             const resp = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -492,6 +506,7 @@ const EventsDashboard = () => {
             const formData = new FormData();
             formData.append("function", "reactivateEvent");
             formData.append("event_id", eventId);
+            formData.append("user_id", user.user_id);
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
