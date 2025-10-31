@@ -78,6 +78,10 @@ const Manage_my_event = () => {
         const handleGlobalMouseUp = () => {
             if (isDragging) {
                 setIsDragging(false);
+                // If event is not published and guest limit is changed, show publish button automatically
+                if (eventStatus !== "Published" && guestLimit !== originalGuestLimit) {
+                    setShowUpdateButton(true);
+                }
             }
         };
 
@@ -708,9 +712,10 @@ const Manage_my_event = () => {
                             <div className="details-card event-details-card">
                                 <div className="card-header">
                                     <h3>Event Details</h3>
-                                    {showUpdateButton && (
+                                    {/* Show Update button when event is published and guest limit is changed */}
+                                    {eventStatus === "Published" && showUpdateButton && (
                                         <button className="update-event-btn" onClick={handleUpdateEvent}>
-                                            Update Event
+                                            Update Guest Limit
                                         </button>
                                     )}
                                 </div>
@@ -777,7 +782,13 @@ const Manage_my_event = () => {
                                         </div>
 
                                         <div className="guest-limit-info">
-                                            <small>Drag the slider or enter a number to set your guest limit (Max: {maxGuests})</small>
+                                            <small>
+                                                {eventStatus === "Published"
+                                                    ? "Drag the slider or enter a number to update your guest limit"
+                                                    : "Drag the slider or enter a number to set your guest limit before publishing"
+                                                }
+                                                (Max: {maxGuests})
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -787,21 +798,42 @@ const Manage_my_event = () => {
                             {renderCurrentPlanCard()}
                         </div>
 
-                        {/* Only show Publish button when event is not published AND no guest limit changes */}
-                        {eventStatus !== "Published" && !showUpdateButton && (
-                            <button
-                                className={`publish-event-btn ${!currentPlan?.hasPackage || currentPlan?.available_events === 0 ? 'disabled' : ''}`}
-                                onClick={handlePublishEvent}
-                                disabled={!currentPlan?.hasPackage || currentPlan?.available_events === 0}
-                            >
-                                Publish Event
-                                {(!currentPlan?.hasPackage || currentPlan?.available_events === 0) && (
-                                    <span className="tooltip">
-                                        {!currentPlan?.hasPackage ? "No active package" : "No available events left"}
-                                    </span>
-                                )}
-                            </button>
-                        )}
+                        {/* Show different buttons based on event status and guest limit changes */}
+                        <div className="action-buttons-container">
+                            {/* Show Publish button when event is not published AND guest limit has been changed */}
+                            {eventStatus !== "Published" && showUpdateButton && (
+                                <button
+                                    className={`publish-event-btn ${!currentPlan?.hasPackage || currentPlan?.available_events === 0 ? 'disabled' : ''}`}
+                                    onClick={handlePublishEvent}
+                                    disabled={!currentPlan?.hasPackage || currentPlan?.available_events === 0}
+                                >
+                                    Publish Event
+                                    {(!currentPlan?.hasPackage || currentPlan?.available_events === 0) && (
+                                        <span className="tooltip">
+                                            {!currentPlan?.hasPackage ? "No active package" : "No available events left"}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
+
+                            {/* Show Update button when event is published AND guest limit has been changed */}
+                            {eventStatus === "Published" && showUpdateButton && (
+                                <button
+                                    className="update-event-btn-large"
+                                    onClick={handleUpdateEvent}
+                                >
+                                    Update Guest Limit
+                                </button>
+                            )}
+
+                            {/* Show instruction when event is not published and no changes made */}
+                            {eventStatus !== "Published" && !showUpdateButton && guestLimit === 0 && (
+                                <div className="publish-instruction">
+                                    <i className="bi bi-info-circle"></i>
+                                    Set a guest limit above 0 to publish your event
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

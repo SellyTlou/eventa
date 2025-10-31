@@ -859,6 +859,7 @@ if ($fun === "eventAccConfirm") {
 
    if ($fun === "deleteEvent") {
     $event_id = $_POST['event_id'] ?? '';
+$user_id = $_POST['user_id'] ?? '';
 
     if (!$event_id) {
         echo json_encode(["success" => false, "message" => "Missing event ID"]);
@@ -2525,6 +2526,7 @@ if ($fun === "eventAccConfirm") {
     if ($fun === "updateEventGuestLimit") {
     $event_id = $_POST['event_id'] ?? '';
     $guest_limit = $_POST['guest_limit'] ?? 0;
+        $user_id =  $_POST['user_id'] ?? '';
 
     if (empty($event_id)) {
         echo json_encode(["success" => false, "message" => "Missing event ID"]);
@@ -2554,6 +2556,8 @@ if ($fun === "eventAccConfirm") {
 
     if ($fun === 'cancelEvent') {
         $event_id = $_POST['event_id'] ?? '';
+$user_id = $_POST['user_id'] ?? '';
+
 
         if (empty($event_id)) {
             echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -2566,7 +2570,14 @@ if ($fun === "eventAccConfirm") {
             $stmt->execute([$event_id]);
 
             if ($stmt->rowCount() > 0) {
-                echo json_encode(["success" => true, "message" => "Event cancelled successfully"]);
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $user_id, 
+                    ':action'      => 'Event Reactivated',
+                    ':description' => "Event ID '{$event_id}' was reactivated at " . date('Y-m-d H:i:s'),
+                ]);
+
+                echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
             } else {
                 echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
             }

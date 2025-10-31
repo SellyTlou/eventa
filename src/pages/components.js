@@ -635,16 +635,23 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
     const sendVerificationEmail = async (email, name) => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
+            let apiUrl = process.env.REACT_APP_API_URL;
+            if (!apiUrl) {
+                console.warn('REACT_APP_API_URL not set, using fallback relative path');
+                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
+            }
             const formDataToSend = new FormData();
             formDataToSend.append("email", email);
             formDataToSend.append("name", name);
-            formDataToSend.append("API_URL", API_URL);
+            formDataToSend.append("API_URL", apiUrl);
 
-            const response = await fetch(`${API_URL}/send_verification.php`, {
+            const url = `${apiUrl}/send_verification.php`;
+            console.log("Sending verification request to:", url);
+
+            const response = await fetchWithTimeout(url, {
                 method: "POST",
                 body: formDataToSend
-            });
+            }, 15000);
 
             const result = await response.json();
             return result;
@@ -655,47 +662,52 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     };
 
     const saveSecurityQuestions = async (userId, answers) => {
-    console.log("Saving security questions for user:", userId, "Answers:", answers);
-    
-    try {
-        const API_URL = process.env.REACT_APP_API_URL;
-        const formData = new FormData();
-        formData.append("function", "saveSecurityQuestions");
-        formData.append("user_id", userId);
-        formData.append("question1", "What was the name of your first pet?");
-        formData.append("answer1", answers.answer1);
-        formData.append("question2", "What city were you born in?");
-        formData.append("answer2", answers.answer2);
-        formData.append("question3", "What is your mother's maiden name?");
-        formData.append("answer3", answers.answer3);
+        console.log("Saving security questions for user:", userId, "Answers:", answers);
 
-        console.log("Sending security questions to:", `${API_URL}/query.php`);
+        try {
+            let apiUrl = process.env.REACT_APP_API_URL;
+            if (!apiUrl) {
+                console.warn('REACT_APP_API_URL not set, using fallback relative path');
+                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
+            }
+            const formData = new FormData();
+            formData.append("function", "saveSecurityQuestions");
+            formData.append("user_id", userId);
+            formData.append("question1", "What was the name of your first pet?");
+            formData.append("answer1", answers.answer1);
+            formData.append("question2", "What city were you born in?");
+            formData.append("answer2", answers.answer2);
+            formData.append("question3", "What is your mother's maiden name?");
+            formData.append("answer3", answers.answer3);
 
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData
-        });
+            const url = `${apiUrl}/query.php`;
+            console.log("Sending security questions to:", url);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const response = await fetchWithTimeout(url, {
+                method: "POST",
+                body: formData
+            }, 15000);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const responseText = await response.text();
+            console.log("Raw security questions response:", responseText);
+
+            if (!responseText.trim()) {
+                throw new Error("Empty response from server for security questions");
+            }
+
+            const result = JSON.parse(responseText);
+            console.log("Security questions save response:", result);
+
+            return result;
+        } catch (err) {
+            console.error("Error saving security questions:", err);
+            return { success: false, message: "Failed to save security questions: " + err.message };
         }
-
-        const responseText = await response.text();
-        console.log("Raw security questions response:", responseText);
-
-        if (!responseText.trim()) {
-            throw new Error("Empty response from server for security questions");
-        }
-
-        const result = JSON.parse(responseText);
-        console.log("Security questions save response:", result);
-        
-        return result;
-    } catch (err) {
-        console.error("Error saving security questions:", err);
-        return { success: false, message: "Failed to save security questions: " + err.message };
-    }
-};
+    };
 
     const handleSecurityQuestionsSave = async (answers) => {
         setSecurityAnswers(answers);
@@ -705,122 +717,128 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     };
 
     const completeRegistration = async (answers = null) => {
-    try {
-        const API_URL = process.env.REACT_APP_API_URL;
-        const formDataToSend = new FormData();
-
-        if (isLogin) {
-            formDataToSend.append("function", "login");
-            formDataToSend.append("email", formData.email);
-            formDataToSend.append("password", formData.password);
-        } else {
-            if (formData.password !== formData.confirmPassword) {
-                printAlert("Passwords don't match!", 'error');
-                setLoading(false);
-                return;
-            }
-            formDataToSend.append("function", "eventAccConfirm");
-            formDataToSend.append("name", formData.name);
-            formDataToSend.append("lastname", formData.lastname);
-            formDataToSend.append("email", formData.email);
-            formDataToSend.append("password", formData.password);
-        }
-
-        console.log("Sending registration request to:", API_URL);
-
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formDataToSend
-        });
-
-        // Check if response is OK and has content
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const responseText = await response.text();
-        console.log("Raw API response:", responseText);
-
-        // Check if response is empty
-        if (!responseText.trim()) {
-            throw new Error("Empty response from server");
-        }
-
-        let result;
         try {
-            result = JSON.parse(responseText);
-        } catch (jsonError) {
-            console.error("JSON parse error:", jsonError);
-            console.error("Raw response that failed to parse:", responseText);
-            throw new Error("Invalid JSON response from server");
-        }
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formDataToSend = new FormData();
 
-        console.log("Parsed API Response:", result);
-
-        if (result.success) {
             if (isLogin) {
-                localStorage.setItem("user", JSON.stringify(result.user));
-
-                const isAdmin = result.user.role == "admin" ||
-                    (result.user.role && result.user.role.includes("admin"));
-
-                if (isAdmin) {
-                    navigate("/adminDashboard");
-                } else {
-                    navigate("/eventsDashboard");
-                }
-
-                onClose();
-                printAlert("Login successful!", 'success');
+                formDataToSend.append("function", "login");
+                formDataToSend.append("email", formData.email);
+                formDataToSend.append("password", formData.password);
             } else {
-                // For registration, save security questions if answers were provided
-                if (answers && result.user && result.user.user_id) {
-                    const securityResult = await saveSecurityQuestions(result.user.user_id, answers);
-                    if (!securityResult.success) {
-                        console.error("Failed to save security questions:", securityResult.message);
-                        // Don't fail the registration if security questions fail
+                if (formData.password !== formData.confirmPassword) {
+                    printAlert("Passwords don't match!", 'error');
+                    setLoading(false);
+                    return;
+                }
+                formDataToSend.append("function", "eventAccConfirm");
+                formDataToSend.append("name", formData.name);
+                formDataToSend.append("lastname", formData.lastname);
+                formDataToSend.append("email", formData.email);
+                formDataToSend.append("password", formData.password);
+            }
+
+            let apiUrl = process.env.REACT_APP_API_URL;
+            if (!apiUrl) {
+                console.warn('REACT_APP_API_URL not set, using fallback relative path');
+                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
+            }
+            console.log("Sending registration request to:", apiUrl);
+            const url = `${apiUrl}/query.php`;
+
+            const response = await fetchWithTimeout(url, {
+                method: "POST",
+                body: formDataToSend
+            }, 15000);
+
+            // Check if response is OK and has content
+            // if (!response.ok) {
+            //     throw new Error(`HTTP error! status: ${response.status}`);
+            // }
+
+            const responseText = await response.text();
+            console.log("Raw API response:", responseText);
+
+            // Check if response is empty
+            if (!responseText.trim()) {
+                throw new Error("Empty response from server");
+            }
+
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (jsonError) {
+                console.error("JSON parse error:", jsonError);
+                console.error("Raw response that failed to parse:", responseText);
+                throw new Error("Invalid JSON response from server");
+            }
+
+            console.log("Parsed API Response:", result);
+
+            if (result.success) {
+                if (isLogin) {
+                    localStorage.setItem("user", JSON.stringify(result.user));
+
+                    const isAdmin = result.user.role === "admin" ||
+                        (result.user.role && result.user.role.includes("admin"));
+
+                    if (isAdmin) {
+                        navigate("/adminDashboard");
+                    } else {
+                        navigate("/eventsDashboard");
+                    }
+
+                    onClose();
+                    printAlert("Login successful!", 'success');
+                } else {
+                    // For registration, save security questions if answers were provided
+                    if (answers && result.user && result.user.user_id) {
+                        const securityResult = await saveSecurityQuestions(result.user.user_id, answers);
+                        if (!securityResult.success) {
+                            console.error("Failed to save security questions:", securityResult.message);
+                            // Don't fail the registration if security questions fail
+                            printAlert("Account created but security questions failed to save", 'warning');
+                        }
+                    } else if (answers) {
+                        console.error("Cannot save security questions: user_id is undefined", result);
                         printAlert("Account created but security questions failed to save", 'warning');
                     }
-                } else if (answers) {
-                    console.error("Cannot save security questions: user_id is undefined", result);
-                    printAlert("Account created but security questions failed to save", 'warning');
+
+                    printAlert("Account created successfully! Sending verification email...", 'success');
+
+                    const verificationResult = await sendVerificationEmail(formData.email, formData.name);
+
+                    if (verificationResult.success) {
+                        printAlert("Verification email sent! Please check your inbox.", 'success');
+                    } else {
+                        printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
+                    }
+
+                    setFormData({
+                        name: '',
+                        email: '',
+                        lastname: '',
+                        password: '',
+                        confirmPassword: ''
+                    });
+                    setIsLogin(true);
                 }
-
-                printAlert("Account created successfully! Sending verification email...", 'success');
-
-                const verificationResult = await sendVerificationEmail(formData.email, formData.name);
-
-                if (verificationResult.success) {
-                    printAlert("Verification email sent! Please check your inbox.", 'success');
-                } else {
-                    printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
-                }
-
-                setFormData({
-                    name: '',
-                    email: '',
-                    lastname: '',
-                    password: '',
-                    confirmPassword: ''
-                });
-                setIsLogin(true);
-            }
-        } else {
-            if (result.needsVerification) {
-                setNeedsVerification(true);
-                setUnverifiedEmail(formData.email);
-                printAlert(result.message, 'error');
             } else {
-                printAlert(result.message || "Something went wrong!", 'error');
+                if (result.needsVerification) {
+                    setNeedsVerification(true);
+                    setUnverifiedEmail(formData.email);
+                    printAlert(result.message, 'error');
+                } else {
+                    printAlert(result.message || "Something went wrong!", 'error');
+                }
             }
+        } catch (error) {
+            console.error("Registration Error:", error);
+            printAlert(`Registration failed: ${error.message}`, 'error');
+        } finally {
+            setLoading(false);
         }
-    } catch (error) {
-        console.error("Registration Error:", error);
-        printAlert(`Registration failed: ${error.message}`, 'error');
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -1110,3 +1128,22 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         </div>
     );
 }
+
+// Helper: fetch with timeout to avoid hanging requests
+const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error('Request timed out'));
+        }, timeout);
+
+        fetch(resource, options)
+            .then((response) => {
+                clearTimeout(timer);
+                resolve(response);
+            })
+            .catch((err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+};
