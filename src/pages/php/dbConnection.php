@@ -8,12 +8,17 @@ class Database
     private $dbname = "if0_40261617_evendidb";
     private $port = 3306;
      */
-
     private $host   = "localhost";
     private $user   = "root";
     private $pass   = "";
     private $dbname = "eventa";
     private $port   = 3306;
+
+    /*private $host   = "mysql9001.site4now.net";
+    private $user   = "ac036d_sellytl";
+    private $pass   = "@Selly#01";
+    private $dbname = "db_ac036d_sellytl";
+    private $port   = 3306;*/
     private $pdo;
 
     public function __construct()
