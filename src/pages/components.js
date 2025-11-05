@@ -734,13 +734,14 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     setLoading(false);
                     return;
                 }
-                formDataToSend.append("function", "eventAccConfirm");
+                formDataToSend.append("function", "register");
                 formDataToSend.append("name", formData.name);
                 formDataToSend.append("lastname", formData.lastname);
                 formDataToSend.append("email", formData.email);
                 formDataToSend.append("password", formData.password);
             }
 
+           
             console.log("Sending registration request to:", API_URL);
             const url = `${API_URL}/query.php`;
 
