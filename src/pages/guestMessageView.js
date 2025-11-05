@@ -13,7 +13,7 @@ const GuestMessageView = () => {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [emailChecked, setEmailChecked] = useState(false);
-    const [eventStatus, setEventStatus] = useState(null); // null | 'not_found' | 'canceled' | 'active'
+    const [eventStatus, setEventStatus] = useState(null);
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
     const API_URL = process.env.REACT_APP_API_URL;
     const eventId = new URLSearchParams(location.search).get('event_id');
@@ -63,7 +63,6 @@ const GuestMessageView = () => {
 
             const eventInfo = eventData.events[0];   
             setEvent(eventInfo);
-console.log(eventInfo);
             const isCanceled =
                 eventInfo.status === 'Cancelled' ||
                 eventInfo.status === 'cancelled';
@@ -119,7 +118,7 @@ console.log(eventInfo);
 
             if (result.success) {
                 setMessageInput('');
-                fetchGuest(); // Refresh messages
+                fetchGuest(); 
             } else {
                 showAlert(result.message, 'error');
             }

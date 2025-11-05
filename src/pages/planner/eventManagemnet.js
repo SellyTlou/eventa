@@ -259,7 +259,7 @@ const RSVPResponses = () => {
             var formData = new FormData();
             formData.append("function", "sendGuestMessage");
             formData.append("message", messageContent);
-            formData.append("API_URL", API_URL);
+            formData.append("API_URL", API_URL); 
             formData.append("event_id", eventId);
 
             // Handle guest_ids properly for both bulk and individual

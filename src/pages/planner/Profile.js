@@ -96,7 +96,6 @@ const Profile = () => {
   const goToProfile = () => {
     navigate("/Profile");
   }
-  const goToHome = () => navigate("/eventsDashboard");
   const handleBack = () => { navigate(-1); };
   const goToUpgradePackage = () => {
     navigate("/upgrade_package");
@@ -715,7 +714,7 @@ const Profile = () => {
                       <i className="bi bi-box-seam"></i>
                       <h3>No Package Found</h3>
                       <p>You don't have an active package yet.</p>
-                      <button className="create-event-btn">
+                      <button className="create-event-btn"  onClick={goToUpgradePackage}>
                         Choose a Package
                       </button>
                     </div>

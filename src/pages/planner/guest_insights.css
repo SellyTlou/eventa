@@ -215,6 +215,7 @@
         overflow-x: auto;
     }
 }
+
 .guest-insights-content {
     flex: 1;
     padding: 2rem;
@@ -440,6 +441,7 @@
         overflow-x: auto;
     }
 }
+
 /* === MODAL === */
 .modal-overlay {
     position: fixed;
@@ -587,6 +589,7 @@
 .delete-confirm-btn:hover {
     background: #c53030;
 }
+
 /* Action cell – flex layout */
 .action-cell {
     display: flex;
@@ -739,6 +742,7 @@
 .send-reply-btn:hover {
     background: #5a67d8;
 }
+
 /* UNREAD BADGE */
 .unread-badge {
     display: inline-flex;
