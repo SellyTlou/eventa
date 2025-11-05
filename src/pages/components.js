@@ -190,17 +190,16 @@ export function SessionHandler() {
                 <Route path="/rsvpForm" element={<RsvpForm />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/Manage_my_event" element={<ManageEyEvent />} />
-                <Route path="/packagePayment" element={<PackagePayment />} />
+                <Route path="/packagepayment" element={<PackagePayment />} />
                 <Route path="/forgot_password" element={<ForgotPassword />} />
                 <Route path="/email_verify" element={<EmailVerify />} />
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
                 <Route path="/guest_insights" element={<GuestInsights />} />
-                {/* ADD MISSING ROUTES */}
-                <Route path="/guest-message" element={<GuestMessageView />} />
-                <Route path="/report-event" element={<ReportEvent />} />
-                <Route path="/security-questions" element={<SecurityQuestionsModal />} />
+                <Route path="/guestmessageview" element={<GuestMessageView />} />
+                <Route path="/reportevent" element={<ReportEvent />} />
+                <Route path="/securityquestionsmodal" element={<SecurityQuestionsModal />} />
             </Routes>
 
             <SessionWarningModal

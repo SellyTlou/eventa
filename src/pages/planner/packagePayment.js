@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./main.css"; // Verify this path is correct
 import "../../alert.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut } from "../components"; // Verify this import path
+import { logOut } from "../components"; 
 
 const PackagePayment = () => {
     const dropdownRef = useRef(null);
