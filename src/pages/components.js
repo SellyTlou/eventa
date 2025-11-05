@@ -178,7 +178,7 @@ export function SessionHandler() {
                 <Route path="/feature" element={<Features />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/about" element={<About />} />
-                <Route path="/createevent" element={<CreateEvent />} />
+                <Route path="/createEvent" element={<CreateEvent />} />
                 <Route path="/sales" element={<Sales />} />
                 <Route path="/admindashboard" element={<AdminDashboard />} />
                 <Route path="/eventTheme" element={<EventTheme />} />
@@ -197,9 +197,9 @@ export function SessionHandler() {
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
                 <Route path="/guest_insights" element={<GuestInsights />} />
-                <Route path="/guestmessageview" element={<GuestMessageView />} />
-                <Route path="/reportevent" element={<ReportEvent />} />
-                <Route path="/securityquestionsmodal" element={<SecurityQuestionsModal />} />
+                <Route path="/guestMessageView" element={<GuestMessageView />} />
+                <Route path="/report-event" element={<ReportEvent />} />
+                <Route path="/security-questions" element={<SecurityQuestionsModal />} />
             </Routes>
 
             <SessionWarningModal
@@ -636,9 +636,13 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         try {
             let apiUrl = process.env.REACT_APP_API_URL;
             if (!apiUrl) {
-                console.warn('REACT_APP_API_URL not set, using fallback relative path');
                 apiUrl = `${window.location.origin}/eventa/src/pages/php`;
             }
+
+            if (apiUrl === "/api") {
+                apiUrl = "http://sellytlou-001-site1.ltempurl.com/api";
+            }
+
             const formDataToSend = new FormData();
             formDataToSend.append("email", email);
             formDataToSend.append("name", name);
@@ -730,30 +734,26 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     setLoading(false);
                     return;
                 }
-                formDataToSend.append("function", "eventAccConfirm");
+                formDataToSend.append("function", "register");
                 formDataToSend.append("name", formData.name);
                 formDataToSend.append("lastname", formData.lastname);
                 formDataToSend.append("email", formData.email);
                 formDataToSend.append("password", formData.password);
             }
 
-            let apiUrl = process.env.REACT_APP_API_URL;
-            if (!apiUrl) {
-                console.warn('REACT_APP_API_URL not set, using fallback relative path');
-                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
-            }
-            console.log("Sending registration request to:", apiUrl);
-            const url = `${apiUrl}/query.php`;
+           
+            console.log("Sending registration request to:", API_URL);
+            const url = `${API_URL}/query.php`;
 
             const response = await fetchWithTimeout(url, {
                 method: "POST",
                 body: formDataToSend
             }, 15000);
 
-            // Check if response is OK and has content
-            // if (!response.ok) {
-            //     throw new Error(`HTTP error! status: ${response.status}`);
-            // }
+            //Check if response is OK and has content
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const responseText = await response.text();
             console.log("Raw API response:", responseText);

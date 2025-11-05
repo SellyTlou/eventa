@@ -4,12 +4,12 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
-require_once "dbConnection.php";
-
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
+require_once "dbConnection.php";
 
 try {
     $db  = new Database();
@@ -19,71 +19,83 @@ try {
     $API_URL = $_POST['API_URL'] ?? '';
 
     if (empty($email) || empty($API_URL)) {
-        echo json_encode(["success" => false, "message" => "Missing Values"]);
+        echo json_encode(["success" => false, "message" => "Missing email or API_URL"]);
         exit;
     }
 
-    $API_URL = str_replace(['/php', '/api'], '', $API_URL);
+    // Clean API_URL (remove /php, /api, trailing slash)
+    $API_URL = rtrim(str_replace(['/php', '/api'], '', $API_URL), '/');
     if (strpos($API_URL, 'localhost') !== false) {
         $API_URL = 'http://localhost:3000';
     }
 
+    // Find user
     $stmt = $pdo->prepare("SELECT user_id, name FROM users WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user) {
+    if (! $user) {
         echo json_encode(["success" => false, "message" => "No account found with that email."]);
         exit;
     }
 
+    // SIMPLE LINK — NO TOKEN!
     $verifyLink = "$API_URL/email_verify?email=" . urlencode($email);
 
-    $SENDGRID_API_KEY = "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";
-    $fromEmail        = "bugbusters929@gmail.com";
-    $fromName         = "Eventa Support";
-
-    $emailData = [
-        "personalizations" => [[
-            "to" => [["email" => $email, "name" => $user['name']]],
-            "subject" => "Evendi Email Verification",
-        ]],
-        "from" => ["email" => $fromEmail, "name" => $fromName],
-        "content" => [[
-            "type" => "text/html",
-            "value" => "
-                <html>
-                <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;'>
-                    <div style='background: #fff; padding: 30px; border-radius: 12px; text-align: center;'>
-                        <h2>Email Verification Request 🔐</h2>
-                        <p>Hi {$user['name']},</p>
-                        <p>Click below to continue:</p>
-                        <a href='{$verifyLink}' style='display:inline-block;margin-top:20px;padding:12px 24px;background:#8b6a35;color:#fff;text-decoration:none;border-radius:6px;'>Go to Verification</a>
-                        <p style='margin-top:20px;font-size:12px;color:#666;'>If you didn’t request this, ignore this email.</p>
-                    </div>
-                </body>
-                </html>"
-        ]]
+    // Brevo Email
+    $BREVO_API_KEY = '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';
+    $payload       = [
+        "sender"      => ["email" => "ananiasndou0@gmail.com", "name" => "Eventa Support"],
+        "to"          => [["email" => $email, "name" => $user['name']]],
+        "subject"     => "Verify Your Eventa Email",
+        "htmlContent" => "
+            <html>
+            <body style='font-family:Arial;background:#f9f9f9;padding:20px'>
+                <div style='max-width:500px;margin:auto;background:white;padding:30px;border-radius:12px;text-align:center'>
+                    <h2 style='color:#8b6a35'>Verify Your Email</h2>
+                    <p>Hi <strong>{$user['name']}</strong>,</p>
+                    <p>Click below to verify your email:</p>
+                    <a href='$verifyLink' style='background:#8b6a35;color:white;padding:14px 32px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;margin:20px 0'>
+                        Verify Email Now
+                    </a>
+                    <p style='font-size:12px;color:#888'>
+                        If you didn't sign up, ignore this email.
+                    </p>
+                </div>
+            </body>
+            </html>",
+        "textContent" => "Hi {$user['name']},\n\nVerify: $verifyLink\n\n— Eventa Team",
     ];
 
-    // ✅ Send request to SendGrid API
-    $ch = curl_init("https://api.sendgrid.com/v3/mail/send");
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer $SENDGRID_API_KEY",
-        "Content-Type: application/json"
+    $ch = curl_init("https://api.brevo.com/v3/smtp/email");
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_HTTPHEADER     => [
+            "api-key: $BREVO_API_KEY",
+            "Content-Type: application/json",
+            "Accept: application/json",
+        ],
+        CURLOPT_POSTFIELDS     => json_encode($payload),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 30,
     ]);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
     $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($status == 202) {
-        echo json_encode(["success" => true, "message" => "Reset link sent to $email"]);
+    if ($status === 201) {
+        echo json_encode([
+            "success" => true,
+            "message" => "Verification email sent!",
+            "link"    => $verifyLink,
+        ]);
     } else {
-        echo json_encode(["success" => false, "message" => "SendGrid Error (HTTP $status): $response"]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Failed to send email.",
+            "debug"   => $response,
+        ]);
     }
 
 } catch (Exception $e) {
