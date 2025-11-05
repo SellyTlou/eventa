@@ -345,12 +345,12 @@ try {
                     $update = $pdo->prepare("UPDATE users SET session = 1 WHERE user_id = :id");
                     $update->execute([":id" => $user['user_id']]);
 
-                    // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                    // $logStmt->execute([
-                    //     ':user_id'     => $user['user_id'],
-                    //     ':action'      => 'User Login',
-                    //     ':description' => "User {$user['name']} logged into the system",
-                    // ]);
+                    $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                    $logStmt->execute([
+                        ':user_id'     => $user['user_id'],
+                        ':action'      => 'User Login',
+                        ':description' => "User {$user['name']} logged into the system",
+                    ]);
 
                     echo json_encode([
                         "success" => true,
@@ -438,14 +438,73 @@ try {
                     "message" => "Account created successfully!",
                 ]);
 
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
+            } catch (PDOException $e) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database error: " . $e->getMessage(),
+                ]);
+            }
+            exit;
+        }
+
+ if ($fun === "backupDatabase") {
+        $adminUserId = $_POST['admin_user_id'] ?? '';
+
+        if (! verifyAdminAccess($pdo, $adminUserId)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Unauthorized: Admin access required",
+            ]);
+            exit;
+        }
+
+        try {
+            // Get database configuration
+            $host   = 'localhost';
+            $user   = 'root';
+            $pass   = '';
+            $dbname = 'eventa';
+
+            // Create backup directory
+            $backupDir = __DIR__ . '/backups/';
+            if (! is_dir($backupDir)) {
+                mkdir($backupDir, 0755, true);
+            }
+
+            // Generate backup filename
+            $timestamp  = date('Y-m-d_H-i-s');
+            $backupFile = $backupDir . "backup_{$timestamp}.sql";
+
+            // Create backup using mysqldump
+            $command = "mysqldump --host={$host} --user={$user} --password={$pass} {$dbname} > {$backupFile}";
+            system($command, $output);
+
+            if ($output === 0 && file_exists($backupFile)) {
+                // Log the activity
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $adminUserId,
+                    ':action'      => 'Database Backup',
+                    ':description' => "Database backup created: " . basename($backupFile),
+                ]);
+
+                echo json_encode([
+                    "success"   => true,
+                    "message"   => "Database backup created successfully",
+                    "file_path" => $backupFile,
+                    "filename"  => basename($backupFile),
+                ]);
+            } else {
+                throw new Exception("Failed to create database backup");
+            }
+        } catch (Exception $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Error creating backup: " . $e->getMessage(),
+            ]);
+        }
+        exit;
     }
-    exit;
-}
 
     if ($fun === "saveEvent") {
         $userID          = $_POST['userID'] ?? '';
@@ -631,38 +690,37 @@ try {
     if ($fun === "getUserEvents") {
         $userID = $_POST['userID'] ?? '';
 
-    if (!$userID) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Missing user ID",
-        ]);
-        exit;
-    }
+            if (! $userID) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Missing user ID",
+            ]);
+            exit;
+        }
 
-    try {
-        $stmt = $pdo->prepare("
-            SELECT * 
-            FROM events  
-            WHERE user_id = :user_id 
+        try {
+                $stmt = $pdo->prepare("
+            SELECT *
+            FROM events
+            WHERE user_id = :user_id
               AND (is_deleted = 0 OR is_deleted IS NULL)
             ORDER BY created_at DESC
-        ");
-        $stmt->execute([":user_id" => $userID]);
-        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+         ");
+                $stmt->execute([":user_id" => $userID]);
+                 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        echo json_encode([
-            "success" => true,
-            "events"  => $events,
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
+                echo json_encode([
+                "success" => true,
+                "events"  => $events,
+            ]);
+        }   catch (PDOException $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database error: " . $e->getMessage(),
+            ]);
+        }
+        exit;
     }
-    exit;
-}
-
 
     if ($fun === "getUserEventsCount") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -892,13 +950,13 @@ try {
     if ($fun === "getInvitationStats") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (! verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Unauthorized: Admin access required",
+            ]);
+            exit;
+        }
 
         try {
             // Total invitations sent (total RSVP records for non-deleted events)
@@ -953,26 +1011,25 @@ try {
         exit;
     }
 
-   if ($fun === "deleteEvent") {
-    $event_id = $_POST['event_id'] ?? '';
-$user_id = $_POST['user_id'] ?? '';
+    if ($fun === "deleteEvent") {
+            $event_id = $_POST['event_id'] ?? '';
+                    $user_id  = $_POST['user_id'] ?? '';
 
-    if (!$event_id) {
-        echo json_encode(["success" => false, "message" => "Missing event ID"]);
-        exit;
-    }
+            if (! $event_id) {
+            echo json_encode(["success" => false, "message" => "Missing event ID"]);
+            exit;
+            }
 
-    try {
-        $stmt = $pdo->prepare("UPDATE events SET is_deleted = 1 WHERE event_id = :event_id");
-        $stmt->execute([":event_id" => $event_id]);
+            try {
+            $stmt = $pdo->prepare("UPDATE events SET is_deleted = 1 WHERE event_id = :event_id");
+            $stmt->execute([":event_id" => $event_id]);
 
-        echo json_encode(["success" => true]);
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
+            echo json_encode(["success" => true]);
+            } catch (PDOException $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
+        }
 
     if ($fun === "getEventStatusByID") {
         $event_id = $_POST['event_id'] ?? '';
@@ -1102,16 +1159,16 @@ $user_id = $_POST['user_id'] ?? '';
             $stmt->execute([":user_id" => $user_id]);
             $userPackage = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($userPackage) {
-            echo json_encode(["success" => true, "userPackage" => $userPackage]);
-        } else {
-            echo json_encode(["success" => false, "message" => "No package found"]);
+            if ($userPackage) {
+                echo json_encode(["success" => true, "userPackage" => $userPackage]);
+            } else {
+                echo json_encode(["success" => false, "message" => "No package found"]);
+            }
+        } catch (PDOException $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
         }
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
+        exit;
+        }
 
     if ($fun === "getAllPackages") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -1282,19 +1339,19 @@ $user_id = $_POST['user_id'] ?? '';
     if ($fun === "getDashboardStats") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (! verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Unauthorized: Admin access required",
+            ]);
+            exit;
+         }
 
-    try {
-        // Get total users count
-        $stmt = $pdo->prepare("SELECT COUNT(*) as total_users FROM users");
-        $stmt->execute();
-        $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
+            try {
+            // Get total users count
+            $stmt = $pdo->prepare("SELECT COUNT(*) as total_users FROM users");
+            $stmt->execute();
+            $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
 
             // Get active users count (ONLY users with status = 'active')
             $stmt = $pdo->prepare("SELECT COUNT(*) as active_users FROM users WHERE status = 'active'");
@@ -1322,24 +1379,24 @@ $user_id = $_POST['user_id'] ?? '';
 
             $responseRate = $totalEvents > 0 ? round(($eventsWithRsvp / $totalEvents) * 100, 1) : 0;
 
-        echo json_encode([
-            "success" => true,
-            "stats"   => [
-                "total_users"    => (int) $totalUsers,
-                "active_users"   => (int) $activeUsers,
-                "inactive_users" => (int) $inactiveUsers,
-                "active_events"  => (int) $activeEvents,
-                "response_rate"  => (float) $responseRate,
-            ],
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
+            echo json_encode([
+                "success" => true,
+                "stats"   => [
+                    "total_users"    => (int) $totalUsers,
+                    "active_users"   => (int) $activeUsers,
+                    "inactive_users" => (int) $inactiveUsers,
+                    "active_events"  => (int) $activeEvents,
+                    "response_rate"  => (float) $responseRate,
+                ],
+            ]);
+            } catch (PDOException $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database error: " . $e->getMessage(),
+            ]);
+            }
+         exit;
     }
-    exit;
-}
 
 // REPLACE your getSystemActivity function with this SAFE version:
 if ($fun === "getSystemActivity") {
@@ -1459,18 +1516,18 @@ if ($fun === "getSystemActivity") {
     }
 
     if ($fun === "getInvitationAnalytics") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
+                $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (! verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Unauthorized: Admin access required",
+            ]);
+            exit;
+            }
 
-    try {
-        $stmt = $pdo->prepare("
+            try {
+            $stmt = $pdo->prepare("
             SELECT
                 e.event_id,
                 e.event_name,
@@ -1515,18 +1572,18 @@ if ($fun === "getSystemActivity") {
                 ];
             }, $events);
 
-        echo json_encode([
-            "success"   => true,
-            "analytics" => $analytics,
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
+            echo json_encode([
+                "success"   => true,
+                "analytics" => $analytics,
+            ]);
+            } catch (PDOException $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database error: " . $e->getMessage(),
+            ]);
+            }
+            exit;
+        }
 
     if ($fun === "getRevenueData") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -2027,91 +2084,90 @@ if ($fun === "getSystemActivity") {
     }
 
     if ($fun === "generateReport") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $reportType = $_POST['report_type'] ?? '';
-    $dateRange = $_POST['date_range'] ?? 'all';
-    $format = $_POST['format'] ?? 'pdf';
+            $adminUserId = $_POST['admin_user_id'] ?? '';
+            $reportType  = $_POST['report_type'] ?? '';
+            $dateRange   = $_POST['date_range'] ?? 'all';
+            $format      = $_POST['format'] ?? 'pdf';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
-
-    try {
-        // Create reports directory if it doesn't exist
-        $reportsDir = __DIR__ . '/reports/';
-        if (!is_dir($reportsDir)) {
-            if (!mkdir($reportsDir, 0755, true)) {
-                throw new Exception("Cannot create reports directory");
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Unauthorized: Admin access required",
+                ]);
+                exit;
             }
-        }
 
-        // Check if directory is writable
-        if (!is_writable($reportsDir)) {
-            throw new Exception("Reports directory is not writable");
-        }
+            try {
+                // Create reports directory if it doesn't exist
+                $reportsDir = __DIR__ . '/reports/';
+                if (! is_dir($reportsDir)) {
+                    if (! mkdir($reportsDir, 0755, true)) {
+                        throw new Exception("Cannot create reports directory");
+                    }
+                }
 
-        // Generate filename with timestamp
-        $timestamp = date('Y-m-d_H-i-s');
-        $filename = "report_{$reportType}_{$timestamp}";
+                // Check if directory is writable
+                if (! is_writable($reportsDir)) {
+                    throw new Exception("Reports directory is not writable");
+                }
+
+                // Generate filename with timestamp
+                $timestamp = date('Y-m-d_H-i-s');
+                $filename  = "report_{$reportType}_{$timestamp}";
 
             // Generate report data based on type
             $reportData = generateReportData($pdo, $reportType, $dateRange);
 
-        // Generate file based on format
-        $filePath = '';
-        switch ($format) {
-            case 'csv':
-                $filename .= '.csv';
-                $filePath = $reportsDir . $filename;
-                generateCSVReport($reportData, $filePath);
-                break;
-            case 'excel':
-                $filename .= '.xlsx';
-                $filePath = $reportsDir . $filename;
-                generateCSVReport($reportData, $filePath); // Using CSV as fallback
-                break;
-            case 'pdf':
-            default:
-                $filename .= '.pdf';
-                $filePath = $reportsDir . $filename;
-                generatePDFReport($reportData, $filePath);
-                break;
+                // Generate file based on format
+                $filePath = '';
+                switch ($format) {
+                    case 'csv':
+                        $filename .= '.csv';
+                        $filePath = $reportsDir . $filename;
+                        generateCSVReport($reportData, $filePath);
+                        break;
+                    case 'excel':
+                        $filename .= '.xlsx';
+                        $filePath = $reportsDir . $filename;
+                        generateCSVReport($reportData, $filePath);
+                        break;
+                    case 'pdf':
+                    default:
+                        $filename .= '.pdf';
+                        $filePath = $reportsDir . $filename;
+                        generatePDFReport($reportData, $filePath);
+                        break;
+                }
+
+                // Verify file was created
+                if (! file_exists($filePath)) {
+                    throw new Exception("Failed to create report file");
+                }
+
+                // Log the activity
+                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                $logStmt->execute([
+                    ':user_id'     => $adminUserId,
+                    ':action'      => 'Report Generated',
+                    ':description' => "Generated {$reportType} report in {$format} format - {$filename}",
+                ]);
+
+                echo json_encode([
+                    "success"   => true,
+                    "message"   => "Report generated successfully",
+                    "file_path" => $filePath,
+                    "filename"  => $filename,
+                ]);
+
+        } catch (Exception $e) {
+            error_log("Report generation error: " . $e->getMessage());
+            echo json_encode([
+                "success" => false,
+                "message" => "Error generating report: " . $e->getMessage(),
+            ]);
         }
-
-        // Verify file was created
-        if (!file_exists($filePath)) {
-            throw new Exception("Failed to create report file");
-        }
-
-        // Log the activity
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-        $logStmt->execute([
-            ':user_id' => $adminUserId,
-            ':action' => 'Report Generated',
-            ':description' => "Generated {$reportType} report in {$format} format - {$filename}",
-        ]);
-
-        echo json_encode([
-            "success" => true,
-            "message" => "Report generated successfully",
-            "file_path" => $filePath,
-            "filename" => $filename,
-        ]);
-
-    } catch (Exception $e) {
-        error_log("Report generation error: " . $e->getMessage());
-        echo json_encode([
-            "success" => false,
-            "message" => "Error generating report: " . $e->getMessage(),
-        ]);
+        exit;
     }
-    exit;
-}
-
 
     // Helper function to generate report data
     function generateReportData($pdo, $reportType, $dateRange)
@@ -2238,7 +2294,8 @@ if ($fun === "getSystemActivity") {
     }
 
     // Helper functions
-    function getDateRangeWhereClause($dateRange){
+    function getDateRangeWhereClause($dateRange)
+    {
         $now = new DateTime();
 
         switch ($dateRange) {
@@ -2259,7 +2316,8 @@ if ($fun === "getSystemActivity") {
         }
     }
 
-    function getTotalCount($pdo, $table){
+    function getTotalCount($pdo, $table)
+    {
         $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM {$table}");
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
@@ -2277,8 +2335,8 @@ if ($fun === "getSystemActivity") {
             exit;
         }
 
-    try {
-        $stmt = $pdo->prepare("
+        try {
+            $stmt = $pdo->prepare("
             SELECT
                 e.event_id,
                 e.event_name,
@@ -2299,30 +2357,30 @@ if ($fun === "getSystemActivity") {
             $stmt->execute();
             $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Format the data for frontend
-        $analytics = array_map(function ($event) {
-            $sent      = (int) $event['sent'];
-            $responded = (int) $event['responded'];
+            // Format the data for frontend
+            $analytics = array_map(function ($event) {
+                $sent      = (int) $event['sent'];
+                $responded = (int) $event['responded'];
 
-            // FIX: Proper response rate calculation (should never exceed 100%)
-            $responseRate = $sent > 0 ? min(100, round(($responded / $sent) * 100, 1)) : 0;
+                // FIX: Proper response rate calculation (should never exceed 100%)
+                $responseRate = $sent > 0 ? min(100, round(($responded / $sent) * 100, 1)) : 0;
 
-            // Map status to frontend values
-            $statusMap = [
-                1 => 'active',
-                0 => 'draft',
-            ];
+                // Map status to frontend values
+                $statusMap = [
+                    1 => 'active',
+                    0 => 'draft',
+                ];
 
-            return [
-                'id'           => $event['event_id'],
-                'eventName'    => $event['event_name'],
-                'sent'         => $sent,
-                'opened'       => $sent, // Assuming all sent are opened for simplicity
-                'responded'    => $responded,
-                'responseRate' => $responseRate . '%',
-                'status'       => $statusMap[$event['status']] ?? 'draft',
-            ];
-        }, $events);
+                return [
+                    'id'           => $event['event_id'],
+                    'eventName'    => $event['event_name'],
+                    'sent'         => $sent,
+                    'opened'       => $sent, // Assuming all sent are opened for simplicity
+                    'responded'    => $responded,
+                    'responseRate' => $responseRate . '%',
+                    'status'       => $statusMap[$event['status']] ?? 'draft',
+                ];
+            }, $events);
 
             echo json_encode([
                 "success"   => true,
@@ -2338,21 +2396,21 @@ if ($fun === "getSystemActivity") {
     }
 
     if ($fun === "exportInvitationData") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $status      = $_POST['status'] ?? 'all';
-    $userId      = $_POST['user_id'] ?? '';
+        $adminUserId = $_POST['admin_user_id'] ?? '';
+        $status      = $_POST['status'] ?? 'all';
+        $userId      = $_POST['user_id'] ?? '';
 
-    if (! verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
+        if (! verifyAdminAccess($pdo, $adminUserId)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Unauthorized: Admin access required",
+            ]);
+            exit;
+        }
 
-    try {
-        // Build the base query
-        $query = "
+        try {
+            // Build the base query
+            $query = "
             SELECT
                 e.event_id,
                 e.event_name,
@@ -2373,113 +2431,113 @@ if ($fun === "getSystemActivity") {
             WHERE (e.is_deleted = 0 OR e.is_deleted IS NULL)  -- EXCLUDE DELETED EVENTS
         ";
 
-        // Add WHERE conditions based on filters
-        $conditions = [];
-        $params     = [];
+            // Add WHERE conditions based on filters
+            $conditions = [];
+            $params     = [];
 
-        if ($status !== 'all') {
-            if ($status === 'active') {
-                $conditions[] = "e.published = 1";
-            } elseif ($status === 'draft') {
-                $conditions[] = "e.published = 0";
+            if ($status !== 'all') {
+                if ($status === 'active') {
+                    $conditions[] = "e.published = 1";
+                } elseif ($status === 'draft') {
+                    $conditions[] = "e.published = 0";
+                }
             }
-        }
 
-        if (! empty($userId)) {
-            $conditions[] = "e.user_id = ?";
-            $params[]     = $userId;
-        }
+            if (! empty($userId)) {
+                $conditions[] = "e.user_id = ?";
+                $params[]     = $userId;
+            }
 
-        if (! empty($conditions)) {
-            $query .= " AND " . implode(" AND ", $conditions);
-        }
+            if (! empty($conditions)) {
+                $query .= " AND " . implode(" AND ", $conditions);
+            }
 
-        $query .= " GROUP BY e.event_id, e.event_name, e.user_name, e.created_at, e.published";
-        $query .= " ORDER BY e.created_at DESC";
+            $query .= " GROUP BY e.event_id, e.event_name, e.user_name, e.created_at, e.published";
+            $query .= " ORDER BY e.created_at DESC";
 
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($params);
+            $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Format data for CSV
-        $csvData = [];
+            // Format data for CSV
+            $csvData = [];
 
-        // Add header row
-        $csvData[] = [
-            'Event ID',
-            'Event Name',
-            'Organizer',
-            'Event Created',
-            'Status',
-            'Invitations Sent',
-            'Invitations Responded',
-            'Attending Count',
-            'Declined Count',
-            'Response Rate (%)',
-        ];
-
-        // Add data rows
-        foreach ($events as $event) {
-            $status = $event['event_status'] == 1 ? 'Active' : 'Draft';
-
+            // Add header row
             $csvData[] = [
-                $event['event_id'],
-                $event['event_name'],
-                $event['organizer_name'],
-                $event['event_created'],
-                $status,
-                $event['invitations_sent'],
-                $event['invitations_responded'],
-                $event['attending_count'],
-                $event['declined_count'],
-                $event['response_rate_percent'],
+                'Event ID',
+                'Event Name',
+                'Organizer',
+                'Event Created',
+                'Status',
+                'Invitations Sent',
+                'Invitations Responded',
+                'Attending Count',
+                'Declined Count',
+                'Response Rate (%)',
             ];
-        }
 
-        // Generate CSV file
-        $timestamp = date('Y-m-d_H-i-s');
-        $filename  = "invitation_analytics_export_{$timestamp}.csv";
-        $exportDir = __DIR__ . '/exports/';
+            // Add data rows
+            foreach ($events as $event) {
+                $status = $event['event_status'] == 1 ? 'Active' : 'Draft';
 
-        // Create exports directory if it doesn't exist
-        if (! is_dir($exportDir)) {
-            mkdir($exportDir, 0755, true);
-        }
+                $csvData[] = [
+                    $event['event_id'],
+                    $event['event_name'],
+                    $event['organizer_name'],
+                    $event['event_created'],
+                    $status,
+                    $event['invitations_sent'],
+                    $event['invitations_responded'],
+                    $event['attending_count'],
+                    $event['declined_count'],
+                    $event['response_rate_percent'],
+                ];
+            }
 
-        $filePath = $exportDir . $filename;
+            // Generate CSV file
+            $timestamp = date('Y-m-d_H-i-s');
+            $filename  = "invitation_analytics_export_{$timestamp}.csv";
+            $exportDir = __DIR__ . '/exports/';
 
-        // Write CSV file
-        $file = fopen($filePath, 'w');
-        foreach ($csvData as $row) {
-            fputcsv($file, $row);
-        }
-        fclose($file);
+            // Create exports directory if it doesn't exist
+            if (! is_dir($exportDir)) {
+                mkdir($exportDir, 0755, true);
+            }
 
-        // Verify file was created
-        if (file_exists($filePath)) {
+            $filePath = $exportDir . $filename;
+
+            // Write CSV file
+            $file = fopen($filePath, 'w');
+            foreach ($csvData as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+
+            // Verify file was created
+            if (file_exists($filePath)) {
+                echo json_encode([
+                    "success"   => true,
+                    "message"   => "Export completed successfully",
+                    "filename"  => $filename,
+                    "file_path" => $filePath,
+                ]);
+            } else {
+                throw new Exception("Failed to create export file");
+            }
+
+        } catch (PDOException $e) {
             echo json_encode([
-                "success"   => true,
-                "message"   => "Export completed successfully",
-                "filename"  => $filename,
-                "file_path" => $filePath,
+                "success" => false,
+                "message" => "Database error: " . $e->getMessage(),
             ]);
-        } else {
-            throw new Exception("Failed to create export file");
+        } catch (Exception $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Export error: " . $e->getMessage(),
+            ]);
         }
-
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    } catch (Exception $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Export error: " . $e->getMessage(),
-        ]);
+        exit;
     }
-    exit;
-}
 
     if ($fun === 'recordPayment') {
         $user_id        = $_POST['user_id'] ?? '';
@@ -2492,9 +2550,9 @@ if ($fun === "getSystemActivity") {
 
         $payment_id = generateSimpleTransactionId($pdo);
 
-    try {
-        // ✅ Begin transaction
-        $pdo->beginTransaction();
+            try {
+            // ✅ Begin transaction
+            $pdo->beginTransaction();
 
             /* -------------------------------------------------
            1. Validate package
@@ -2592,22 +2650,19 @@ if ($fun === "getSystemActivity") {
             SET package_id = ?, updated_at = NOW()
             WHERE user_id = ?
         ");
-        $updateEvents->execute([$package_id, $user_id]);
+            $updateEvents->execute([$package_id, $user_id]);
 
-        /* -------------------------------------------------
-           6. Log activity (if you have a helper or table)
-           ------------------------------------------------- */
-        $logStmt = $pdo->prepare("
-            INSERT INTO system_activity (user_id, activity_type, activity_description, created_at)
-            VALUES (?, 'Payment Made', ?, NOW())
-        ");
-        $description = "Payment of {$amount} for {$package_type} ({$package_id}) by {$user_full_name}";
-        $logStmt->execute([$user_id, $description]);
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id'     => $user_id,
+                ':action'      => 'New Package',
+                ':description' => "Purchase new Package ",
+            ]);
 
-        /* -------------------------------------------------
+            /* -------------------------------------------------
            7. Commit transaction
            ------------------------------------------------- */
-        $pdo->commit();
+            $pdo->commit();
 
             echo json_encode([
                 "success"    => true,
@@ -2615,52 +2670,50 @@ if ($fun === "getSystemActivity") {
                 "payment_id" => $payment_id,
             ]);
 
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database error: " . $e->getMessage(),
+                ]);
+            }
+            exit;
+        }
 
     if ($fun === "updateEventGuestLimit") {
-    $event_id = $_POST['event_id'] ?? '';
-    $guest_limit = $_POST['guest_limit'] ?? 0;
-        $user_id =  $_POST['user_id'] ?? '';
+            $event_id    = $_POST['event_id'] ?? '';
+            $guest_limit = $_POST['guest_limit'] ?? 0;
+            $user_id     = $_POST['user_id'] ?? '';
 
         if (empty($event_id)) {
             echo json_encode(["success" => false, "message" => "Missing event ID"]);
             exit;
         }
 
-    try {
-        $stmt = $pdo->prepare("UPDATE events SET guest_limit = :guest_limit WHERE event_id = :event_id");
-        $stmt->execute([
-            ":guest_limit" => (int)$guest_limit,
-            ":event_id" => $event_id
-        ]);
+            try {
+                $stmt = $pdo->prepare("UPDATE events SET guest_limit = :guest_limit WHERE event_id = :event_id");
+                $stmt->execute([
+                    ":guest_limit" => (int) $guest_limit,
+                    ":event_id"    => $event_id,
+                ]);
 
-        echo json_encode([
-            "success" => true,
-            "message" => "Guest limit updated successfully"
-        ]);
+                echo json_encode([
+                    "success" => true,
+                    "message" => "Guest limit updated successfully",
+                ]);
 
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage()
-        ]);
-    }
-    exit;
-}
+            } catch (PDOException $e) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database error: " . $e->getMessage(),
+                ]);
+            }
+            exit;
+        }
 
     if ($fun === 'cancelEvent') {
         $event_id = $_POST['event_id'] ?? '';
-$user_id = $_POST['user_id'] ?? '';
-
+                $user_id  = $_POST['user_id'] ?? '';
 
             if (empty($event_id)) {
                 echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -2672,13 +2725,13 @@ $user_id = $_POST['user_id'] ?? '';
                 $stmt = $pdo->prepare("UPDATE events SET status = 'cancelled' WHERE event_id = ?");
                 $stmt->execute([$event_id]);
 
-            if ($stmt->rowCount() > 0) {
-                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                $logStmt->execute([
-                    ':user_id'     => $user_id, 
-                    ':action'      => 'Event Reactivated',
-                    ':description' => "Event ID '{$event_id}' was reactivated at " . date('Y-m-d H:i:s'),
-                ]);
+                if ($stmt->rowCount() > 0) {
+                    $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                    $logStmt->execute([
+                        ':user_id'     => $user_id,
+                        ':action'      => 'Event Reactivated',
+                        ':description' => "Event ID '{$event_id}' was reactivated at " . date('Y-m-d H:i:s'),
+                    ]);
 
                     echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
                 } else {
@@ -2860,24 +2913,256 @@ $user_id = $_POST['user_id'] ?? '';
     }
 
     if ($fun === "getGuestInsights") {
-        $event_id = $_POST['event_id'] ?? '';
+         $event_id = $_POST['event_id'] ?? '';
 
-        if (empty($event_id)) {
+        $guest_id = $_POST['guest_id'] ?? '';
+        if (empty($guest_id) || ! is_numeric($guest_id)) {
+            ob_end_clean();
+        echo json_encode(["success" => false, "message" => "Invalid guest ID"]);
+        exit;
+        }
+
+        try {
+
+            // Delete RSVP
+            $stmt = $pdo->prepare("DELETE FROM rsvp WHERE guest_id = ?");
+            $stmt->execute([$guest_id]);
+            $rsvp_deleted = $stmt->rowCount();
+
+            $success = ($rsvp_deleted > 0);
+            echo json_encode([
+                "success"          => $success,
+                "message"          => $success
+                    ? "Guest deleted successfully"
+                    : "Guest not found",
+                "rsvp_deleted"     => $rsvp_deleted,
+                "messages_deleted" => $messages_deleted,
+            ]);
+
+        } catch (Throwable $e) {
+
             echo json_encode([
                 "success" => false,
-                "message" => "Missing event ID",
+                "message" => "Database error",
             ]);
+        }
+        exit;
+    }
+    if ($fun === "getGuestMessageByEmail") {
+        $event_id = $_POST['event_id'] ?? '';
+        $email    = trim(strtolower($_POST['email'] ?? ''));
+
+        if (empty($event_id) || empty($email)) {
+            echo json_encode(["success" => false, "message" => "Missing data"]);
             exit;
         }
 
         try {
-            // 1. Get event name
-            $stmtEvent = $pdo->prepare("SELECT event_name FROM events WHERE event_id = :event_id");
-            $stmtEvent->execute([":event_id" => $event_id]);
-            $event = $stmtEvent->fetch(PDO::FETCH_ASSOC);
+            $pdo->beginTransaction();
 
-            // 2. Get RSVPs + guest messages
             $stmt = $pdo->prepare("
+            SELECT r.guest_id, r.name, r.email,
+                   e.event_name, e.event_start_date AS event_date,
+                   e.event_start_time AS event_time, e.event_location AS location
+            FROM rsvp r
+            JOIN events e ON r.event_id = e.event_id
+            WHERE r.event_id = :event_id AND LOWER(r.email) = :email
+        ");
+            $stmt->execute([':event_id' => $event_id, ':email' => $email]);
+            $rsvp = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (! $rsvp) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "No RSVP found for this email."]);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("
+            SELECT id AS msg_id, message, reply, created_at, replied_at
+            FROM rsvp_messages
+            WHERE guest_id = :guest_id AND event_id = :event_id
+        ");
+            $stmt->execute([':guest_id' => $rsvp['guest_id'], ':event_id' => $event_id]);
+            $thread = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $messages = [];
+
+            if (! $thread) {
+                $stmt = $pdo->prepare("
+                INSERT INTO rsvp_messages
+                (guest_id, event_id, guest_name, guest_email, message, created_at)
+                VALUES (:guest_id, :event_id, :name, :email, '', NOW())
+            ");
+                $stmt->execute([
+                    ':guest_id' => $rsvp['guest_id'],
+                    ':event_id' => $event_id,
+                    ':name'     => $rsvp['name'],
+                    ':email'    => $rsvp['email'],
+                ]);
+                $msg_id = $pdo->lastInsertId();
+            } else {
+                $msg_id = $thread['msg_id'];
+
+                // === COLLECT ALL MESSAGES WITH TIMESTAMPS ===
+                $all_messages = [];
+
+                // Guest messages
+                if ($thread['message']) {
+                    $lines = explode("\n\n", $thread['message']);
+                    foreach ($lines as $line) {
+                        if (preg_match('/^\[Guest\]: (.+) \| (.+)$/', $line, $m)) {
+                            $all_messages[] = [
+                                'text'   => $m[1],
+                                'sender' => 'guest',
+                                'time'   => $m[2],
+                            ];
+                        }
+                    }
+                }
+
+                // Admin replies
+                if ($thread['reply']) {
+                    $lines = explode("\n\n", $thread['reply']);
+                    foreach ($lines as $line) {
+                        if (preg_match('/^\[Organizer\]: (.+) \| (.+)$/', $line, $m)) {
+                            $all_messages[] = [
+                                'text'   => $m[1],
+                                'sender' => 'organizer',
+                                'time'   => $m[2],
+                            ];
+                        }
+                    }
+                }
+
+                // === SORT BY TIMESTAMP ===
+                usort($all_messages, function ($a, $b) {
+                    return strtotime($a['time']) - strtotime($b['time']);
+                });
+
+                $messages = $all_messages;
+            }
+
+            $pdo->commit();
+
+            echo json_encode([
+                "success" => true,
+                "event"   => [
+                    "event_name" => $rsvp['event_name'],
+                    "event_date" => $rsvp['event_date'],
+                    "event_time" => $rsvp['event_time'],
+                    "location"   => $rsvp['location'],
+                ],
+                "guest"   => [
+                    'guest_id' => $rsvp['guest_id'],
+                    'name'     => $rsvp['name'],
+                    'email'    => $rsvp['email'],
+                    'msg_id'   => $msg_id,
+                    'messages' => $messages,
+                ],
+            ]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($fun === "guestSendMessage") {
+        $msg_id  = $_POST['msg_id'] ?? '';
+        $message = trim($_POST['message'] ?? '');
+
+        if (empty($msg_id) || empty($message)) {
+            echo json_encode(["success" => false, "message" => "Missing data"]);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $timestamp = date('Y-m-d H:i:s');
+            $line      = "[Guest]: $message | $timestamp";
+
+            $stmt = $pdo->prepare("
+            UPDATE rsvp_messages
+            SET message = CONCAT(
+                IFNULL(message, ''),
+                IF(LENGTH(IFNULL(message,'')) > 0, '\n\n', ''),
+                :line
+            )
+            WHERE id = :msg_id
+        ");
+            $stmt->execute([':line' => $line, ':msg_id' => $msg_id]);
+
+            if ($stmt->rowCount() > 0) {
+                $pdo->commit();
+                echo json_encode(["success" => true]);
+            } else {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Not found"]);
+            }
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Failed"]);
+        }
+        exit;
+    }
+
+    if ($fun === "organizerReplyToGuest") {
+        $msg_id = $_POST['msg_id'] ?? '';
+        $reply  = trim($_POST['reply'] ?? '');
+
+        if (empty($msg_id) || empty($reply)) {
+            echo json_encode(["success" => false, "message" => "Missing data"]);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $timestamp = date('Y-m-d H:i:s');
+            $line      = "[Organizer]: $reply | $timestamp";
+
+            $stmt = $pdo->prepare("
+            UPDATE rsvp_messages
+            SET reply = CONCAT(
+                IFNULL(reply, ''),
+                IF(LENGTH(IFNULL(reply,'')) > 0, '\n\n', ''),
+                :line
+            ),
+            replied_at = NOW()
+            WHERE id = :msg_id
+        ");
+            $stmt->execute([':line' => $line, ':msg_id' => $msg_id]);
+
+            if ($stmt->rowCount() > 0) {
+                $pdo->commit();
+                echo json_encode(["success" => true]);
+            } else {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Not found"]);
+            }
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Failed"]);
+        }
+        exit;
+    }
+
+    if ($fun === "getGuestInsights") {
+        $event_id = $_POST['event_id'] ?? '';
+
+        if (empty($event_id)) {
+            echo json_encode(["success" => false, "message" => "Missing event ID"]);
+            exit;
+        }
+
+        try {
+
+            $stmt = $pdo->prepare("SELECT event_name FROM events WHERE event_id = ?");
+            $stmt->execute([$event_id]);
+            $event = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['event_name' => 'Unknown'];
+
+            $sql = "
             SELECT
                 r.guest_id,
                 r.event_id,
@@ -2896,20 +3181,18 @@ $user_id = $_POST['user_id'] ?? '';
                AND r.event_id = rm.event_id
             WHERE r.event_id = ?
             ORDER BY r.created_at DESC
-        ");
-            $stmt->execute([":event_id" => $event_id]);
+        ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$event_id]);
             $guests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode([
                 "success" => true,
-                "guests"  => $guests,
                 "event"   => $event,
+                "guests"  => $guests,
             ]);
         } catch (PDOException $e) {
-            echo json_encode([
-                "success" => false,
-                "message" => "Database error: " . $e->getMessage(),
-            ]);
+            echo json_encode(["success" => false, "message" => $e->getMessage()]);
         }
         exit;
     }
@@ -2964,39 +3247,39 @@ $user_id = $_POST['user_id'] ?? '';
             $package    = $_POST['package'] ?? 'all';
             $dateFilter = $_POST['date_filter'] ?? 'all';
 
-        // Direct query replacing the revenue_analytics view
-        $query = "
-            SELECT 
-                ph.payment_id,
-                ph.user_id,
-                ph.user_name,
-                ph.package_id,
-                ph.package_name,
-                ph.amount,
-                ph.payment_status,
-                ph.payment_date,
-                ph.payment_method,
-                u.email AS user_email,
-                p.max_events,
-                p.max_guests,
-                p.package_type
-            FROM payment_history AS ph
-            LEFT JOIN users AS u ON ph.user_id = u.user_id
-            LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
-            WHERE 1=1
-        ";
+                // Direct query replacing the revenue_analytics view
+                $query = "
+                SELECT
+                    ph.payment_id,
+                    ph.user_id,
+                    ph.user_name,
+                    ph.package_id,
+                    ph.package_name,
+                    ph.amount,
+                    ph.payment_status,
+                    ph.payment_date,
+                    ph.payment_method,
+                    u.email AS user_email,
+                    p.max_events,
+                    p.max_guests,
+                    p.package_type
+                FROM payment_history AS ph
+                LEFT JOIN users AS u ON ph.user_id = u.user_id
+                LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
+                WHERE 1=1
+            ";
 
             $params = [];
 
-        // Search filter
-        if (! empty($search)) {
-            $query .= " AND (ph.user_name LIKE ? OR ph.user_id LIKE ? OR ph.payment_id LIKE ? OR u.email LIKE ?)";
-            $searchTerm = "%$search%";
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-        }
+                // Search filter
+                if (! empty($search)) {
+                    $query .= " AND (ph.user_name LIKE ? OR ph.user_id LIKE ? OR ph.payment_id LIKE ? OR u.email LIKE ?)";
+                    $searchTerm = "%$search%";
+                    $params[]   = $searchTerm;
+                    $params[]   = $searchTerm;
+                    $params[]   = $searchTerm;
+                    $params[]   = $searchTerm;
+                }
 
             // Payment status filter
             if ($status !== 'all') {
@@ -3036,12 +3319,11 @@ $user_id = $_POST['user_id'] ?? '';
 
             echo json_encode(["success" => true, "payments" => $payments]);
 
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
+            } catch (PDOException $e) {
+                echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
+        }
 
     if ($fun === "getRevenueAnalytics") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -3051,48 +3333,47 @@ $user_id = $_POST['user_id'] ?? '';
             exit;
         }
 
-    try {
-        // Direct query without using the view
-        $stmt = $pdo->prepare("
-            SELECT
-                COALESCE(SUM(CASE WHEN ph.payment_status = 'completed' THEN ph.amount ELSE 0 END), 0) AS total_revenue,
-                COALESCE(SUM(CASE 
-                    WHEN ph.payment_status = 'completed' 
-                    AND MONTH(ph.payment_date) = MONTH(CURRENT_DATE())
-                    AND YEAR(ph.payment_date) = YEAR(CURRENT_DATE())
-                    THEN ph.amount ELSE 0 END), 0) AS current_month_revenue,
-                ph.payment_status,
-                COUNT(*) AS count
-            FROM payment_history AS ph
-            LEFT JOIN users AS u ON ph.user_id = u.user_id
-            LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
-            GROUP BY ph.payment_status
-        ");
-        $stmt->execute();
-        $statusCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                // Direct query without using the view
+                $stmt = $pdo->prepare("
+                SELECT
+                    COALESCE(SUM(CASE WHEN ph.payment_status = 'completed' THEN ph.amount ELSE 0 END), 0) AS total_revenue,
+                    COALESCE(SUM(CASE
+                        WHEN ph.payment_status = 'completed'
+                        AND MONTH(ph.payment_date) = MONTH(CURRENT_DATE())
+                        AND YEAR(ph.payment_date) = YEAR(CURRENT_DATE())
+                        THEN ph.amount ELSE 0 END), 0) AS current_month_revenue,
+                    ph.payment_status,
+                    COUNT(*) AS count
+                FROM payment_history AS ph
+                LEFT JOIN users AS u ON ph.user_id = u.user_id
+                LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
+                GROUP BY ph.payment_status
+            ");
+                $stmt->execute();
+                $statusCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Calculate totals safely
-        $totalRevenue = 0;
-        $currentMonthRevenue = 0;
-        foreach ($statusCounts as $row) {
-            $totalRevenue += (float) ($row['total_revenue'] ?? 0);
-            $currentMonthRevenue += (float) ($row['current_month_revenue'] ?? 0);
+                // Calculate totals safely
+                $totalRevenue        = 0;
+                $currentMonthRevenue = 0;
+                foreach ($statusCounts as $row) {
+                    $totalRevenue += (float) ($row['total_revenue'] ?? 0);
+                    $currentMonthRevenue += (float) ($row['current_month_revenue'] ?? 0);
+                }
+
+                echo json_encode([
+                    "success"   => true,
+                    "analytics" => [
+                        "total_revenue"         => $totalRevenue,
+                        "current_month_revenue" => $currentMonthRevenue,
+                        "payment_status_counts" => $statusCounts,
+                    ],
+                ]);
+            } catch (PDOException $e) {
+                echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
         }
-
-        echo json_encode([
-            "success"   => true,
-            "analytics" => [
-                "total_revenue"         => $totalRevenue,
-                "current_month_revenue" => $currentMonthRevenue,
-                "payment_status_counts" => $statusCounts,
-            ],
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
 
     if ($fun === "getRevenueData") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -3102,54 +3383,54 @@ $user_id = $_POST['user_id'] ?? '';
             exit;
         }
 
-    try {
-        // Summary revenue data
-        $stmt = $pdo->prepare("
-            SELECT
-                COALESCE(SUM(CASE WHEN ph.payment_status = 'completed' THEN ph.amount ELSE 0 END), 0) AS total_revenue,
-                COALESCE(SUM(CASE 
-                    WHEN ph.payment_status = 'completed' 
-                    AND MONTH(ph.payment_date) = MONTH(CURRENT_DATE())
-                    AND YEAR(ph.payment_date) = YEAR(CURRENT_DATE())
-                    THEN ph.amount ELSE 0 END), 0) AS current_month_revenue,
-                COUNT(*) AS total_payments,
-                COUNT(CASE WHEN ph.payment_status = 'pending' THEN 1 END) AS pending_payments,
-                COUNT(CASE WHEN ph.payment_status = 'completed' THEN 1 END) AS completed_payments
-            FROM payment_history AS ph
-            LEFT JOIN users AS u ON ph.user_id = u.user_id
-            LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
-        ");
-        $stmt->execute();
-        $revenueStats = $stmt->fetch(PDO::FETCH_ASSOC);
+            try {
+                // Summary revenue data
+                $stmt = $pdo->prepare("
+                SELECT
+                    COALESCE(SUM(CASE WHEN ph.payment_status = 'completed' THEN ph.amount ELSE 0 END), 0) AS total_revenue,
+                    COALESCE(SUM(CASE
+                        WHEN ph.payment_status = 'completed'
+                        AND MONTH(ph.payment_date) = MONTH(CURRENT_DATE())
+                        AND YEAR(ph.payment_date) = YEAR(CURRENT_DATE())
+                        THEN ph.amount ELSE 0 END), 0) AS current_month_revenue,
+                    COUNT(*) AS total_payments,
+                    COUNT(CASE WHEN ph.payment_status = 'pending' THEN 1 END) AS pending_payments,
+                    COUNT(CASE WHEN ph.payment_status = 'completed' THEN 1 END) AS completed_payments
+                FROM payment_history AS ph
+                LEFT JOIN users AS u ON ph.user_id = u.user_id
+                LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
+            ");
+                $stmt->execute();
+                $revenueStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Revenue by package type
-        $packageStmt = $pdo->prepare("
-            SELECT
-                p.package_type,
-                COALESCE(SUM(ph.amount), 0) AS revenue,
-                COUNT(ph.payment_id) AS payment_count
-            FROM packagetb AS p
-            LEFT JOIN payment_history AS ph 
-                ON p.package_id = ph.package_id AND ph.payment_status = 'completed'
-            GROUP BY p.package_type
-        ");
-        $packageStmt->execute();
-        $packageRevenue = $packageStmt->fetchAll(PDO::FETCH_ASSOC);
+                // Revenue by package type
+                $packageStmt = $pdo->prepare("
+                SELECT
+                    p.package_type,
+                    COALESCE(SUM(ph.amount), 0) AS revenue,
+                    COUNT(ph.payment_id) AS payment_count
+                FROM packagetb AS p
+                LEFT JOIN payment_history AS ph
+                    ON p.package_id = ph.package_id AND ph.payment_status = 'completed'
+                GROUP BY p.package_type
+            ");
+                $packageStmt->execute();
+                $packageRevenue = $packageStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Monthly revenue trend (last 6 months)
-        $monthlyStmt = $pdo->prepare("
-            SELECT
-                DATE_FORMAT(ph.payment_date, '%Y-%m') AS month,
-                COALESCE(SUM(ph.amount), 0) AS monthly_revenue,
-                COUNT(*) AS payment_count
-            FROM payment_history AS ph
-            WHERE ph.payment_status = 'completed'
-            GROUP BY DATE_FORMAT(ph.payment_date, '%Y-%m')
-            ORDER BY month DESC
-            LIMIT 6
-        ");
-        $monthlyStmt->execute();
-        $monthlyTrend = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
+                // Monthly revenue trend (last 6 months)
+                $monthlyStmt = $pdo->prepare("
+                SELECT
+                    DATE_FORMAT(ph.payment_date, '%Y-%m') AS month,
+                    COALESCE(SUM(ph.amount), 0) AS monthly_revenue,
+                    COUNT(*) AS payment_count
+                FROM payment_history AS ph
+                WHERE ph.payment_status = 'completed'
+                GROUP BY DATE_FORMAT(ph.payment_date, '%Y-%m')
+                ORDER BY month DESC
+                LIMIT 6
+            ");
+                $monthlyStmt->execute();
+                $monthlyTrend = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode([
                 "success"     => true,
@@ -3164,16 +3445,15 @@ $user_id = $_POST['user_id'] ?? '';
                 ],
             ]);
 
-    } catch (PDOException $e) {
-        error_log("Revenue data error: " . $e->getMessage());
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
-    }
-    exit;
-}
-
+            } catch (PDOException $e) {
+                error_log("Revenue data error: " . $e->getMessage());
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database error: " . $e->getMessage(),
+                ]);
+            }
+            exit;
+        }
 
     if ($fun === "getActiveSubscriptions") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -3390,30 +3670,29 @@ $user_id = $_POST['user_id'] ?? '';
                 "message" => "Password changed successfully",
             ]);
 
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            } catch (PDOException $e) {
+                echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
     }
-    exit;
-}
 
-
-if ($fun === "reportEvent") {
-    $event_id = $_POST['event_id'] ?? '';
-    $violation_type = $_POST['violation_type'] ?? '';
-    $description = $_POST['description'] ?? '';
-    $reporter_email = $_POST['reporter_email'] ?? '';
+        if ($fun === "reportEvent") {
+            $event_id       = $_POST['event_id'] ?? '';
+            $violation_type = $_POST['violation_type'] ?? '';
+            $description    = $_POST['description'] ?? '';
+            $reporter_email = $_POST['reporter_email'] ?? '';
 
         if (empty($event_id) || empty($violation_type)) {
             echo json_encode(["success" => false, "message" => "Missing required fields"]);
             exit;
         }
 
-    try {
-        // Generate a unique ID for anonymous reporting if no email provided
-        $reporter_id = $reporter_email ? $reporter_email : 'anonymous_' . uniqid();
-        
-        $stmt = $pdo->prepare("INSERT INTO event_violations (event_id, reported_by_user_id, violation_type, description) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$event_id, $reporter_id, $violation_type, $description]);
+            try {
+                // Generate a unique ID for anonymous reporting if no email provided
+                $reporter_id = $reporter_email ? $reporter_email : 'anonymous_' . uniqid();
+    
+                $stmt = $pdo->prepare("INSERT INTO event_violations (event_id, reported_by_user_id, violation_type, description) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$event_id, $reporter_id, $violation_type, $description]);
 
             // Also record in user_violations if we have event owner info
             $eventStmt = $pdo->prepare("SELECT user_id FROM events WHERE event_id = ?");
@@ -3439,31 +3718,31 @@ if ($fun === "reportEvent") {
     if ($fun === "getReportedEvents") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+                echo json_encode(["success" => false, "message" => "Unauthorized"]);
+                exit;
+            }
 
-    try {
-        $stmt = $pdo->prepare("
-            SELECT 
-                ev.*,
-                e.event_name,
-                e.user_id as event_owner_id,
-                e.user_name as event_owner_name,
-                e.event_image,
-                e.created_at as event_created_at,
-                e.design_data,
-                u.name as reporter_name,
-                u.email as reporter_email
-            FROM event_violations ev
-            JOIN events e ON ev.event_id = e.event_id
-            LEFT JOIN users u ON ev.reported_by_user_id = u.user_id
-            WHERE ev.status = 'pending'
-            ORDER BY ev.reported_at DESC
-        ");
-        $stmt->execute();
-        $reportedEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $pdo->prepare("
+                SELECT
+                    ev.*,
+                    e.event_name,
+                    e.user_id as event_owner_id,
+                    e.user_name as event_owner_name,
+                    e.event_image,
+                    e.created_at as event_created_at,
+                    e.design_data,
+                    u.name as reporter_name,
+                    u.email as reporter_email
+                FROM event_violations ev
+                JOIN events e ON ev.event_id = e.event_id
+                LEFT JOIN users u ON ev.reported_by_user_id = u.user_id
+                WHERE ev.status = 'pending'
+                ORDER BY ev.reported_at DESC
+            ");
+                $stmt->execute();
+                $reportedEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(["success" => true, "reportedEvents" => $reportedEvents]);
         } catch (PDOException $e) {
@@ -3472,18 +3751,18 @@ if ($fun === "reportEvent") {
         exit;
     }
 
-if ($fun === "adminDeleteEvent") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $event_id = $_POST['event_id'] ?? '';
-    $reason = $_POST['reason'] ?? '';
-    $custom_reason = $_POST['custom_reason'] ?? '';
-    $block_user = $_POST['block_user'] ?? false;
-    $violation_severity = $_POST['violation_severity'] ?? 'medium';
+        if ($fun === "adminDeleteEvent") {
+            $adminUserId        = $_POST['admin_user_id'] ?? '';
+            $event_id           = $_POST['event_id'] ?? '';
+            $reason             = $_POST['reason'] ?? '';
+            $custom_reason      = $_POST['custom_reason'] ?? '';
+            $block_user         = $_POST['block_user'] ?? false;
+            $violation_severity = $_POST['violation_severity'] ?? 'medium';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+                echo json_encode(["success" => false, "message" => "Unauthorized"]);
+                exit;
+            }
 
         if (empty($event_id) || empty($reason)) {
             echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -3493,28 +3772,28 @@ if ($fun === "adminDeleteEvent") {
         try {
             $pdo->beginTransaction();
 
-        // Get event owner details - join with users table to get email
-        $eventStmt = $pdo->prepare("
-            SELECT 
-                e.user_id, 
-                e.user_name, 
-                u.email as user_email,
-                e.event_name
-            FROM events e 
-            LEFT JOIN users u ON e.user_id = u.user_id 
-            WHERE e.event_id = ?
-        ");
-        $eventStmt->execute([$event_id]);
-        $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
+                // Get event owner details - join with users table to get email
+                $eventStmt = $pdo->prepare("
+                SELECT
+                    e.user_id,
+                    e.user_name,
+                    u.email as user_email,
+                    e.event_name
+                FROM events e
+                LEFT JOIN users u ON e.user_id = u.user_id
+                WHERE e.event_id = ?
+            ");
+                $eventStmt->execute([$event_id]);
+                $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$event) {
-            throw new Exception("Event not found");
-        }
+                if (! $event) {
+                    throw new Exception("Event not found");
+                }
 
-        $event_owner_id = $event['user_id'];
-        $event_owner_email = $event['user_email'];
-        $eventName = $event['event_name'];
-        $final_reason = $reason === 'other' ? $custom_reason : $reason;
+                $event_owner_id    = $event['user_id'];
+                $event_owner_email = $event['user_email'];
+                $eventName         = $event['event_name'];
+                $final_reason      = $reason === 'other' ? $custom_reason : $reason;
 
             // Soft delete the event
             $deleteStmt = $pdo->prepare("UPDATE events SET is_deleted = TRUE, deleted_by_admin_id = ?, deletion_reason = ?, deleted_at = NOW() WHERE event_id = ?");
@@ -3532,51 +3811,51 @@ if ($fun === "adminDeleteEvent") {
             $updateReportStmt = $pdo->prepare("UPDATE event_violations SET status = 'action_taken', reviewed_by_admin_id = ?, reviewed_at = NOW() WHERE event_id = ? AND status = 'pending'");
             $updateReportStmt->execute([$adminUserId, $event_id]);
 
-        // Send notification email to event planner
-        if ($event_owner_email) {
-            $emailContent = "
-            <html>
-            <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;'>
-                <div style='background: #fff; padding: 30px; border-radius: 12px;'>
-                    <h2 style='color: #dc3545;'>Event Removal Notice</h2>
-                    <p>Dear Event Planner,</p>
-                    <p>Your event <strong>{$eventName}</strong> has been removed from our platform.</p>
-                    <div style='background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;'>
-                        <p><strong>Reason for removal:</strong> {$final_reason}</p>
+                // Send notification email to event planner
+                if ($event_owner_email) {
+                    $emailContent = "
+                <html>
+                <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;'>
+                    <div style='background: #fff; padding: 30px; border-radius: 12px;'>
+                        <h2 style='color: #dc3545;'>Event Removal Notice</h2>
+                        <p>Dear Event Planner,</p>
+                        <p>Your event <strong>{$eventName}</strong> has been removed from our platform.</p>
+                        <div style='background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;'>
+                            <p><strong>Reason for removal:</strong> {$final_reason}</p>
+                        </div>
+                        <p>If you believe this was a mistake, please contact our support team.</p>
+                        <hr style='border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
+                        <p style='color: #666; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
                     </div>
-                    <p>If you believe this was a mistake, please contact our support team.</p>
-                    <hr style='border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
-                    <p style='color: #666; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
-                </div>
-            </body>
-            </html>";
+                </body>
+                </html>";
 
-            // Send email using your existing email system
-            $emailData = [
-                "personalizations" => [[
-                    "to" => [["email" => $event_owner_email, "name" => $event['user_name']]],
-                    "subject" => "Your event has been removed - Eventa",
-                ]],
-                "from" => ["email" => "bugbusters929@gmail.com", "name" => "Eventa Admin"],
-                "content" => [[
-                    "type" => "text/html",
-                    "value" => $emailContent
-                ]]
-            ];
+                    // Send email using your existing email system
+                    $emailData = [
+                        "personalizations" => [[
+                            "to"      => [["email" => $event_owner_email, "name" => $event['user_name']]],
+                            "subject" => "Your event has been removed - Eventa",
+                        ]],
+                        "from"             => ["email" => "bugbusters929@gmail.com", "name" => "Eventa Admin"],
+                        "content"          => [[
+                            "type"  => "text/html",
+                            "value" => $emailContent,
+                        ]],
+                    ];
 
-            // Send email via SendGrid
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://api.sendgrid.com/v3/mail/send");
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                "Authorization: Bearer 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",
-                "Content-Type: application/json"
-            ]);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_exec($ch);
-            curl_close($ch);
-        }
+                    // Send email via SendGrid
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, "https://api.sendgrid.com/v3/mail/send");
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        "Authorization: Bearer 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",
+                        "Content-Type: application/json",
+                    ]);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($emailData));
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_exec($ch);
+                    curl_close($ch);
+                }
 
             // Check if user should be blocked
             if ($block_user) {
@@ -3591,8 +3870,8 @@ if ($fun === "adminDeleteEvent") {
                 $violationCountStmt->execute([$event_owner_id]);
                 $violationStats = $violationCountStmt->fetch(PDO::FETCH_ASSOC);
 
-            $violation_count = $violationStats['violation_count'] ?? 0;
-            $total_points = $violationStats['total_points'] ?? 0;
+                    $violation_count = $violationStats['violation_count'] ?? 0;
+                    $total_points    = $violationStats['total_points'] ?? 0;
 
                 // Automatic blocking rules: 10 points OR 3 violations
                 if ($total_points >= 10 || $violation_count >= 3) {
@@ -3608,22 +3887,21 @@ if ($fun === "adminDeleteEvent") {
 
             echo json_encode(["success" => true, "message" => "Event deleted successfully" . ($block_user ? " and user blocked" : "")]);
 
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
-    }
-    exit;
-}
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+            }
+            exit;
+        }
 
+        if ($fun === "dismissEventReport") {
+            $adminUserId = $_POST['admin_user_id'] ?? '';
+            $report_id   = $_POST['report_id'] ?? '';
 
-if ($fun === "dismissEventReport") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $report_id = $_POST['report_id'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+                echo json_encode(["success" => false, "message" => "Unauthorized"]);
+                exit;
+            }
 
         if (empty($report_id)) {
             echo json_encode(["success" => false, "message" => "Missing report ID"]);
@@ -3644,25 +3922,25 @@ if ($fun === "dismissEventReport") {
     if ($fun === "getAllEvents") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
+            if (! verifyAdminAccess($pdo, $adminUserId)) {
+                echo json_encode(["success" => false, "message" => "Unauthorized"]);
+                exit;
+            }
 
-    try {
-        $stmt = $pdo->prepare("
-            SELECT 
-                e.*,
-                u.name as user_name,
-                u.email as user_email,
-                (SELECT COUNT(*) FROM event_violations ev WHERE ev.event_id = e.event_id AND ev.status = 'pending') as report_count
-            FROM events e
-            LEFT JOIN users u ON e.user_id = u.user_id
-            WHERE (e.is_deleted = 0 OR e.is_deleted IS NULL)  -- EXCLUDE DELETED EVENTS
-            ORDER BY e.created_at DESC
-        ");
-        $stmt->execute();
-        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $pdo->prepare("
+                SELECT
+                    e.*,
+                    u.name as user_name,
+                    u.email as user_email,
+                    (SELECT COUNT(*) FROM event_violations ev WHERE ev.event_id = e.event_id AND ev.status = 'pending') as report_count
+                FROM events e
+                LEFT JOIN users u ON e.user_id = u.user_id
+                WHERE (e.is_deleted = 0 OR e.is_deleted IS NULL)  -- EXCLUDE DELETED EVENTS
+                ORDER BY e.created_at DESC
+            ");
+                $stmt->execute();
+                $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode(["success" => true, "events" => $events]);
         } catch (PDOException $e) {
@@ -3671,10 +3949,6 @@ if ($fun === "dismissEventReport") {
         exit;
     }
 
-} catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => "General error: " . $e->getMessage()]);
-}
-
-
-
-?>
+    } catch (Exception $e) {
+        echo json_encode(["success" => false, "message" => "General error: " . $e->getMessage()]);
+    }
