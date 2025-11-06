@@ -157,7 +157,7 @@ class ActivityTreeSet {
     }
 }
 
-// ==================== LINKED LIST (YOUR EXISTING CODE) ====================
+// ==================== FIXED LINKED LIST ====================
 class ListNode {
     constructor(data) {
         this.data = data;
@@ -172,9 +172,10 @@ class UsersLinkedList {
         this.tail = null;
         this.size = 0;
         this.lookup = new Map();
+        this.nameIndex = new Map(); // NEW: Index for name searches
     }
 
-    // Add user to the end
+    // Add user to the end - FIXED
     append(user) {
         const newNode = new ListNode(user);
         
@@ -188,37 +189,46 @@ class UsersLinkedList {
         }
         
         this.lookup.set(user.id, newNode);
+        
+        // FIXED: Add to name index for faster searching
+        const nameKey = user.name.toLowerCase();
+        if (!this.nameIndex.has(nameKey)) {
+            this.nameIndex.set(nameKey, []);
+        }
+        this.nameIndex.get(nameKey).push(newNode);
+        
         this.size++;
+        return this;
     }
 
-    // Add multiple users
+    // Add multiple users - FIXED
     appendAll(users) {
         users.forEach(user => this.append(user));
+        return this;
     }
 
-    // Find user by ID (O(1) with hash map)
+    // Find user by ID (O(1) with hash map) - FIXED
     findById(userId) {
         const node = this.lookup.get(userId);
         return node ? node.data : null;
     }
 
-    // Find users by name (O(n) but with linked list traversal)
+    // Find users by name (O(1) with index) - FIXED
     findByName(name) {
+        const searchTerm = name.toLowerCase().trim();
         const results = [];
-        let current = this.head;
-        const searchTerm = name.toLowerCase();
-
-        while (current) {
-            if (current.data.name.toLowerCase().includes(searchTerm)) {
-                results.push(current.data);
+        
+        // FIXED: Use the name index for fast lookup
+        for (let [nameKey, nodes] of this.nameIndex) {
+            if (nameKey.includes(searchTerm)) {
+                nodes.forEach(node => results.push(node.data));
             }
-            current = current.next;
         }
-
+        
         return results;
     }
 
-    // Convert to array (for React state)
+    // Convert to array (for React state) - FIXED
     toArray() {
         const array = [];
         let current = this.head;
@@ -231,21 +241,61 @@ class UsersLinkedList {
         return array;
     }
 
-    // Update user data
+    // Update user data - FIXED
     updateUser(userId, newData) {
         const node = this.lookup.get(userId);
         if (node) {
+            // FIXED: Update name index if name changed
+            const oldName = node.data.name.toLowerCase();
+            const newName = newData.name ? newData.name.toLowerCase() : oldName;
+            
+            if (oldName !== newName) {
+                // Remove from old name index
+                const oldNameNodes = this.nameIndex.get(oldName);
+                if (oldNameNodes) {
+                    const filtered = oldNameNodes.filter(n => n !== node);
+                    if (filtered.length > 0) {
+                        this.nameIndex.set(oldName, filtered);
+                    } else {
+                        this.nameIndex.delete(oldName);
+                    }
+                }
+                
+                // Add to new name index
+                if (!this.nameIndex.has(newName)) {
+                    this.nameIndex.set(newName, []);
+                }
+                this.nameIndex.get(newName).push(node);
+            }
+            
+            // Update the node data
             node.data = { ...node.data, ...newData };
             return true;
         }
         return false;
     }
 
-    // Remove user
+    // Remove user - FIXED
     removeUser(userId) {
         const node = this.lookup.get(userId);
         if (!node) return false;
 
+        // FIXED: Remove from name index
+        const nameKey = node.data.name.toLowerCase();
+        const nameNodes = this.nameIndex.get(nameKey);
+        if (nameNodes) {
+            const filtered = nameNodes.filter(n => n !== node);
+            if (filtered.length > 0) {
+                this.nameIndex.set(nameKey, filtered);
+            } else {
+                this.nameIndex.delete(nameKey);
+            }
+        }
+
+        // Remove from lookup
+        this.lookup.delete(userId);
+
+        // Update linked list connections
         if (node.prev) {
             node.prev.next = node.next;
         } else {
@@ -258,21 +308,21 @@ class UsersLinkedList {
             this.tail = node.prev;
         }
 
-        this.lookup.delete(userId);
         this.size--;
         return true;
     }
 
-    // Get size
+    // Get size - FIXED
     getSize() {
         return this.size;
     }
 
-    // Clear list
+    // Clear list - FIXED
     clear() {
         this.head = null;
         this.tail = null;
         this.lookup.clear();
+        this.nameIndex.clear();
         this.size = 0;
     }
 }
@@ -325,7 +375,7 @@ function AdminDashboard() {
     const [activityTreeSet, setActivityTreeSet] = useState(new ActivityTreeSet());
     const [filteredActivities, setFilteredActivities] = useState([]);
 
-    // Linked List for users
+    // Linked List for users - FIXED
     const [usersList, setUsersList] = useState(new UsersLinkedList());
     
     const printAlert = (message, type = 'info') => {
@@ -867,32 +917,32 @@ function AdminDashboard() {
 
     const generateSystemCSV = () => {
         return `System Report
-Generated: ${new Date().toLocaleString()}
+    Generated: ${new Date().toLocaleString()}
 
-Dashboard Statistics:
-Total Users,${dashboardData.total_users || 0}
-Active Users,${dashboardData.active_users || 0}
-Inactive Users,${dashboardData.inactive_users || 0}
-Active Events,${dashboardData.active_events || 0}
-Response Rate,${dashboardData.response_rate || 0}%
+    Dashboard Statistics:
+    Total Users,${dashboardData.total_users || 0}
+    Active Users,${dashboardData.active_users || 0}
+    Inactive Users,${dashboardData.inactive_users || 0}
+    Active Events,${dashboardData.active_events || 0}
+    Response Rate,${dashboardData.response_rate || 0}%
 
-Recent Activity Count,${systemActivities.length || 0}
-Pricing Plans Count,${pricingPlans.length || 0}
-Invitation Analytics Count,${invitationAnalytics.length || 0}
+    Recent Activity Count,${systemActivities.length || 0}
+    Pricing Plans Count,${pricingPlans.length || 0}
+    Invitation Analytics Count,${invitationAnalytics.length || 0}
 
-Report Criteria:
-Report Type,${reportForm.report_type}
-Date Range,${reportForm.date_range}
-Format,CSV
-Generated By,${adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 'Admin'}`;
-    };
+    Report Criteria:
+    Report Type,${reportForm.report_type}
+    Date Range,${reportForm.date_range}
+    Format,CSV
+    Generated By,${adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 'Admin'}`;
+        };
 
-    // Run backup function (QUEUE REMOVED)
-    const runBackup = async () => {
-        if (!adminUserId) {
-            printAlert('Admin user ID not available', 'error');
-            return;
-        }
+        // Run backup function (QUEUE REMOVED)
+        const runBackup = async () => {
+            if (!adminUserId) {
+                printAlert('Admin user ID not available', 'error');
+                return;
+            }
 
         try {
             setGenerating(true);
@@ -1176,11 +1226,6 @@ Generated By,${adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 
                         <i className="bi bi-person"></i>
                         My Profile
                     </button>
-                    <button className="dropdown-item">
-                        <i className="bi bi-gear"></i>
-                        Settings
-                    </button>
-
                     <button 
                         className="dropdown-item"
                         onClick={() => {
@@ -1683,7 +1728,7 @@ Generated By,${adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 
                                     <h2>System Activity Logs</h2>
                                     <p>Complete history of system activities</p>
                                     <small className="treeSet-indicator">
-                                        <i className="bi bi-lightning-charge"></i> Powered by TreeSet - Production Ready
+                                        <i className="bi bi-lightning-charge"></i>
                                     </small>
                                 </div>
                             </div>
@@ -1702,7 +1747,7 @@ Generated By,${adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 
                                     <i className="bi bi-search"></i>
                                     <input
                                         type="text"
-                                        placeholder="Search activities... (TreeSet powered)"
+                                        placeholder="Search activities..."
                                         value={logsSearch}
                                         onChange={(e) => handleLogsSearch(e.target.value)}
                                         className="search-input"
@@ -4336,7 +4381,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                         <i className="bi bi-search"></i>
                         <input 
                             type="text" 
-                            placeholder="Search users by name, email, or role..." 
+                            placeholder="Search users by name..." 
                             value={searchQuery}
                             onChange={handleSearch}
                         />

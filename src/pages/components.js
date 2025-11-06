@@ -1129,7 +1129,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 }
 
 // Helper: fetch with timeout to avoid hanging requests
-const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
+const fetchWithTimeout = (resource, options = {}, timeout = 15000) => { 
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
             reject(new Error('Request timed out'));

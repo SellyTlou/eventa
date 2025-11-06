@@ -62,7 +62,7 @@ $BREVO_API_KEY = 'xkeysib-30c9a3dfff306e374e76a1aecee8184af4792d52e1609027a4ceea
         "htmlContent" => "
             <html><body style='font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;'>
                 <div style='background:#fff;padding:30px;border-radius:12px;text-align:center;'>
-                    <h1 style='color:#75cc54;'>You're Invited (party popper)</h1>
+                    <h1 style='color:#75cc54;'>You're Invited to $eventName</h1>
                     <h2>{$eventName}</h2>
                     <p><strong>Date:</strong> " . date('F j, Y', strtotime($eventDate)) . "</p>
                     <p><strong>Location:</strong> {$eventLocation}</p>
@@ -72,7 +72,7 @@ $BREVO_API_KEY = 'xkeysib-30c9a3dfff306e374e76a1aecee8184af4792d52e1609027a4ceea
                     <div style='margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0;'>
                         <p style='font-size:12px;color:#888;'>
                             If you believe this event contains inappropriate content, you can
-                            <a href='{$reportLink}' style='color:#888;text-decoration:underline;'>report this event</a>.
+                            <a href='{$reportLink}' style='color:#8B0000;text-decoration:underline;'>report this event</a>.
                         </p>
                     </div>
                 </div>
