@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./rsvp.css";
 import '../../alert.css';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const RsvpForm = () => {
     const [formData, setFormData] = useState({
@@ -20,7 +20,7 @@ const RsvpForm = () => {
     const [totalRplyGuestCount, setTotalRplyGuestCount] = useState(0);
     const [totalEventLimit, setTotalEventLimit] = useState(0);
     const [event_id, setEventId] = useState("");
-
+    const navigate = useNavigate();
     // Event status
     const [eventStatus, setEventStatus] = useState(null); // 'active' | 'not_found' | 'canceled' | 'past'
 
@@ -219,6 +219,9 @@ const RsvpForm = () => {
                     name: "", email: "", attending: "yes", guestCount: 0, message: ""
                 });
                 await fetchEventData(event_id);
+                setTimeout(() => {
+                    navigate("/");
+                }, 3000);
             } else {
                 throw new Error(result.message || "Failed to submit RSVP");
             }
@@ -303,9 +306,9 @@ const RsvpForm = () => {
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
-                            alert.type === "success" ? "fa-check-circle" :
-                                alert.type === "warning" ? "fa-exclamation-triangle" :
-                                    "fa-info-circle"
+                        alert.type === "success" ? "fa-check-circle" :
+                            alert.type === "warning" ? "fa-exclamation-triangle" :
+                                "fa-info-circle"
                         }`}></i>
                     <span>{alert.message}</span>
                 </div>

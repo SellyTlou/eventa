@@ -556,7 +556,7 @@ try {
         }
     }
 
-    if ($fun === "eventAccConfirm") {
+    if ($fun === "eventAccConfirm") { 
     $name     = trim($_POST['name']);
     $email    = trim($_POST['email']);
     $password = $_POST['password'];
@@ -611,7 +611,7 @@ try {
         ]);
     }
     exit;
-}
+    }
 
     if ($fun === "saveEvent") {
         $userID          = $_POST['userID'] ?? '';
@@ -1507,7 +1507,7 @@ try {
             ]);
         }
         exit;
-}
+     }
 
 // REPLACE your getSystemActivity function with this SAFE version:
 if ($fun === "getSystemActivity") {
@@ -3490,7 +3490,7 @@ if ($fun === "organizerReplyToGuest") {
             echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
         }
         exit;
-}
+    }
 
 
 if ($fun === "reportEvent") {
@@ -3521,9 +3521,7 @@ if ($fun === "reportEvent") {
             $violationStmt->execute([$event['user_id'], $event_id, $violation_type, $reporter_id, $description]);
         }
 
-        // Log the report
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
-        $logStmt->execute([$reporter_id, 'Event Reported', "Event {$event_id} reported for {$violation_type}"]);
+       
 
         echo json_encode(["success" => true, "message" => "Event reported successfully. Our team will review it shortly."]);
     } catch (PDOException $e) {

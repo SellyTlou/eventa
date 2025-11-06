@@ -586,9 +586,7 @@ export function LoginNav() {
                                     <button onClick={goToProfile} className="dropdown-item">
                                         <i className="bi bi-person"></i>Profile
                                     </button>
-                                    <button className="dropdown-item">
-                                        <i className="bi bi-gear"></i>Settings
-                                    </button>
+                                   
                                     <button className="dropdown-item" onClick={logOut}>
                                         <i className="bi bi-box-arrow-right"></i>Logout
                                     </button>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import "./report-event.css";
+import "../alert.css";
 
 const ReportEvent = () => {
     const [searchParams] = useSearchParams();
@@ -13,7 +14,7 @@ const ReportEvent = () => {
     const [eventData, setEventData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [message, setMessage] = useState({ show: false, text: "", type: "" });
+    const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
     const eventId = searchParams.get("event_id");
 
@@ -26,11 +27,19 @@ const ReportEvent = () => {
         { value: "other", label: "Other Issue" }
     ];
 
+    // Unified Alert Function
+    const printAlert = (message, type = "info") => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => {
+            setAlert({ show: false, message: "", type: "" });
+        }, 5000);
+    };
+
     useEffect(() => {
         if (eventId) {
             fetchEventData();
         } else {
-            setMessage({ show: true, text: "No event specified", type: "error" });
+            printAlert("No event specified", "error");
             setLoading(false);
         }
     }, [eventId]);
@@ -50,11 +59,11 @@ const ReportEvent = () => {
             if (data.success && data.events && data.events.length > 0) {
                 setEventData(data.events[0]);
             } else {
-                setMessage({ show: true, text: "Event not found", type: "error" });
+                printAlert("Event not found", "error");
             }
         } catch (error) {
             console.error("Error fetching event:", error);
-            setMessage({ show: true, text: "Failed to load event details", type: "error" });
+            printAlert("Failed to load event details", "error");
         } finally {
             setLoading(false);
         }
@@ -62,9 +71,9 @@ const ReportEvent = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!formData.violation_type) {
-            setMessage({ show: true, text: "Please select a violation type", type: "error" });
+            printAlert("Please select a violation type", "error");
             return;
         }
 
@@ -84,25 +93,21 @@ const ReportEvent = () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
-                setMessage({ 
-                    show: true, 
-                    text: "Thank you for your report. Our team will review it shortly.", 
-                    type: "success" 
-                });
+                printAlert("Thank you for your report. Our team will review it shortly.", "success");
                 setFormData({ violation_type: "", description: "", reporter_email: "" });
-                
-                // Redirect after success
+
+                // Redirect after 3 seconds
                 setTimeout(() => {
                     navigate("/");
                 }, 3000);
             } else {
-                setMessage({ show: true, text: data.message || "Failed to submit report", type: "error" });
+                printAlert(data.message || "Failed to submit report", "error");
             }
         } catch (error) {
             console.error("Error submitting report:", error);
-            setMessage({ show: true, text: "Network error. Please try again.", type: "error" });
+            printAlert("Network error. Please try again.", "error");
         } finally {
             setSubmitting(false);
         }
@@ -126,6 +131,20 @@ const ReportEvent = () => {
 
     return (
         <div className="report-event-container">
+            {/*  Custom Alert */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error" ? "fa-times-circle" :
+                                alert.type === "success" ? "fa-check-circle" :
+                                    alert.type === "warning" ? "fa-exclamation-triangle" :
+                                        "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
+
             <div className="report-event-card">
                 <div className="report-header">
                     <h1>Report Event</h1>
@@ -138,20 +157,14 @@ const ReportEvent = () => {
                         <div className="event-details">
                             <strong>{eventData.event_name}</strong>
                             {eventData.event_image && (
-                                <img 
-                                    src={eventData.event_image} 
-                                    alt="Event preview" 
+                                <img
+                                    src={eventData.event_image}
+                                    alt="Event preview"
                                     className="event-image-preview"
                                 />
                             )}
                             <p>Created by: {eventData.user_name}</p>
                         </div>
-                    </div>
-                )}
-
-                {message.show && (
-                    <div className={`message ${message.type}`}>
-                        {message.text}
                     </div>
                 )}
 
