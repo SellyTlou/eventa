@@ -112,6 +112,7 @@ const RSVPResponses = () => {
             if (data.success && data.responses) {
                 var tree = new RSVPBinaryTree();
                 tree.bulkInsert(data.responses);
+                console.log('RSVPTree built — in-order traversal:', tree.toArray());
                 setBST(tree);
                 setFilteredResponses(tree.toArray());
                 setEventData(data.event || null);
