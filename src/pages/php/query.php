@@ -206,15 +206,105 @@ try {
             // ✅ LOG THE ACTIVITY - User registered themselves
             $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
             $logStmt->execute([
-                ':user_id'     => $userID, // The new user's ID
+                ':user_id'     => $userID,
                 ':action'      => 'User Registered',
                 ':description' => "New user registered: {$name} {$lastname} ({$email})",
             ]);
 
-            echo json_encode(["success" => true, "message" => "Registration successful"]);
+            echo json_encode([
+                "success" => true,
+                "message" => "Registration successful",
+                "user"    => [
+                    "user_id"  => $userID,
+                    "name"     => $name,
+                    "lastname" => $lastname,
+                    "email"    => $email,
+                    "role"     => "event_planner",
+                ],
+            ]);
+            exit;
         } catch (PDOException $e) {
             echo json_encode(["success" => false, "message" => $e->getMessage()]);
         }
+    }
+
+    if ($fun === "saveSecurityQuestions") {
+        // Required fields
+        $user_id   = $_POST['user_id'] ?? '';
+        $question1 = $_POST['question1'] ?? '';
+        $answer1   = $_POST['answer1'] ?? '';
+        $question2 = $_POST['question2'] ?? '';
+        $answer2   = $_POST['answer2'] ?? '';
+        $question3 = $_POST['question3'] ?? '';
+        $answer3   = $_POST['answer3'] ?? '';
+
+        // Validate input
+        if (! $user_id || ! $question1 || ! $answer1 || ! $question2 || ! $answer2 || ! $question3 || ! $answer3) {
+            echo json_encode([
+                "success" => false,
+                "message" => "All fields are required",
+            ]);
+            exit;
+        }
+
+        try {
+            // Hash answers (same as passwords)
+            $answer1_hash = password_hash($answer1, PASSWORD_DEFAULT);
+            $answer2_hash = password_hash($answer2, PASSWORD_DEFAULT);
+            $answer3_hash = password_hash($answer3, PASSWORD_DEFAULT);
+
+            // Insert into DB
+            $stmt = $pdo->prepare("
+            INSERT INTO user_security_questions
+            (user_id, question1, answer1_hash, question2, answer2_hash, question3, answer3_hash)
+            VALUES
+            (:user_id, :q1, :a1, :q2, :a2, :q3, :a3)
+        ");
+
+            $stmt->execute([
+                ':user_id' => $user_id,
+                ':q1'      => $question1,
+                ':a1'      => $answer1_hash,
+                ':q2'      => $question2,
+                ':a2'      => $answer2_hash,
+                ':q3'      => $question3,
+                ':a3'      => $answer3_hash,
+            ]);
+
+            // Log activity
+            $logStmt = $pdo->prepare("
+            INSERT INTO system_activity (user_id, action, description)
+            VALUES (:user_id, :action, :description)
+        ");
+            $logStmt->execute([
+                ':user_id'     => $user_id,
+                ':action'      => 'Security Questions Set',
+                ':description' => "User $user_id set up security questions",
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Security questions saved successfully",
+            ]);
+
+        } catch (PDOException $e) {
+            // Log error (optional: write to file)
+            error_log("saveSecurityQuestions Error: " . $e->getMessage());
+
+            // Check for duplicate entry (if user already has questions)
+            if ($e->getCode() == 23000) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Security questions already exist for this user",
+                ]);
+            } else {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database error: " . $e->getMessage(),
+                ]);
+            }
+        }
+        exit;
     }
 
     if ($fun === "login") {

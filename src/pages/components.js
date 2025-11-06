@@ -742,7 +742,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             }
 
            
-            console.log("Sending registration request to:", API_URL);
+            console.log("Sending request to:", API_URL);
             const url = `${API_URL}/query.php`;
 
             const response = await fetchWithTimeout(url, {
@@ -852,7 +852,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         e.preventDefault();
 
         if (isLogin) {
-            // For login, proceed directly
             await completeRegistration();
         } else {
             // For registration, show security questions modal first
