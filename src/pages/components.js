@@ -190,7 +190,7 @@ export function SessionHandler() {
                 <Route path="/rsvpForm" element={<RsvpForm />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/Manage_my_event" element={<ManageEyEvent />} />
-                <Route path="/packagePayment" element={<PackagePayment />} />
+                <Route path="/packagepayment" element={<PackagePayment />} />
                 <Route path="/forgot_password" element={<ForgotPassword />} />
                 <Route path="/email_verify" element={<EmailVerify />} />
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
@@ -1128,7 +1128,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 }
 
 // Helper: fetch with timeout to avoid hanging requests
-const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
+const fetchWithTimeout = (resource, options = {}, timeout = 15000) => { 
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
             reject(new Error('Request timed out'));

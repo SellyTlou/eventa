@@ -81,7 +81,7 @@ try {
 
                     <p style='font-size:12px;color:#888;margin-top:30px'>
                         If you believe this event contains inappropriate content,
-                        <a href='{$reportLink}' style='color:#888;text-decoration:underline'>report it</a>.
+                        <a href='{$reportLink}' style='color: #8B0000;text-decoration:underline'>report it</a>.
                     </p>
                 </div>
             </body>
