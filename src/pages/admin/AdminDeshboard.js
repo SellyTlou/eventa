@@ -172,7 +172,7 @@ class UsersLinkedList {
         this.tail = null;
         this.size = 0;
         this.lookup = new Map();
-        this.nameIndex = new Map(); // NEW: Index for name searches
+        this.nameIndex = new Map(); 
     }
 
     // Add user to the end - FIXED
@@ -207,18 +207,18 @@ class UsersLinkedList {
         return this;
     }
 
-    // Find user by ID (O(1) with hash map) - FIXED
+    // Find user by ID (O(1) with hash map)
     findById(userId) {
         const node = this.lookup.get(userId);
         return node ? node.data : null;
     }
 
-    // Find users by name (O(1) with index) - FIXED
+    // Find users by name (O(1) with index)
     findByName(name) {
         const searchTerm = name.toLowerCase().trim();
         const results = [];
         
-        // FIXED: Use the name index for fast lookup
+        // Use the name index for fast lookup
         for (let [nameKey, nodes] of this.nameIndex) {
             if (nameKey.includes(searchTerm)) {
                 nodes.forEach(node => results.push(node.data));
@@ -228,7 +228,7 @@ class UsersLinkedList {
         return results;
     }
 
-    // Convert to array (for React state) - FIXED
+    
     toArray() {
         const array = [];
         let current = this.head;
@@ -241,11 +241,11 @@ class UsersLinkedList {
         return array;
     }
 
-    // Update user data - FIXED
+    // Update user data 
     updateUser(userId, newData) {
         const node = this.lookup.get(userId);
         if (node) {
-            // FIXED: Update name index if name changed
+            //Update name index if name changed
             const oldName = node.data.name.toLowerCase();
             const newName = newData.name ? newData.name.toLowerCase() : oldName;
             
@@ -280,7 +280,7 @@ class UsersLinkedList {
         const node = this.lookup.get(userId);
         if (!node) return false;
 
-        // FIXED: Remove from name index
+        //  Remove from name index
         const nameKey = node.data.name.toLowerCase();
         const nameNodes = this.nameIndex.get(nameKey);
         if (nameNodes) {
