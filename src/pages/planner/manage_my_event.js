@@ -201,7 +201,7 @@ const Manage_my_event = () => {
                     maxGuest: pkg.max_guests,
                     maxEvents: pkg.max_events,
                     price: parseFloat(pkg.price),
-                    features: getPackageFeatures(pkg.package_type)
+                    features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type)
                 }));
                 setAvailablePackages(formattedPackages);
             }
@@ -211,36 +211,45 @@ const Manage_my_event = () => {
         }
     };
 
-    const getPackageFeatures = (packageType) => {
-        const featuresMap = {
+    // Fallback function in case features column is empty
+    const getDefaultFeatures = (packageType) => {
+        const defaultFeaturesMap = {
             'basic': [
-                "Access to basic templates",
-                "Create and send invitations",
-                "RSVP tracking",
-                "Event management tools"
+                "Up to 100 guests per event",
+                "Basic event templates",
+                "RSVP management",
+                "Guest list tracking",
+                "Email invitations",
+                "Basic analytics"
             ],
             'premium': [
-                "All Basic features",
-                "Access to premium templates",
+                "Up to 500 guests per event",
+                "Premium event templates",
                 "Custom branding options",
-                "Priority support",
-                "Advanced RSVP analytics"
+                "Advanced RSVP analytics",
+                "Priority customer support",
+                "Bulk guest imports",
+                "Reminder emails"
             ],
             'enterprise': [
-                "All Premium features",
+                "Unlimited guests",
+                "Custom event templates",
                 "Dedicated account manager",
-                "Custom integrations",
-                "Unlimited events",
-                "Team collaboration tools"
+                "API access for integrations",
+                "Advanced reporting dashboard",
+                "White-label solutions",
+                "Team collaboration tools",
+                "Custom workflows"
             ],
             'free': [
-                "Access to basic templates",
-                "Create and send invitations",
+                "Up to 50 guests per event",
+                "Basic templates",
                 "RSVP tracking",
-                "Event management tools"
+                "Email notifications",
+                "Mobile-friendly invites"
             ]
         };
-        return featuresMap[packageType] || ["Basic event management features"];
+        return defaultFeaturesMap[packageType] || ["Event management features"];
     };
 
     const fetchEventStatusByID = async (eventId) => {
@@ -857,7 +866,7 @@ const Manage_my_event = () => {
                                 </div>
                             </div>
                             <button className="choose-package-btn" onClick={handleChoosePackage}>
-                                Choose {selectedPackage.id} Package
+                                Choose {selectedPackage.name} Package
                             </button>
                         </div>
                     </div>

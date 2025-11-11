@@ -7,6 +7,9 @@ function Index() {
     const [startIndex, setStartIndex] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [showMaintenance, setShowMaintenance] = useState(false);
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [pricingPlans, setPricingPlans] = useState([]);
+    const [loadingPricing, setLoadingPricing] = useState(true);
 
     const events = [
         { id: 1, title: "Wedding Bash", img: "/images/popular events/wedding.png", description: "Turn your wedding dream into a reality." },
@@ -14,6 +17,150 @@ function Index() {
         { id: 3, title: "Music Concert", img: "/images/popular events/concert.png", description: "Seamless concert planning from soundtrack to spotlight." },
         { id: 4, title: "Baby Shower", img: "images/popular events/baby shower.png", description: "Creating unforgattable baby shower memories" },
     ];
+
+    // Fetch pricing plans from database
+    const fetchPricingPlans = async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getAllPackages");
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+            console.log("Pricing plans data:", data);
+
+            if (data.success && data.packages) {
+                const formattedPlans = data.packages.map(pkg => ({
+                    id: pkg.package_id,
+                    name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
+                    price: pkg.price === 0 ? "Free" : `R${pkg.price}`,
+                    duration: "per month",
+                    max_guests: pkg.max_guests,
+                    max_events: pkg.max_events,
+                    features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type, pkg.max_guests, pkg.max_events),
+                    isPopular: pkg.package_type === 'premium' // Mark premium as most popular
+                }));
+                setPricingPlans(formattedPlans);
+            } else {
+                // Fallback to default plans if API fails
+                setPricingPlans(getDefaultPricingPlans());
+            }
+        } catch (err) {
+            console.error("Error fetching pricing plans:", err);
+            // Fallback to default plans
+            setPricingPlans(getDefaultPricingPlans());
+        } finally {
+            setLoadingPricing(false);
+        }
+    };
+
+    // Fallback function for features
+    const getDefaultFeatures = (packageType, maxGuests, maxEvents) => {
+        const featuresMap = {
+            'free': [
+                `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
+                `Up to ${maxGuests} guests`,
+                "Basic invitations",
+                "RSVP tracking",
+                "Email support"
+            ],
+            'basic': [
+                `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
+                `Up to ${maxGuests} guests`,
+                "Customizable invitations",
+                "RSVP tracking",
+                "Guest management",
+                "Email support"
+            ],
+            'premium': [
+                `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
+                `Up to ${maxGuests} guests`,
+                "Premium invitations",
+                "Advanced RSVP tracking",
+                "Seating charts",
+                "Automated reminders",
+                "Priority support"
+            ],
+            'enterprise': [
+                "Unlimited events",
+                "Unlimited guests",
+                "Custom branding",
+                "Advanced analytics",
+                "Dedicated account manager",
+                "API access",
+                "Custom integrations"
+            ]
+        };
+        return featuresMap[packageType] || ["Event management features"];
+    };
+
+    // Fallback default pricing plans
+    const getDefaultPricingPlans = () => {
+        return [
+            {
+                id: 1,
+                name: "Free",
+                price: "R0",
+                duration: "per month",
+                features: [
+                    "1 event",
+                    "Up to 50 guests",
+                    "Basic invitations",
+                    "RSVP tracking",
+                    "Email support"
+                ],
+                isPopular: false,
+            },
+            {
+                id: 2,
+                name: "Pro",
+                price: "R150",
+                duration: "per month",
+                features: [
+                    "5 events",
+                    "Up to 500 guests",
+                    "Customizable invitations",
+                    "Seating charts",
+                    "Automated reminders",
+                    "Priority support",
+                ],
+                isPopular: true,
+            },
+            {
+                id: 3,
+                name: "Enterprise",
+                price: "Contact us",
+                duration: "",
+                features: [
+                    "Unlimited events",
+                    "Unlimited guests",
+                    "Advanced analytics",
+                    "Dedicated account manager",
+                    "Custom integrations",
+                    "White-label solutions",
+                ],
+                isPopular: false,
+            },
+        ];
+    };
+
+    useEffect(() => {
+        fetchPricingPlans();
+    }, []);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % 3);
+        }, 6000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const handleResize = () => {
@@ -42,6 +189,7 @@ function Index() {
         }
         return visibleEvents;
     };
+
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
 
@@ -54,8 +202,6 @@ function Index() {
         setLoginMode("signup");
         setIsLoginOpen(true);
     }
-
-
 
     const [activeTab, setActiveTab] = useState("Invitations");
     const [managementStartIndex, setManagementStartIndex] = useState(0);
@@ -78,48 +224,6 @@ function Index() {
             { id: 10, icon: "bi bi-bar-chart", title: "Guest Insights", description: "View analytics on guest responses and demographics." },
         ],
     };
-
-    const pricingPlans = [
-        {
-            name: "Free",
-            price: "R0",
-            duration: "per month",
-            features: [
-                "1 event",
-                "Up to 50 guests",
-                "Basic invitations",
-                "RSVP tracking",
-            ],
-            isPopular: false,
-        },
-        {
-            name: "Pro",
-            price: "R150",
-            duration: "per month",
-            features: [
-                "5 events",
-                "Unlimited guests",
-                "Customizable invitations",
-                "Seating charts",
-                "Automated reminders",
-                "Email support",
-            ],
-            isPopular: true,
-        },
-        {
-            name: "Enterprise",
-            price: "Contact us",
-            duration: "",
-            features: [
-                "Unlimited events",
-                "Priority support",
-                "Advanced analytics",
-                "Dedicated account manager",
-                "Custom integrations",
-            ],
-            isPopular: false,
-        },
-    ];
 
     const handleManagementNext = () => {
         const currentCards = managementFeatures[activeTab];
@@ -147,6 +251,13 @@ function Index() {
         setShowMaintenance(true);
     };
 
+    const handleGetStartedClick = (planName) => {
+        if (planName === "Free" || planName === "free") {
+            window.location.href = "/createevent";
+        } else {
+            window.location.href = "/upgrade_package";
+        }
+    };
 
     return (
         <>
@@ -161,31 +272,89 @@ function Index() {
             />
 
             <div className="homepage-section">
-
                 <section className="homeHeader">
-                    <div className="container">
-                        <div className="row">
-                            <div className="col-lg-6 text-content">
-                                <h1>Evendi- Where Every Celebration Comes Alive </h1>
-                                <p>
-                                    Make every event memorable. From intimate gatherings to grand celebrations, Evendi helps you design invitations, track responses, and engage your guests effortlessly.
-                                </p>
+                    <div className="hero-carousel">
+
+                        {/* SLIDE 1 */}
+                        <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`}>
+                            <div className="container">
+                                <div className="row align-items-center">
+                                    <div className="col-lg-6 text-content">
+                                        <h1>Evendi – Where Every Celebration Comes Alive</h1>
+                                        <p>
+                                            Make every event memorable. From intimate gatherings to grand celebrations,
+                                            Evendi helps you design invitations, track responses, and engage your guests effortlessly.
+                                        </p>
+                                        <div className="btn-container">
+                                            <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
+                                                Get Started For Free
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="col-lg-6 image-content">
+                                        <img src="/images/homeheader.png" alt="Celebrate with Evendi" className="img-fluid hero-image" />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="col-lg-6 image-content">
-                                <img
-                                    src="/images/homeheader.png"
-                                    alt="evenda Homepage"
-                                    className="img-fluid"
+                        </section>
+
+                        {/* SLIDE 2 */}
+                        <section className={`hero-slide ${currentSlide === 1 ? 'active' : ''}`}>
+                            <div className="container">
+                                <div className="row align-items-center">
+                                    <div className="col-lg-6 text-content">
+                                        <h1>Create Stunning Invitations in Minutes</h1>
+                                        <p>
+                                            Choose from hundreds of elegant templates. Customize colors, fonts, and animations.
+                                            Send via Email, WhatsApp, SMS, or QR code — all with one click.
+                                        </p>
+                                        <div className="btn-container">
+                                            <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
+                                                Design Your Invite Now
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="col-lg-6 image-content">
+                                        <img src="/images/invitation.png" alt="Beautiful Invitations" className="img-fluid hero-image" />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SLIDE 3 */}
+                        <section className={`hero-slide ${currentSlide === 2 ? 'active' : ''}`}>
+                            <div className="container">
+                                <div className="row align-items-center">
+                                    <div className="col-lg-6 text-content">
+                                        <h1>Never Chase RSVPs Again</h1>
+                                        <p>
+                                            Real-time tracking, automated reminders, guest insights, seating charts —
+                                            everything you need to stay organized and stress-free.
+                                        </p>
+                                        <div className="btn-container">
+                                            <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
+                                                Start Managing For Free
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="col-lg-6 image-content">
+                                        <img src="/images/chirs.png" alt="RSVP Management" className="img-fluid hero-image" />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Navigation Dots */}
+                        <div className="carousel-dots">
+                            {[0, 1, 2].map((index) => (
+                                <span
+                                    key={index}
+                                    className={`dot ${currentSlide === index ? 'active' : ''}`}
+                                    onClick={() => setCurrentSlide(index)}
                                 />
-                            </div>
+                            ))}
                         </div>
-                        <div className="btn-container">
-                            <button
-                                className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
-                                Get Started For Free
-                            </button>
-                            {/*<button className="btn btn-demo">Book a Demo</button>*/}
-                        </div>
+
                     </div>
                 </section>
 
@@ -301,28 +470,43 @@ function Index() {
                             <h2>Our Flexible Pricing Plans</h2>
                             <p className="lead text-muted">Choose the right plan to match your event, from cozy get-togethers to grand conferences.</p>
                         </div>
-                        <div className="row d-flex justify-content-center">
-                            {pricingPlans.map((plan) => (
-                                <div key={plan.name} className={`col-lg-4 pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
-                                    <div className="pricing-card text-center">
-                                        {plan.isPopular && <div className="popular-badge">Most Popular</div>}
-                                        <h3>{plan.name}</h3>
-                                        <div className="price-tag">
-                                            <span className="price">{plan.price}</span>
-                                            <p className="duration">{plan.duration}</p>
-                                        </div>
-                                        <ul className="features-list list-unstyled text-left">
-                                            {plan.features.map((feature, index) => (
-                                                <li key={index}>
-                                                    <i className="bi bi-check2-circle"></i> {feature}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <button className="btn btn-create">Get Started</button>
-                                    </div>
+
+                        {loadingPricing ? (
+                            <div className="text-center">
+                                <div className="spinner-border text-primary" role="status">
+                                    <span className="visually-hidden">Loading plans...</span>
                                 </div>
-                            ))}
-                        </div>
+                                <p className="mt-2">Loading pricing plans...</p>
+                            </div>
+                        ) : (
+                            <div className="row d-flex justify-content-center">
+                                {pricingPlans.map((plan) => (
+                                    <div key={plan.id || plan.name} className={`col-lg-4 pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
+                                        <div className="pricing-card text-center">
+                                            {plan.isPopular && <div className="popular-badge">Most Popular</div>}
+                                            <h3>{plan.name}</h3>
+                                            <div className="price-tag">
+                                                <span className="price">{plan.price}</span>
+                                                <p className="duration">{plan.duration}</p>
+                                            </div>
+                                            <ul className="features-list list-unstyled text-left">
+                                                {plan.features.map((feature, index) => (
+                                                    <li key={index}>
+                                                        <i className="bi bi-check2-circle"></i> {feature}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            <button
+                                                className="btn btn-create"
+                                                onClick={() => handleGetStartedClick(plan.name)}
+                                            >
+                                                {plan.price === "Free" || plan.price === "R0" ? "Get Started Free" : "Choose Plan"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </section>
 

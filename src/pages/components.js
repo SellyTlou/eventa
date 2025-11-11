@@ -620,6 +620,23 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
     const navigate = useNavigate();
 
+    // Reset form when mode changes or modal opens/closes
+    useEffect(() => {
+        if (isOpen) {
+            setIsLogin(defaultMode === "login");
+            setFormData({
+                name: '',
+                email: '',
+                lastname: '',
+                password: '',
+                confirmPassword: ''
+            });
+            setNeedsVerification(false);
+            setUnverifiedEmail('');
+            setSecurityAnswers(null);
+        }
+    }, [isOpen, defaultMode]);
+
     if (!isOpen) return null;
 
     const printAlert = (message, type = 'info') => {
@@ -739,7 +756,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 formDataToSend.append("password", formData.password);
             }
 
-           
+
             console.log("Sending request to:", API_URL);
             const url = `${API_URL}/query.php`;
 
