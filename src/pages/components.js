@@ -586,9 +586,7 @@ export function LoginNav() {
                                     <button onClick={goToProfile} className="dropdown-item">
                                         <i className="bi bi-person"></i>Profile
                                     </button>
-                                    <button className="dropdown-item">
-                                        <i className="bi bi-gear"></i>Settings
-                                    </button>
+                                   
                                     <button className="dropdown-item" onClick={logOut}>
                                         <i className="bi bi-box-arrow-right"></i>Logout
                                     </button>
@@ -673,6 +671,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 console.warn('REACT_APP_API_URL not set, using fallback relative path');
                 apiUrl = `${window.location.origin}/eventa/src/pages/php`;
             }
+
             const formData = new FormData();
             formData.append("function", "saveSecurityQuestions");
             formData.append("user_id", userId);
@@ -715,7 +714,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const handleSecurityQuestionsSave = async (answers) => {
         setSecurityAnswers(answers);
         setShowSecurityModal(false);
-        // Continue with registration after security questions are set
         await completeRegistration(answers);
     };
 
@@ -833,7 +831,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             }
         } catch (error) {
             console.error("Registration Error:", error);
-            printAlert(`Registration failed: ${error.message}`, 'error');
+            printAlert(`Error: ${error.message}`, 'error');
         } finally {
             setLoading(false);
         }

@@ -64,7 +64,7 @@ export default class RSVPBinaryTree {
     searchPartial(query) {
         query = query.toLowerCase();
         return this.uniqueByEmail().filter((r) => r.name?.toLowerCase().includes(query));
-    }
+    } 
 
     filterByAttending(status) {
         if (status === "all") return this.uniqueByEmail();
