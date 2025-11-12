@@ -235,6 +235,16 @@
     margin-bottom: 60px;
 }
 
+.comparison-section .text-success {
+    color: #10b981 !important;
+    font-weight: 600;
+}
+.comparison-section .text-muted {
+        color: #ff0d00 !important;
+    font-weight: 500;
+}
+
+
 .comparison-section h2 {
     text-align: center;
     font-size: 2.2rem;

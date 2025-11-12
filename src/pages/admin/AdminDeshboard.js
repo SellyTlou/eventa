@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import "./adminDesign.css";
 import "../../App.css";
 import "../../index.css";
 import "../../alert.css"
@@ -10,7 +11,7 @@ class ActivityTreeSet {
         this.activities = []; // Sorted array (newest first)
         this.indexes = {
             byTimestamp: new Map(),
-            byAction: new Map(), 
+            byAction: new Map(),
             byUserId: new Map(),
             byText: new Map()
         };
@@ -19,79 +20,79 @@ class ActivityTreeSet {
     // Add activity with proper sorting - IMMUTABLE
     addActivity(activity) {
         const newTreeSet = new ActivityTreeSet();
-        
+
         // Copy existing data
         newTreeSet.activities = [...this.activities];
         newTreeSet.indexes.byTimestamp = new Map(this.indexes.byTimestamp);
         newTreeSet.indexes.byAction = new Map(this.indexes.byAction);
         newTreeSet.indexes.byUserId = new Map(this.indexes.byUserId);
         newTreeSet.indexes.byText = new Map(this.indexes.byText);
-        
+
         // Insert in correct position (newest first)
         const insertIndex = this.findInsertIndex(activity.created_at);
         newTreeSet.activities.splice(insertIndex, 0, activity);
-        
+
         // Update indexes
         this.updateIndexesForActivity(newTreeSet, activity);
-        
+
         return newTreeSet;
     }
 
     // Add multiple activities - PROPERLY SORTED
     addActivities(activities) {
         let newTreeSet = new ActivityTreeSet();
-        
+
         // Sort activities by timestamp descending before adding
-        const sortedActivities = [...activities].sort((a, b) => 
+        const sortedActivities = [...activities].sort((a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-        
+
         sortedActivities.forEach(activity => {
             newTreeSet = newTreeSet.addActivity(activity);
         });
-        
+
         return newTreeSet;
     }
 
     // RELIABLE binary search for insertion
     findInsertIndex(timestamp) {
         if (this.activities.length === 0) return 0;
-        
+
         const newTime = new Date(timestamp).getTime();
         let low = 0;
         let high = this.activities.length;
-        
+
         while (low < high) {
             const mid = Math.floor((low + high) / 2);
             const midTime = new Date(this.activities[mid].created_at).getTime();
-            
+
             if (newTime > midTime) {
                 high = mid;
             } else {
                 low = mid + 1;
             }
         }
-        
+
         return low;
     }
 
     // SAFE index updating
     updateIndexesForActivity(treeSet, activity) {
         const timestamp = new Date(activity.created_at).getTime();
-        
+
         // Index by timestamp
         if (!treeSet.indexes.byTimestamp.has(timestamp)) {
             treeSet.indexes.byTimestamp.set(timestamp, []);
         }
         treeSet.indexes.byTimestamp.get(timestamp).push(activity);
-        
+
         // Index by action
         const action = activity.action;
         if (!treeSet.indexes.byAction.has(action)) {
             treeSet.indexes.byAction.set(action, []);
         }
         treeSet.indexes.byAction.get(action).push(activity);
-        
+
         // Index by user
         const userId = activity.user_id;
         if (userId) {
@@ -100,7 +101,7 @@ class ActivityTreeSet {
             }
             treeSet.indexes.byUserId.get(userId).push(activity);
         }
-        
+
         // Index by text content
         this.indexTextContent(treeSet, activity);
     }
@@ -109,7 +110,7 @@ class ActivityTreeSet {
     indexTextContent(treeSet, activity) {
         const text = `${activity.action} ${activity.description} ${activity.user_name || ''}`.toLowerCase();
         const words = new Set(text.split(/\s+/).filter(word => word.length > 2));
-        
+
         words.forEach(word => {
             if (!treeSet.indexes.byText.has(word)) {
                 treeSet.indexes.byText.set(word, []);
@@ -121,12 +122,12 @@ class ActivityTreeSet {
     // FAST and RELIABLE search
     searchByText(searchTerm) {
         const terms = searchTerm.toLowerCase().split(/\s+/).filter(term => term.length > 2);
-        
+
         if (terms.length === 0) return this.activities;
-        
+
         // Find intersection of all search terms
         let results = null;
-        
+
         terms.forEach(term => {
             const termResults = this.indexes.byText.get(term) || [];
             if (results === null) {
@@ -135,7 +136,7 @@ class ActivityTreeSet {
                 results = new Set([...results].filter(x => termResults.includes(x)));
             }
         });
-        
+
         return results ? Array.from(results) : [];
     }
 
@@ -171,13 +172,13 @@ class UsersLinkedList {
         this.tail = null;
         this.size = 0;
         this.lookup = new Map();
-        this.nameIndex = new Map(); 
+        this.nameIndex = new Map();
     }
 
     // Add user to the end - FIXED
     append(user) {
         const newNode = new ListNode(user);
-        
+
         if (!this.head) {
             this.head = newNode;
             this.tail = newNode;
@@ -186,16 +187,16 @@ class UsersLinkedList {
             this.tail.next = newNode;
             this.tail = newNode;
         }
-        
+
         this.lookup.set(user.id, newNode);
-        
+
         // FIXED: Add to name index for faster searching
         const nameKey = user.name.toLowerCase();
         if (!this.nameIndex.has(nameKey)) {
             this.nameIndex.set(nameKey, []);
         }
         this.nameIndex.get(nameKey).push(newNode);
-        
+
         this.size++;
         return this;
     }
@@ -216,18 +217,18 @@ class UsersLinkedList {
     findByName(name) {
         const searchTerm = name.toLowerCase().trim();
         const results = [];
-        
+
         // Use the name index for fast lookup
         for (let [nameKey, nodes] of this.nameIndex) {
             if (nameKey.includes(searchTerm)) {
                 nodes.forEach(node => results.push(node.data));
             }
         }
-        
+
         return results;
     }
 
-    
+
     toArray() {
         const array = [];
         let current = this.head;
@@ -247,7 +248,7 @@ class UsersLinkedList {
             //Update name index if name changed
             const oldName = node.data.name.toLowerCase();
             const newName = newData.name ? newData.name.toLowerCase() : oldName;
-            
+
             if (oldName !== newName) {
                 // Remove from old name index
                 const oldNameNodes = this.nameIndex.get(oldName);
@@ -259,14 +260,14 @@ class UsersLinkedList {
                         this.nameIndex.delete(oldName);
                     }
                 }
-                
+
                 // Add to new name index
                 if (!this.nameIndex.has(newName)) {
                     this.nameIndex.set(newName, []);
                 }
                 this.nameIndex.get(newName).push(node);
             }
-            
+
             // Update the node data
             node.data = { ...node.data, ...newData };
             return true;
@@ -333,7 +334,7 @@ function AdminDashboard() {
         active_users: 0,
         active_events: 0,
         response_rate: 0,
-        inactive_users: 0 
+        inactive_users: 0
     });
     const [systemActivities, setSystemActivities] = useState([]);
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
@@ -355,7 +356,7 @@ function AdminDashboard() {
         format: 'csv'
     });
     const [downloadUrl, setDownloadUrl] = useState('');
-    const [actionMessage, setActionMessage] = useState('');   
+    const [actionMessage, setActionMessage] = useState('');
     const [showLogsModal, setShowLogsModal] = useState(false);
     const [allActivities, setAllActivities] = useState([]);
     const [logsLoading, setLogsLoading] = useState(false);
@@ -376,7 +377,7 @@ function AdminDashboard() {
 
     // Linked List for users - FIXED
     const [usersList, setUsersList] = useState(new UsersLinkedList());
-    
+
     const printAlert = (message, type = 'info') => {
         setAlert({ show: true, message, type });
 
@@ -408,10 +409,10 @@ function AdminDashboard() {
             action: action,
             description: description
         };
-        
+
         // Add to backend queue
         activityQueue.enqueue(activityData);
-        
+
         // Create temporary activity for real-time display
         const tempActivity = {
             id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -421,24 +422,24 @@ function AdminDashboard() {
             user_id: adminUserId,
             created_at: new Date().toISOString()
         };
-        
+
         // Add to TreeSet immediately
         addActivityToTreeSet(tempActivity);
-        
+
         console.log(`📝 Activity logged in real-time: ${action}`);
     };
 
     // FAST and RELIABLE search handlers
     const handleLogsSearch = (searchTerm) => {
         setLogsSearch(searchTerm);
-        
+
         if (!searchTerm.trim()) {
             setFilteredActivities(activityTreeSet.activities);
         } else {
             const startTime = performance.now();
             const results = activityTreeSet.searchByText(searchTerm);
             const endTime = performance.now();
-            
+
             console.log(`🔍 TreeSet search: ${(endTime - startTime).toFixed(2)}ms`);
             setFilteredActivities(results);
         }
@@ -447,7 +448,7 @@ function AdminDashboard() {
     // Fast filter by action type
     const handleLogsFilter = (actionType) => {
         setLogsFilter(actionType);
-        
+
         if (actionType === 'all') {
             setFilteredActivities(activityTreeSet.activities);
         } else {
@@ -473,7 +474,7 @@ function AdminDashboard() {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 printAlert('Admin user created successfully!', 'success');
                 setShowCreateAdminModal(false);
@@ -507,12 +508,12 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getInvitationStats');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -527,8 +528,8 @@ function AdminDashboard() {
 
     useEffect(() => {
         console.log('Refresh triggered:', refreshTrigger);
-        
-        switch(activeTab) {
+
+        switch (activeTab) {
             case "dashboard":
                 fetchDashboardData();
                 fetchSystemActivities();
@@ -571,9 +572,9 @@ function AdminDashboard() {
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
-                profileTriggerRef.current && 
+                profileTriggerRef.current &&
                 !profileTriggerRef.current.contains(event.target) &&
-                profileDropdownRef.current && 
+                profileDropdownRef.current &&
                 !profileDropdownRef.current.contains(event.target)
             ) {
                 setShowProfileDropdown(false);
@@ -603,10 +604,10 @@ function AdminDashboard() {
                         email: userObj.email,
                         role: userObj.role,
                     });
-                    
+
                     const savedImage = localStorage.getItem('adminProfileImage');
                     if (savedImage) setProfileImage(savedImage);
-                    
+
                     console.log('Admin initialized with user ID:', userObj.user_id);
                 }
             }
@@ -657,12 +658,12 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getAdminProfile');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -685,7 +686,7 @@ function AdminDashboard() {
 
             setLoading(true);
             try {
-                switch(activeTab) {
+                switch (activeTab) {
                     case "dashboard":
                         await fetchDashboardData();
                         await fetchSystemActivities();
@@ -728,15 +729,15 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getDashboardStats');
             formData.append('admin_user_id', adminUserId);
-            
+
             // Direct fetch instead of queued fetch
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 setDashboardData(data.stats);
             }
@@ -757,14 +758,14 @@ function AdminDashboard() {
             formData.append('function', 'getSystemActivity');
             formData.append('limit', 5);
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 setSystemActivities(data.activities);
             } else {
@@ -821,7 +822,7 @@ function AdminDashboard() {
                 let csvContent = "";
                 let filename = `${reportForm.report_type}_report_${new Date().getTime()}.csv`;
 
-                switch(reportForm.report_type) {
+                switch (reportForm.report_type) {
                     case 'users':
                         csvContent = generateUsersCSV();
                         break;
@@ -848,14 +849,14 @@ function AdminDashboard() {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                
+
                 setShowReportModal(false);
                 setActionMessage('');
-                
+
             } else {
                 throw new Error(data.message || 'Failed to generate report');
             }
-            
+
         } catch (error) {
             console.error('Report generation error:', error);
             setActionMessage('Error: ' + error.message);
@@ -867,12 +868,12 @@ function AdminDashboard() {
     // CSV Generator Functions
     const generateUsersCSV = () => {
         let csv = "User ID,Full Name,Email,Role,Status,Created Date,Total Events\n";
-        
+
         if (usersData && usersData.length > 0) {
             usersData.forEach(user => {
                 const safeName = (user.name || '').replace(/"/g, '""');
                 const safeEmail = (user.email || '').replace(/"/g, '""');
-                
+
                 csv += `"${user.user_id || ''}","${safeName}","${safeEmail}","${user.role || 'event_planner'}","${user.status || 'active'}","${user.created_at || ''}","${user.total_events || 0}"\n`;
             });
         } else {
@@ -883,7 +884,7 @@ function AdminDashboard() {
 
     const generateEventsCSV = () => {
         let csv = "Event Name,Organizer,Start Date,End Date,Location,Status,RSVP Count\n";
-        
+
         if (invitationAnalytics && invitationAnalytics.length > 0) {
             invitationAnalytics.forEach(event => {
                 const safeName = (event.eventName || '').replace(/"/g, '""');
@@ -898,13 +899,13 @@ function AdminDashboard() {
 
     const generateRevenueCSV = () => {
         let csv = "Package Type,Price,Max Events,Max Guests,Active Subscriptions\n";
-        
+
         if (pricingPlans && pricingPlans.length > 0) {
             pricingPlans.forEach(plan => {
                 const packageType = plan.package_type || 'Unknown';
                 csv += `"${packageType}","R ${plan.price || 0}","${plan.max_events || 0}","${plan.max_guests || 0}","${plan.active_subscriptions || 0}"\n`;
             });
-            
+
             csv += "\nSummary\n";
             csv += `Total Packages,${pricingPlans.length}\n`;
             csv += `Total Revenue Estimate,R ${pricingPlans.reduce((sum, plan) => sum + (parseFloat(plan.price) || 0), 0)}\n`;
@@ -934,14 +935,14 @@ function AdminDashboard() {
     Date Range,${reportForm.date_range}
     Format,CSV
     Generated By,${adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 'Admin'}`;
-        };
+    };
 
-        // Run backup function (QUEUE REMOVED)
-        const runBackup = async () => {
-            if (!adminUserId) {
-                printAlert('Admin user ID not available', 'error');
-                return;
-            }
+    // Run backup function (QUEUE REMOVED)
+    const runBackup = async () => {
+        if (!adminUserId) {
+            printAlert('Admin user ID not available', 'error');
+            return;
+        }
 
         try {
             setGenerating(true);
@@ -950,21 +951,21 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'backupDatabase');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
             if (data.success) {
                 setActionMessage('Backup created successfully! Download will start shortly...');
                 logActivity('Database Backup Created', 'System database backup completed successfully');
-                
+
                 // Create download link
                 const downloadUrl = `${API_BASE_URL}/backups/${data.filename}`;
                 setDownloadUrl(downloadUrl);
-                
+
                 // Auto download after 2 seconds
                 setTimeout(() => {
                     window.open(downloadUrl, '_blank');
@@ -995,14 +996,14 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getInvitationAnalytics');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 setInvitationAnalytics(data.analytics);
             }
@@ -1021,21 +1022,22 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getAllPackages');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 const normalized = (data.packages || []).map(p => ({
                     package_id: p.package_id || p.id || p.packageId,
                     package_type: p.package_type || p.type || p.packageType || '',
                     max_guests: p.max_guests || p.maxGuests || p.guests || 0,
                     max_events: p.max_events || p.maxEvents || p.events || 0,
-                    price: p.price || p.cost || p.amount || 0
+                    price: p.price || p.cost || p.amount || 0,
+                    features: p.features || p.package_features || p.features_list || '',
                 }));
                 setPricingPlans(normalized);
             }
@@ -1054,14 +1056,14 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getRevenueData');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 setRevenueData(data.revenueData);
             }
@@ -1080,18 +1082,18 @@ function AdminDashboard() {
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 // Update both array state and linked list
                 setUsersData(data.users);
-                
+
                 const newUsersList = new UsersLinkedList();
                 data.users.forEach(user => {
                     newUsersList.append({
@@ -1121,17 +1123,17 @@ function AdminDashboard() {
             setLogsLoading(true);
             setShowLogsModal(true);
             logActivity('System Logs Viewed', 'Administrator accessed complete system activity logs');
-            
+
             const formData = new FormData();
             formData.append('function', 'getSystemActivity');
             formData.append('admin_user_id', adminUserId);
             formData.append('limit', 1000);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -1140,7 +1142,7 @@ function AdminDashboard() {
                     setActivityTreeSet(newTreeSet);
                     setAllActivities(newTreeSet.activities);
                     setFilteredActivities(newTreeSet.activities);
-                    
+
                     console.log(`✅ TreeSet loaded with ${data.activities.length} activities`);
                 }
             }
@@ -1173,11 +1175,11 @@ function AdminDashboard() {
         const handleLogout = async () => {
             try {
                 logActivity('Admin Logout', 'Administrator signed out of the system');
-                
+
                 const formData = new FormData();
                 formData.append('function', 'logout');
                 formData.append('user_id', adminUserId);
-                
+
                 await fetch(`${API_BASE_URL}/query.php`, {
                     method: 'POST',
                     body: formData
@@ -1189,7 +1191,7 @@ function AdminDashboard() {
                 localStorage.removeItem('adminUser');
                 localStorage.removeItem('adminData');
                 sessionStorage.clear();
-                
+
                 window.location.href = '/';
             }
         };
@@ -1215,7 +1217,7 @@ function AdminDashboard() {
                     </div>
                 </div>
                 <div className="profile-dropdown-menu">
-                    <button 
+                    <button
                         className="dropdown-item"
                         onClick={() => {
                             setActiveTab("profile");
@@ -1225,7 +1227,7 @@ function AdminDashboard() {
                         <i className="bi bi-person"></i>
                         My Profile
                     </button>
-                    <button 
+                    <button
                         className="dropdown-item"
                         onClick={() => {
                             setShowProfileDropdown(false);
@@ -1237,7 +1239,7 @@ function AdminDashboard() {
                     </button>
 
                     <div className="dropdown-divider"></div>
-                    <button 
+                    <button
                         className="dropdown-item logout-btn"
                         onClick={handleLogout}
                     >
@@ -1253,7 +1255,7 @@ function AdminDashboard() {
     const getActionType = (action) => {
         const actionTypes = {
             'User Login': 'login',
-            'User Registered': 'register', 
+            'User Registered': 'register',
             'Event Created': 'create',
             'Event Updated': 'update',
             'User Blocked': 'blocked',
@@ -1265,12 +1267,12 @@ function AdminDashboard() {
 
     // Export logs function
     const exportLogs = () => {
-        const csvContent = "data:text/csv;charset=utf-8," 
+        const csvContent = "data:text/csv;charset=utf-8,"
             + "User,Action,Description,Date\n"
-            + filteredActivities.map(activity => 
+            + filteredActivities.map(activity =>
                 `"${activity.user_name || 'System'}","${activity.action}","${activity.description}","${activity.created_at}"`
             ).join("\n");
-        
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -1278,59 +1280,59 @@ function AdminDashboard() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         logActivity('Logs Exported', 'System activity logs exported to CSV file');
     };
 
     // Format dashboard stats for display
     const dashboardStats = useMemo(() => [
-        { 
-            id: 1, 
-            title: "Total Users", 
-            value: dashboardData.total_users.toString(), 
+        {
+            id: 1,
+            title: "Total Users",
+            value: dashboardData.total_users.toString(),
             icon: "bi bi-people",
             color: "blue"
         },
-        { 
-            id: 2, 
-            title: "Active Events", 
-            value: dashboardData.active_events.toString(), 
+        {
+            id: 2,
+            title: "Active Events",
+            value: dashboardData.active_events.toString(),
             icon: "bi bi-calendar-event",
             color: "green"
         },
-        { 
-            id: 3, 
-            title: "Response Rate", 
-            value: `${dashboardData.response_rate}%`, 
+        {
+            id: 3,
+            title: "Response Rate",
+            value: `${dashboardData.response_rate}%`,
             icon: "bi bi-graph-up",
             color: "purple"
         },
-        { 
-            id: 4, 
-            title: "Active Users", 
-            value: dashboardData.active_users.toString(), 
+        {
+            id: 4,
+            title: "Active Users",
+            value: dashboardData.active_users.toString(),
             icon: "bi bi-check-circle",
             color: "green"
         },
-        { 
-            id: 5, 
-            title: "Inactive Users", 
-            value: dashboardData.inactive_users.toString(), 
+        {
+            id: 5,
+            title: "Inactive Users",
+            value: dashboardData.inactive_users.toString(),
             icon: "bi bi-x-circle",
             color: "red"
         }
     ], [dashboardData]);
 
     const quickActions = useMemo(() => [
-        { 
-            id: 1, 
-            title: "Generate Reports", 
+        {
+            id: 1,
+            title: "Generate Reports",
             icon: "bi bi-file-earmark-bar-graph",
             action: 'generateReports'
         },
-        { 
-            id: 2, 
-            title: "Run System Backup", 
+        {
+            id: 2,
+            title: "Run System Backup",
             icon: "bi bi-cloud-arrow-up",
             action: 'runBackup'
         }
@@ -1364,9 +1366,9 @@ function AdminDashboard() {
             return <div className="loading">Loading...</div>;
         }
 
-        switch(activeTab) {
+        switch (activeTab) {
             case "event-management":
-                return <EventManagementTabContent adminUserId={adminUserId} logActivity={logActivity} triggerRefresh={triggerRefresh} setDashboardData={setDashboardData}  fetchDashboardData={fetchDashboardData} fetchInvitationAnalytics={fetchInvitationAnalytics} printAlert={printAlert} />;
+                return <EventManagementTabContent adminUserId={adminUserId} logActivity={logActivity} triggerRefresh={triggerRefresh} setDashboardData={setDashboardData} fetchDashboardData={fetchDashboardData} fetchInvitationAnalytics={fetchInvitationAnalytics} printAlert={printAlert} />;
             case "invitations":
                 return <InvitationsTabContent analytics={invitationAnalytics} logActivity={logActivity} adminUserId={adminUserId} fetchInvitationStats={fetchInvitationStats} printAlert={printAlert} />;
             case "pricing":
@@ -1374,9 +1376,9 @@ function AdminDashboard() {
             case "users":
                 return <UsersTabContent users={usersData} adminUserId={adminUserId} logActivity={logActivity} printAlert={printAlert} />;
             case "profile":
-                return <ProfileTabContent 
-                    adminProfile={adminProfile} 
-                    adminUserId={adminUserId} 
+                return <ProfileTabContent
+                    adminProfile={adminProfile}
+                    adminUserId={adminUserId}
                     profileImage={profileImage}
                     onImageUpload={handleImageUpload}
                     onProfileUpdate={fetchAdminProfile}
@@ -1409,8 +1411,8 @@ function AdminDashboard() {
                         <div className="admin-dashboard-recent-activity">
                             <div className="admin-dashboard-section-header">
                                 <h2>System Activity</h2>
-                                <button 
-                                    className="admin-dashboard-view-all" 
+                                <button
+                                    className="admin-dashboard-view-all"
                                     onClick={fetchAllSystemActivities}
                                 >
                                     View Logs
@@ -1441,7 +1443,7 @@ function AdminDashboard() {
                             </div>
                             <div className="admin-dashboard-actions-grid">
                                 {quickActions.map(action => (
-                                    <button 
+                                    <button
                                         key={action.id}
                                         className="admin-dashboard-action-btn"
                                         onClick={() => handleQuickAction(action.action)}
@@ -1461,89 +1463,89 @@ function AdminDashboard() {
     return (
         <>
             <div className="admin-dashboard-page">
-                 {/* Add Alert Component */}
-            {alert.show && (
-                <div className={`custom-alert ${alert.type}`}>
-                    <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
+                {/* Add Alert Component */}
+                {alert.show && (
+                    <div className={`custom-alert ${alert.type}`}>
+                        <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
                             alert.type === "success" ? "fa-check-circle" :
                                 alert.type === "warning" ? "fa-exclamation-triangle" :
                                     "fa-info-circle"
-                        }`}></i>
-                    <span>{alert.message}</span>
-                </div>
-            )}
+                            }`}></i>
+                        <span>{alert.message}</span>
+                    </div>
+                )}
                 <div className="admin-dashboard-container">
                     {/* Sidebar Navigation */}
-<aside className="admin-dashboard-sidebar">
-    <div className="admin-dashboard-logo">
-        <div className="logo-container">
-            <i className="bi bi-building-gear"></i>
-            <div className="logo-content">
-                <h3>Evendi Admin</h3>
-                <span>Control Center</span>
-            </div>
-        </div>
-    </div>
-    
-    <nav className="admin-dashboard-nav">
-        <ul>
-            <li 
-                className={`admin-dashboard-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
-                onClick={() => setActiveTab("dashboard")}
-            >
-                <div className="nav-item-content">
-                    <i className="bi bi-grid-1x2"></i>
-                    <span>Dashboard Overview</span>
-                </div>
-                <div className="nav-indicator"></div>
-            </li>
-            
-            <li className="nav-divider">
-                <span>Content Management</span>
-            </li>
-            
-            <li 
-                className={`admin-dashboard-nav-item ${activeTab === "event-management" ? "active" : ""}`}
-                onClick={() => setActiveTab("event-management")}
-            >
-                <div className="nav-item-content">
-                    <i className="bi bi-calendar-week"></i>
-                    <span>Event Management</span>
-                </div>
-            </li>
-            
-            <li 
-                className={`admin-dashboard-nav-item ${activeTab === "users" ? "active" : ""}`}
-                onClick={() => setActiveTab("users")}
-            >
-                <div className="nav-item-content">
-                    <i className="bi bi-person-gear"></i>
-                    <span>User Administration</span>
-                </div>
-            </li>
-            
-            <li 
-                className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
-                onClick={() => setActiveTab("invitations")}
-            >
-                <div className="nav-item-content">
-                    <i className="bi bi-send-check"></i>
-                    <span>Invitation Analytics</span>
-                </div>
-            </li>
-            
-            <li 
-                className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
-                onClick={() => setActiveTab("pricing")}
-            >
-                <div className="nav-item-content">
-                    <i className="bi bi-graph-up"></i>
-                    <span>Revenue & Pricing</span>
-                </div>
-            </li>
-        </ul>
-    </nav>
-</aside>
+                    <aside className="admin-dashboard-sidebar">
+                        <div className="admin-dashboard-logo">
+                            <div className="logo-container">
+                                <i className="bi bi-building-gear"></i>
+                                <div className="logo-content">
+                                    <h3>Evendi Admin</h3>
+                                    <span>Control Center</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <nav className="admin-dashboard-nav">
+                            <ul>
+                                <li
+                                    className={`admin-dashboard-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("dashboard")}
+                                >
+                                    <div className="nav-item-content">
+                                        <i className="bi bi-grid-1x2"></i>
+                                        <span>Dashboard Overview</span>
+                                    </div>
+                                    <div className="nav-indicator"></div>
+                                </li>
+
+                                <li className="nav-divider">
+                                    <span>Content Management</span>
+                                </li>
+
+                                <li
+                                    className={`admin-dashboard-nav-item ${activeTab === "event-management" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("event-management")}
+                                >
+                                    <div className="nav-item-content">
+                                        <i className="bi bi-calendar-week"></i>
+                                        <span>Event Management</span>
+                                    </div>
+                                </li>
+
+                                <li
+                                    className={`admin-dashboard-nav-item ${activeTab === "users" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("users")}
+                                >
+                                    <div className="nav-item-content">
+                                        <i className="bi bi-person-gear"></i>
+                                        <span>User Administration</span>
+                                    </div>
+                                </li>
+
+                                <li
+                                    className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("invitations")}
+                                >
+                                    <div className="nav-item-content">
+                                        <i className="bi bi-send-check"></i>
+                                        <span>Invitation Analytics</span>
+                                    </div>
+                                </li>
+
+                                <li
+                                    className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("pricing")}
+                                >
+                                    <div className="nav-item-content">
+                                        <i className="bi bi-graph-up"></i>
+                                        <span>Revenue & Pricing</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </nav>
+                    </aside>
 
                     {/* Main Content Area */}
                     <main className="admin-dashboard-main">
@@ -1556,7 +1558,7 @@ function AdminDashboard() {
                             </h1>
                             <div className="admin-header-actions">
                                 <div className="profile-section">
-                                    <button 
+                                    <button
                                         ref={profileTriggerRef}
                                         className="profile-trigger"
                                         onClick={() => setShowProfileDropdown(!showProfileDropdown)}
@@ -1599,7 +1601,7 @@ function AdminDashboard() {
                                     <p>Create detailed analytics reports</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => !generating && setShowReportModal(false)}
                                 disabled={generating}
@@ -1613,10 +1615,10 @@ function AdminDashboard() {
                                 <>
                                     <div className="form-group-new">
                                         <label>Report Type</label>
-                                        <select 
+                                        <select
                                             className="form-select-new"
                                             value={reportForm.report_type}
-                                            onChange={(e) => setReportForm(prev => ({...prev, report_type: e.target.value}))}
+                                            onChange={(e) => setReportForm(prev => ({ ...prev, report_type: e.target.value }))}
                                         >
                                             <option value="users">User Analytics</option>
                                             <option value="revenue">Revenue Report</option>
@@ -1626,10 +1628,10 @@ function AdminDashboard() {
                                     </div>
                                     <div className="form-group-new">
                                         <label>Date Range</label>
-                                        <select 
+                                        <select
                                             className="form-select-new"
                                             value={reportForm.date_range}
-                                            onChange={(e) => setReportForm(prev => ({...prev, date_range: e.target.value}))}
+                                            onChange={(e) => setReportForm(prev => ({ ...prev, date_range: e.target.value }))}
                                         >
                                             <option value="all">All Time</option>
                                             <option value="today">Today</option>
@@ -1640,10 +1642,10 @@ function AdminDashboard() {
                                     </div>
                                     <div className="form-group-new">
                                         <label>Format</label>
-                                        <select 
+                                        <select
                                             className="form-select-new"
                                             value={reportForm.format}
-                                            onChange={(e) => setReportForm(prev => ({...prev, format: e.target.value}))}
+                                            onChange={(e) => setReportForm(prev => ({ ...prev, format: e.target.value }))}
                                         >
                                             <option value="pdf">PDF</option>
                                             <option value="csv">CSV</option>
@@ -1651,14 +1653,14 @@ function AdminDashboard() {
                                         </select>
                                     </div>
                                     <div className="modal-actions-new">
-                                        <button 
+                                        <button
                                             className="action-btn-new primary"
                                             onClick={generateReport}
                                         >
                                             <i className="bi bi-file-earmark-arrow-down"></i>
                                             Generate Report
                                         </button>
-                                        <button 
+                                        <button
                                             className="action-btn-new secondary"
                                             onClick={() => setShowReportModal(false)}
                                         >
@@ -1692,7 +1694,7 @@ function AdminDashboard() {
                                     <p>Secure your system data</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => !generating && setShowBackupModal(false)}
                                 disabled={generating}
@@ -1713,14 +1715,14 @@ function AdminDashboard() {
                                         </div>
                                     </div>
                                     <div className="modal-actions-new">
-                                        <button 
+                                        <button
                                             className="action-btn-new primary"
                                             onClick={runBackup}
                                         >
                                             <i className="bi bi-database-check"></i>
                                             Start Backup
                                         </button>
-                                        <button 
+                                        <button
                                             className="action-btn-new secondary"
                                             onClick={() => setShowBackupModal(false)}
                                         >
@@ -1738,7 +1740,7 @@ function AdminDashboard() {
                         </div>
                     </div>
                 </div>
-            )} 
+            )}
 
             {/* System Logs Modal - PRODUCTION READY */}
             {showLogsModal && (
@@ -1757,7 +1759,7 @@ function AdminDashboard() {
                                     </small>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowLogsModal(false)}
                             >
@@ -1779,7 +1781,7 @@ function AdminDashboard() {
                                     />
                                 </div>
                                 <div className="filter-controls">
-                                    <select 
+                                    <select
                                         value={logsFilter}
                                         onChange={(e) => handleLogsFilter(e.target.value)}
                                         className="filter-select"
@@ -1815,7 +1817,7 @@ function AdminDashboard() {
                                         <span>Description</span>
                                         <span>Date & Time</span>
                                     </div>
-                                    
+
                                     <div className="table-body">
                                         {filteredActivities.length > 0 ? (
                                             filteredActivities.map(activity => (
@@ -1843,12 +1845,12 @@ function AdminDashboard() {
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     {/* TreeSet Performance Info */}
                                     <div className="treeset-info">
                                         <small>
                                             <i className="bi bi-lightning-charge"></i>
-                                            Showing {filteredActivities.length} of {activityTreeSet.getActivityCount()} activities 
+                                            Showing {filteredActivities.length} of {activityTreeSet.getActivityCount()} activities
                                             (TreeSet optimized • Real-time updates • Production ready)
                                         </small>
                                     </div>
@@ -1865,7 +1867,7 @@ function AdminDashboard() {
                     <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header-new">
                             <h2>Create New Admin User</h2>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowCreateAdminModal(false)}
                             >
@@ -1880,44 +1882,44 @@ function AdminDashboard() {
                             }}>
                                 <div className="form-group" style={{ marginBottom: '15px' }}>
                                     <label>First Name</label>
-                                    <input 
-                                        type="text" 
-                                        className="form-control" 
+                                    <input
+                                        type="text"
+                                        className="form-control"
                                         value={newAdminData.name}
-                                        onChange={(e) => setNewAdminData({...newAdminData, name: e.target.value})}
+                                        onChange={(e) => setNewAdminData({ ...newAdminData, name: e.target.value })}
                                         required
                                     />
                                 </div>
 
                                 <div className="form-group" style={{ marginBottom: '15px' }}>
                                     <label>Last Name</label>
-                                    <input 
-                                        type="text" 
-                                        className="form-control" 
+                                    <input
+                                        type="text"
+                                        className="form-control"
                                         value={newAdminData.lastname}
-                                        onChange={(e) => setNewAdminData({...newAdminData, lastname: e.target.value})}
+                                        onChange={(e) => setNewAdminData({ ...newAdminData, lastname: e.target.value })}
                                         required
                                     />
                                 </div>
 
                                 <div className="form-group" style={{ marginBottom: '15px' }}>
                                     <label>Email</label>
-                                    <input 
-                                        type="email" 
-                                        className="form-control" 
+                                    <input
+                                        type="email"
+                                        className="form-control"
                                         value={newAdminData.email}
-                                        onChange={(e) => setNewAdminData({...newAdminData, email: e.target.value})}
+                                        onChange={(e) => setNewAdminData({ ...newAdminData, email: e.target.value })}
                                         required
                                     />
                                 </div>
 
                                 <div className="form-group" style={{ marginBottom: '15px' }}>
                                     <label>Password</label>
-                                    <input 
-                                        type="password" 
-                                        className="form-control" 
+                                    <input
+                                        type="password"
+                                        className="form-control"
                                         value={newAdminData.password}
-                                        onChange={(e) => setNewAdminData({...newAdminData, password: e.target.value})}
+                                        onChange={(e) => setNewAdminData({ ...newAdminData, password: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -1995,166 +1997,166 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
     };
 
     const handleLogout = async () => {
-    try {
-        // Call backend logout if needed
-        const formData = new FormData();
-        formData.append('function', 'logout');
-        formData.append('user_id', adminUserId);
-        
-        await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-    } catch (error) {
-        console.error('Logout API error:', error);
-    } finally {
-        // Clear all local storage
-        localStorage.removeItem('user');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-        localStorage.removeItem('adminData');
-        sessionStorage.clear();
-        
-        // Redirect to login page
-        window.location.href = '/';
-    }
-};
+        try {
+            // Call backend logout if needed
+            const formData = new FormData();
+            formData.append('function', 'logout');
+            formData.append('user_id', adminUserId);
+
+            await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+        } catch (error) {
+            console.error('Logout API error:', error);
+        } finally {
+            // Clear all local storage
+            localStorage.removeItem('user');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            localStorage.removeItem('adminData');
+            sessionStorage.clear();
+
+            // Redirect to login page
+            window.location.href = '/';
+        }
+    };
 
     const handlePasswordChange = async () => {
-    // Validate that all fields are filled
-    if (!formData.password || !formData.newPassword || !formData.confirmPassword) {
-        setMessage('All password fields are required');
-        setMessageType('error');
-        return;
-    }
-
-    // Validate passwords match
-    if (formData.newPassword !== formData.confirmPassword) {
-        setMessage('New passwords do not match');
-        setMessageType('error');
-        return;
-    }
-
-    // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
-    if (!passwordRegex.test(formData.newPassword)) {
-        setMessage('Password must be at least 6 characters long and contain uppercase, lowercase, number and special character');
-        setMessageType('error');
-        return;
-    }
-
-    // Prevent changing to the same password
-    if (formData.password === formData.newPassword) {
-        setMessage('New password cannot be the same as current password');
-        setMessageType('error');
-        return;
-    }
-
-    try {
-        setLoading(true);
-        setMessage(''); // Clear previous messages
-
-        const formDataToSend = new FormData();
-        formDataToSend.append('function', 'changeAdminPassword');
-        formDataToSend.append('admin_user_id', adminUserId);
-        formDataToSend.append('current_password', formData.password);
-        formDataToSend.append('new_password', formData.newPassword);
-
-        console.log('Sending password change request for admin:', adminUserId);
-
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formDataToSend
-        });
-
-        // Get raw response text first
-        const responseText = await response.text();
-        console.log('Raw password change response:', responseText);
-
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            throw new Error('Invalid response from server. Please try again.');
+        // Validate that all fields are filled
+        if (!formData.password || !formData.newPassword || !formData.confirmPassword) {
+            setMessage('All password fields are required');
+            setMessageType('error');
+            return;
         }
 
-        console.log('Parsed password change response:', data);
+        // Validate passwords match
+        if (formData.newPassword !== formData.confirmPassword) {
+            setMessage('New passwords do not match');
+            setMessageType('error');
+            return;
+        }
 
-        if (data.success) {
-            setMessage('Password changed successfully! You will be redirected to login.');
-            setMessageType('success');
-            
-            // Log the activity locally
-            logActivity('Password Changed', 'Administrator successfully changed their password');
-            
-            // Clear password fields
-            setFormData(prev => ({
-                ...prev,
-                password: '',
-                newPassword: '',
-                confirmPassword: ''
-            }));
-            
-            // Reset password visibility
-            setShowPasswords({
-                current: false,
-                new: false,
-                confirm: false
+        // Validate password strength
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+        if (!passwordRegex.test(formData.newPassword)) {
+            setMessage('Password must be at least 6 characters long and contain uppercase, lowercase, number and special character');
+            setMessageType('error');
+            return;
+        }
+
+        // Prevent changing to the same password
+        if (formData.password === formData.newPassword) {
+            setMessage('New password cannot be the same as current password');
+            setMessageType('error');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setMessage(''); // Clear previous messages
+
+            const formDataToSend = new FormData();
+            formDataToSend.append('function', 'changeAdminPassword');
+            formDataToSend.append('admin_user_id', adminUserId);
+            formDataToSend.append('current_password', formData.password);
+            formDataToSend.append('new_password', formData.newPassword);
+
+            console.log('Sending password change request for admin:', adminUserId);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formDataToSend
             });
 
-            // Close modal after delay and redirect to login
-            setTimeout(() => {
-                setChangingPassword(false);
-                setMessage('');
-                setMessageType('');
-                
-                // Optional: Force logout and redirect to login page
-                const confirmLogout = window.confirm('Password changed successfully! For security, you need to login again. Click OK to continue.');
-                if (confirmLogout) {
-                    handleLogout();
-                }
-            }, 3000);
-            
-        } else {
-            // Handle specific error messages
-            let errorMessage = data.message || 'Failed to change password';
-            
-            // Provide more user-friendly error messages
-            if (errorMessage.includes('Current password is incorrect')) {
-                errorMessage = 'The current password you entered is incorrect. Please try again.';
-            } else if (errorMessage.includes('at least 6 characters')) {
-                errorMessage = 'New password must be at least 6 characters long.';
-            } else if (errorMessage.includes('Database error')) {
-                errorMessage = 'A database error occurred. Please contact system administrator.';
-            } else if (errorMessage.includes('Unauthorized')) {
-                errorMessage = 'You are not authorized to perform this action.';
+            // Get raw response text first
+            const responseText = await response.text();
+            console.log('Raw password change response:', responseText);
+
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                throw new Error('Invalid response from server. Please try again.');
             }
-            
+
+            console.log('Parsed password change response:', data);
+
+            if (data.success) {
+                setMessage('Password changed successfully! You will be redirected to login.');
+                setMessageType('success');
+
+                // Log the activity locally
+                logActivity('Password Changed', 'Administrator successfully changed their password');
+
+                // Clear password fields
+                setFormData(prev => ({
+                    ...prev,
+                    password: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                }));
+
+                // Reset password visibility
+                setShowPasswords({
+                    current: false,
+                    new: false,
+                    confirm: false
+                });
+
+                // Close modal after delay and redirect to login
+                setTimeout(() => {
+                    setChangingPassword(false);
+                    setMessage('');
+                    setMessageType('');
+
+                    // Optional: Force logout and redirect to login page
+                    const confirmLogout = window.confirm('Password changed successfully! For security, you need to login again. Click OK to continue.');
+                    if (confirmLogout) {
+                        handleLogout();
+                    }
+                }, 3000);
+
+            } else {
+                // Handle specific error messages
+                let errorMessage = data.message || 'Failed to change password';
+
+                // Provide more user-friendly error messages
+                if (errorMessage.includes('Current password is incorrect')) {
+                    errorMessage = 'The current password you entered is incorrect. Please try again.';
+                } else if (errorMessage.includes('at least 6 characters')) {
+                    errorMessage = 'New password must be at least 6 characters long.';
+                } else if (errorMessage.includes('Database error')) {
+                    errorMessage = 'A database error occurred. Please contact system administrator.';
+                } else if (errorMessage.includes('Unauthorized')) {
+                    errorMessage = 'You are not authorized to perform this action.';
+                }
+
+                setMessage(errorMessage);
+                setMessageType('error');
+
+                // Log the failed attempt
+                logActivity('Password Change Failed', `Failed to change password: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error changing password:', error);
+
+            let errorMessage = 'Network error: Unable to connect to server. ';
+            if (error.message.includes('Invalid response')) {
+                errorMessage += 'Please check if the server is running.';
+            } else {
+                errorMessage += 'Please try again later.';
+            }
+
             setMessage(errorMessage);
             setMessageType('error');
-            
-            // Log the failed attempt
-            logActivity('Password Change Failed', `Failed to change password: ${data.message}`);
+
+            logActivity('Password Change Error', `Password change error: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
-    } catch (error) {
-        console.error('Error changing password:', error);
-        
-        let errorMessage = 'Network error: Unable to connect to server. ';
-        if (error.message.includes('Invalid response')) {
-            errorMessage += 'Please check if the server is running.';
-        } else {
-            errorMessage += 'Please try again later.';
-        }
-        
-        setMessage(errorMessage);
-        setMessageType('error');
-        
-        logActivity('Password Change Error', `Password change error: ${error.message}`);
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const togglePasswordVisibility = (field) => {
         setShowPasswords(prev => ({
@@ -2174,12 +2176,12 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
             formDataToSend.append('name', formData.name);
             formDataToSend.append('lastname', formData.lastname);
             formDataToSend.append('email', formData.email);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formDataToSend
             });
-            
+
             const data = await response.json();
             if (data.success) {
                 setMessage('Profile updated successfully!');
@@ -2212,26 +2214,26 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                 <h2>My Profile</h2>
                 <div className="header-actions">
                     {!editMode ? (
-                        <button 
+                        <button
                             className="btn btn-primary"
                             onClick={() => setEditMode(true)}
                         >
                             <i className="bi bi-pencil"></i> Edit Profile
-                        </button> 
+                        </button>
                     ) : (
                         <div className="edit-actions">
-                            <button 
+                            <button
                                 className="btn btn-success"
                                 onClick={handleSaveProfile}
                                 disabled={loading}
                             >
                                 <i className="bi bi-check"></i> Save Changes
                             </button>
-                            <button 
+                            <button
                                 className="btn btn-outline"
                                 onClick={() => {
                                     setEditMode(false);
-                                    setMessage(''); 
+                                    setMessage('');
                                     setMessageType('');
                                 }}
                                 disabled={loading}
@@ -2246,9 +2248,9 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
             {message && (
                 <div className={`custom-alert ${messageType}`}>
                     <i className={`fas ${messageType === "error" ? "fa-times-circle" :
-                            messageType === "success" ? "fa-check-circle" :
-                                messageType === "warning" ? "fa-exclamation-triangle" :
-                                    "fa-info-circle"
+                        messageType === "success" ? "fa-check-circle" :
+                            messageType === "warning" ? "fa-exclamation-triangle" :
+                                "fa-info-circle"
                         }`}></i>
                     <span>{message}</span>
                 </div>
@@ -2270,8 +2272,8 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                             <h4>Profile Picture</h4>
                             <p>upload your own...</p>
                             <div className="upload-area">
-                                <input 
-                                    type="file" 
+                                <input
+                                    type="file"
                                     id="avatar-upload"
                                     accept="image/*"
                                     onChange={onImageUpload}
@@ -2292,8 +2294,8 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>Username</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={formData.username}
                                     onChange={(e) => handleInputChange('username', e.target.value)}
                                     disabled={!editMode}
@@ -2302,8 +2304,8 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                             </div>
                             <div className="form-group">
                                 <label>Email *</label>
-                                <input 
-                                    type="email" 
+                                <input
+                                    type="email"
                                     value={formData.email}
                                     onChange={(e) => handleInputChange('email', e.target.value)}
                                     disabled={!editMode}
@@ -2312,166 +2314,166 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                             </div>
                             <div className="form-group">
                                 <label>Password</label>
-    <div className="password-field-with-button">
-        <input 
-            type="password" 
-            value="••••••••"
-            disabled
-            className="disabled"
-        />
-        {editMode && (
-            <button 
-                type="button"
-                className="btn-change-password"
-                onClick={() => setChangingPassword(true)}
-            >
-                <i className="bi bi-key"></i> Change
-            </button>
-        )}
-                            </div>
+                                <div className="password-field-with-button">
+                                    <input
+                                        type="password"
+                                        value="••••••••"
+                                        disabled
+                                        className="disabled"
+                                    />
+                                    {editMode && (
+                                        <button
+                                            type="button"
+                                            className="btn-change-password"
+                                            onClick={() => setChangingPassword(true)}
+                                        >
+                                            <i className="bi bi-key"></i> Change
+                                        </button>
+                                    )}
+                                </div>
 
                                 {changingPassword && (
-    <div className="modal-overlay-new" onClick={() => setChangingPassword(false)}>
-        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-                <div className="modal-title-section">
-                    <div className="modal-icon-large">
-                        <i className="bi bi-key"></i>
-                    </div>
-                    <div className="modal-title">
-                        <h2>Change Password</h2>
-                        <p>Update your administrator password</p>
-                    </div>
-                </div>
-                <button 
-                    className="close-btn-new"
-                    onClick={() => setChangingPassword(false)}
-                    disabled={loading}
-                >
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
+                                    <div className="modal-overlay-new" onClick={() => setChangingPassword(false)}>
+                                        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                                            <div className="modal-header-new">
+                                                <div className="modal-title-section">
+                                                    <div className="modal-icon-large">
+                                                        <i className="bi bi-key"></i>
+                                                    </div>
+                                                    <div className="modal-title">
+                                                        <h2>Change Password</h2>
+                                                        <p>Update your administrator password</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    className="close-btn-new"
+                                                    onClick={() => setChangingPassword(false)}
+                                                    disabled={loading}
+                                                >
+                                                    <i className="bi bi-x-lg"></i>
+                                                </button>
+                                            </div>
 
-            <div className="modal-body-new">
-                <div className="form-group-new">
-                    <label>Current Password *</label>
-                    <div className="password-input-new">
-                        <input 
-                            type={showPasswords.current ? "text" : "password"}
-                            value={formData.password}
-                            onChange={(e) => handleInputChange('password', e.target.value)}
-                            placeholder="Enter your current password"
-                            className="form-control-new"
-                        />
-                        <button 
-                            type="button" 
-                            className="password-toggle-new"
-                            onClick={() => setShowPasswords(prev => ({
-                                ...prev,
-                                current: !prev.current
-                            }))}
-                        >
-                            <i className={`bi bi-eye${showPasswords.current ? '-slash' : ''}`}></i>
-                        </button>
-                    </div>
-                </div>
+                                            <div className="modal-body-new">
+                                                <div className="form-group-new">
+                                                    <label>Current Password *</label>
+                                                    <div className="password-input-new">
+                                                        <input
+                                                            type={showPasswords.current ? "text" : "password"}
+                                                            value={formData.password}
+                                                            onChange={(e) => handleInputChange('password', e.target.value)}
+                                                            placeholder="Enter your current password"
+                                                            className="form-control-new"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="password-toggle-new"
+                                                            onClick={() => setShowPasswords(prev => ({
+                                                                ...prev,
+                                                                current: !prev.current
+                                                            }))}
+                                                        >
+                                                            <i className={`bi bi-eye${showPasswords.current ? '-slash' : ''}`}></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
 
-                <div className="form-group-new">
-                    <label>New Password *</label>
-                    <div className="password-input-new">
-                        <input 
-                            type={showPasswords.new ? "text" : "password"}
-                            value={formData.newPassword}
-                            onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                            placeholder="Enter new password"
-                            className="form-control-new"
-                        />
-                        <button 
-                            type="button" 
-                            className="password-toggle-new"
-                            onClick={() => setShowPasswords(prev => ({
-                                ...prev,
-                                new: !prev.new
-                            }))}
-                        >
-                            <i className={`bi bi-eye${showPasswords.new ? '-slash' : ''}`}></i>
-                        </button>
-                    </div>
-                    <small className="password-requirements">
-                        Password must be at least 6 characters with uppercase, lowercase, number and special character
-                    </small>
-                </div>
+                                                <div className="form-group-new">
+                                                    <label>New Password *</label>
+                                                    <div className="password-input-new">
+                                                        <input
+                                                            type={showPasswords.new ? "text" : "password"}
+                                                            value={formData.newPassword}
+                                                            onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                                                            placeholder="Enter new password"
+                                                            className="form-control-new"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="password-toggle-new"
+                                                            onClick={() => setShowPasswords(prev => ({
+                                                                ...prev,
+                                                                new: !prev.new
+                                                            }))}
+                                                        >
+                                                            <i className={`bi bi-eye${showPasswords.new ? '-slash' : ''}`}></i>
+                                                        </button>
+                                                    </div>
+                                                    <small className="password-requirements">
+                                                        Password must be at least 6 characters with uppercase, lowercase, number and special character
+                                                    </small>
+                                                </div>
 
-                <div className="form-group-new">
-                    <label>Confirm New Password *</label>
-                    <div className="password-input-new">
-                        <input 
-                            type={showPasswords.confirm ? "text" : "password"}
-                            value={formData.confirmPassword}
-                            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                            placeholder="Confirm new password"
-                            className="form-control-new"
-                        />
-                        <button 
-                            type="button" 
-                            className="password-toggle-new"
-                            onClick={() => setShowPasswords(prev => ({
-                                ...prev,
-                                confirm: !prev.confirm
-                            }))}
-                        >
-                            <i className={`bi bi-eye${showPasswords.confirm ? '-slash' : ''}`}></i>
-                        </button>
-                    </div>
-                </div>
+                                                <div className="form-group-new">
+                                                    <label>Confirm New Password *</label>
+                                                    <div className="password-input-new">
+                                                        <input
+                                                            type={showPasswords.confirm ? "text" : "password"}
+                                                            value={formData.confirmPassword}
+                                                            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                                                            placeholder="Confirm new password"
+                                                            className="form-control-new"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="password-toggle-new"
+                                                            onClick={() => setShowPasswords(prev => ({
+                                                                ...prev,
+                                                                confirm: !prev.confirm
+                                                            }))}
+                                                        >
+                                                            <i className={`bi bi-eye${showPasswords.confirm ? '-slash' : ''}`}></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
 
-                {message && (
-                    <div className={`custom-alert ${messageType}`}>
-                        <i className={`fas ${messageType === "error" ? "fa-times-circle" :
-                                messageType === "success" ? "fa-check-circle" :
-                                    messageType === "warning" ? "fa-exclamation-triangle" :
-                                        "fa-info-circle"
-                            }`}></i>
-                        <span>{message}</span>
-                    </div>
-                )}
+                                                {message && (
+                                                    <div className={`custom-alert ${messageType}`}>
+                                                        <i className={`fas ${messageType === "error" ? "fa-times-circle" :
+                                                            messageType === "success" ? "fa-check-circle" :
+                                                                messageType === "warning" ? "fa-exclamation-triangle" :
+                                                                    "fa-info-circle"
+                                                            }`}></i>
+                                                        <span>{message}</span>
+                                                    </div>
+                                                )}
 
-                <div className="modal-actions-new">
-                    <button 
-                        className="action-btn-new primary"
-                        onClick={handlePasswordChange}
-                        disabled={loading || !formData.password || !formData.newPassword || !formData.confirmPassword}
-                    >
-                        {loading ? (
-                            <>
-                                <div className="spinner-small"></div>
-                                Updating...
-                            </>
-                        ) : (
-                            <>
-                                <i className="bi bi-check-circle"></i>
-                                Update Password
-                            </>
-                        )}
-                    </button>
-                    <button 
-                        className="action-btn-new secondary"
-                        onClick={() => setChangingPassword(false)}
-                        disabled={loading}
-                    >
-                        <i className="bi bi-x-circle"></i>
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-)}
+                                                <div className="modal-actions-new">
+                                                    <button
+                                                        className="action-btn-new primary"
+                                                        onClick={handlePasswordChange}
+                                                        disabled={loading || !formData.password || !formData.newPassword || !formData.confirmPassword}
+                                                    >
+                                                        {loading ? (
+                                                            <>
+                                                                <div className="spinner-small"></div>
+                                                                Updating...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <i className="bi bi-check-circle"></i>
+                                                                Update Password
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        className="action-btn-new secondary"
+                                                        onClick={() => setChangingPassword(false)}
+                                                        disabled={loading}
+                                                    >
+                                                        <i className="bi bi-x-circle"></i>
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>Full Name *</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={formData.name}
                                     onChange={(e) => handleInputChange('name', e.target.value)}
                                     disabled={!editMode}
@@ -2480,8 +2482,8 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                             </div>
                             <div className="form-group">
                                 <label>Last Name</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={formData.lastname}
                                     onChange={(e) => handleInputChange('lastname', e.target.value)}
                                     disabled={!editMode}
@@ -2490,8 +2492,8 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                             </div>
                             <div className="form-group">
                                 <label>Title</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={formData.title}
                                     onChange={(e) => handleInputChange('title', e.target.value)}
                                     disabled={!editMode}
@@ -2500,7 +2502,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
                             </div>
                             <div className="form-group">
                                 <label>Language</label>
-                                <select 
+                                <select
                                     value={formData.language}
                                     onChange={(e) => handleInputChange('language', e.target.value)}
                                     disabled={!editMode}
@@ -2536,14 +2538,14 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
         eventStatus: 'all'
     });
     const [showExportModal, setShowExportModal] = useState(false);
-    
+
     // ADD ALL THE MISSING STATES:
     const [exportFilters, setExportFilters] = useState({
         event_type: 'all',
         status: 'all',
         user_id: ''
     });
-    
+
     const [users, setUsers] = useState([]);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showEventModal, setShowEventModal] = useState(false);
@@ -2558,39 +2560,39 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
     }, []);
 
     const fetchInvitationStats = async () => {
-    try {
-        setStatsLoading(true);
-        console.log('Fetching invitation stats...');
-        
-        const formData = new FormData();
-        formData.append('function', 'getInvitationStats');
-        formData.append('admin_user_id', adminUserId);
-        
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('Stats API Response:', data);
-        
-        if (data.success && data.stats) {
-            setInvitationStats(data.stats);
-        } else {
-            console.error('API Error:', data.message);
+        try {
+            setStatsLoading(true);
+            console.log('Fetching invitation stats...');
+
+            const formData = new FormData();
+            formData.append('function', 'getInvitationStats');
+            formData.append('admin_user_id', adminUserId);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Stats API Response:', data);
+
+            if (data.success && data.stats) {
+                setInvitationStats(data.stats);
+            } else {
+                console.error('API Error:', data.message);
+                // Keep default values (0, 0, 0)
+            }
+        } catch (error) {
+            console.error('Network Error:', error);
             // Keep default values (0, 0, 0)
+        } finally {
+            setStatsLoading(false);
         }
-    } catch (error) {
-        console.error('Network Error:', error);
-        // Keep default values (0, 0, 0)
-    } finally {
-        setStatsLoading(false);
-    }
-};
+    };
 
     const fetchInvitationAnalytics = async () => {
 
@@ -2621,12 +2623,12 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -2654,46 +2656,46 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
         }));
     };
 
-const handleExport = async () => {
-    try {
-        setLoading(true);
-        
-        // Create CSV directly from current data (client-side only)
-        let csvContent = "Event Name,Organizer,Invitations Sent,Opened,Responses,Response Rate,Status\n";
-        
-        if (analytics && analytics.length > 0) {
-            analytics.forEach(item => {
-                const safeEventName = (item.eventName || '').replace(/"/g, '""');
-                const safeOrganizer = (item.organizer || 'N/A').replace(/"/g, '""');
-                
-                csvContent += `"${safeEventName}","${safeOrganizer}","${item.sent || 0}","${item.opened || 0}","${item.responded || 0}","${item.responseRate || '0%'}","${item.status || 'draft'}"\n`;
-            });
-        } else {
-            csvContent += "No invitation data available for export\n";
-        }
+    const handleExport = async () => {
+        try {
+            setLoading(true);
 
-        // Create and download CSV
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `invitation_export_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        setShowExportModal(false);
-        logActivity('Invitation Data Exported', 'Exported invitation analytics to CSV');
-        printAlert('Export downloaded successfully!', 'success');
-        
-    } catch (error) {
-        console.error('Error exporting data:', error);
-        printAlert('Export failed: ' + error.message, 'error');
-    } finally {
-        setLoading(false);
-    }
-};
+            // Create CSV directly from current data (client-side only)
+            let csvContent = "Event Name,Organizer,Invitations Sent,Opened,Responses,Response Rate,Status\n";
+
+            if (analytics && analytics.length > 0) {
+                analytics.forEach(item => {
+                    const safeEventName = (item.eventName || '').replace(/"/g, '""');
+                    const safeOrganizer = (item.organizer || 'N/A').replace(/"/g, '""');
+
+                    csvContent += `"${safeEventName}","${safeOrganizer}","${item.sent || 0}","${item.opened || 0}","${item.responded || 0}","${item.responseRate || '0%'}","${item.status || 'draft'}"\n`;
+                });
+            } else {
+                csvContent += "No invitation data available for export\n";
+            }
+
+            // Create and download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `invitation_export_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            setShowExportModal(false);
+            logActivity('Invitation Data Exported', 'Exported invitation analytics to CSV');
+            printAlert('Export downloaded successfully!', 'success');
+
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            printAlert('Export failed: ' + error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const viewEventDetails = (event) => {
         setSelectedEvent(event);
@@ -2712,21 +2714,21 @@ const handleExport = async () => {
     // Sort and filter analytics
     const sortedAnalytics = useMemo(() => {
         if (!analytics || !Array.isArray(analytics)) return [];
-        
+
         return [...analytics].sort((a, b) => {
             let aValue = a[sortField];
             let bValue = b[sortField];
-            
+
             if (sortField === 'responseRate') {
                 aValue = parseFloat(aValue) || 0;
                 bValue = parseFloat(bValue) || 0;
             }
-            
+
             if (sortField === 'sent' || sortField === 'opened' || sortField === 'responded') {
                 aValue = parseInt(aValue) || 0;
                 bValue = parseInt(bValue) || 0;
             }
-            
+
             if (sortDirection === 'asc') {
                 return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
             } else {
@@ -2737,7 +2739,7 @@ const handleExport = async () => {
 
     const filteredAnalytics = useMemo(() => {
         if (!sortedAnalytics) return [];
-        
+
         return sortedAnalytics.filter(item => {
             if (filters.eventStatus !== 'all' && item.status !== filters.eventStatus) {
                 return false;
@@ -2756,14 +2758,14 @@ const handleExport = async () => {
             <div className="admin-content-header">
                 <h2>Invitation Performance Analytics</h2>
                 <div className="header-actions">
-                    <button 
-                        className="btn btn-outline" 
+                    <button
+                        className="btn btn-outline"
                         onClick={refreshData}
                         disabled={loading}
                     >
                         <i className="bi bi-arrow-clockwise"></i> Refresh
                     </button>
-                    <button 
+                    <button
                         className="btn btn-primary"
                         onClick={() => setShowExportModal(true)}
                     >
@@ -2774,59 +2776,59 @@ const handleExport = async () => {
 
             {loading && <div className="loading">Loading invitation data...</div>}
 
-           {/* Analytics Overview Cards */}
-<div className="analytics-overview">
-    <div className="analytics-card">
-        <div className="analytics-icon">
-            <i className="bi bi-envelope"></i>
-        </div>
-        <div className="analytics-content">
-            <h3>Total Invitations Sent</h3>
-            {statsLoading ? (
-                <div className="stats-loading">Loading...</div>
-            ) : (
-                <p className="analytics-number">
-                    {invitationStats.total_invitations?.toLocaleString() || 0}
-                </p>
-            )}
-            <span className="analytics-trend">All events</span>
-        </div>
-    </div>
-    
-    <div className="analytics-card">
-        <div className="analytics-icon">
-            <i className="bi bi-eye"></i>
-        </div>
-        <div className="analytics-content">
-            <h3>Average Open Rate</h3>
-            {statsLoading ? (
-                <div className="stats-loading">Loading...</div>
-            ) : (
-                <p className="analytics-number">
-                    {invitationStats.open_rate || 0}%
-                </p>
-            )}
-            <span className="analytics-trend">Based on responses</span>
-        </div>
-    </div>
-    
-    <div className="analytics-card">
-        <div className="analytics-icon">
-            <i className="bi bi-check-circle"></i>
-        </div>
-        <div className="analytics-content">
-            <h3>Average Response Rate</h3>
-            {statsLoading ? (
-                <div className="stats-loading">Loading...</div>
-            ) : (
-                <p className="analytics-number">
-                    {invitationStats.response_rate || 0}%
-                </p>
-            )}
-            <span className="analytics-trend">All events</span>
-        </div>
-    </div>
-</div>
+            {/* Analytics Overview Cards */}
+            <div className="analytics-overview">
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-envelope"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Total Invitations Sent</h3>
+                        {statsLoading ? (
+                            <div className="stats-loading">Loading...</div>
+                        ) : (
+                            <p className="analytics-number">
+                                {invitationStats.total_invitations?.toLocaleString() || 0}
+                            </p>
+                        )}
+                        <span className="analytics-trend">All events</span>
+                    </div>
+                </div>
+
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-eye"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Average Open Rate</h3>
+                        {statsLoading ? (
+                            <div className="stats-loading">Loading...</div>
+                        ) : (
+                            <p className="analytics-number">
+                                {invitationStats.open_rate || 0}%
+                            </p>
+                        )}
+                        <span className="analytics-trend">Based on responses</span>
+                    </div>
+                </div>
+
+                <div className="analytics-card">
+                    <div className="analytics-icon">
+                        <i className="bi bi-check-circle"></i>
+                    </div>
+                    <div className="analytics-content">
+                        <h3>Average Response Rate</h3>
+                        {statsLoading ? (
+                            <div className="stats-loading">Loading...</div>
+                        ) : (
+                            <p className="analytics-number">
+                                {invitationStats.response_rate || 0}%
+                            </p>
+                        )}
+                        <span className="analytics-trend">All events</span>
+                    </div>
+                </div>
+            </div>
 
             {/* Analytics Table */}
             <div className="analytics-table">
@@ -2849,7 +2851,7 @@ const handleExport = async () => {
                     <span>Status</span>
                     <span>Actions</span>
                 </div>
-                
+
                 <div className="table-body">
                     {filteredAnalytics.map((item, index) => (
                         <div key={index} className="table-row">
@@ -2868,8 +2870,8 @@ const handleExport = async () => {
                                 </span>
                             </span>
                             <span>
-                                <button 
-                                    className="btn-icon" 
+                                <button
+                                    className="btn-icon"
                                     title="View Details"
                                     onClick={() => viewEventDetails(item)}
                                 >
@@ -2900,7 +2902,7 @@ const handleExport = async () => {
                                     <p>Invitation Performance Details</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowEventModal(false)}
                             >
@@ -2919,7 +2921,7 @@ const handleExport = async () => {
                                         <p className="detail-value">{selectedEvent.sent}</p>
                                     </div>
                                 </div>
-                                
+
                                 <div className="detail-card">
                                     <div className="detail-icon">
                                         <i className="bi bi-eye"></i>
@@ -2929,7 +2931,7 @@ const handleExport = async () => {
                                         <p className="detail-value">{selectedEvent.opened}</p>
                                     </div>
                                 </div>
-                                
+
                                 <div className="detail-card">
                                     <div className="detail-icon">
                                         <i className="bi bi-check-circle"></i>
@@ -2939,7 +2941,7 @@ const handleExport = async () => {
                                         <p className="detail-value">{selectedEvent.responded}</p>
                                     </div>
                                 </div>
-                                
+
                                 <div className="detail-card">
                                     <div className="detail-icon">
                                         <i className="bi bi-graph-up"></i>
@@ -2950,9 +2952,9 @@ const handleExport = async () => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="modal-actions">
-                                <button 
+                                <button
                                     className="action-btn secondary"
                                     onClick={() => setShowEventModal(false)}
                                 >
@@ -2979,7 +2981,7 @@ const handleExport = async () => {
                                     <p>Export invitation analytics and performance data</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowExportModal(false)}
                             >
@@ -2990,10 +2992,10 @@ const handleExport = async () => {
                         <div className="modal-body-new">
                             <div className="form-group-new">
                                 <label>Event Status</label>
-                                <select 
+                                <select
                                     className="form-select-new"
                                     value={exportFilters.status}
-                                    onChange={(e) => setExportFilters(prev => ({...prev, status: e.target.value}))}
+                                    onChange={(e) => setExportFilters(prev => ({ ...prev, status: e.target.value }))}
                                 >
                                     <option value="all">All Statuses</option>
                                     <option value="active">Active Only</option>
@@ -3002,10 +3004,10 @@ const handleExport = async () => {
                             </div>
                             <div className="form-group-new">
                                 <label>Specific User (Optional)</label>
-                                <select 
+                                <select
                                     className="form-select-new"
                                     value={exportFilters.user_id}
-                                    onChange={(e) => setExportFilters(prev => ({...prev, user_id: e.target.value}))}
+                                    onChange={(e) => setExportFilters(prev => ({ ...prev, user_id: e.target.value }))}
                                 >
                                     <option value="">All Users</option>
                                     {users.map(user => (
@@ -3016,7 +3018,7 @@ const handleExport = async () => {
                                 </select>
                             </div>
                             <div className="modal-actions-new">
-                                <button 
+                                <button
                                     className="action-btn-new primary"
                                     onClick={handleExport}
                                     disabled={loading}
@@ -3024,7 +3026,7 @@ const handleExport = async () => {
                                     <i className="bi bi-file-earmark-arrow-down"></i>
                                     Export to CSV
                                 </button>
-                                <button 
+                                <button
                                     className="action-btn-new secondary"
                                     onClick={() => setShowExportModal(false)}
                                 >
@@ -3040,7 +3042,6 @@ const handleExport = async () => {
     );
 };
 
-// Enhanced Pricing Tab Content with Logging
 const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     const [activeSection, setActiveSection] = useState('plans');
     const [editingPlan, setEditingPlan] = useState(null);
@@ -3048,9 +3049,11 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         package_type: '',
         max_guests: '',
         max_events: '',
-        price: ''
+        price: '',
+        features: ''
     });
     const [allPlans, setAllPlans] = useState(plans);
+    const [showEditModal, setShowEditModal] = useState(false);
 
     // Keep local plans in sync when parent prop `plans` changes
     useEffect(() => {
@@ -3068,7 +3071,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         billing_cycle: 'monthly'
     });
     const [users, setUsers] = useState([]);
-    
+
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [packageFilter, setPackageFilter] = useState('all');
@@ -3102,12 +3105,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             const formData = new FormData();
             formData.append('function', 'getPaymentHistory');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -3126,27 +3129,26 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             const formData = new FormData();
             formData.append('function', 'getRevenueAnalytics');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
                     setRevenueData(data.analytics);
                 }
             }
-        }  catch (error) {
-        console.error('Revenue analytics endpoint not available:', error);
-        // Provide fallback data
-        setRevenueData({
-            total_revenue: 0,
-            current_month_revenue: 0,
-            payment_status_counts: []
-        });
-    }
+        } catch (error) {
+            console.error('Revenue analytics endpoint not available:', error);
+            setRevenueData({
+                total_revenue: 0,
+                current_month_revenue: 0,
+                payment_status_counts: []
+            });
+        }
     };
 
     const fetchUsers = async () => {
@@ -3154,12 +3156,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -3171,22 +3173,20 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
     };
 
-    // New fetch functions for real data
     const fetchActiveSubscriptions = async () => {
         try {
             const formData = new FormData();
             formData.append('function', 'getActiveSubscriptions');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    // Convert array to object for easy lookup
                     const subscriptionsObj = {};
                     data.subscriptions.forEach(sub => {
                         subscriptionsObj[sub.package_type] = sub.active_subscriptions;
@@ -3204,12 +3204,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             const formData = new FormData();
             formData.append('function', 'getPackageUsageStats');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -3223,32 +3223,32 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
 
     const filteredPayments = useMemo(() => {
         if (!paymentHistory || !Array.isArray(paymentHistory)) return [];
-        
+
         let filtered = [...paymentHistory];
-        
+
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase().trim();
-            filtered = filtered.filter(payment => 
+            filtered = filtered.filter(payment =>
                 (payment.user_name && payment.user_name.toLowerCase().includes(query)) ||
-                (payment.user_email && payment.payment.toLowerCase().includes(query)) ||
+                (payment.user_email && payment.user_email.toLowerCase().includes(query)) ||
                 (payment.payment_id && payment.payment_id.toLowerCase().includes(query)) ||
                 (payment.package_type && payment.package_type.toLowerCase().includes(query))
             );
         }
-        
+
         if (statusFilter !== 'all') {
             filtered = filtered.filter(payment => payment.payment_status === statusFilter);
         }
-        
+
         if (packageFilter !== 'all') {
             filtered = filtered.filter(payment => payment.package_type === packageFilter);
         }
-        
+
         if (dateFilter !== 'all') {
             const now = new Date();
             filtered = filtered.filter(payment => {
                 const paymentDate = new Date(payment.payment_date);
-                
+
                 switch (dateFilter) {
                     case 'today':
                         return paymentDate.toDateString() === now.toDateString();
@@ -3266,11 +3266,11 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 }
             });
         }
-        
+
         filtered.sort((a, b) => {
             let aValue = a[sortBy];
             let bValue = b[sortBy];
-            
+
             if (sortBy === 'amount') {
                 aValue = parseFloat(aValue) || 0;
                 bValue = parseFloat(bValue) || 0;
@@ -3281,14 +3281,14 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 aValue = String(aValue || '').toLowerCase();
                 bValue = String(bValue || '').toLowerCase();
             }
-            
+
             if (sortOrder === 'asc') {
                 return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
             } else {
                 return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
             }
         });
-        
+
         return filtered;
     }, [paymentHistory, searchQuery, statusFilter, packageFilter, dateFilter, sortBy, sortOrder]);
 
@@ -3307,14 +3307,39 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         logActivity('Payment Details Viewed', `Viewed payment details for transaction: ${payment.payment_id}`);
     };
 
+    // Helper function to parse features safely
+    const parseFeatures = (features) => {
+        if (!features) return [];
+        if (typeof features === 'string') {
+            return features.split(',').map(f => f.trim()).filter(f => f.length > 0);
+        }
+        if (Array.isArray(features)) {
+            return features.filter(f => f && typeof f === 'string');
+        }
+        return [];
+    };
+
     const startEditing = (plan) => {
         setEditingPlan(plan.package_id);
+        const rawFeatures = plan.features || ''; // ← safety
+        const parsedFeatures = parseFeatures(rawFeatures);
+
         setEditForm({
             package_type: plan.package_type || '',
             max_guests: plan.max_guests || '',
             max_events: plan.max_events || '',
-            price: plan.price || ''
+            price: plan.price || '',
+            features: parsedFeatures.join(', ')
         });
+        setShowEditModal(true);
+
+        console.group('Edit Modal Opened');
+        console.log('Plan ID:', plan.package_id);
+        console.log('Plan Name:', formatPlanName(plan.package_type));
+        console.log('Raw Features (DB):', plan.features);
+        console.log('Parsed Features:', parsedFeatures);
+        console.log('Features String:', parsedFeatures.join(', '));
+        console.groupEnd();
     };
 
     const cancelEditing = () => {
@@ -3323,8 +3348,10 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             package_type: '',
             max_guests: '',
             max_events: '',
-            price: ''
+            price: '',
+            features: ''
         });
+        setShowEditModal(false);
     };
 
     const handleEditChange = (field, value) => {
@@ -3334,36 +3361,39 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }));
     };
 
-    const savePackage = async (packageId) => {
+    const savePackage = async () => {
+        if (!editingPlan) return;
+
         try {
             const formData = new FormData();
             formData.append('function', 'updatePackage');
-            formData.append('package_id', packageId);
+            formData.append('package_id', editingPlan);
             formData.append('package_type', editForm.package_type);
             formData.append('max_guests', editForm.max_guests);
             formData.append('max_events', editForm.max_events);
             formData.append('price', editForm.price);
+            formData.append('features', editForm.features);
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
             if (data.success) {
-                setAllPlans(prevPlans => 
-                    prevPlans.map(plan => 
-                        plan.package_id === packageId 
+                setAllPlans(prevPlans =>
+                    prevPlans.map(plan =>
+                        plan.package_id === editingPlan
                             ? { ...plan, ...editForm }
                             : plan
                     )
                 );
                 setEditingPlan(null);
-                // Refresh subscription data
+                setShowEditModal(false);
                 fetchActiveSubscriptions();
                 fetchPackageUsageStats();
-                logActivity('Package Updated', 
+                logActivity('Package Updated',
                     `Updated ${editForm.package_type} package: ${editForm.max_events} events, ${editForm.max_guests} guests, R${editForm.price}`
                 );
                 printAlert('Package updated successfully!', 'success');
@@ -3392,17 +3422,15 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             formData.append('amount', manualPaymentForm.amount);
             formData.append('payment_method', manualPaymentForm.payment_method);
             formData.append('billing_cycle', manualPaymentForm.billing_cycle);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
 
-            
-            
             const data = await response.json();
             if (data.success) {
-                logActivity('Manual Payment Added', 
+                logActivity('Manual Payment Added',
                     `Manual payment of R${manualPaymentForm.amount} processed for user ${manualPaymentForm.user_id}`
                 );
                 printAlert('Manual payment added successfully!', 'success');
@@ -3414,7 +3442,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                     payment_method: 'manual',
                     billing_cycle: 'monthly'
                 });
-                // Refresh data
                 fetchPaymentHistory();
                 fetchRevenueAnalytics();
                 fetchActiveSubscriptions();
@@ -3437,12 +3464,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             formData.append('admin_user_id', adminUserId);
             formData.append('payment_id', paymentId);
             formData.append('status', status);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
             if (data.success) {
                 logActivity('Payment Status Updated', `Payment ${paymentId} status changed to ${status}`);
@@ -3465,7 +3492,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         return packageType.charAt(0).toUpperCase() + packageType.slice(1);
     };
 
-    // Real subscription count function
     const getActiveSubscriptions = (packageType) => {
         return activeSubscriptions[packageType] || 0;
     };
@@ -3497,13 +3523,13 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 <h2>Pricing & Payments Management</h2>
                 <div className="header-actions">
                     <div className="tab-buttons">
-                        <button 
+                        <button
                             className={`tab-button ${activeSection === 'plans' ? 'active' : ''}`}
                             onClick={() => setActiveSection('plans')}
                         >
                             Pricing Plans
                         </button>
-                        <button 
+                        <button
                             className={`tab-button ${activeSection === 'payments' ? 'active' : ''}`}
                             onClick={() => setActiveSection('payments')}
                         >
@@ -3518,83 +3544,24 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                     {allPlans.map(plan => (
                         <div key={plan.package_id} className="pricing-plan-card">
                             <div className="plan-header">
-                                <h3>
-                                    {editingPlan === plan.package_id ? (
-                                        <select 
-                                            value={editForm.package_type} 
-                                            onChange={(e) => handleEditChange('package_type', e.target.value)}
-                                            className="form-control-sm"
-                                        >
-                                            <option value="basic">Basic</option>
-                                            <option value="premium">Premium</option>
-                                            <option value="enterprise">Enterprise</option>
-                                        </select>
-                                    ) : (
-                                        formatPlanName(plan.package_type)
-                                    )}
-                                </h3>
+                                <h3>{formatPlanName(plan.package_type)}</h3>
                                 <span className="plan-status active">Active</span>
                             </div>
-                            
+
                             <div className="plan-price">
-                                {editingPlan === plan.package_id ? (
-                                    <div className="price-edit">
-                                        <span className="price-prefix">R</span>
-                                        <input 
-                                            type="number" 
-                                            value={editForm.price} 
-                                            onChange={(e) => handleEditChange('price', e.target.value)}
-                                            className="form-control-sm"
-                                            step="0.01"
-                                            min="0"
-                                            style={{width: '80px'}}
-                                        />
-                                        <span className="price-interval">/monthly</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span className="price-amount">R{plan.price || '0.00'}</span>
-                                        <span className="price-interval">/monthly</span>
-                                    </>
-                                )}
+                                <span className="price-amount">R{plan.price || '0.00'}</span>
+                                <span className="price-interval"></span>
                             </div>
-                            
+
                             <div className="plan-subscriptions">
                                 <i className="bi bi-people"></i>
                                 <span>{getActiveSubscriptions(plan.package_type)} active subscriptions</span>
                             </div>
-                            
+
                             <div className="plan-features">
-                                <h4>Features & Usage:</h4>
+                                <h4>Features:</h4>
                                 <ul>
-                                    <li>
-                                        {editingPlan === plan.package_id ? (
-                                            <input 
-                                                type="number" 
-                                                value={editForm.max_guests} 
-                                                onChange={(e) => handleEditChange('max_guests', e.target.value)}
-                                                className="form-control-sm"
-                                                placeholder="Max Guests"
-                                                style={{width: '120px'}}
-                                            />
-                                        ) : (
-                                            `${plan.max_guests || 0} guests/event`
-                                        )}
-                                    </li>
-                                    <li>
-                                        {editingPlan === plan.package_id ? (
-                                            <input 
-                                                type="number" 
-                                                value={editForm.max_events} 
-                                                onChange={(e) => handleEditChange('max_events', e.target.value)}
-                                                className="form-control-sm"
-                                                placeholder="Max Events"
-                                                style={{width: '120px'}}
-                                            />
-                                        ) : (
-                                            `${plan.max_events || 0} events/month`
-                                        )}
-                                    </li>
+                                    
                                     <li>
                                         <strong>Active Users:</strong> {getActiveSubscriptions(plan.package_type)}
                                     </li>
@@ -3603,45 +3570,26 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                             <strong>Avg Usage:</strong> {Math.round(packageUsageStats.find(stat => stat.package_id === plan.package_id)?.avg_events_used || 0)} events
                                         </li>
                                     )}
-                                    <li>Premium templates</li>
-                                    <li>Email support</li>
-                                    {plan.package_type === 'premium' && <li>Custom branding</li>}
-                                    {plan.package_type === 'enterprise' && <li>Advanced analytics</li>}
-                                    {plan.package_type === 'enterprise' && <li>API access</li>}
+
+                                    {parseFeatures(plan.features).map((feature, index) => (
+                                        <li key={index}>{feature}</li>
+                                    ))}
                                 </ul>
                             </div>
-                            
+
                             <div className="plan-actions">
-                                {editingPlan === plan.package_id ? (
-                                    <>
-                                        <button 
-                                            className="btn btn-success btn-sm"
-                                            onClick={() => savePackage(plan.package_id)}
-                                        >
-                                            <i className="bi bi-check"></i> Save
-                                        </button>
-                                        <button 
-                                            className="btn btn-outline btn-sm"
-                                            onClick={cancelEditing}
-                                        >
-                                            <i className="bi bi-x"></i> Cancel
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button 
-                                        className="btn btn-outline btn-sm"
-                                        onClick={() => startEditing(plan)}
-                                    >
-                                        <i className="bi bi-pencil"></i> Edit
-                                    </button>
-                                )}
+                                <button
+                                    className="btn btn-outline btn-sm"
+                                    onClick={() => startEditing(plan)}
+                                >
+                                    <i className="bi bi-pencil"></i> Edit
+                                </button>
                             </div>
                         </div>
                     ))}
                 </div>
             ) : (
                 <div className="payment-history-section">
-                    {/* Revenue Stats Cards */}
                     <div className="revenue-stats-grid">
                         <div className="revenue-card total">
                             <div className="revenue-icon">
@@ -3655,7 +3603,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 <span className="revenue-trend">All time</span>
                             </div>
                         </div>
-                        
+
                         <div className="revenue-card monthly">
                             <div className="revenue-icon">
                                 <i className="bi bi-graph-up"></i>
@@ -3668,7 +3616,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 <span className="revenue-trend">Current month</span>
                             </div>
                         </div>
-                        
+
                         <div className="revenue-card pending">
                             <div className="revenue-icon">
                                 <i className="bi bi-clock"></i>
@@ -3676,8 +3624,8 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                             <div className="revenue-content">
                                 <h3>Pending Payments</h3>
                                 <p className="revenue-amount">
-                                    {revenueData ? 
-                                        revenueData.payment_status_counts.find(s => s.payment_status === 'pending')?.count || 0 
+                                    {revenueData ?
+                                        revenueData.payment_status_counts.find(s => s.payment_status === 'pending')?.count || 0
                                         : 'Loading...'
                                     }
                                 </p>
@@ -3699,14 +3647,13 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                         </div>
                     </div>
 
-                    {/* Filter, Sort, and Search Controls */}
                     <div className="payment-controls">
                         <div className="control-group">
                             <div className="search-box">
                                 <i className="bi bi-search"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="Search by user name, email, or transaction ID..." 
+                                <input
+                                    type="text"
+                                    placeholder="Search by user name, email, or transaction ID..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -3716,10 +3663,10 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     </button>
                                 )}
                             </div>
-                            
+
                             <div className="filter-controls">
-                                <select 
-                                    value={statusFilter} 
+                                <select
+                                    value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                 >
                                     <option value="all">All Statuses</option>
@@ -3727,9 +3674,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <option value="pending">Pending</option>
                                     <option value="failed">Failed</option>
                                 </select>
-                                
-                                <select 
-                                    value={packageFilter} 
+
+                                <select
+                                    value={packageFilter}
                                     onChange={(e) => setPackageFilter(e.target.value)}
                                 >
                                     <option value="all">All Packages</option>
@@ -3739,9 +3686,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                         </option>
                                     ))}
                                 </select>
-                                
-                                <select 
-                                    value={dateFilter} 
+
+                                <select
+                                    value={dateFilter}
                                     onChange={(e) => setDateFilter(e.target.value)}
                                 >
                                     <option value="all">All Time</option>
@@ -3752,17 +3699,15 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 </select>
                             </div>
                         </div>
-                        
                     </div>
 
-                    {/* Payment History Table */}
                     <div className="payment-table-container">
                         <div className="table-header-actions">
                             <h3>
-                                Payment History 
+                                Payment History
                                 <span className="result-count">({filteredPayments.length} payments)</span>
                             </h3>
-                            <button 
+                            <button
                                 className="btn btn-primary"
                                 onClick={() => setShowManualPayment(true)}
                             >
@@ -3784,14 +3729,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <span className="sortable" onClick={() => handleSort('package_type')}>
                                         Package {sortBy === 'package_type' && (sortOrder === 'asc' ? '↑' : '↓')}
                                     </span>
-                                    <span >
-                                        Amount 
-                                    </span>
+                                    <span>Amount</span>
                                     <span>Method</span>
                                     <span>Status</span>
                                     <span>Actions</span>
                                 </div>
-                                
+
                                 {filteredPayments.map(payment => (
                                     <div key={payment.payment_id} className="table-row">
                                         <span>{formatDate(payment.payment_date)}</span>
@@ -3817,7 +3760,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                         </span>
                                         <span className="actions">
                                             {payment.payment_status === 'pending' && (
-                                                <button 
+                                                <button
                                                     className="btn-icon success"
                                                     onClick={() => updatePaymentStatus(payment.payment_id, 'completed')}
                                                     title="Mark as Completed"
@@ -3826,7 +3769,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                                 </button>
                                             )}
 
-                                            <button 
+                                            <button
                                                 className="btn-icon info"
                                                 onClick={() => viewPaymentDetails(payment)}
                                                 title="View Details"
@@ -3840,7 +3783,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <div key="no-payments" className="no-payments">
                                         <i className="bi bi-receipt"></i>
                                         <p>No payments found matching your criteria</p>
-                                        <button 
+                                        <button
                                             className="btn btn-outline"
                                             onClick={() => {
                                                 setSearchQuery('');
@@ -3859,27 +3802,127 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 </div>
             )}
 
+            {/* Edit Package Modal - FULLY WORKING WITH TAGS */}
+            {showEditModal && (
+                <div className="modal-overlay" onClick={cancelEditing}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Edit Package</h2>
+                            <button className="close-btn" onClick={cancelEditing}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>Package Type *</label>
+                                    <select value={editForm.package_type} onChange={(e) => handleEditChange('package_type', e.target.value)}>
+                                        <option value="basic">Basic</option>
+                                        <option value="premium">Premium</option>
+                                        <option value="enterprise">Enterprise</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Max Guests *</label>
+                                    <input type="number" value={editForm.max_guests} onChange={(e) => handleEditChange('max_guests', e.target.value)} placeholder="Enter max guests" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Max Events *</label>
+                                    <input type="number" value={editForm.max_events} onChange={(e) => handleEditChange('max_events', e.target.value)} placeholder="Enter max events" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Price (R) *</label>
+                                    <input type="number" step="0.01" value={editForm.price} onChange={(e) => handleEditChange('price', e.target.value)} placeholder="0.00" />
+                                </div>
+
+                                <div className="form-group full-width">
+                                    <label>Features *</label>
+                                    <div className="features-tags-input">
+                                        <div className="tags-list">
+                                            {parseFeatures(editForm.features).map((feature, index) => (
+                                                <span key={index} className="feature-tag">
+                                                    {feature}
+                                                    <button
+                                                        type="button"
+                                                        className="remove-tag"
+                                                        onClick={() => {
+                                                            const updated = parseFeatures(editForm.features)
+                                                                .filter((_, i) => i !== index)
+                                                                .join(', ');
+                                                            handleEditChange('features', updated);
+                                                        }}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder={parseFeatures(editForm.features).length === 0 ? "Type a feature and press Enter" : ""}
+                                            className="tag-input"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ',') {
+                                                    e.preventDefault();
+                                                    const val = e.target.value.trim();
+                                                    if (val) {
+                                                        const current = parseFeatures(editForm.features);
+                                                        const newFeatures = val.includes(',') ? val.split(',').map(f => f.trim()).filter(f => f) : [val];
+                                                        const unique = [...new Set([...current, ...newFeatures])];
+                                                        handleEditChange('features', unique.join(', '));
+                                                        e.target.value = '';
+                                                    }
+                                                } else if (e.key === 'Backspace' && e.target.value === '' && parseFeatures(editForm.features).length > 0) {
+                                                    const updated = parseFeatures(editForm.features);
+                                                    updated.pop();
+                                                    handleEditChange('features', updated.join(', '));
+                                                }
+                                            }}
+                                            onBlur={(e) => {
+                                                const val = e.target.value.trim();
+                                                if (val) {
+                                                    const current = parseFeatures(editForm.features);
+                                                    const unique = [...new Set([...current, val])];
+                                                    handleEditChange('features', unique.join(', '));
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <small className="form-help">
+                                        Press Enter or comma to add. Click × or Backspace to remove.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions">
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={savePackage}
+                                    disabled={!editForm.package_type || !editForm.max_guests || !editForm.max_events || !editForm.price || !editForm.features.trim()}
+                                >
+                                    Save Changes
+                                </button>
+                                <button className="btn btn-outline" onClick={cancelEditing}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Manual Payment Modal */}
             {showManualPayment && (
                 <div className="modal-overlay" onClick={() => setShowManualPayment(false)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>Add Manual Payment</h2>
-                            <button 
-                                className="close-btn"
-                                onClick={() => setShowManualPayment(false)}
-                            >
-                                &times;
-                            </button>
+                            <button className="close-btn" onClick={() => setShowManualPayment(false)}>&times;</button>
                         </div>
                         <div className="modal-body">
                             <div className="form-grid">
                                 <div className="form-group">
                                     <label>User *</label>
-                                    <select 
-                                        value={manualPaymentForm.user_id}
-                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, user_id: e.target.value}))}
-                                    >
+                                    <select value={manualPaymentForm.user_id} onChange={(e) => setManualPaymentForm(prev => ({ ...prev, user_id: e.target.value }))}>
                                         <option value="">Select User</option>
                                         {users.map(user => (
                                             <option key={user.user_id} value={user.user_id}>
@@ -3890,10 +3933,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 </div>
                                 <div className="form-group">
                                     <label>Package *</label>
-                                    <select 
-                                        value={manualPaymentForm.package_id}
-                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, package_id: e.target.value}))}
-                                    >
+                                    <select value={manualPaymentForm.package_id} onChange={(e) => setManualPaymentForm(prev => ({ ...prev, package_id: e.target.value }))}>
                                         <option value="">Select Package</option>
                                         {allPlans.map(plan => (
                                             <option key={plan.package_id} value={plan.package_id}>
@@ -3904,37 +3944,21 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 </div>
                                 <div className="form-group">
                                     <label>Amount *</label>
-                                    <input 
-                                        type="number"
-                                        step="0.01"
-                                        value={manualPaymentForm.amount}
-                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, amount: e.target.value}))}
-                                        placeholder="0.00"
-                                    />
+                                    <input type="number" step="0.01" value={manualPaymentForm.amount} onChange={(e) => setManualPaymentForm(prev => ({ ...prev, amount: e.target.value }))} placeholder="0.00" />
                                 </div>
                                 <div className="form-group">
                                     <label>Billing Cycle</label>
-                                    <select 
-                                        value={manualPaymentForm.billing_cycle}
-                                        onChange={(e) => setManualPaymentForm(prev => ({...prev, billing_cycle: e.target.value}))}
-                                    >
+                                    <select value={manualPaymentForm.billing_cycle} onChange={(e) => setManualPaymentForm(prev => ({ ...prev, billing_cycle: e.target.value }))}>
                                         <option value="monthly">Monthly</option>
                                         <option value="yearly">Yearly</option>
                                     </select>
                                 </div>
                             </div>
                             <div className="modal-actions">
-                                <button 
-                                    className="btn btn-primary"
-                                    onClick={handleManualPayment}
-                                    disabled={!manualPaymentForm.user_id || !manualPaymentForm.package_id || !manualPaymentForm.amount}
-                                >
+                                <button className="btn btn-primary" onClick={handleManualPayment} disabled={!manualPaymentForm.user_id || !manualPaymentForm.package_id || !manualPaymentForm.amount}>
                                     Add Payment
                                 </button>
-                                <button 
-                                    className="btn btn-outline"
-                                    onClick={() => setShowManualPayment(false)}
-                                >
+                                <button className="btn btn-outline" onClick={() => setShowManualPayment(false)}>
                                     Cancel
                                 </button>
                             </div>
@@ -3957,10 +3981,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <p>Payment ID: {selectedPayment.payment_id}</p>
                                 </div>
                             </div>
-                            <button 
-                                className="close-btn-new"
-                                onClick={() => setShowPaymentModal(false)}
-                            >
+                            <button className="close-btn-new" onClick={() => setShowPaymentModal(false)}>
                                 <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
@@ -4041,29 +4062,19 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                         <p>{selectedPayment.payment_id}</p>
                                     </div>
                                 </div>
-
-
-            
                             </div>
 
-                            {/* Payment Actions */}
                             <div className="payment-actions-new">
                                 {selectedPayment.payment_status === 'pending' && (
-                                    <button 
-                                        className="action-btn-new success"
-                                        onClick={() => {
-                                            updatePaymentStatus(selectedPayment.payment_id, 'completed');
-                                            setShowPaymentModal(false);
-                                        }}
-                                    >
+                                    <button className="action-btn-new success" onClick={() => {
+                                        updatePaymentStatus(selectedPayment.payment_id, 'completed');
+                                        setShowPaymentModal(false);
+                                    }}>
                                         <i className="bi bi-check-circle"></i>
                                         Mark as Completed
                                     </button>
                                 )}
-                                <button 
-                                    className="action-btn-new secondary"
-                                    onClick={() => setShowPaymentModal(false)}
-                                >
+                                <button className="action-btn-new secondary" onClick={() => setShowPaymentModal(false)}>
                                     <i className="bi bi-x-circle"></i>
                                     Close
                                 </button>
@@ -4075,7 +4086,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         </div>
     );
 };
-
 // Users Tab Content with Logging - FIXED LINKED LIST IMPLEMENTATION
 const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printAlert }) => {
     const [users, setUsers] = useState([]);
@@ -4128,20 +4138,20 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
         try {
             setLoading(true);
             setError(null);
-            
+
             const formData = new FormData();
             formData.append('function', 'getAllUsers');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 const formattedUsers = data.users.map(user => ({
                     id: user.user_id,
@@ -4151,14 +4161,14 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                     status: user.status || 'active',
                     joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
                 }));
-                
+
                 // Initialize linked list with fetched data
                 const newList = new UsersLinkedList();
                 newList.appendAll(formattedUsers);
                 setUsersList(newList);
                 setFilteredUsers(newList.toArray()); // Show all users initially
                 setUsers(formattedUsers);
-                
+
                 logActivity('Users Data Loaded', 'Loaded user management data');
             } else {
                 throw new Error(data.message || 'Failed to fetch users');
@@ -4177,12 +4187,12 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
             formData.append('function', 'getUserEventsCount');
             formData.append('admin_user_id', adminUserId);
             formData.append('user_id', userId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -4198,7 +4208,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
     const handleSearch = (e) => {
         const query = e.target.value;
         setSearchQuery(query);
-        
+
         if (!query.trim()) {
             // Show all users when search is empty
             applyFiltersAndSort(usersList.toArray());
@@ -4212,36 +4222,36 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
     // Helper function to apply status filter and sorting
     const applyFiltersAndSort = (userArray) => {
         let result = [...userArray];
-        
+
         // Apply status filter
         if (selectedStatus !== 'all') {
             result = result.filter(user => user.status === selectedStatus);
         }
-        
+
         // Apply sorting
         result.sort((a, b) => {
             if (sortBy === 'name') {
-                return sortOrder === 'asc' 
-                    ? a.name.localeCompare(b.name) 
+                return sortOrder === 'asc'
+                    ? a.name.localeCompare(b.name)
                     : b.name.localeCompare(a.name);
             } else if (sortBy === 'role') {
-                return sortOrder === 'asc' 
-                    ? a.role.localeCompare(b.role) 
+                return sortOrder === 'asc'
+                    ? a.role.localeCompare(b.role)
                     : b.role.localeCompare(a.role);
             } else if (sortBy === 'status') {
-                return sortOrder === 'asc' 
-                    ? a.status.localeCompare(b.status) 
+                return sortOrder === 'asc'
+                    ? a.status.localeCompare(b.status)
                     : b.status.localeCompare(a.status);
             } else if (sortBy === 'joined') {
                 const dateA = a.joined === 'N/A' ? new Date(0) : new Date(a.joined);
                 const dateB = b.joined === 'N/A' ? new Date(0) : new Date(b.joined);
-                return sortOrder === 'asc' 
+                return sortOrder === 'asc'
                     ? dateA - dateB
                     : dateB - dateA;
             }
             return 0;
         });
-        
+
         setFilteredUsers(result);
     };
 
@@ -4252,7 +4262,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
             setSortBy(column);
             setSortOrder('asc');
         }
-        
+
         // Re-apply sorting to current filtered results
         applyFiltersAndSort(filteredUsers);
     };
@@ -4277,20 +4287,20 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
             formData.append('user_id', userId);
             formData.append('status', newStatus);
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 // Update local linked list immediately for better UX
                 const updated = usersList.updateUser(userId, { status: newStatus });
                 if (updated) {
                     setUsersList(usersList); // Trigger re-render
-                    
+
                     // Update the filtered view
                     if (searchQuery.trim()) {
                         // If searching, update search results
@@ -4301,7 +4311,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                         applyFiltersAndSort(usersList.toArray());
                     }
                 }
-                
+
                 logActivity('User Status Updated', `User ${userId} status changed to ${newStatus}`);
                 printAlert(`User ${newStatus === 'active' ? 'activated' : 'blocked'} successfully!`, 'success');
             } else {
@@ -4316,7 +4326,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
 
     const handleStatusFilterChange = (status) => {
         setSelectedStatus(status);
-        
+
         if (searchQuery.trim()) {
             // If searching, filter the search results
             const searchResults = usersList.findByName(searchQuery);
@@ -4377,7 +4387,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                         <p className="users-number">{totalUsers}</p>
                     </div>
                 </div>
-                
+
                 <div className="users-card">
                     <div className="users-icon">
                         <i className="bi bi-check-circle"></i>
@@ -4387,7 +4397,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                         <p className="users-number">{activeUsers}</p>
                     </div>
                 </div>
-                
+
                 <div className="users-card">
                     <div className="users-icon">
                         <i className="bi bi-x-circle"></i>
@@ -4403,9 +4413,9 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                 <div className="table-controls">
                     <div className="search-box">
                         <i className="bi bi-search"></i>
-                        <input 
-                            type="text" 
-                            placeholder="Search users by name..." 
+                        <input
+                            type="text"
+                            placeholder="Search users by name..."
                             value={searchQuery}
                             onChange={handleSearch}
                         />
@@ -4416,27 +4426,27 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                         )}
                     </div>
                     <div className="filter-controls">
-                        <select 
-                            value={selectedStatus} 
+                        <select
+                            value={selectedStatus}
                             onChange={(e) => handleStatusFilterChange(e.target.value)}
                         >
                             <option value="all">All Statuses</option>
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
-                        <button 
+                        <button
                             className={sortBy === 'name' ? 'active' : ''}
                             onClick={() => handleSort('name')}
                         >
                             Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </button>
-                        <button 
+                        <button
                             className={sortBy === 'role' ? 'active' : ''}
                             onClick={() => handleSort('role')}
                         >
                             Role {sortBy === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </button>
-                        <button 
+                        <button
                             className={sortBy === 'status' ? 'active' : ''}
                             onClick={() => handleSort('status')}
                         >
@@ -4453,7 +4463,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                         <span>Status</span>
                         <span>Actions</span>
                     </div>
-                    
+
                     {filteredUsers.map(user => (
                         <div key={user.id} className="table-row">
                             <span className="user-info">
@@ -4472,19 +4482,19 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                                 </span>
                             </span>
                             <span className="actions">
-                                <button 
-                                    className="btn-icon view-btn" 
+                                <button
+                                    className="btn-icon view-btn"
                                     title="View Details"
                                     onClick={() => viewUserDetails(user)}
                                 >
                                     <i className="bi bi-eye"></i>
                                 </button>
-                                
-                                <button 
-                                    className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`} 
+
+                                <button
+                                    className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`}
                                     title={user.status === 'active' ? 'Block User' : 'Unblock User'}
                                     onClick={() => updateUserStatus(
-                                        user.id, 
+                                        user.id,
                                         user.status === 'active' ? 'inactive' : 'active'
                                     )}
                                 >
@@ -4520,7 +4530,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                                     <p>{selectedUser.email}</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowUserModal(false)}
                             >
@@ -4576,7 +4586,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                             </div>
 
                             <div className="modal-actions">
-                                <button 
+                                <button
                                     className={`action-btn ${selectedUser.status === 'active' ? 'warning' : 'success'}`}
                                     onClick={() => {
                                         updateUserStatus(selectedUser.id, selectedUser.status === 'active' ? 'inactive' : 'active');
@@ -4586,8 +4596,8 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                                     <i className={`bi ${selectedUser.status === 'active' ? 'bi-person-x' : 'bi-person-check'}`}></i>
                                     {selectedUser.status === 'active' ? 'Block User' : 'Activate User'}
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     className="action-btn secondary"
                                     onClick={() => setShowUserModal(false)}
                                 >
@@ -4604,10 +4614,10 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
 };
 
 // Event Management Tab Content with Logging
-const EventManagementTabContent = ({ 
-    adminUserId, 
-    logActivity, 
-    triggerRefresh, 
+const EventManagementTabContent = ({
+    adminUserId,
+    logActivity,
+    triggerRefresh,
     setDashboardData,
     fetchDashboardData,
     fetchInvitationAnalytics,
@@ -4653,12 +4663,12 @@ const EventManagementTabContent = ({
             const formData = new FormData();
             formData.append('function', 'getReportedEvents');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
             if (data.success) {
                 setReportedEvents(data.reportedEvents);
@@ -4677,15 +4687,15 @@ const EventManagementTabContent = ({
             const formData = new FormData();
             formData.append('function', 'getAllEvents');
             formData.append('admin_user_id', adminUserId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const text = await response.text();
             console.log('Raw response:', text);
-            
+
             let data;
             try {
                 data = JSON.parse(text);
@@ -4697,7 +4707,7 @@ const EventManagementTabContent = ({
                     throw new Error('Invalid JSON response from server');
                 }
             }
-            
+
             if (data.success) {
                 setAllEvents(data.events);
             } else {
@@ -4712,7 +4722,7 @@ const EventManagementTabContent = ({
         }
     };
 
-     const handleDeleteEvent = async () => {
+    const handleDeleteEvent = async () => {
         if (!selectedEvent) return;
 
         try {
@@ -4724,7 +4734,7 @@ const EventManagementTabContent = ({
             formData.append('custom_reason', deleteForm.custom_reason);
             formData.append('block_user', deleteForm.block_user ? '1' : '0');
             formData.append('violation_severity', deleteForm.violation_severity);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
@@ -4738,7 +4748,7 @@ const EventManagementTabContent = ({
                 console.error('Delete response parse error:', text);
                 throw new Error('Invalid response from server');
             }
-            
+
             if (data.success) {
                 printAlert('Event deleted successfully' + (deleteForm.block_user ? ' and user blocked' : ''), 'success');
                 setShowDeleteModal(false);
@@ -4749,12 +4759,12 @@ const EventManagementTabContent = ({
                     block_user: false,
                     violation_severity: 'medium'
                 });
-                
+
                 // ✅ USE triggerRefresh and available functions only
                 if (triggerRefresh) {
                     triggerRefresh(); // This should refresh all parent data
                 }
-                
+
                 // Also refresh the specific data we have access to
                 if (fetchDashboardData) {
                     await fetchDashboardData();
@@ -4762,14 +4772,14 @@ const EventManagementTabContent = ({
                 if (fetchInvitationAnalytics) {
                     await fetchInvitationAnalytics();
                 }
-                
+
                 // Refresh current tab data using local functions
                 if (activeSection === 'reported') {
                     await fetchReportedEventsLocal();
                 } else {
                     await fetchAllEventsLocal();
                 }
-                
+
                 logActivity('Event Deleted', `Deleted event ${selectedEvent.event_name} for reason: ${deleteForm.reason}`);
             } else {
                 throw new Error(data.message || 'Failed to delete event');
@@ -4791,12 +4801,12 @@ const EventManagementTabContent = ({
             formData.append('function', 'dismissEventReport');
             formData.append('admin_user_id', adminUserId);
             formData.append('report_id', reportId);
-            
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
-            
+
             const data = await response.json();
             if (data.success) {
                 fetchReportedEventsLocal(); // Use local function
@@ -4824,7 +4834,7 @@ const EventManagementTabContent = ({
             setShowUnpublishedModal(true);
             return;
         }
-        
+
         // Open event in new tab for preview
         window.open(`/rsvpForm?event_id=${event.event_id}`, '_blank');
     };
@@ -4835,7 +4845,7 @@ const EventManagementTabContent = ({
                 <h2>Event Management</h2>
                 <div className="header-actions">
                     <div className="tab-buttons">
-                        <button 
+                        <button
                             className={`tab-button ${activeSection === 'reported' ? 'active' : ''}`}
                             onClick={() => setActiveSection('reported')}
                         >
@@ -4844,15 +4854,15 @@ const EventManagementTabContent = ({
                                 <span className="badge">{reportedEvents.length}</span>
                             )}
                         </button>
-                        <button 
+                        <button
                             className={`tab-button ${activeSection === 'all' ? 'active' : ''}`}
                             onClick={() => setActiveSection('all')}
                         >
                             All Events
                         </button>
                     </div>
-                    <button 
-                        className="btn btn-outline" 
+                    <button
+                        className="btn btn-outline"
                         onClick={activeSection === 'reported' ? fetchReportedEventsLocal : fetchAllEventsLocal} // Use local functions
                         disabled={loading}
                     >
@@ -4885,7 +4895,7 @@ const EventManagementTabContent = ({
                                             Reported: {new Date(report.reported_at).toLocaleDateString()}
                                         </span>
                                     </div>
-                                    
+
                                     <div className="event-details">
                                         <div className="detail-row">
                                             <label>Event Owner:</label>
@@ -4919,19 +4929,19 @@ const EventManagementTabContent = ({
                                     )}
 
                                     <div className="action-buttons">
-                                        <button 
+                                        <button
                                             className="btn btn-danger"
                                             onClick={() => openDeleteModal(report)}
                                         >
                                             <i className="bi bi-trash"></i> Review & Delete
                                         </button>
-                                        <button 
+                                        <button
                                             className="btn btn-outline"
                                             onClick={() => dismissReport(report.id)}
                                         >
                                             <i className="bi bi-x-circle"></i> Dismiss Report
                                         </button>
-                                        <button 
+                                        <button
                                             className={`btn btn-secondary ${!report.published ? 'disabled' : ''}`}
                                             onClick={() => viewEventPreview(report)}
                                             disabled={!report.published}
@@ -4963,7 +4973,7 @@ const EventManagementTabContent = ({
                             <span>Reports</span>
                             <span>Actions</span>
                         </div>
-                        
+
                         {allEvents.map(event => (
                             <div key={event.event_id} className="table-row">
                                 <span className="event-name">{event.event_name}</span>
@@ -4982,7 +4992,7 @@ const EventManagementTabContent = ({
                                     )}
                                 </span>
                                 <span className="actions">
-                                    <button 
+                                    <button
                                         className={`btn-icon view-btn ${!event.published ? 'disabled' : ''}`}
                                         onClick={() => viewEventPreview(event)}
                                         disabled={!event.published}
@@ -4990,7 +5000,7 @@ const EventManagementTabContent = ({
                                     >
                                         <i className="bi bi-eye"></i>
                                     </button>
-                                    <button 
+                                    <button
                                         className="btn-icon delete-btn"
                                         onClick={() => openDeleteModal(event)}
                                     >
@@ -5017,7 +5027,7 @@ const EventManagementTabContent = ({
                                     <p>Review and confirm event deletion</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowDeleteModal(false)}
                             >
@@ -5040,10 +5050,10 @@ const EventManagementTabContent = ({
 
                             <div className="form-group-new">
                                 <label>Deletion Reason *</label>
-                                <select 
+                                <select
                                     className="form-select-new"
                                     value={deleteForm.reason}
-                                    onChange={(e) => setDeleteForm(prev => ({...prev, reason: e.target.value}))}
+                                    onChange={(e) => setDeleteForm(prev => ({ ...prev, reason: e.target.value }))}
                                     required
                                 >
                                     <option value="">Select a reason</option>
@@ -5058,10 +5068,10 @@ const EventManagementTabContent = ({
                             {deleteForm.reason === 'other' && (
                                 <div className="form-group-new">
                                     <label>Custom Reason *</label>
-                                    <textarea 
+                                    <textarea
                                         className="form-textarea-new"
                                         value={deleteForm.custom_reason}
-                                        onChange={(e) => setDeleteForm(prev => ({...prev, custom_reason: e.target.value}))}
+                                        onChange={(e) => setDeleteForm(prev => ({ ...prev, custom_reason: e.target.value }))}
                                         placeholder="Please specify the reason for deletion..."
                                         required
                                     />
@@ -5070,10 +5080,10 @@ const EventManagementTabContent = ({
 
                             <div className="form-group-new">
                                 <label>Violation Severity</label>
-                                <select 
+                                <select
                                     className="form-select-new"
                                     value={deleteForm.violation_severity}
-                                    onChange={(e) => setDeleteForm(prev => ({...prev, violation_severity: e.target.value}))}
+                                    onChange={(e) => setDeleteForm(prev => ({ ...prev, violation_severity: e.target.value }))}
                                 >
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
@@ -5084,10 +5094,10 @@ const EventManagementTabContent = ({
 
                             <div className="form-check-new">
                                 <label className="checkbox-label">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         checked={deleteForm.block_user}
-                                        onChange={(e) => setDeleteForm(prev => ({...prev, block_user: e.target.checked}))}
+                                        onChange={(e) => setDeleteForm(prev => ({ ...prev, block_user: e.target.checked }))}
                                     />
                                     <span className="checkmark"></span>
                                     Also block event owner from creating new events
@@ -5098,7 +5108,7 @@ const EventManagementTabContent = ({
                             </div>
 
                             <div className="modal-actions-new">
-                                <button 
+                                <button
                                     className="action-btn-new danger"
                                     onClick={handleDeleteEvent}
                                     disabled={!deleteForm.reason || (deleteForm.reason === 'other' && !deleteForm.custom_reason)}
@@ -5106,7 +5116,7 @@ const EventManagementTabContent = ({
                                     <i className="bi bi-trash"></i>
                                     Delete Event{deleteForm.block_user ? ' & Block User' : ''}
                                 </button>
-                                <button 
+                                <button
                                     className="action-btn-new secondary"
                                     onClick={() => setShowDeleteModal(false)}
                                 >
@@ -5133,7 +5143,7 @@ const EventManagementTabContent = ({
                                     <p>This event is not available for viewing</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowUnpublishedModal(false)}
                             >
@@ -5154,7 +5164,7 @@ const EventManagementTabContent = ({
                             </div>
 
                             <div className="modal-actions-new">
-                                <button 
+                                <button
                                     className="action-btn-new primary"
                                     onClick={() => setShowUnpublishedModal(false)}
                                 >

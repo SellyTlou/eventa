@@ -1902,6 +1902,7 @@ try {
         $maxGuests   = $_POST['max_guests'] ?? '';
         $maxEvents   = $_POST['max_events'] ?? '';
         $price       = $_POST['price'] ?? '';
+        $features    = $_POST['features'] ?? '';
 
         if (! verifyAdminAccess($pdo, $adminUserId)) {
             echo json_encode([
@@ -1919,7 +1920,7 @@ try {
         try {
             $stmt = $pdo->prepare("
             UPDATE packagetb
-            SET package_type = :package_type, max_guests = :max_guests, max_events = :max_events, price = :price
+            SET package_type = :package_type, max_guests = :max_guests, max_events = :max_events, price = :price, features = :features
             WHERE package_id = :package_id
         ");
 
@@ -1928,6 +1929,7 @@ try {
                 ':max_guests'   => (int) $maxGuests,
                 ':max_events'   => (int) $maxEvents,
                 ':price'        => (float) $price,
+                ':features'     => $features,
                 ':package_id'   => $packageId,
             ]);
 
@@ -2960,7 +2962,7 @@ try {
         exit;
     }
 
-     if ($fun === "getGuestMessageByEmail") {
+    if ($fun === "getGuestMessageByEmail") {
         $event_id = $_POST['event_id'] ?? '';
         $email    = trim(strtolower($_POST['email'] ?? ''));
 
@@ -3118,7 +3120,7 @@ try {
         }
         exit;
     }
-    
+
     if ($fun === "getGuestInsights") {
         $event_id = $_POST['event_id'] ?? '';
 
@@ -3495,18 +3497,22 @@ try {
         }
 
         try {
-            // Get package usage statistics
+            // Get package usage statistics + features
             $stmt = $pdo->prepare("
             SELECT
                 p.package_id,
                 p.package_type,
+                p.features,                    -- ADD THIS LINE
+                p.max_guests,                  -- Optional: include limits
+                p.max_events,                  -- Optional
+                p.price,                       -- Optional
                 COUNT(up.user_id) as total_users,
                 AVG(up.event_used) as avg_events_used,
                 AVG(up.event_limit) as avg_event_limit,
                 SUM(up.event_used) as total_events_used
             FROM packagetb p
             LEFT JOIN user_packages up ON p.package_id = up.package_id
-            GROUP BY p.package_id, p.package_type
+            GROUP BY p.package_id, p.package_type, p.features, p.max_guests, p.max_events, p.price
         ");
             $stmt->execute();
             $usageStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
