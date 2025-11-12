@@ -1428,9 +1428,9 @@ Features Page Styling - PAGE SPECIFIC
 }
 
 .features-page .feature-card .btn-view-more {
-  background-color: transparent;
-  border: 2px solid #00b4d8;
-  color: #000;
+  background-color: #007bff; /* Solid blue */
+  border: 2px solid #007bff; /* Solid blue border */
+  color: white; /* White text */
   padding: 10px 20px;
   border-radius: 25px;
   font-weight: 500;
@@ -1438,10 +1438,12 @@ Features Page Styling - PAGE SPECIFIC
 }
 
 .features-page .feature-card .btn-view-more:hover {
-  background-color: #fff;
-  color: #00b4d8;
+  background-color: #0056b3; /* Darker blue on hover */
+  border-color: #0056b3; /* Darker blue border on hover */
+  color: white; /* Keep white text */
   transform: translateY(-2px);
 }
+
 
 /* Slider Wrapper */
 .features-page .features-tabs-section .features-slider-wrapper {
@@ -7979,4 +7981,458 @@ body,
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Features Page Styles */
+.features-page {
+    padding: 20px 0;
+}
+
+.features-hero {
+    padding: 60px 0;
+    text-align: center;
+}
+
+.features-hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.features-hero .lead {
+    font-size: 1.2rem;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Features Tabs Section */
+.features-tabs-section {
+    padding: 40px 0;
+}
+
+.navBtn {
+    justify-content: center;
+    margin-bottom: 40px;
+    gap: 15px;
+}
+
+.navBtn .btn {
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.section-header {
+    margin-bottom: 40px;
+}
+
+.section-header h2 {
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.section-header p {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+/* Features Slider Wrapper */
+.features-slider-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* Slider Buttons */
+.slider-btn {
+    background: #007bff; 
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.slider-btn:hover {
+    background: #0056b3;
+    transform: scale(1.1);
+}
+
+/* Cards Container - Row layout like team members */
+.cards-container {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    align-items: stretch;
+    flex: 1;
+    max-width: 1200px;
+}
+
+/* Feature Cards - Team member style layout */
+.feature-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px 25px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+    flex: 1;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 350px;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.feature-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 25px;
+    background: #667eea; /* Solid blue instead of gradient */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+    transform: scale(1.1);
+}
+
+.feature-card h4 {
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+    color: #333;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.feature-card p {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    flex-grow: 1;
+    font-size: 1rem;
+}
+
+/* Solid blue button - no gradient */
+.btn-view-more {
+    background: blue; 
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.btn-view-more:hover {
+    background: #0056b3; 
+    transform: translateY(-2px);
+    color: white;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+/* Mobile Indicators */
+.mobile-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.indicator-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ddd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.indicator-dot.active {
+    background: #667eea;
+    transform: scale(1.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .features-hero {
+        padding: 40px 0;
+    }
+    
+    .features-hero h1 {
+        font-size: 2rem;
+    }
+    
+    .features-tabs-section {
+        padding: 30px 0;
+    }
+    
+    .navBtn {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .navBtn .btn {
+        width: 200px;
+        margin-bottom: 10px;
+    }
+    
+    .cards-container {
+        gap: 20px;
+    }
+    
+    .feature-card {
+        min-height: 300px;
+        padding: 25px 20px;
+        max-width: 300px;
+    }
+    
+    .feature-icon {
+        width: 70px;
+        height: 70px;
+        font-size: 1.6rem;
+    }
+    
+    .feature-card h4 {
+        font-size: 1.3rem;
+    }
+    
+    .slider-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .features-slider-wrapper {
+        gap: 10px;
+    }
+    
+    .cards-container {
+        gap: 15px;
+    }
+    
+    .feature-card {
+        min-height: 280px;
+        padding: 20px 15px;
+        max-width: 280px;
+    }
+    
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.4rem;
+    }
+    
+    .feature-card h4 {
+        font-size: 1.2rem;
+    }
+    
+    .feature-card p {
+        font-size: 0.95rem;
+    }
+    
+    .btn-view-more {
+        padding: 10px 25px;
+        font-size: 0.9rem;
+    }
+}
+
+/* All active tabs with white background */
+.nav-list .nav-item .nav-link.active {
+    background-color: white !important;
+    color: #000 !important;
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+
+.mobile-nav-list .mobile-nav-link.active {
+    background-color: white !important;
+    color: #000 !important;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin: 2px 0;
+}
+
+/* Professional Corporate Sidebar Styles */
+.admin-dashboard-sidebar {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    border-right: 1px solid #334155;
+    padding: 0;
+    width: 280px;
+    min-height: 100vh;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.admin-dashboard-logo {
+    padding: 24px 20px;
+    border-bottom: 1px solid #334155;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-container i {
+    font-size: 2rem;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.logo-content h3 {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.logo-content span {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+.admin-dashboard-nav {
+    padding: 20px 0;
+}
+
+.admin-dashboard-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.admin-dashboard-nav-item {
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.nav-item-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    color: #cbd5e0;
+    transition: all 0.3s ease;
+}
+
+.admin-dashboard-nav-item:hover .nav-item-content {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.admin-dashboard-nav-item.active .nav-item-content {
+    background: rgba(59, 130, 246, 0.1);
+    color: white;
+    border-right: 3px solid #3b82f6;
+}
+
+.nav-indicator {
+    display: none;
+}
+
+.admin-dashboard-nav-item.active .nav-indicator {
+    display: block;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: #3b82f6;
+    border-radius: 50%;
+}
+
+.admin-dashboard-nav-item i {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.admin-dashboard-nav-item.active i {
+    opacity: 1;
+    color: #3b82f6;
+}
+
+.admin-dashboard-nav-item span {
+    font-weight: 500;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.nav-divider {
+    padding: 16px 24px 8px 24px;
+    margin-top: 8px;
+}
+
+.nav-divider span {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Ensure main content doesn't get hidden behind fixed sidebar */
+.admin-dashboard-main {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .admin-dashboard-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .admin-dashboard-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .admin-dashboard-main {
+        margin-left: 0;
+        width: 100%;
+    }
 }

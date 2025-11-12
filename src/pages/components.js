@@ -675,7 +675,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             const formData = new FormData();
             formData.append("function", "saveSecurityQuestions");
             formData.append("user_id", userId);
-            formData.append("question1", "What was the name of your first pet?");
+            formData.append("question1", "What Primary school did you attend?");
             formData.append("answer1", answers.answer1);
             formData.append("question2", "What city were you born in?");
             formData.append("answer2", answers.answer2);
