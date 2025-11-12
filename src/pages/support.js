@@ -53,7 +53,7 @@ function Support() {
                 {/* Hero Section */}
                 <section className="header-section">
                     <img
-                        src="/images/Sales.png"
+                        src="/images/support.jpg"
                         alt="Support hero background"
                         className="hero-bg-img"
                     />

@@ -10,14 +10,14 @@ const SecurityQuestionsModal = ({ isOpen, onClose, onSave, mode = "registration"
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [questions, setQuestions] = useState({
-        question1: "What was the name of your first pet?",
+        question1: "what Primary school did you attend?",
         question2: "What city were you born in?",
         question3: "What is your mother's maiden name?"
     });
 
     // Predefined questions for registration
     const predefinedQuestions = {
-        question1: "What was the name of your first pet?",
+        question1: "What Primary school did you attend?",
         question2: "What city were you born in?",
         question3: "What is your mother's maiden name?"
     };

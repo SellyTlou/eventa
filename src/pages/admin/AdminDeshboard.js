@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import "../../App.css";
 import "../../index.css";
 import "../../alert.css"
-import { Footer } from "../components";
 import activityQueue from "../activityQueue";
 
 // ==================== PRODUCTION-READY TREE SET ====================
@@ -172,7 +171,7 @@ class UsersLinkedList {
         this.tail = null;
         this.size = 0;
         this.lookup = new Map();
-        this.nameIndex = new Map(); // NEW: Index for name searches
+        this.nameIndex = new Map(); 
     }
 
     // Add user to the end - FIXED
@@ -207,18 +206,18 @@ class UsersLinkedList {
         return this;
     }
 
-    // Find user by ID (O(1) with hash map) - FIXED
+    // Find user by ID (O(1) with hash map)
     findById(userId) {
         const node = this.lookup.get(userId);
         return node ? node.data : null;
     }
 
-    // Find users by name (O(1) with index) - FIXED
+    // Find users by name (O(1) with index)
     findByName(name) {
         const searchTerm = name.toLowerCase().trim();
         const results = [];
         
-        // FIXED: Use the name index for fast lookup
+        // Use the name index for fast lookup
         for (let [nameKey, nodes] of this.nameIndex) {
             if (nameKey.includes(searchTerm)) {
                 nodes.forEach(node => results.push(node.data));
@@ -228,7 +227,7 @@ class UsersLinkedList {
         return results;
     }
 
-    // Convert to array (for React state) - FIXED
+    
     toArray() {
         const array = [];
         let current = this.head;
@@ -241,11 +240,11 @@ class UsersLinkedList {
         return array;
     }
 
-    // Update user data - FIXED
+    // Update user data 
     updateUser(userId, newData) {
         const node = this.lookup.get(userId);
         if (node) {
-            // FIXED: Update name index if name changed
+            //Update name index if name changed
             const oldName = node.data.name.toLowerCase();
             const newName = newData.name ? newData.name.toLowerCase() : oldName;
             
@@ -280,7 +279,7 @@ class UsersLinkedList {
         const node = this.lookup.get(userId);
         if (!node) return false;
 
-        // FIXED: Remove from name index
+        //  Remove from name index
         const nameKey = node.data.name.toLowerCase();
         const nameNodes = this.nameIndex.get(nameKey);
         if (nameNodes) {
@@ -1475,46 +1474,72 @@ function AdminDashboard() {
             )}
                 <div className="admin-dashboard-container">
                     {/* Sidebar Navigation */}
-                   <aside className="admin-dashboard-sidebar">
+<aside className="admin-dashboard-sidebar">
     <div className="admin-dashboard-logo">
-        <h2>System Management</h2>
+        <div className="logo-container">
+            <i className="bi bi-building-gear"></i>
+            <div className="logo-content">
+                <h3>Evendi Admin</h3>
+                <span>Control Center</span>
+            </div>
+        </div>
     </div>
+    
     <nav className="admin-dashboard-nav">
         <ul>
             <li 
                 className={`admin-dashboard-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
                 onClick={() => setActiveTab("dashboard")}
             >
-                <i className="bi bi-speedometer2"></i>
-                <span>Dashboard</span>
+                <div className="nav-item-content">
+                    <i className="bi bi-grid-1x2"></i>
+                    <span>Dashboard Overview</span>
+                </div>
+                <div className="nav-indicator"></div>
             </li>
+            
+            <li className="nav-divider">
+                <span>Content Management</span>
+            </li>
+            
             <li 
                 className={`admin-dashboard-nav-item ${activeTab === "event-management" ? "active" : ""}`}
                 onClick={() => setActiveTab("event-management")}
             >
-                <i className="bi bi-shield-check"></i>
-                <span>Event Management</span>
+                <div className="nav-item-content">
+                    <i className="bi bi-calendar-week"></i>
+                    <span>Event Management</span>
+                </div>
             </li>
-            <li 
-                className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
-                onClick={() => setActiveTab("invitations")}
-            >
-                <i className="bi bi-envelope"></i>
-                <span>Invitations</span>
-            </li>
-            <li 
-                className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
-                onClick={() => setActiveTab("pricing")}
-            >
-                <i className="bi bi-tags"></i>
-                <span>Pricing Plans</span>
-            </li>
+            
             <li 
                 className={`admin-dashboard-nav-item ${activeTab === "users" ? "active" : ""}`}
                 onClick={() => setActiveTab("users")}
             >
-                <i className="bi bi-people"></i>
-                <span>User Management</span>
+                <div className="nav-item-content">
+                    <i className="bi bi-person-gear"></i>
+                    <span>User Administration</span>
+                </div>
+            </li>
+            
+            <li 
+                className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
+                onClick={() => setActiveTab("invitations")}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-send-check"></i>
+                    <span>Invitation Analytics</span>
+                </div>
+            </li>
+            
+            <li 
+                className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
+                onClick={() => setActiveTab("pricing")}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-graph-up"></i>
+                    <span>Revenue & Pricing</span>
+                </div>
             </li>
         </ul>
     </nav>
@@ -1908,7 +1933,6 @@ function AdminDashboard() {
                 </div>
             )}
 
-            <Footer />
         </>
     );
 }

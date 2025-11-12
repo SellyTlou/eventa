@@ -117,28 +117,32 @@ function Features() {
     const handleNext = () => {
         const currentCards = featureSections[activeTab];
         const newIndex = (startIndex + 1) % currentCards.length;
-        setStartIndex(newIndex);
         
-        // Update tab if we're at the last card and need to switch categories
+        // If we're at the last card and there are more tabs, switch to next tab
         if (newIndex === 0 && currentCards.length === 3) {
             const tabs = Object.keys(featureSections);
             const currentIndex = tabs.indexOf(activeTab);
             const nextIndex = (currentIndex + 1) % tabs.length;
             setActiveTab(tabs[nextIndex]);
+            setStartIndex(0); // Reset to first card of new tab
+        } else {
+            setStartIndex(newIndex);
         }
     };
 
     const handlePrev = () => {
         const currentCards = featureSections[activeTab];
         const newIndex = (startIndex - 1 + currentCards.length) % currentCards.length;
-        setStartIndex(newIndex);
         
-        // Update tab if we're at the first card and need to switch categories
+        // If we're at the first card and there are previous tabs, switch to previous tab
         if (newIndex === currentCards.length - 1 && currentCards.length === 3) {
             const tabs = Object.keys(featureSections);
             const currentIndex = tabs.indexOf(activeTab);
             const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
             setActiveTab(tabs[prevIndex]);
+            setStartIndex(featureSections[tabs[prevIndex]].length - 1); // Start at last card of new tab
+        } else {
+            setStartIndex(newIndex);
         }
     };
 
@@ -271,15 +275,15 @@ function Features() {
                                 <p>Discover our comprehensive {activeTab.toLowerCase()} designed to streamline your event planning process</p>
                             </div>
 
-                            {/* Cards Slider */}
-                        <div className="features-slider-wrapper">
+                            {/* Cards Slider - All tabs in row layout */}
+                            <div className="features-slider-wrapper">
                                 <button className="slider-btn" onClick={handlePrev}>
                                     <i className="bi bi-caret-left"></i>
                                 </button>
                                 
                                 <div className="cards-container features-row">
                                     {getVisibleCards().map((card) => (
-                                        <div key={card.id} className="col-lg-4 feature-card">
+                                        <div key={card.id} className="feature-card">
                                             <div className="feature-icon">
                                                 <i className={card.icon}></i>
                                             </div>
