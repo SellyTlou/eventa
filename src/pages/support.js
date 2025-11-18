@@ -53,7 +53,7 @@ function Support() {
                 {/* Hero Section */}
                 <section className="header-section">
                     <img
-                        src="/images/support.jpg"
+                        src="/images/support.png"
                         alt="Support hero background"
                         className="hero-bg-img"
                     />
@@ -164,7 +164,7 @@ function Support() {
                 {/* Contact CTA */}
                 <section className="cta-banner text-light d-flex align-items-center">
                     <img
-                        src="/images/SalesHero.png"
+                        src="/images/SalesHero.jpeg"
                         alt="Support CTA background"
                         className="cta-bg-img"
                     />

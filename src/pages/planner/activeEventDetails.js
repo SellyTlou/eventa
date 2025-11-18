@@ -71,7 +71,7 @@ function ActiveEventDetails() {
             const startDate = new Date(eventStartDate);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             // Return the later date between start date and today
             return startDate > today ? eventStartDate : getTodayDate();
         }
@@ -132,7 +132,7 @@ function ActiveEventDetails() {
             if (endDate < startDate) {
                 return "End date cannot be before start date";
             }
-            
+
             // Also check if end date is in the past
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -142,16 +142,16 @@ function ActiveEventDetails() {
         }
 
         // Time comparison validation
-        if (rules.afterStartTime && value && allValues.eventStartTime && 
+        if (rules.afterStartTime && value && allValues.eventStartTime &&
             allValues.eventStartDate && allValues.eventEndDate) {
-            
+
             const startDateTime = new Date(`${allValues.eventStartDate}T${allValues.eventStartTime}`);
             const endDateTime = new Date(`${allValues.eventEndDate}T${value}`);
-            
+
             if (startDateTime.getTime() === endDateTime.getTime()) {
                 return "End time cannot be the same as start time";
             }
-            
+
             if (endDateTime <= startDateTime) {
                 return "End time must be after start time";
             }
@@ -206,7 +206,7 @@ function ActiveEventDetails() {
 
     const handleBlur = (fieldName) => {
         setTouched(prev => ({ ...prev, [fieldName]: true }));
-        
+
         // Validate individual field on blur
         const allValues = {
             eventStartDate,
@@ -217,7 +217,7 @@ function ActiveEventDetails() {
             eventLocation,
             timezone
         };
-        
+
         const error = validateField(fieldName, allValues[fieldName], allValues);
         setErrors(prev => ({ ...prev, [fieldName]: error }));
     };
@@ -333,216 +333,221 @@ function ActiveEventDetails() {
     };
 
     return (
-        <div>
+        <>
             <LoginNav />
-            <button
-                className="eventa-back-btn"
-                onClick={handleBack}
-            >
-                &#8592; Back
-            </button>
-            <div className="progressBar">
+            <div className="eventDetails-page">
+                <button
+                    className="eventa-back-btn"
+                    onClick={handleBack}
+                >
+                    &#8592; Back
+                </button>
                 <div className="container">
-                    <div className="row">
-                        <div className={getStepClass(1)}>
-                            <div className="step-circle">1</div>
-                            <div className="step-label">Event Name</div>
-                        </div>
-                        <div className={getStepClass(2)}>
-                            <div className="step-circle">2</div>
-                            <div className="step-label">Event Details</div>
-                        </div>
-                        <div className={getStepClass(3)}>
-                            <div className="step-circle">3</div>
-                            <div className="step-label">Choose a Theme</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="create-event-container" id="createEventPage">
-                <div className="create-event-body">
-                    {/* Step 1: Event Name */}
-                    {currentStep === 1 && (
-                        <div className="event-step">
-                            {errors.general && <div className="form-error">{errors.general}</div>}
-                            <h2 className="step-title">What's the name of your Event</h2>
-                            <p className="step-subtitle">Type the name of your Event</p>
-                            <div className="form-group-event">
-                                <input
-                                    type="text"
-                                    className={`form-control-event ${shouldShowError('eventName') ? 'error' : ''}`}
-                                    id="eventName"
-                                    placeholder="e.g., mfana's Birthday Party"
-                                    value={eventName}
-                                    onChange={(e) => setEventName(e.target.value)}
-                                    onBlur={() => handleBlur('eventName')}
-                                />
-                                {shouldShowError('eventName') && (
-                                    <div className="field-error">{errors.eventName}</div>
-                                )}
+                    <div className="progressBar">
+                        <div className="container">
+                            <div className="row">
+                                <div className={getStepClass(1)}>
+                                    <div className="step-circle">1</div>
+                                    <div className="step-label">Event Name</div>
+                                </div>
+                                <div className={getStepClass(2)}>
+                                    <div className="step-circle">2</div>
+                                    <div className="step-label">Event Details</div>
+                                </div>
+                                <div className={getStepClass(3)}>
+                                    <div className="step-circle">3</div>
+                                    <div className="step-label">Choose a Theme</div>
+                                </div>
                             </div>
                         </div>
-                    )}
+                    </div>
 
-                    {/* Step 2: Event Details with sub-steps (removed URL sub-step) */}
-                    {currentStep === 2 && (
-                        <div className="event-step">
-                            {errors.general && <div className="form-error">{errors.general}</div>}
-                            <h2 className="step-title">Event Details</h2>
-                            {step2SubStep === 1 && (
-                                <>
-                                    <p className="step-subtitle">
-                                        When is Your Event? <span className="text-muted">Not sure yet? You can add things later.</span>
-                                    </p>
-                                    <div className="datetime-row">
-                                        <div className="datetime-group">
-                                            <label htmlFor="eventStartDate">EVENT START - Date</label>
-                                            <input
-                                                type="date"
-                                                className={`form-control-event ${shouldShowError('eventStartDate') ? 'error' : ''}`}
-                                                id="eventStartDate"
-                                                value={eventStartDate}
-                                                onChange={(e) => setEventStartDate(e.target.value)}
-                                                onBlur={() => handleBlur('eventStartDate')}
-                                                min={getTodayDate()}
-                                            />
-                                            {shouldShowError('eventStartDate') && (
-                                                <div className="field-error">{errors.eventStartDate}</div>
-                                            )}
-                                        </div>
-                                        <div className="datetime-group">
-                                            <label htmlFor="eventStartTime">Time</label>
-                                            <input
-                                                type="time"
-                                                className={`form-control-event ${shouldShowError('eventStartTime') ? 'error' : ''}`}
-                                                id="eventStartTime"
-                                                value={eventStartTime}
-                                                onChange={(e) => setEventStartTime(e.target.value)}
-                                                onBlur={() => handleBlur('eventStartTime')}
-                                            />
-                                            {shouldShowError('eventStartTime') && (
-                                                <div className="field-error">{errors.eventStartTime}</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="datetime-row">
-                                        <div className="datetime-group">
-                                            <label htmlFor="eventEndDate">EVENT END - Date</label>
-                                            <input
-                                                type="date"
-                                                className={`form-control-event ${shouldShowError('eventEndDate') ? 'error' : ''}`}
-                                                id="eventEndDate"
-                                                value={eventEndDate}
-                                                onChange={(e) => setEventEndDate(e.target.value)}
-                                                onBlur={() => handleBlur('eventEndDate')}
-                                                min={getMinEndDate()}
-                                            />
-                                            {shouldShowError('eventEndDate') && (
-                                                <div className="field-error">{errors.eventEndDate}</div>
-                                            )}
-                                        </div>
-                                        <div className="datetime-group">
-                                            <label htmlFor="eventEndTime">Time</label>
-                                            <input
-                                                type="time"
-                                                className={`form-control-event ${shouldShowError('eventEndTime') ? 'error' : ''}`}
-                                                id="eventEndTime"
-                                                value={eventEndTime}
-                                                onChange={(e) => setEventEndTime(e.target.value)}
-                                                onBlur={() => handleBlur('eventEndTime')}
-                                            />
-                                            {shouldShowError('eventEndTime') && (
-                                                <div className="field-error">{errors.eventEndTime}</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="form-group-event">
-                                        <label htmlFor="timezone">TIMEZONE</label>
-                                        <select
-                                            className={`form-control-event ${shouldShowError('timezone') ? 'error' : ''}`}
-                                            id="timezone"
-                                            value={timezone}
-                                            onChange={(e) => setTimezone(e.target.value)}
-                                            onBlur={() => handleBlur('timezone')}
-                                        >
-                                            <option value="Africa/Johannesburg">Africa/Johannesburg</option>
-                                            <option value="UTC">UTC</option>
-                                            <option value="Europe/London">Europe/London</option>
-                                            <option value="America/New_York">America/New_York</option>
-                                        </select>
-                                        {shouldShowError('timezone') && (
-                                            <div className="field-error">{errors.timezone}</div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                            {step2SubStep === 2 && (
-                                <>
-                                    <p className="step-subtitle">Where is your Event?</p>
+                    <div className="create-event-container" id="createEventPage">
+                        <div className="create-event-body">
+                            {/* Step 1: Event Name */}
+                            {currentStep === 1 && (
+                                <div className="event-step">
+                                    {errors.general && <div className="form-error">{errors.general}</div>}
+                                    <h2 className="step-title">What's the name of your Event</h2>
+                                    <p className="step-subtitle">Type the name of your Event</p>
                                     <div className="form-group-event">
                                         <input
                                             type="text"
-                                            className={`form-control-event ${shouldShowError('eventLocation') ? 'error' : ''}`}
-                                            id="eventLocation"
-                                            placeholder="Venue or Address"
-                                            value={eventLocation}
-                                            onChange={(e) => setEventLocation(e.target.value)}
-                                            onBlur={() => handleBlur('eventLocation')}
+                                            className={`form-control-event ${shouldShowError('eventName') ? 'error' : ''}`}
+                                            id="eventName"
+                                            placeholder="e.g., mfana's Birthday Party"
+                                            value={eventName}
+                                            onChange={(e) => setEventName(e.target.value)}
+                                            onBlur={() => handleBlur('eventName')}
                                         />
-                                        {shouldShowError('eventLocation') && (
-                                            <div className="field-error">{errors.eventLocation}</div>
+                                        {shouldShowError('eventName') && (
+                                            <div className="field-error">{errors.eventName}</div>
                                         )}
-                                        <p className="text-muted small mt-1">Not sure yet? You can add location later.</p>
                                     </div>
-                                </>
+                                </div>
                             )}
-                            {/* Removed step2SubStep === 3 (URL step) */}
-                        </div>
-                    )}
 
-                    {/* Step 3: Confirmation before going to theme selection */}
-                    {currentStep === 3 && (
-                        <div className="event-step">
-                            <h2 className="step-title">Ready to choose a theme!</h2>
-                            <p className="step-subtitle">
-                                Now let's create a beautiful invitation for your event.
-                                You'll be able to customize colors, add text, and more.
-                            </p>
-                            <div className="event-summary">
-                                <h3>Event Summary</h3>
-                                <p><strong>Name:</strong> {eventName}</p>
-                                <p><strong>When:</strong> {eventStartDate} {eventStartTime} to {eventEndDate} {eventEndTime}</p>
-                                <p><strong>Where:</strong> {eventLocation || "Not specified"}</p>
+                            {/* Step 2: Event Details with sub-steps (removed URL sub-step) */}
+                            {currentStep === 2 && (
+                                <div className="event-step">
+                                    {errors.general && <div className="form-error">{errors.general}</div>}
+                                    <h2 className="step-title">Event Details</h2>
+                                    {step2SubStep === 1 && (
+                                        <>
+                                            <p className="step-subtitle">
+                                                When is Your Event? <span className="text-muted">Not sure yet? You can add things later.</span>
+                                            </p>
+                                            <div className="datetime-row">
+                                                <div className="datetime-group">
+                                                    <label htmlFor="eventStartDate">EVENT START - Date</label>
+                                                    <input
+                                                        type="date"
+                                                        className={`form-control-event ${shouldShowError('eventStartDate') ? 'error' : ''}`}
+                                                        id="eventStartDate"
+                                                        value={eventStartDate}
+                                                        onChange={(e) => setEventStartDate(e.target.value)}
+                                                        onBlur={() => handleBlur('eventStartDate')}
+                                                        min={getTodayDate()}
+                                                    />
+                                                    {shouldShowError('eventStartDate') && (
+                                                        <div className="field-error">{errors.eventStartDate}</div>
+                                                    )}
+                                                </div>
+                                                <div className="datetime-group">
+                                                    <label htmlFor="eventStartTime">Time</label>
+                                                    <input
+                                                        type="time"
+                                                        className={`form-control-event ${shouldShowError('eventStartTime') ? 'error' : ''}`}
+                                                        id="eventStartTime"
+                                                        value={eventStartTime}
+                                                        onChange={(e) => setEventStartTime(e.target.value)}
+                                                        onBlur={() => handleBlur('eventStartTime')}
+                                                    />
+                                                    {shouldShowError('eventStartTime') && (
+                                                        <div className="field-error">{errors.eventStartTime}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="datetime-row">
+                                                <div className="datetime-group">
+                                                    <label htmlFor="eventEndDate">EVENT END - Date</label>
+                                                    <input
+                                                        type="date"
+                                                        className={`form-control-event ${shouldShowError('eventEndDate') ? 'error' : ''}`}
+                                                        id="eventEndDate"
+                                                        value={eventEndDate}
+                                                        onChange={(e) => setEventEndDate(e.target.value)}
+                                                        onBlur={() => handleBlur('eventEndDate')}
+                                                        min={getMinEndDate()}
+                                                    />
+                                                    {shouldShowError('eventEndDate') && (
+                                                        <div className="field-error">{errors.eventEndDate}</div>
+                                                    )}
+                                                </div>
+                                                <div className="datetime-group">
+                                                    <label htmlFor="eventEndTime">Time</label>
+                                                    <input
+                                                        type="time"
+                                                        className={`form-control-event ${shouldShowError('eventEndTime') ? 'error' : ''}`}
+                                                        id="eventEndTime"
+                                                        value={eventEndTime}
+                                                        onChange={(e) => setEventEndTime(e.target.value)}
+                                                        onBlur={() => handleBlur('eventEndTime')}
+                                                    />
+                                                    {shouldShowError('eventEndTime') && (
+                                                        <div className="field-error">{errors.eventEndTime}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="form-group-event">
+                                                <label htmlFor="timezone">TIMEZONE</label>
+                                                <select
+                                                    className={`form-control-event ${shouldShowError('timezone') ? 'error' : ''}`}
+                                                    id="timezone"
+                                                    value={timezone}
+                                                    onChange={(e) => setTimezone(e.target.value)}
+                                                    onBlur={() => handleBlur('timezone')}
+                                                >
+                                                    <option value="Africa/Johannesburg">Africa/Johannesburg</option>
+                                                    <option value="UTC">UTC</option>
+                                                    <option value="Europe/London">Europe/London</option>
+                                                    <option value="America/New_York">America/New_York</option>
+                                                </select>
+                                                {shouldShowError('timezone') && (
+                                                    <div className="field-error">{errors.timezone}</div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                    {step2SubStep === 2 && (
+                                        <>
+                                            <p className="step-subtitle">Where is your Event?</p>
+                                            <div className="form-group-event">
+                                                <input
+                                                    type="text"
+                                                    className={`form-control-event ${shouldShowError('eventLocation') ? 'error' : ''}`}
+                                                    id="eventLocation"
+                                                    placeholder="Venue or Address"
+                                                    value={eventLocation}
+                                                    onChange={(e) => setEventLocation(e.target.value)}
+                                                    onBlur={() => handleBlur('eventLocation')}
+                                                />
+                                                {shouldShowError('eventLocation') && (
+                                                    <div className="field-error">{errors.eventLocation}</div>
+                                                )}
+                                                <p className="text-muted small mt-1">Not sure yet? You can add location later.</p>
+                                            </div>
+                                        </>
+                                    )}
+                                    {/* Removed step2SubStep === 3 (URL step) */}
+                                </div>
+                            )}
+
+                            {/* Step 3: Confirmation before going to theme selection */}
+                            {currentStep === 3 && (
+                                <div className="event-step">
+                                    <h2 className="step-title">Ready to choose a theme!</h2>
+                                    <p className="step-subtitle">
+                                        Now let's create a beautiful invitation for your event.
+                                        You'll be able to customize colors, add text, and more.
+                                    </p>
+                                    <div className="event-summary">
+                                        <h3>Event Summary</h3>
+                                        <p><strong>Name:</strong> {eventName}</p>
+                                        <p><strong>When:</strong> {eventStartDate} {eventStartTime} to {eventEndDate} {eventEndTime}</p>
+                                        <p><strong>Where:</strong> {eventLocation || "Not specified"}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="create-event-footer">
+                            <div>
+                                {currentStep > 1 && (
+                                    <button className="btn-event btn-event-back" onClick={handleBack}>
+                                        Back
+                                    </button>
+                                )}
+                                {/* {currentStep === 2 && step2SubStep < 2 && ( // Changed from 3 to 2
+                                    <button className="btn-event btn-event-skip" onClick={handleSkip}>
+                                        Skip for now
+                                    </button>
+                                )} */}
+                            </div>
+                            <div>
+                                <button className="btn-event btn-event-next" onClick={handleNext}>
+                                    {currentStep === 1 && "NEXT: EVENT DETAILS"}
+                                    {currentStep === 2 && step2SubStep === 1 && "NEXT: LOCATION"}
+                                    {currentStep === 2 && step2SubStep === 2 && "NEXT: CHOOSE THEME"} {/* Updated text */}
+                                    {currentStep === 3 && "CHOOSE A THEME"}
+                                </button>
                             </div>
                         </div>
-                    )}
-                </div>
-
-                <div className="create-event-footer">
-                    <div>
-                        {currentStep > 1 && (
-                            <button className="btn-event btn-event-back" onClick={handleBack}>
-                                Back
-                            </button>
-                        )}
-                        {currentStep === 2 && step2SubStep < 2 && ( // Changed from 3 to 2
-                            <button className="btn-event btn-event-skip" onClick={handleSkip}>
-                                Skip for now
-                            </button>
-                        )}
-                    </div>
-                    <div>
-                        <button className="btn-event btn-event-next" onClick={handleNext}>
-                            {currentStep === 1 && "NEXT: EVENT DETAILS"}
-                            {currentStep === 2 && step2SubStep === 1 && "NEXT: LOCATION"}
-                            {currentStep === 2 && step2SubStep === 2 && "NEXT: CHOOSE THEME"} {/* Updated text */}
-                            {currentStep === 3 && "CHOOSE A THEME"}
-                        </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
+
     );
 }
 

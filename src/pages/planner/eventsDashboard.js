@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PriorityQueue from "js-priority-queue";
 import "./main.css";
-import "../../App.css";
+import "../../responce.css"
 import "../../alert.css";
-import { LoginNav, logOut } from "../components";
 
 const EventsDashboard = () => {
     const [events, setEvents] = useState([]);
@@ -13,13 +12,11 @@ const EventsDashboard = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [filters, setFilters] = useState({
         dateRange: "all",
-        sortBy: "latest",
-        status: "all",
+        eventType: "all",
         searchQuery: ""
     });
     const [rsvpStats, setRsvpStats] = useState({});
     const [deletingEventId, setDeletingEventId] = useState(null);
-    const [activeTab, setActiveTab] = useState("all");
     const [soonestEvent, setSoonestEvent] = useState(null);
     const [showMenuId, setShowMenuId] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -36,7 +33,7 @@ const EventsDashboard = () => {
     const [sendingMessage, setSendingMessage] = useState(false);
     const [showMessageStep, setShowMessageStep] = useState(false);
 
-    // Delete modal states (same UX as cancel)
+    // Delete modal states
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteEventId, setDeleteEventId] = useState(null);
     const [deleteEventName, setDeleteEventName] = useState("");
@@ -46,6 +43,10 @@ const EventsDashboard = () => {
     const [showDeleteMessageStep, setShowDeleteMessageStep] = useState(false);
     const [user, setUserData] = useState(null);
 
+    // Navbar states
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
     const itemsPerPage = 6;
     const navigate = useNavigate();
 
@@ -53,6 +54,39 @@ const EventsDashboard = () => {
         setAlert({ show: true, message, type });
         setTimeout(() => setAlert({ show: false, message: "", type: "" }), 5000);
     };
+
+    // Navbar functions
+    const craeteEventClicked = () => {
+        navigate("/activeEventDetails");
+    };
+
+    const goToProfile = () => {
+        navigate("/profile");
+    };
+
+    const logOut = () => {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        navigate("/");
+    };
+
+    const toggleDropdown = () => {
+        setDropdownOpen(prev => !prev);
+    };
+
+    // Navbar click outside handler
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     const isEventCancelled = (event) => {
         return event.status === "cancelled" || event.status === "canceled";
@@ -75,7 +109,56 @@ const EventsDashboard = () => {
         const today = new Date();
         return today.toISOString().split("T")[0];
     };
-  
+
+    // Sort events with minHeap logic: upcoming events first, then past events
+    const sortEventsWithMinHeap = (eventsArray) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const upcomingEvents = [];
+        const pastEvents = [];
+        const cancelledEvents = [];
+
+        // Separate events into upcoming, past, and cancelled
+        eventsArray.forEach((event) => {
+            if (isEventCancelled(event)) {
+                cancelledEvents.push(event);
+                return;
+            }
+
+            const evDate = new Date(event.event_start_date || event.created_at);
+            evDate.setHours(0, 0, 0, 0);
+
+            if (evDate >= today) {
+                upcomingEvents.push(event);
+            } else {
+                pastEvents.push(event);
+            }
+        });
+
+        // Sort upcoming events by date (minHeap - earliest first)
+        const upcomingHeap = new PriorityQueue({
+            comparator: (a, b) => {
+                const dA = new Date(a.event_start_date || a.created_at);
+                const dB = new Date(b.event_start_date || b.created_at);
+                return dA - dB;
+            }
+        });
+
+        upcomingEvents.forEach((e) => upcomingHeap.queue(e));
+        const sortedUpcoming = [];
+        while (upcomingHeap.length > 0) sortedUpcoming.push(upcomingHeap.dequeue());
+
+        // Sort past events by date (most recent first)
+        const sortedPast = pastEvents.sort((a, b) => {
+            const dA = new Date(a.event_start_date || a.created_at);
+            const dB = new Date(b.event_start_date || b.created_at);
+            return dB - dA;
+        });
+
+        // Combine: upcoming first, then past, then cancelled
+        return [...sortedUpcoming, ...sortedPast, ...cancelledEvents];
+    };
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -92,7 +175,6 @@ const EventsDashboard = () => {
             const userdata = JSON.parse(storedUser);
             setUserData(userdata);
 
-            
             if (userdata && userdata.user_id) {
                 fetchEvents(userdata.user_id);
             } else {
@@ -107,7 +189,7 @@ const EventsDashboard = () => {
             logOut();
             navigate("/");
         }
-    }, [navigate]); 
+    }, [navigate]);
 
     const fetchEvents = async (userId) => {
         try {
@@ -136,47 +218,23 @@ const EventsDashboard = () => {
                     }
                 });
 
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                // Apply minHeap sorting
+                const sortedEvents = sortEventsWithMinHeap(uniqueEvents);
 
-                const upcomingEvents = uniqueEvents.filter((event) => {
+                // Find the soonest upcoming event
+                const soonest = sortedEvents.find(event => {
+                    if (isEventCancelled(event)) return false;
                     const evDate = new Date(event.event_start_date || event.created_at);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
                     evDate.setHours(0, 0, 0, 0);
-                    return evDate >= today && !isEventCancelled(event);
-                });
+                    return evDate >= today;
+                }) || null;
 
-                const pastEvents = uniqueEvents.filter((event) => {
-                    const evDate = new Date(event.event_start_date || event.created_at);
-                    evDate.setHours(0, 0, 0, 0);
-                    return evDate < today && !isEventCancelled(event);
-                });
-
-                const canceledEvents = uniqueEvents.filter(isEventCancelled);
-
-                const upcomingHeap = new PriorityQueue({
-                    comparator: (a, b) => {
-                        const dA = new Date(a.event_start_date || a.created_at);
-                        const dB = new Date(b.event_start_date || b.created_at);
-                        return dA - dB;
-                    }
-                });
-                upcomingEvents.forEach((e) => upcomingHeap.queue(e));
-
-                const sortedUpcoming = [];
-                while (upcomingHeap.length > 0) sortedUpcoming.push(upcomingHeap.dequeue());
-
-                const sortedPast = pastEvents.sort((a, b) => {
-                    const dA = new Date(a.event_start_date || a.created_at);
-                    const dB = new Date(b.event_start_date || b.created_at);
-                    return dB - dA;
-                });
-
-                const finalSorted = [...sortedUpcoming, ...sortedPast, ...canceledEvents];
-                const soonest = sortedUpcoming[0] || null;
                 setSoonestEvent(soonest);
-                setEvents(finalSorted);
-                setFilteredEvents(finalSorted);
-                fetchRSVPStatsForEvents(finalSorted);
+                setEvents(sortedEvents);
+                setFilteredEvents(sortedEvents);
+                fetchRSVPStatsForEvents(sortedEvents);
             } else {
                 printAlert("Failed to load events: " + (data.message || "Unknown error"), "error");
             }
@@ -236,6 +294,70 @@ const EventsDashboard = () => {
         );
         setRsvpStats(stats);
     };
+
+    // Filter and sort logic
+    useEffect(() => {
+        let result = [...events];
+
+        // Search filter
+        if (filters.searchQuery.trim() !== "") {
+            const q = filters.searchQuery.toLowerCase();
+            result = result.filter((e) => e.event_name.toLowerCase().includes(q));
+        }
+
+        // Event type filter
+        if (filters.eventType !== "all") {
+            result = result.filter((e) => {
+                const pub = isEventPublished(e);
+                const can = isEventCancelled(e);
+                switch (filters.eventType) {
+                    case "published":
+                        return pub && !can;
+                    case "unpublished":
+                        return !pub && !can;
+                    case "cancelled":
+                        return can;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        // Date range filter
+        if (filters.dateRange !== "all") {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            result = result.filter((e) => {
+                const evDate = new Date(e.event_start_date || e.created_at);
+                evDate.setHours(0, 0, 0, 0);
+                switch (filters.dateRange) {
+                    case "today":
+                        return evDate.toDateString() === today.toDateString();
+                    case "week": {
+                        const weekAgo = new Date();
+                        weekAgo.setDate(today.getDate() - 7);
+                        return evDate >= weekAgo;
+                    }
+                    case "month": {
+                        const monthAgo = new Date();
+                        monthAgo.setMonth(today.getMonth() - 1);
+                        return evDate >= monthAgo;
+                    }
+                    case "upcoming":
+                        return evDate >= today;
+                    case "past":
+                        return evDate < today;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        // Apply minHeap sorting to filtered results
+        const sortedFiltered = sortEventsWithMinHeap(result);
+        setFilteredEvents(sortedFiltered);
+        setCurrentPage(1);
+    }, [filters, events]);
 
     /* -------------------------------------------------------------
        CANCEL EVENT PROCESS
@@ -639,81 +761,6 @@ const EventsDashboard = () => {
         navigate("/eventManagement");
     };
 
-    /* -------------------------------------------------------------
-       FILTERS & RENDER HELPERS
-    ------------------------------------------------------------- */
-    const publishedEventsCount = events.filter(
-        (e) => isEventPublished(e) && !isEventCancelled(e)
-    ).length;
-    const unpublishedEventsCount = events.filter(
-        (e) => !isEventPublished(e) && !isEventCancelled(e)
-    ).length;
-    const cancelledEventsCount = events.filter(isEventCancelled).length;
-
-    useEffect(() => {
-        let result = [...events];
-
-        if (filters.searchQuery.trim() !== "") {
-            const q = filters.searchQuery.toLowerCase();
-            result = result.filter((e) => e.event_name.toLowerCase().includes(q));
-        }
-
-        if (activeTab !== "all") {
-            result = result.filter((e) => {
-                const pub = isEventPublished(e);
-                const can = isEventCancelled(e);
-                switch (activeTab) {
-                    case "published":
-                        return pub && !can;
-                    case "unpublished":
-                        return !pub && !can;
-                    case "cancelled":
-                        return can;
-                    default:
-                        return true;
-                }
-            });
-        }
-
-        if (filters.dateRange !== "all") {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            result = result.filter((e) => {
-                const evDate = new Date(e.event_start_date || e.created_at);
-                evDate.setHours(0, 0, 0, 0);
-                switch (filters.dateRange) {
-                    case "today":
-                        return evDate.toDateString() === today.toDateString();
-                    case "week": {
-                        const weekAgo = new Date();
-                        weekAgo.setDate(today.getDate() - 7);
-                        return evDate >= weekAgo;
-                    }
-                    case "month": {
-                        const monthAgo = new Date();
-                        monthAgo.setMonth(today.getMonth() - 1);
-                        return evDate >= monthAgo;
-                    }
-                    case "upcoming":
-                        return evDate >= today;
-                    case "past":
-                        return evDate < today;
-                    default:
-                        return true;
-                }
-            });
-        }
-
-        result.sort((a, b) => {
-            const dA = new Date(a.event_start_date || a.created_at);
-            const dB = new Date(b.event_start_date || b.created_at);
-            return filters.sortBy === "latest" ? dB - dA : dA - dB;
-        });
-
-        setFilteredEvents(result);
-        setCurrentPage(1);
-    }, [filters, events, activeTab]);
-
     const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
     const canLoadMore = filteredEvents.length > displayedEvents.length;
 
@@ -739,26 +786,32 @@ const EventsDashboard = () => {
         });
     };
 
-    /* -------------------------------------------------------------
-       RENDER
-    ------------------------------------------------------------- */
+    // Counts for dropdown
+    const publishedEventsCount = events.filter(
+        (e) => isEventPublished(e) && !isEventCancelled(e)
+    ).length;
+    const unpublishedEventsCount = events.filter(
+        (e) => !isEventPublished(e) && !isEventCancelled(e)
+    ).length;
+    const cancelledEventsCount = events.filter(isEventCancelled).length;
+
     if (loading) {
         return (
             <>
-                <LoginNav />
-                <div className="loading-container">
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Loading...</span>
+                {loading && (
+                    <div className="loading-container">
+                        <div className="loading-overlay">
+                            <div className="loading-spinner"></div>
+                            <div className="loading-text">Loading your events...</div>
+                        </div>
                     </div>
-                    <div className="loading-text">Loading your events...</div>
-                </div>
+                )}
             </>
         );
     }
 
     return (
         <>
-            <LoginNav />
             {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
@@ -777,6 +830,44 @@ const EventsDashboard = () => {
             )}
 
             <section className="eventsDashboard">
+             
+                <nav className="eventsNavbar">
+                    <div className="container">
+                        <div className="row align-items-center">
+                            <div className="col-lg-2">
+                                <div className="logo-placeholder">
+                                    <img src="/images/logo.png" alt="Logo" className="logo-img" />
+                                </div>
+                            </div>
+
+                            <div className="col-lg-10 navbar-right">
+                                <button className="btn btn-createEvevt" onClick={craeteEventClicked}>New Event</button>
+
+                                <div
+                                    ref={dropdownRef}
+                                    className={`profile-container ${dropdownOpen ? "open" : ""}`}
+                                    onClick={toggleDropdown}
+                                >
+                                    <i className="bi bi-person-circle"></i>
+                                    <span>{user ? user.name : "Guest"}</span>
+                                    <i className="bi bi-chevron-bar-down"></i>
+
+                                    {dropdownOpen && (
+                                        <div className="dropdown-menu show mobile-dropdown"> {/* Added mobile-dropdown class */}
+                                            <button onClick={goToProfile} className="dropdown-item">
+                                                <i className="bi bi-person"></i> Profile
+                                            </button>
+                                            <button className="dropdown-item" onClick={logOut}>
+                                                <i className="bi bi-box-arrow-right"></i> Logout
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
                 <div className="container">
                     {/* HEADER */}
                     <div className="dashboard-header">
@@ -805,36 +896,9 @@ const EventsDashboard = () => {
                         </div>
                     )}
 
-                    {/* TABS + FILTERS */}
+                    {/* COMBINED FILTERS SECTION */}
                     <div className="dashboard-controls">
-                        <div className="events-tabs">
-                            <button
-                                className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
-                                onClick={() => setActiveTab("all")}
-                            >
-                                <i className="bi bi-grid-3x3-gap"></i> All ({events.length})
-                            </button>
-                            <button
-                                className={`tab-btn ${activeTab === "published" ? "active" : ""}`}
-                                onClick={() => setActiveTab("published")}
-                            >
-                                <i className="bi bi-check-circle"></i> Published ({publishedEventsCount})
-                            </button>
-                            <button
-                                className={`tab-btn ${activeTab === "unpublished" ? "active" : ""}`}
-                                onClick={() => setActiveTab("unpublished")}
-                            >
-                                <i className="bi bi-pencil-square"></i> Draft ({unpublishedEventsCount})
-                            </button>
-                            <button
-                                className={`tab-btn ${activeTab === "cancelled" ? "active" : ""}`}
-                                onClick={() => setActiveTab("cancelled")}
-                            >
-                                <i className="bi bi-slash-circle"></i> Cancelled ({cancelledEventsCount})
-                            </button>
-                        </div>
-
-                        <div className="filters-section compact">
+                        <div className="combined-filters">
                             <div className="filter-group search-group">
                                 <div className="search-input-wrapper">
                                     <i className="bi bi-search"></i>
@@ -847,6 +911,20 @@ const EventsDashboard = () => {
                                     />
                                 </div>
                             </div>
+
+                            <div className="filter-group">
+                                <select
+                                    value={filters.eventType}
+                                    onChange={(e) => handleFilterChange("eventType", e.target.value)}
+                                    className="filter-select"
+                                >
+                                    <option value="all">All Events ({events.length})</option>
+                                    <option value="published">Published ({publishedEventsCount})</option>
+                                    <option value="unpublished">Draft ({unpublishedEventsCount})</option>
+                                    <option value="cancelled">Cancelled ({cancelledEventsCount})</option>
+                                </select>
+                            </div>
+
                             <div className="filter-group">
                                 <select
                                     value={filters.dateRange}
@@ -861,37 +939,6 @@ const EventsDashboard = () => {
                                     <option value="past">Past</option>
                                 </select>
                             </div>
-                            <div className="filter-group">
-                                <select
-                                    value={filters.sortBy}
-                                    onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-                                    className="filter-select"
-                                >
-                                    <option value="latest">Newest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* STATS */}
-                    <div className="stats-overview">
-                        <div className="stat-card">
-                            <div className="stat-icon"><i className="bi bi-people"></i></div>
-                            <div className="stat-value">
-                                {Object.values(rsvpStats).reduce((s, st) => s + st.yes, 0)}
-                            </div>
-                            <div className="stat-label">Total Attending</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-icon"><i className="bi bi-calendar-event"></i></div>
-                            <div className="stat-value">{events.length}</div>
-                            <div className="stat-label">Total Events</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-icon"><i className="bi bi-filter"></i></div>
-                            <div className="stat-value">{filteredEvents.length}</div>
-                            <div className="stat-label">Filtered Results</div>
                         </div>
                     </div>
 

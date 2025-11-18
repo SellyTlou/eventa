@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import '../../alert.css';
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar } from "../components";
+
 
 const Manage_my_event = () => {
     const [loading, setLoading] = useState(true);
@@ -24,7 +25,7 @@ const Manage_my_event = () => {
     const [availablePackages, setAvailablePackages] = useState([]);
     const [currentPlan, setCurrentPlan] = useState(null);
     const [showUpdateButton, setShowUpdateButton] = useState(false);
-
+ const [sidebarOpen, setSidebarOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
     const printAlert = (message, type = "info") => {
@@ -211,6 +212,7 @@ const Manage_my_event = () => {
         }
     };
 
+    const goToUpgradePlan = () => navigate("/upgrade_package");
     // Fallback function in case features column is empty
     const getDefaultFeatures = (packageType) => {
         const defaultFeaturesMap = {
@@ -371,15 +373,14 @@ const Manage_my_event = () => {
         }
     };
 
-    const goToUpgradePlan = () => navigate("/upgrade_package");
-    const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
-    const goToHome = () => navigate("/eventsDashboard");
-    const goToEventManagement = () => navigate(`/eventManagement`);
-    const goToInvitations = () => navigate(`/invitationPage`);
-    const goToManage = () => navigate(`/manage_my_event`);
-    const goToGuestInsights = () => navigate("/guest_insights");
-    const goToAttendanceStats = () => navigate("/attendance_stats");
-    const goToProfile = () => navigate("/Profile");
+   
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+
+    const closeSidebar = () => {
+        setSidebarOpen(false);
+    };
 
     const handlePackageClick = (pkg) => {
         setSelectedPackage(pkg);
@@ -652,45 +653,19 @@ const Manage_my_event = () => {
                 </div>
             )}
 
-            {/* HEADER */}
-            <div className="dashboard-header">
-                <h1>Evenda</h1>
-                <div className="header-tabs">
-                    <button className="upgrade-btn" onClick={goToUpgradePlan}>Upgrade</button>
-                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
-                        <i className="bi bi-person-circle"></i>
-                        <span>{user?.name || "Guest"}</span>
-                        <i className="bi bi-chevron-bar-down"></i>
-                        {dropdownOpen && (
-                            <div className="dropdown-menu show">
-                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* SIDEBAR */}
-            <div className="dashboard-sidebar">
-                <div className="sidebar-header"><h3>Event Management</h3></div>
-                <div className="sidebar-section">
-                    <h4>Event Planning</h4>
-                    <ul>
-                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
-                        <li className="active" onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
-                        <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
-                        <li onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
-                    </ul>
-                </div>
-                <div className="sidebar-section">
-                    <h4>Event Analytics</h4>
-                    <ul>
-                        <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
-                        <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
-                    </ul>
-                </div>
-            </div>
+                    {/* HEADER */}
+                                              <DashboardHeader
+                                                  user={user}
+                                                  eventStatus={eventStatus}
+                                                  onToggleSidebar={toggleSidebar}
+                                              />
+                                  
+                                              {/* SIDEBAR */}
+                                              <DashboardSidebar
+                                                  isMobileOpen={sidebarOpen}
+                                                  onClose={closeSidebar}
+                                              />
+                      
 
             {/* Content */}
             <div className="manage-my-event-content">

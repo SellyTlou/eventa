@@ -15,6 +15,23 @@
         overflow: auto;
     }
 
+    /*************************
+    Login Nav bar
+    ************************/
+    .eventsNavbar {
+        padding: 10px 15px;
+    }
+
+    .eventsNavbar .col-lg-2 {
+        display: none;
+    }
+
+    .eventsNavbar .col-lg-10 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
     /************
      Homepage Section Styles
      ************/
@@ -81,6 +98,12 @@
 
     .homepage-section .homeHeader {
         height: auto;
+    }
+
+    .homepage-section .ManagementsGuid .navBtn {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
     }
 
     .homepage-section .ManagementsGuid .navBtn .btn {
@@ -608,17 +631,19 @@ Create Event Page Styling
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
-  .create-event-container {
-    padding: 16px 4px;
-  }
-  .theme-cards {
-    flex-direction: column;
-    gap: 8px;
-  }
-  .datetime-row {
-    flex-direction: column;
-    gap: 8px;
-  }
+    .create-event-container {
+        padding: 16px 4px;
+    }
+
+    .theme-cards {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .datetime-row {
+        flex-direction: column;
+        gap: 8px;
+    }
 }
 
 /* Responsive Styles */
@@ -626,34 +651,34 @@ Create Event Page Styling
     .admin-dashboard-container {
         flex-direction: column;
     }
-    
+
     .admin-dashboard-sidebar {
         width: 100%;
         padding: 1rem 0;
     }
-    
+
     .admin-dashboard-nav-item {
         justify-content: center;
         padding: 0.6rem 1rem;
     }
-    
+
     .admin-dashboard-nav-item span {
         display: none;
     }
-    
+
     .admin-dashboard-nav-item i {
         margin-right: 0;
         font-size: 1.3rem;
     }
-    
+
     .admin-dashboard-main {
         padding: 1rem;
     }
-    
+
     .admin-dashboard-stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .admin-dashboard-actions-grid {
         grid-template-columns: 1fr;
     }
@@ -665,9 +690,10 @@ Create Event Page Styling
     .admin-dashboard-content-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .admin-dashboard-actions {
-        order: -1; /* Move Quick Actions to top on mobile */
+        order: -1;
+        /* Move Quick Actions to top on mobile */
     }
 }
 
@@ -676,7 +702,7 @@ Create Event Page Styling
         flex-direction: column;
         text-align: center;
     }
-    
+
     .admin-dashboard-activity-icon {
         margin-right: 0;
         margin-bottom: 0.5rem;
@@ -692,9 +718,7 @@ Create Event Page Styling
 }
 
 @media (max-width: 768px) {
-    .eventsDashboard {
-        padding: 20px 0;
-    }
+ 
 
     .eventsDashboard .cardConatiner {
         flex: 0 0 100%;
@@ -755,20 +779,20 @@ Create Event Page Styling
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .status-cards {
-    flex-direction: column;
-  }
-  
-  .controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .users-table {
-    font-size: 14px;
-  }
-  
-  .actions {
-    flex-direction: column;
-  }
+    .status-cards {
+        flex-direction: column;
+    }
+
+    .controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .users-table {
+        font-size: 14px;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
 }

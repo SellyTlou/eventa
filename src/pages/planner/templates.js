@@ -111,7 +111,8 @@ export const templates = {
           }
         ]
       }
-    }
+    },
+    
     // ... you can add more templates here
   ]
 };
