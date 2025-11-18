@@ -293,7 +293,7 @@ function Features() {
                                                 className="btn btn-view-more" 
                                                 onClick={handleLearnMore}
                                             >
-                                                Learn More
+                                                Get started
                                             </button>
                                         </div>
                                     ))}

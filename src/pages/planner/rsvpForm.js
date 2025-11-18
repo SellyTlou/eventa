@@ -7,6 +7,7 @@ const RsvpForm = () => {
     const [formData, setFormData] = useState({
         name: "",
         email: "",
+        phone: "",
         attending: "yes",
         guestCount: 0,
         message: "",
@@ -29,6 +30,51 @@ const RsvpForm = () => {
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
         setTimeout(() => setAlert({ show: false, message: "", type: "" }), 5000);
+    };
+
+    // Updated phone handler for 065 875 1979 format
+const handlePhoneChange = (e) => {
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    
+    // Ensure it starts with 0
+    if (value.length > 0 && value[0] !== '0') {
+        value = '0' + value;
+    }
+    
+    // Allow up to 10 digits (0 + 9 digits = 10 total)
+    if (value.length > 10) {
+        value = value.slice(0, 10);
+    }
+    
+    // Format the number as 065 875 1979 (3-3-4 pattern)
+    if (value.length > 1) {
+        if (value.length <= 3) {
+            
+            value = value.replace(/(\d{3})/, '$1');
+        } else if (value.length <= 6) {
+            value = value.replace(/(\d{3})(\d{0,})/, '$1 $2');
+        } else {
+            
+            value = value.replace(/(\d{3})(\d{3})(\d{0,})/, '$1 $2 $3');
+        }
+    }
+    
+    setFormData(prev => ({
+        ...prev,
+        phone: value
+    }));
+};
+
+    // General form change handler (excluding phone)
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        if (name !== 'phone') { // Exclude phone from general handler
+            setFormData(prev => ({
+                ...prev,
+                [name]: value,
+                ...(name === "attending" && value === "no" && { guestCount: 0 })
+            }));
+        }
     };
 
     useEffect(() => {
@@ -162,15 +208,6 @@ const RsvpForm = () => {
         }
     };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value,
-            ...(name === "attending" && value === "no" && { guestCount: 0 })
-        }));
-    };
-
     const handleGuestCountChange = (increment) => {
         setFormData(prev => ({
             ...prev,
@@ -197,6 +234,7 @@ const RsvpForm = () => {
         formDataToSend.append("event_id", event_id);
         formDataToSend.append("name", formData.name);
         formDataToSend.append("email", formData.email);
+        formDataToSend.append("phone", formData.phone); // Add phone to form data
         formDataToSend.append("attending", formData.attending);
         formDataToSend.append("message", formData.message);
         formDataToSend.append("guestCount", formData.guestCount);
@@ -216,7 +254,7 @@ const RsvpForm = () => {
             if (result.success) {
                 printAlert(result.message || "RSVP submitted successfully!", "success");
                 setFormData({
-                    name: "", email: "", attending: "yes", guestCount: 0, message: ""
+                    name: "", email: "", phone: "", attending: "yes", guestCount: 0, message: ""
                 });
                 await fetchEventData(event_id);
                 setTimeout(() => {
@@ -268,10 +306,6 @@ const RsvpForm = () => {
                     <i className="fas fa-ban"></i>
                     <h2>Event Canceled</h2>
                     <p><strong>{eventData?.event_name}</strong> has been canceled by the organizer.</p>
-                    {/* <div className="event-details">
-                        <p><strong>Date:</strong> {eventData?.event_start_date ? new Date(eventData.event_start_date).toLocaleDateString() : 'N/A'}</p>
-                        {eventData?.event_location && <p><strong>Location:</strong> {eventData.event_location}</p>}
-                    </div> */}
                     <p>RSVP is no longer available.</p>
                 </div>
             </div>
@@ -409,6 +443,26 @@ const RsvpForm = () => {
                                         className="rsvp_form__input"
                                         placeholder="Your email address"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Phone Number Row */}
+                            <div className="form-row">
+                                <div className="rsvp_form__group">
+                                    <label className="rsvp_form__label">Phone Number</label>
+                                    <div className="phone-input-container">
+                                        <span className="phone-prefix">+27</span>
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handlePhoneChange}
+                                            className="rsvp_form__input phone-input"
+                                            placeholder="Phone number"
+                                            maxLength="12"
+                                        />
+                                    </div>
+                                    <small className="phone-hint">Enter your 9-digit SA number starting with 0</small>
                                 </div>
                             </div>
 

@@ -6,6 +6,57 @@ import { Navbar, Footer, Login } from "./components";
 function About() {
     const [isLoginOpen, setIsLoginOpen] = React.useState(false);
     const [loginMode, setLoginMode] = React.useState("login");
+    const [eventsCount, setEventsCount] = React.useState(0);
+    const [usersCount, setUsersCount] = React.useState(0);
+
+    // Fetch stats when page loads and set up real-time updates
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                // Fetch events count using POST method
+                const eventsFormData = new FormData();
+                eventsFormData.append('function', 'geteventcount');
+                const eventsRes = await fetch(process.env.REACT_APP_API_URL, {
+                    method: 'POST',
+                    body: eventsFormData
+                });
+                const eventsData = await eventsRes.json();
+                if (eventsData.success) setEventsCount(eventsData.count);
+
+                // Fetch users count using POST method
+                const usersFormData = new FormData();
+                usersFormData.append('function', 'getusercount');
+                const usersRes = await fetch(process.env.REACT_APP_API_URL, {
+                    method: 'POST',
+                    body: usersFormData
+                });
+                const usersData = await usersRes.json();
+                if (usersData.success) setUsersCount(usersData.count);
+
+            } catch (error) {
+                console.error("Failed to load stats", error);
+            }
+        };
+
+        // Fetch immediately
+        fetchStats();
+
+        // Listen for custom event when events are created
+        const handleEventCreated = () => {
+            fetchStats(); // Refresh stats when new event is created
+        };
+
+        window.addEventListener('eventCreated', handleEventCreated);
+        
+        // Also set up polling every 2 minutes as backup
+        const interval = setInterval(fetchStats, 120000);
+
+        // Cleanup
+        return () => {
+            window.removeEventListener('eventCreated', handleEventCreated);
+            clearInterval(interval);
+        };
+    }, []);
 
     const handleLoginClick = () => {
         setLoginMode("login");
@@ -54,25 +105,29 @@ function About() {
                     </div>
                 </section>
 
-                {/* Stats Section */}
+                {/* Stats Section - Fixed with real-time updates */}
                 <section className="about-stats">
                     <div className="container">
                         <div className="row text-center">
+
                             <div className="col-md-4 stat-item">
-                                <h3>0+</h3>
+                                <h3>{eventsCount}+</h3>
                                 <p>Events Created</p>
                                 <a href="/" className="stat-link">Learn more →</a>
                             </div>
+
                             <div className="col-md-4 stat-item">
-                                <h3>0+</h3>
-                                <p>Countries Served</p>
+                                <h3>{usersCount}+</h3>
+                                <p>Users Registered</p>
                                 <a href="/" className="stat-link">Learn more →</a>
                             </div>
+
                             <div className="col-md-4 stat-item">
-                                <h3>0%</h3>
-                                <p>Customer Satisfaction</p>
+                                <h3>South Africa</h3>
+                                <p>Country Served</p>
                                 <a href="/" className="stat-link">Learn more →</a>
                             </div>
+
                         </div>
                     </div>
                 </section>

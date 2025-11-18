@@ -284,44 +284,47 @@ function CreateEvent() {
 
   const completeRegistration = async () => {
     try {
-      const formData = new FormData();
-      formData.append("function", "eventAccConfirm");
-      formData.append("name", firstname.trim());
-      formData.append("lastname", lastname.trim());
-      formData.append("email", email.trim());
-      formData.append("password", password);
+        const formData = new FormData();
+        formData.append("function", "eventAccConfirm");
+        formData.append("name", firstname.trim());
+        formData.append("lastname", lastname.trim());
+        formData.append("email", email.trim());
+        formData.append("password", password);
 
-      const API_URL = process.env.REACT_APP_API_URL;
+        const API_URL = process.env.REACT_APP_API_URL;
 
-      const response = await fetch(`${API_URL}/query.php`, {
-        method: "POST",
-        body: formData,
-      });
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
 
-      const result = await response.json();
-      console.log(result);
+        const result = await response.json();
+        console.log(result);
 
-      if (result.success) {
-        // Save security questions for the new user
-        if (securityAnswers) {
-          await saveSecurityQuestions(result.user.user_id, securityAnswers);
-        }
-        
-        localStorage.setItem("user", JSON.stringify(result.user));
-        navigate("/eventTheme");
-      } else {
-        if (result.userExists) {
-          alert(result.message || "User already exists. Please log in.");
-          setShowLoginPopup(true);
+        if (result.success) {
+            // ✅ ADD THIS LINE - Dispatch custom event when account is created
+            window.dispatchEvent(new CustomEvent('eventCreated'));
+            
+            // Save security questions for the new user
+            if (securityAnswers) {
+                await saveSecurityQuestions(result.user.user_id, securityAnswers);
+            }
+            
+            localStorage.setItem("user", JSON.stringify(result.user));
+            navigate("/eventTheme");
         } else {
-          alert(result.message || "Something went wrong!");
+            if (result.userExists) {
+                alert(result.message || "User already exists. Please log in.");
+                setShowLoginPopup(true);
+            } else {
+                alert(result.message || "Something went wrong!");
+            }
         }
-      }
     } catch (err) {
-      console.error(err);
-      alert("Server error. Please try again later.");
+        console.error(err);
+        alert("Server error. Please try again later.");
     }
-  };
+};
 
   const saveSecurityQuestions = async (userId, answers) => {
     try {
@@ -427,6 +430,7 @@ function CreateEvent() {
       navigate("/eventTheme");
     }
   };
+  
 
   const handleBack = () => {
     if (currentStep === 2 && step2SubStep > 1) {

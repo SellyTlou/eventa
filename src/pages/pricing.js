@@ -179,7 +179,7 @@ function Pricing() {
             description: `Perfect for ${plan.name.toLowerCase()} events`,
             isPopular: plan.isPopular,
             features: plan.features,
-            ctaText: plan.price === "Free" ? "Get Started Free" : "Create my event",
+            ctaText: plan.price === "Free" ? "Get Started Free" : "Get started",
             ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
         })),
         "Business & Nonprofit": pricingPlans.map(plan => ({
@@ -189,7 +189,7 @@ function Pricing() {
             description: `For ${plan.name.toLowerCase()} business needs`,
             isPopular: plan.isPopular,
             features: plan.features,
-            ctaText: "Create event",
+            ctaText: "Get started",
             ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
         })),
         "Selling Tickets": [
@@ -207,7 +207,7 @@ function Pricing() {
                     "RSVP tracking",
                     "Event management tools"
                 ],
-                ctaText: "Create event",
+                ctaText: "Get started",
                 ctaVariant: "btn-create"
             },
             {
@@ -256,7 +256,7 @@ function Pricing() {
         },
         {
             question: "Do you offer a free trial?",
-            answer: "Yes! All paid plans come with a 14-day free trial. You can explore all premium features without any commitment. No credit card required to start your trial."
+            answer: "No, Instead of locking you into monthly subscriptions, we believe in paying only for what you use. Each event stands on its own - create basic events for free, and only upgrade to premium features when you need them for specific occasions."
         },
         {
             question: "Do I get a discount if I pay yearly instead of monthly?",
