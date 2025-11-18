@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar } from "../components";
 import '../../alert.css';
 
 const InvitationPage = () => {
@@ -18,16 +18,18 @@ const InvitationPage = () => {
     const dropdownRef = useRef(null);
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
-    
-        const printAlert = (message, type = "info") => {
-            setAlert({ show: true, message, type });
-            setTimeout(() => {
-                setAlert({ show: false, message: "", type: "" });
-            }, 5000);
-        };
-    
+
+    const printAlert = (message, type = "info") => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => {
+            setAlert({ show: false, message: "", type: "" });
+        }, 5000);
+    };
+
 
     const API_URL = process.env.REACT_APP_API_URL;
     let baseURL = "";
@@ -79,13 +81,13 @@ const InvitationPage = () => {
 
     const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-    const goToHome = () => navigate("/eventsDashboard");
-    const goToEventManagement = () => navigate(`/eventManagement`);
-    const goToInvitations = () => navigate(`/invitationPage`);
-    const goToManage = () => navigate(`/manage_my_event`);
-    const goToGuestInsights = () => navigate("/guest_insights");
-    const goToAttendanceStats = () => navigate("/attendance_stats");
-    const goToProfile = () => navigate("/Profile");
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+
+    const closeSidebar = () => {
+        setSidebarOpen(false);
+    };
 
     const fetchEventStatusByID = async (eventId) => {
         try {
@@ -281,45 +283,19 @@ const InvitationPage = () => {
                     <span>{alert.message}</span>
                 </div>
             )}
-
             {/* HEADER */}
-            <div className="dashboard-header">
-                <h1>Evenda</h1>
-                <div className="header-tabs">
-                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
-                        <i className="bi bi-person-circle"></i>
-                        <span>{user?.name || "Guest"}</span>
-                        <i className="bi bi-chevron-bar-down"></i>
-                        {dropdownOpen && (
-                            <div className="dropdown-menu show">
-                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <DashboardHeader
+                user={user}
+                eventStatus={eventStatus}
+                onToggleSidebar={toggleSidebar}
+            />
 
             {/* SIDEBAR */}
-            <div className="dashboard-sidebar">
-                <div className="sidebar-header"><h3>Event Management</h3></div>
-                <div className="sidebar-section">
-                    <h4>Event Planning</h4>
-                    <ul>
-                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
-                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
-                        <li className="active" onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
-                        <li onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
-                    </ul>
-                </div>
-                <div className="sidebar-section">
-                    <h4>Event Analytics</h4>
-                    <ul>
-                        <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
-                        <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
-                    </ul>
-                </div>
-            </div>
+            <DashboardSidebar
+                isMobileOpen={sidebarOpen}
+                onClose={closeSidebar}
+            />
+
 
             <div className="invitation-content">
                 {eventStatus === "Unpublished" && (
@@ -441,35 +417,55 @@ const InvitationPage = () => {
                         </div>
 
                         <div className="share-options">
-                            <p>Or share directly to:</p>
+                            <p>Share via:</p>
                             <div className="social-buttons">
                                 <button
                                     className="social-btn whatsapp"
                                     onClick={shareViaWhatsApp}
                                     disabled={eventStatus === "Unpublished"}
+                                    title="Share on WhatsApp"
                                 >
-                                    WhatsApp
+                                    <i className="bi bi-whatsapp"></i>
                                 </button>
                                 <button
                                     className="social-btn facebook"
                                     onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(invitationLink)}`, "_blank")}
                                     disabled={eventStatus === "Unpublished"}
+                                    title="Share on Facebook"
                                 >
-                                    Facebook
+                                    <i className="bi bi-facebook"></i>
                                 </button>
                                 <button
                                     className="social-btn twitter"
                                     onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(invitationLink)}&text=${encodeURIComponent("You're invited! 🎉")}`, "_blank")}
                                     disabled={eventStatus === "Unpublished"}
+                                    title="Share on Twitter"
                                 >
-                                    Twitter
+                                    <i className="bi bi-twitter-x"></i>
+                                </button>
+                                <button
+                                    className="social-btn linkedin"
+                                    onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(invitationLink)}`, "_blank")}
+                                    disabled={eventStatus === "Unpublished"}
+                                    title="Share on LinkedIn"
+                                >
+                                    <i className="bi bi-linkedin"></i>
+                                </button>
+                                <button
+                                    className="social-btn telegram"
+                                    onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(invitationLink)}&text=${encodeURIComponent("You're invited! 🎉")}`, "_blank")}
+                                    disabled={eventStatus === "Unpublished"}
+                                    title="Share on Telegram"
+                                >
+                                    <i className="bi bi-telegram"></i>
                                 </button>
                                 <button
                                     className="social-btn email"
                                     onClick={() => window.open(`mailto:?subject=You're invited!&body=${encodeURIComponent(`Join the event using this link:\n${invitationLink}`)}`)}
                                     disabled={eventStatus === "Unpublished"}
+                                    title="Share via Email"
                                 >
-                                    Email
+                                    <i className="bi bi-envelope-paper"></i>
                                 </button>
                             </div>
                         </div>

@@ -37,6 +37,40 @@ function useHistory(initialState) {
     return [state, setState, { undo, redo, clear, history, index }];
 }
 
+const MobileBlocker = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  if (!isMobile) return null;
+
+  return (
+    <div className="mobile-blocker-overlay">
+      <div className="mobile-blocker-content">
+              <div className="mobile-icon">
+                  <i className="bi bi-phone-fill"></i>
+              </div>
+
+        <h2>Oops! Screen Too Small</h2>
+        <p>
+          The postcard editor is designed for larger screens.<br />
+          Please use a <strong>tablet</strong> or <strong>desktop/laptop</strong> for the best experience.
+        </p>
+        <p className="small-text">
+          Minimum recommended width: <strong>768px</strong>
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const CornerTransformer = ({ selectedShapeName, ...props }) => {
     const trRef = useRef();
 
@@ -2116,6 +2150,8 @@ useEffect(() => {
 
     return (
         <div className="editor-container">
+        {/* This will block everything on small screens */}
+    <MobileBlocker />
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i

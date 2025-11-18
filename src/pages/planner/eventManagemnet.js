@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import "../../alert.css";
 import { useNavigate } from "react-router-dom";
-import { logOut } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar } from "../components";
 import RSVPBinaryTree from "../utils/RSVPTree";
 
 const RSVPResponses = () => {
@@ -12,7 +12,6 @@ const RSVPResponses = () => {
     const [eventData, setEventData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [eventStatus, setEventStatus] = useState("");
     const [bst, setBST] = useState(null);
     const [selectedGuests, setSelectedGuests] = useState(new Set());
@@ -21,13 +20,13 @@ const RSVPResponses = () => {
     const [messageContent, setMessageContent] = useState("");
     const [messageType, setMessageType] = useState("bulk");
     const [selectedGuestForMessage, setSelectedGuestForMessage] = useState(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
-    const printAlert = (message, type) => {
-        if (type === void 0) { type = "info"; }
+    const printAlert = (message, type = "info") => {
         setAlert({ show: true, message: message, type: type });
-        setTimeout(function () {
+        setTimeout(() => {
             setAlert({ show: false, message: "", type: "" });
         }, 5000);
     };
@@ -41,36 +40,35 @@ const RSVPResponses = () => {
     });
 
     // Custom confirmation helper
-    var showConfirm = function (title, message, onConfirm, onCancel) {
+    const showConfirm = (title, message, onConfirm, onCancel) => {
         setConfirmModal({
             show: true,
             title: title,
             message: message,
             onConfirm: onConfirm,
-            onCancel: onCancel || function () { setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null }); }
+            onCancel: onCancel || (() => setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null }))
         });
     };
 
-    var handleConfirm = function () {
+    const handleConfirm = () => {
         if (confirmModal.onConfirm) {
             confirmModal.onConfirm();
         }
         setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null });
     };
 
-    var handleCancel = function () {
+    const handleCancel = () => {
         if (confirmModal.onCancel) {
             confirmModal.onCancel();
         }
         setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null });
     };
 
-    const dropdownRef = useRef(null);
     const bulkActionRef = useRef(null);
     const navigate = useNavigate();
 
-    useEffect(function () {
-        var storedUser = localStorage.getItem("user");
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
         if (!storedUser) {
             printAlert("Session expired. Please log in again.", "error");
             logOut();
@@ -79,42 +77,39 @@ const RSVPResponses = () => {
         }
         setUser(JSON.parse(storedUser));
 
-        var handleClickOutside = function (event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setDropdownOpen(false);
-            }
+        const handleClickOutside = (event) => {
             if (bulkActionRef.current && !bulkActionRef.current.contains(event.target)) {
                 setBulkActionOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
-        return function () { return document.removeEventListener("mousedown", handleClickOutside); };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    useEffect(function () {
-        var eventId = localStorage.getItem("selectedEventId");
+    useEffect(() => {
+        const eventId = localStorage.getItem("selectedEventId");
         if (!eventId) return navigate("/eventsDashboard");
         fetchRSVPResponses(eventId);
         fetchEventStatusByID(eventId);
     }, []);
 
-    var fetchRSVPResponses = async function (eventId) {
+    const fetchRSVPResponses = async (eventId) => {
         setLoading(true);
         try {
-            var API_URL = process.env.REACT_APP_API_URL;
-            var formData = new FormData();
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
             formData.append("function", "getRSVPResponses");
             formData.append("event_id", eventId);
 
-            var response = await fetch(API_URL + "/query.php", { method: "POST", body: formData });
-            var data = await response.json();
+            const response = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
+            const data = await response.json();
 
             if (data.success && data.responses) {
-                var tree = new RSVPBinaryTree();
+                const tree = new RSVPBinaryTree();
                 tree.bulkInsert(data.responses);
                 console.log('RSVPTree built — in-order traversal:', tree.toArray());
                 setBST(tree);
-                setFilteredResponses(tree.toArray()); 
+                setFilteredResponses(tree.toArray());
                 setEventData(data.event || null);
             } else {
                 setFilteredResponses([]);
@@ -128,7 +123,6 @@ const RSVPResponses = () => {
             setLoading(false);
         }
     };
-
 
     const fetchEventStatusByID = async (eventId) => {
         try {
@@ -154,22 +148,23 @@ const RSVPResponses = () => {
             return "unknown";
         }
     }
-    useEffect(function () {
+
+    useEffect(() => {
         if (!bst) return;
-        var results = bst.searchPartial(searchTerm);
-        results = bst.filterByAttending(responseFilter).filter(function (r) { return results.includes(r); });
+        let results = bst.searchPartial(searchTerm);
+        results = bst.filterByAttending(responseFilter).filter(r => results.includes(r));
         setFilteredResponses(results);
         setSelectedGuests(new Set());
     }, [searchTerm, responseFilter, bst]);
 
-    var handleSort = function (order) {
+    const handleSort = (order) => {
         if (!bst) return;
-        var sorted = bst.toArray(order).filter(function (r) { return bst.filterByAttending(responseFilter).includes(r); });
+        const sorted = bst.toArray(order).filter(r => bst.filterByAttending(responseFilter).includes(r));
         setFilteredResponses(sorted);
     };
 
-    var toggleGuestSelection = function (guestId) {
-        var newSelected = new Set(selectedGuests);
+    const toggleGuestSelection = (guestId) => {
+        const newSelected = new Set(selectedGuests);
         if (newSelected.has(guestId)) {
             newSelected.delete(guestId);
         } else {
@@ -178,15 +173,15 @@ const RSVPResponses = () => {
         setSelectedGuests(newSelected);
     };
 
-    var selectAllGuests = function () {
+    const selectAllGuests = () => {
         if (selectedGuests.size === filteredResponses.length) {
             setSelectedGuests(new Set());
         } else {
-            setSelectedGuests(new Set(filteredResponses.map(function (guest) { return guest.guest_id; })));
+            setSelectedGuests(new Set(filteredResponses.map(guest => guest.guest_id)));
         }
     };
 
-    var handleBulkAction = function (action) {
+    const handleBulkAction = (action) => {
         if (selectedGuests.size === 0) {
             printAlert("Please select at least one guest", "warning");
             return;
@@ -199,11 +194,11 @@ const RSVPResponses = () => {
                 setMessageModalOpen(true);
                 break;
             case "remove":
-                var guestCount = selectedGuests.size;
+                const guestCount = selectedGuests.size;
                 showConfirm(
                     "Remove Guests",
-                    "Are you sure you want to remove " + guestCount + " guest(s)? They will receive a notification email about this change.",
-                    function () {
+                    `Are you sure you want to remove ${guestCount} guest(s)? They will receive a notification email about this change.`,
+                    () => {
                         removeSelectedGuests();
                     }
                 );
@@ -214,32 +209,31 @@ const RSVPResponses = () => {
         setBulkActionOpen(false);
     };
 
-
-    var removeSelectedGuests = async function () {
+    const removeSelectedGuests = async () => {
         try {
-            var API_URL = process.env.REACT_APP_API_URL;
-            var formData = new FormData();
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
             formData.append("function", "removeGuests");
             formData.append("guest_ids", Array.from(selectedGuests).join(","));
 
             console.log("Removing guests with IDs:", Array.from(selectedGuests));
 
-            var response = await fetch(API_URL + "/query.php", { method: "POST", body: formData });
-            var data = await response.json();
+            const response = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
+            const data = await response.json();
 
             console.log("Remove guests response:", data);
 
             if (data.success) {
-                printAlert("Successfully removed " + data.deleted_count + " guest(s)", "success");
+                printAlert(`Successfully removed ${data.deleted_count} guest(s)`, "success");
 
                 // Refresh the data to update the table
-                var eventId = localStorage.getItem("selectedEventId");
+                const eventId = localStorage.getItem("selectedEventId");
                 fetchRSVPResponses(eventId);
 
                 // Clear selection
                 setSelectedGuests(new Set());
             } else {
-                printAlert("Failed to remove guests: " + data.message, "error");
+                printAlert(`Failed to remove guests: ${data.message}`, "error");
             }
         } catch (error) {
             console.error(error);
@@ -247,24 +241,24 @@ const RSVPResponses = () => {
         }
     };
 
-    var sendMessage = async function () {
+    const sendMessage = async () => {
         if (!messageContent.trim()) {
             printAlert("Please enter a message", "warning");
             return;
         }
 
         try {
-            var API_URL = process.env.REACT_APP_API_URL;
-            var eventId = localStorage.getItem("selectedEventId");
+            const API_URL = process.env.REACT_APP_API_URL;
+            const eventId = localStorage.getItem("selectedEventId");
 
-            var formData = new FormData();
+            const formData = new FormData();
             formData.append("function", "sendGuestMessage");
             formData.append("message", messageContent);
-            formData.append("API_URL", API_URL); 
+            formData.append("API_URL", API_URL);
             formData.append("event_id", eventId);
 
             // Handle guest_ids properly for both bulk and individual
-            var guestIds;
+            let guestIds;
             if (messageType === "bulk") {
                 guestIds = Array.from(selectedGuests).join(",");
             } else {
@@ -278,41 +272,40 @@ const RSVPResponses = () => {
             console.log("Message type:", messageType);
             console.log("Event ID:", eventId);
 
-            var response = await fetch(API_URL + "/send_message_to_guest.php", { method: "POST", body: formData });
-            var data = await response.json();
+            const response = await fetch(`${API_URL}/send_message_to_guest.php`, { method: "POST", body: formData });
+            const data = await response.json();
 
             console.log("messages response: ", data);
 
             if (data.success) {
-                var recipientCount = messageType === "bulk" ? selectedGuests.size : 1;
-                printAlert("Message sent to " + recipientCount + " guest(s)", "success");
+                const recipientCount = messageType === "bulk" ? selectedGuests.size : 1;
+                printAlert(`Message sent to ${recipientCount} guest(s)`, "success");
                 setMessageModalOpen(false);
                 setMessageContent("");
                 setSelectedGuestForMessage(null);
             } else {
-                printAlert("Failed to send message: " + data.message, "error");
+                printAlert(`Failed to send message: ${data.message}`, "error");
             }
         } catch (error) {
             console.error(error);
             printAlert("Error sending message", "error");
         }
     };
-    
-    var openIndividualMessage = function (guest) {
+
+    const openIndividualMessage = (guest) => {
         setSelectedGuestForMessage(guest);
         setMessageType("individual");
         setMessageContent("");
         setMessageModalOpen(true);
     };
 
-    var toggleDropdown = function () { return setDropdownOpen(function (prev) { return !prev; }); };
-    var goToHome = function () { return navigate("/eventsDashboard"); };
-    var goToEventManagement = function () { return navigate("/eventManagement"); };
-    var goToInvitations = function () { return navigate("/invitationPage"); };
-    var goToManage = function () { return navigate("/manage_my_event"); };
-    var goToProfile = function () { return navigate("/Profile"); };
-    var goToGuest = function () { return navigate("/guest_insights"); };
-    var goToAttendanceStats = function () { return navigate("/attendance_stats"); };
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+
+    const closeSidebar = () => {
+        setSidebarOpen(false);
+    };
 
     return (
         <div className="dashboard-container">
@@ -367,46 +360,18 @@ const RSVPResponses = () => {
                 </div>
             )}
 
-
             {/* HEADER */}
-            <div className="dashboard-header">
-                <h1>Evenda</h1>
-                <div className="header-tabs">
-                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>
-                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
-                        <i className="bi bi-person-circle"></i>
-                        <span>{user?.name || "Guest"}</span>
-                        <i className="bi bi-chevron-bar-down"></i>
-                        {dropdownOpen && (
-                            <div className="dropdown-menu show">
-                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <DashboardHeader
+                user={user}
+                eventStatus={eventStatus}
+                onToggleSidebar={toggleSidebar}
+            />
 
             {/* SIDEBAR */}
-            <div className="dashboard-sidebar">
-                <div className="sidebar-header"><h3>Event Management</h3></div>
-                <div className="sidebar-section">
-                    <h4>Event Planning</h4>
-                    <ul>
-                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
-                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
-                        <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
-                        <li className="active"  onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
-                    </ul>
-                </div>
-                <div className="sidebar-section">
-                    <h4>Event Analytics</h4>
-                    <ul>
-                        <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
-                        <li onClick={goToGuest}><i className="bi bi-people"></i>Guest Insights</li>
-                    </ul>
-                </div>
-            </div>
+            <DashboardSidebar
+                isMobileOpen={sidebarOpen}
+                onClose={closeSidebar}
+            />
 
             {/* MAIN CONTENT */}
             <div className="dashboard-content">
@@ -417,7 +382,7 @@ const RSVPResponses = () => {
                     </div>
                     <div className="header-actions">
                         <div className="filter-dropdown">
-                            <select value={responseFilter} onChange={function (e) { return setResponseFilter(e.target.value); }} className="filter-select">
+                            <select value={responseFilter} onChange={(e) => setResponseFilter(e.target.value)} className="filter-select">
                                 <option value="all">All Responses</option>
                                 <option value="yes">Attending</option>
                                 <option value="no">Not Attending</option>
@@ -430,14 +395,14 @@ const RSVPResponses = () => {
                                 type="text"
                                 placeholder="Search guests..."
                                 value={searchTerm}
-                                onChange={function (e) { return setSearchTerm(e.target.value); }}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                 className="search-input"
                             />
                         </div>
-                        <button className="btn btn-sm btn-outline" onClick={function () { return handleSort("asc"); }}>
+                        <button className="btn btn-sm btn-outline" onClick={() => handleSort("asc")}>
                             <i className="bi bi-sort-alpha-down"></i> A-Z
                         </button>
-                        <button className="btn btn-sm btn-outline" onClick={function () { return handleSort("desc"); }}>
+                        <button className="btn btn-sm btn-outline" onClick={() => handleSort("desc")}>
                             <i className="bi bi-sort-alpha-up"></i> Z-A
                         </button>
                     </div>
@@ -452,19 +417,19 @@ const RSVPResponses = () => {
                         <div ref={bulkActionRef} className="bulk-actions">
                             <button
                                 className="btn btn-primary btn-sm"
-                                onClick={function () { return handleBulkAction("message"); }}
+                                onClick={() => handleBulkAction("message")}
                             >
                                 <i className="bi bi-envelope"></i> Send Message
                             </button>
                             <button
                                 className="btn btn-danger btn-sm"
-                                onClick={function () { return handleBulkAction("remove"); }}
+                                onClick={() => handleBulkAction("remove")}
                             >
                                 <i className="bi bi-trash"></i> Remove
                             </button>
                             <button
                                 className="btn btn-outline btn-sm"
-                                onClick={function () { return setSelectedGuests(new Set()); }}
+                                onClick={() => setSelectedGuests(new Set())}
                             >
                                 <i className="bi bi-x"></i> Clear
                             </button>
@@ -474,8 +439,9 @@ const RSVPResponses = () => {
 
                 {loading ? (
                     <div className="loading-container">
-                        <div className="spinner-border text-info" role="status">
-                            <span className="visually-hidden">Loading...</span>
+                        <div className="loading-overlay">
+                            <div className="loading-spinner"></div>
+                            <div className="loading-text">Loading...</div>
                         </div>
                     </div>
                 ) : (
@@ -493,42 +459,30 @@ const RSVPResponses = () => {
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Attending</th>
-                                        <th>Guests</th>
-                                        <th>date</th>
-                                    {/* <th width="120">Actions</th> */}
+                                    <th>Guests</th>
+                                    <th>date</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredResponses.length > 0 ? filteredResponses.map(function (r) {
+                                {filteredResponses.length > 0 ? filteredResponses.map((r) => {
                                     return (
                                         <tr key={r.guest_id} className={selectedGuests.has(r.guest_id) ? "selected" : ""}>
                                             <td>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedGuests.has(r.guest_id)}
-                                                    onChange={function () { return toggleGuestSelection(r.guest_id); }}
+                                                    onChange={() => toggleGuestSelection(r.guest_id)}
                                                 />
                                             </td>
                                             <td className="guest-name">{r.name}</td>
                                             <td className="guest-email">{r.email}</td>
                                             <td>
-                                                <span className={"attending-badge " + (r.attending ? r.attending.toLowerCase() : "")}>
+                                                <span className={`attending-badge ${r.attending ? r.attending.toLowerCase() : ""}`}>
                                                     {r.attending}
                                                 </span>
                                             </td>
                                             <td className="guest-count">{r.guest_count}</td>
                                             <td>{new Date(r.created_at).toLocaleDateString()}</td>
-                                            {/* <td>
-                                                <div className="action-buttons">
-                                                    <button
-                                                        className="btn-icon btn-message"
-                                                        onClick={function () { return openIndividualMessage(r); }}
-                                                        title="Send message"
-                                                    >
-                                                        <i className="bi bi-envelope"></i>
-                                                    </button>
-                                                </div>
-                                            </td> */}
                                         </tr>
                                     );
                                 }) : (
@@ -552,13 +506,13 @@ const RSVPResponses = () => {
                         <div className="modal-header">
                             <h3>
                                 {messageType === "bulk"
-                                    ? "Send Message to " + selectedGuests.size + " Guests"
-                                    : "Message " + (selectedGuestForMessage ? selectedGuestForMessage.name : "")
+                                    ? `Send Message to ${selectedGuests.size} Guests`
+                                    : `Message ${selectedGuestForMessage ? selectedGuestForMessage.name : ""}`
                                 }
                             </h3>
                             <button
                                 className="btn-close"
-                                onClick={function () { return setMessageModalOpen(false); }}
+                                onClick={() => setMessageModalOpen(false)}
                             >
                                 <i className="bi bi-x"></i>
                             </button>
@@ -566,7 +520,7 @@ const RSVPResponses = () => {
                         <div className="modal-body">
                             <textarea
                                 value={messageContent}
-                                onChange={function (e) { return setMessageContent(e.target.value); }}
+                                onChange={(e) => setMessageContent(e.target.value)}
                                 placeholder="Type your message here..."
                                 rows="6"
                                 className="message-textarea"
@@ -575,7 +529,7 @@ const RSVPResponses = () => {
                         <div className="modal-footer">
                             <button
                                 className="btn btn-outline"
-                                onClick={function () { return setMessageModalOpen(false); }}
+                                onClick={() => setMessageModalOpen(false)}
                             >
                                 Cancel
                             </button>

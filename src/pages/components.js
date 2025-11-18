@@ -2,7 +2,7 @@ import '../App.css';
 import '../alert.css';
 import { useEffect, useState, useRef } from "react"
 import { NavLink } from "react-router-dom";
-import { useNavigate, Routes, Route } from "react-router-dom";
+import { useNavigate, Routes, Route, useLocation } from "react-router-dom";
 
 // Import your pages
 import Index from './index';
@@ -535,6 +535,9 @@ export function LoginNav() {
     const goToProfile = () => {
         navigate("/Profile");
     }
+    const goToDashboared = () => {
+        navigate("/eventsDashboard");
+    }
 
     const toggleDropdown = () => {
         setDropdownOpen(prev => !prev);
@@ -583,14 +586,15 @@ export function LoginNav() {
                             <i className="bi bi-chevron-bar-down"></i>
 
                             {dropdownOpen && (
-                                <div className="dropdown-menu show">
-
-                                    <button onClick={goToProfile} className="dropdown-item">
-                                        <i className="bi bi-person"></i>Profile
+                                <div className="dropdown-menu"> 
+                                    <button onClick={goToDashboared} className="dropdown-item">
+                                        <i className="bi bi-grid-fill"></i> Dashboared
                                     </button>
-
+                                    <button onClick={goToProfile} className="dropdown-item">
+                                        <i className="bi bi-person"></i> Profile
+                                    </button>
                                     <button className="dropdown-item" onClick={logOut}>
-                                        <i className="bi bi-box-arrow-right"></i>Logout
+                                        <i className="bi bi-box-arrow-right"></i> Logout
                                     </button>
                                 </div>
                             )}
@@ -1162,3 +1166,164 @@ const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
             });
     });
 };
+
+
+export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+    const navigate = useNavigate();
+
+    const toggleDropdown = () => {
+        setDropdownOpen(!dropdownOpen);
+    };
+
+    const goToProfile = () => {
+        navigate('/Profile');
+        setDropdownOpen(false);
+    };
+
+    const logOut = () => {
+        localStorage.removeItem('user');
+        navigate('/');
+        setDropdownOpen(false);
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    return (
+        <div className="dashboard-header-with-menu">
+            <div className="header-left">
+                <button
+                    className="burger-menu d-md-none"
+                    onClick={onToggleSidebar}
+                    aria-label="Toggle navigation menu"
+                >
+                    <span className="burger-line"></span>
+                    <span className="burger-line"></span>
+                    <span className="burger-line"></span>
+                </button>
+
+                {/* Logo - Hidden on mobile, shown on desktop */}
+                <h1 className="d-none d-md-block">Evenda</h1>
+            </div>
+
+            <div className="header-tabs">
+                <button className={`status-btn status-${eventStatus?.toLowerCase() || 'draft'}`}>
+                    {eventStatus || 'Draft'}
+                </button>
+                <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
+                    <i className="bi bi-person-circle"></i>
+                    <span>{user?.name || "Guest"}</span>
+                    <i className="bi bi-chevron-bar-down"></i>
+                    {dropdownOpen && (
+                        <div className="dropdown-menu show">
+                            <button className="dropdown-item" onClick={goToProfile}>
+                                <i className="bi bi-person"></i>Profile
+                            </button>
+                            <button className="dropdown-item" onClick={logOut}>
+                                <i className="bi bi-box-arrow-right"></i>Logout
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export function DashboardSidebar({ isMobileOpen, onClose }) {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const goToHome = () => {
+        navigate("/eventsDashboard");
+        onClose?.();
+    };
+    const goToManage = () => {
+        navigate("/manage_my_event");
+        onClose?.();
+    };
+    const goToInvitations = () => {
+        navigate("/invitationPage");
+        onClose?.();
+    };
+    const goToEventManagement = () => {
+        navigate("/eventManagement");
+        onClose?.();
+    };
+    const goToAttendanceStats = () => {
+        navigate("/attendance_stats");
+        onClose?.();
+    };
+    const goToGuest = () => {
+        navigate("/guest_insights");
+        onClose?.();
+    };
+
+    const navigationItems = [
+        {
+            section: 'Event Planning',
+            items: [
+                { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
+                { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
+                { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
+                { path: '/eventManagement', icon: 'bi-list-check', label: 'RSVP Responses', onClick: goToEventManagement }
+            ]
+        },
+        {
+            section: 'Event Analytics',
+            items: [
+                { path: '/attendance_stats', icon: 'bi-graph-up', label: 'Attendance Stats', onClick: goToAttendanceStats },
+                { path: '/guest_insights', icon: 'bi-people', label: 'Guest Insights', onClick: goToGuest }
+            ]
+        }
+    ];
+
+    const isActive = (path) => location.pathname === path;
+
+    return (
+        <>
+            {/* Overlay — only on mobile */}
+            {isMobileOpen && (
+                <div className="sidebar-overlay" onClick={onClose} />
+            )}
+
+            {/* Sidebar — THIS LINE IS THE FIX */}
+            <div className={`dashboard-sidebar ${isMobileOpen ? "mobile-open" : ""}`}>
+                <div className="sidebar-header">
+                    <h3>Event Management</h3>
+                </div>
+
+                {navigationItems.map((section, index) => (
+                    <div key={index} className="sidebar-section">
+                        <h4>{section.section}</h4>
+                        <ul>
+                            {section.items.map((item, itemIndex) => (
+                                <li
+                                    key={itemIndex}
+                                    className={isActive(item.path) ? "active" : ""}
+                                    onClick={item.onClick}
+                                >
+                                    <i className={`bi ${item.icon}`}></i>
+                                    {item.label}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
+        </>
+    );
+}

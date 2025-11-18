@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
-import { logOut } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar } from "../components";
 import { Pie, Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -23,6 +23,7 @@ const AttendanceStats = () => {
     const [loading, setLoading] = useState(true);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
     const [user, setUser] = useState(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [eventStatus, setEventStatus] = useState("");
     const [globalStats, setGlobalStats] = useState({
@@ -439,15 +440,13 @@ const AttendanceStats = () => {
             }
         }
     };
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
 
-    // Navigation functions
-    const goToHome = () => navigate("/eventsDashboard");
-    const goToInvitations = () => navigate("/invitationPage");
-    const goToManage = () => navigate("/manage_my_event");
-    const goToProfile = () => navigate("/Profile");
-    const goToRSVPResponses = () => navigate("/eventManagement");
-    const goToGuestInsights = () => navigate("/guest_insights");
-    const goToAttendanceStats = () => navigate("/attendance_stats");
+    const closeSidebar = () => {
+        setSidebarOpen(false);
+    };
 
     if (loading) {
         return (
@@ -479,45 +478,18 @@ const AttendanceStats = () => {
                 </div>
             )}
 
-            {/* HEADER */}
-            <div className="dashboard-header">
-                <h1>Evenda</h1>
-                <div className="header-tabs">
-                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>
-                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
-                        <i className="bi bi-person-circle"></i>
-                        <span>{user?.name || "Guest"}</span>
-                        <i className="bi bi-chevron-bar-down"></i>
-                        {dropdownOpen && (
-                            <div className="dropdown-menu show">
-                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* SIDEBAR */}
-            <div className="dashboard-sidebar">
-                <div className="sidebar-header"><h3>Event Management</h3></div>
-                <div className="sidebar-section">
-                    <h4>Event Planning</h4>
-                    <ul>
-                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
-                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
-                        <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
-                        <li onClick={goToRSVPResponses}><i className="bi bi-list-check"></i>RSVP Responses</li>
-                    </ul>
-                </div>
-                <div className="sidebar-section">
-                    <h4>Event Analytics</h4>
-                    <ul>
-                        <li className="active" onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
-                        <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
-                    </ul>
-                </div>
-            </div>
+             {/* HEADER */}
+                        <DashboardHeader
+                            user={user}
+                            eventStatus={eventStatus}
+                            onToggleSidebar={toggleSidebar}
+                        />
+            
+                        {/* SIDEBAR */}
+                        <DashboardSidebar
+                            isMobileOpen={sidebarOpen}
+                            onClose={closeSidebar}
+                        />
 
             {/* MAIN CONTENT */}
             <div className="attendance-content">
