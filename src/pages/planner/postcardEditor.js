@@ -6,11 +6,10 @@ import "./postcardEditore.css";
 import { v4 as uuidv4 } from "uuid";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-
 function useHistory(initialState) {
+    
     const [history, setHistory] = useState([initialState]);
     const [index, setIndex] = useState(0);
-
 
     const state = history[index];
 
@@ -124,7 +123,6 @@ const DraggableText = ({ textConfig, isSelected, onSelect, onChange }) => {
                         ...textConfig,
                         x: newX,
                         y: newY,
-                        // Store the original centered position as offset for reference
                         offsetX: textConfig.offsetX || textConfig.x,
                         offsetY: textConfig.offsetY || textConfig.y
                     });
@@ -145,7 +143,6 @@ const DraggableText = ({ textConfig, isSelected, onSelect, onChange }) => {
                         width: textConfig.width ? textConfig.width * scaleX : undefined
                     });
                 }}
-                // Center the text properly using offset
                 offsetX={textConfig.width ? textConfig.width / 2 : 0}
                 offsetY={textConfig.fontSize ? textConfig.fontSize / 2 : 0}
             />
@@ -282,22 +279,15 @@ const IconElements = ({ addIcon }) => (
     <div className="control-section">
         <h3>Add Icons</h3>
         <div className="icon-grid">
-            {/* Date and Time Icons */}
             <button className="icon-btn" onClick={() => addIcon("📅")}>📅 Date</button>
             <button className="icon-btn" onClick={() => addIcon("⏰")}>⏰ Time</button>
             <button className="icon-btn" onClick={() => addIcon("📆")}>📆 Calendar</button>
             <button className="icon-btn" onClick={() => addIcon("🕒")}>🕒 Clock</button>
-
-            {/* Location Icon */}
             <button className="icon-btn" onClick={() => addIcon("📍")}>📍 Location</button>
-
-            {/* Emotion Icons */}
             <button className="icon-btn" onClick={() => addIcon("❤️")}>❤️ Heart</button>
             <button className="icon-btn" onClick={() => addIcon("💕")}>💕 Love</button>
             <button className="icon-btn" onClick={() => addIcon("😊")}>😊 Smile</button>
             <button className="icon-btn" onClick={() => addIcon("🎉")}>🎉 Celebration</button>
-
-            {/* Object Icons */}
             <button className="icon-btn" onClick={() => addIcon("🎁")}>🎁 Gift</button>
             <button className="icon-btn" onClick={() => addIcon("⭐")}>⭐ Star</button>
             <button className="icon-btn" onClick={() => addIcon("🎵")}>🎵 Music</button>
@@ -356,10 +346,8 @@ const Sidebar = ({
             </div>
 
             <div className="sidebar-content">
-                {/* Center Button */}
                 <CenterButton onClick={onCenterEventTexts} />
 
-                {/* Delete Button */}
                 {selectedId && (
                     <div className="control-section">
                         <button className="danger-btn" onClick={deleteSelectedItem}>
@@ -368,35 +356,28 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {/* Text Controls */}
                 {selectedText && (
                     <TextControls selectedText={selectedText} selectedId={selectedId} setTexts={setTexts} texts={texts} />
                 )}
 
-                {/* Image Controls */}
                 {selectedImg && (
                     <ImageControls selectedImg={selectedImg} selectedId={selectedId} setImages={setImages} images={images} />
                 )}
 
-                {/* Shape Controls */}
                 {selectedShape && (
                     <ShapeControls selectedShape={selectedShape} selectedId={selectedId} setShapes={setShapes} shapes={shapes} />
                 )}
 
-                {/* Background Controls */}
                 <BackgroundControls bgConfig={bgConfig} setBgConfig={setBgConfig} />
 
-                {/* Icon Elements */}
                 <IconElements addIcon={addIcon} />
 
-                {/* Add Elements */}
                 <AddElements
                     addText={addText}
                     addShape={addShape}
                     handleImageUpload={handleImageUpload}
                 />
 
-                {/* Export */}
                 <div className="control-section">
                     <button className="save-btn" onClick={downloadImage}>
                         💾 Save PostCard
@@ -1462,6 +1443,7 @@ const RightSidebar = ({
         </div>
     </aside>
 );
+
 // Function to get event data from localStorage
 const getEventDataFromStorage = () => {
     try {
@@ -1628,8 +1610,6 @@ const createEventTextElements = (eventData) => {
     return elements;
 };
 
-
-
 export default function PostcardEditor() {
     const [searchParams] = useSearchParams();
     const templateId = searchParams.get("template");
@@ -1650,11 +1630,10 @@ export default function PostcardEditor() {
         texts: [],
         images: [],
         shapes: [],
-        bgConfig: { type: "image", value: template?.image || "/images/default-bg.jpg" },
+        bgConfig: { type: "color", value: "#ffffff" },
     });
 
     const { texts, images, shapes, bgConfig } = state;
-
     const [selectedId, setSelectedId] = useState(null);
     const [selectedType, setSelectedType] = useState(null);
     const stageRef = useRef();
@@ -1664,21 +1643,62 @@ export default function PostcardEditor() {
         "Anonymous"
     );
 
-    // Load event data from localStorage and create text elements on component mount
-    useEffect(() => {
+    // Load template data and event data when component mounts
+// Load template data and event data when component mounts
+useEffect(() => {
+    if (template && template.data) {
         const eventData = getEventDataFromStorage();
-        if (eventData) {
-            const eventTextElements = createEventTextElements(eventData);
-            if (eventTextElements.length > 0) {
-                // Add event text elements to the texts array
-                setState(prev => ({
-                    ...prev,
-                    texts: [...prev.texts, ...eventTextElements]
-                }));
-            }
+        const templateData = { ...template.data };
+        
+        // Remove the dark overlay shape from template data
+        if (templateData.shapes) {
+            templateData.shapes = templateData.shapes.filter(
+                shape => shape.id !== "390:12" // Remove dark overlay
+            );
         }
-    }, []);
 
+        // Get the main background image from template and remove it from images array
+        const mainBgImage = templateData.images?.find(img => img.id === "390:10");
+        const filteredImages = templateData.images?.filter(img => img.id !== "390:10") || [];
+
+        // Replace template texts with event data while maintaining styles
+        let updatedTexts = [];
+        if (templateData.texts && eventData) {
+            updatedTexts = templateData.texts.map(templateText => {
+                let newText = { ...templateText };
+                
+                // Replace text content based on template text content
+                if (templateText.text.includes("Welcome To") && eventData.eventName) {
+                    newText.text = `Welcome To ${eventData.eventName}`;
+                } else if (templateText.text.includes("Date :") && eventData.eventStartDate) {
+                    newText.text = `Date : ${eventData.eventStartDate}`;
+                } else if (templateText.text.includes("Time:") && eventData.eventStartTime && eventData.eventEndTime) {
+                    newText.text = `Time: ${eventData.eventStartTime} - ${eventData.eventEndTime}`;
+                } else if (templateText.text.includes("Location :") && eventData.eventLocation) {
+                    newText.text = `Location : ${eventData.eventLocation}`;
+                }
+                // Keep the original text if no event data matches
+                return newText;
+            });
+        } else {
+            updatedTexts = templateData.texts || [];
+        }
+
+        // Set the main background image as the background
+        const newBgConfig = mainBgImage ? 
+            { type: "image", value: mainBgImage.src } : 
+            templateData.bgConfig || { type: "color", value: "#ffffff" };
+
+        // Update state with template data (without the duplicate background image)
+        setState(prev => ({
+            ...prev,
+            texts: updatedTexts,
+            images: filteredImages, // Use filtered images without the background
+            shapes: templateData.shapes || [],
+            bgConfig: newBgConfig
+        }));
+    }
+}, [template]);
     // Update state with history tracking
     const updateState = (newState) => {
         setState((prev) => ({ ...prev, ...newState }));
@@ -1759,7 +1779,7 @@ export default function PostcardEditor() {
                     shadowOffsetX: 0,
                     shadowOffsetY: 0,
                     shadowOpacity: 0.5,
-                    cornerRadius: [0, 0, 0, 0], // Individual corner radius
+                    cornerRadius: [0, 0, 0, 0],
                     stroke: "",
                     strokeWidth: 0,
                 };
@@ -1790,7 +1810,7 @@ export default function PostcardEditor() {
                     shapeType: "line",
                     x: 150,
                     y: 150,
-                    points: [0, 0, 100, 0], // Straight line
+                    points: [0, 0, 100, 0],
                     stroke: "#4caf50",
                     strokeWidth: 4,
                     rotation: 0,
@@ -1831,7 +1851,7 @@ export default function PostcardEditor() {
                     shapeType: "arrow",
                     x: 150,
                     y: 150,
-                    points: [0, 0, 100, 0], // Straight arrow
+                    points: [0, 0, 100, 0],
                     pointerLength: 10,
                     pointerWidth: 10,
                     fill: "#9c27b0",
@@ -1882,7 +1902,6 @@ export default function PostcardEditor() {
             const eventData = getEventDataFromStorage();
 
             if (!user || !eventData) {
-                //alert("User or event data not found. Please try again.");
                 printAlert("User or event data not found. Please try again.", "error");
                 setLoading(false);
                 return false;
@@ -1899,7 +1918,7 @@ export default function PostcardEditor() {
             formData.append("eventEndDate", eventData.eventEndDate || "");
             formData.append("eventEndTime", eventData.eventEndTime || "");
             formData.append("eventLocation", eventData.eventLocation || "");
-            formData.append("eventUrlImage", imageData); // Base64 image data
+            formData.append("eventUrlImage", imageData);
             formData.append("eventDesignData", JSON.stringify({
                 texts,
                 images,
@@ -1919,13 +1938,11 @@ export default function PostcardEditor() {
                 printAlert("Event saved successfully!", "success");
                 return true;
             } else {
-                //alert("Failed to save event: " + result.message);
                 printAlert("Failed to save event.", "error");
                 return false;
             }
         } catch (error) {
             console.error("Error saving event:", error);
-            //alert("Error saving event. Please try again.");
             printAlert("Error saving event. Please try again.", "error");
             return false;
         } finally {
@@ -1953,20 +1970,10 @@ export default function PostcardEditor() {
                 const success = await saveEventToDatabase(uri);
 
                 if (success) {
-                    // const confirmDownload = window.confirm("Event saved successfully! Would you like to download the image as well?");
-                    // if (confirmDownload) {
-                    //     const link = document.createElement("a");
-                    //     link.download = `${templateId || 'postcard'}-design.png`;
-                    //     link.href = uri;
-                    //     document.body.appendChild(link);
-                    //     link.click();
-                    //     document.body.removeChild(link);
-                    // }
                     goToEventDashboard();
                 }
             } catch (error) {
                 console.error("Error processing image:", error);
-                //alert("Failed to process image. Please try again.");
                 printAlert("Failed to process image. Please try again.", "error");
             }
         }, 100);
@@ -1975,6 +1982,7 @@ export default function PostcardEditor() {
     const goToEventDashboard = () => {
         navigate("/eventsDashboard");
     };
+
     const handleCanvasClick = (e) => {
         const clickedOnEmpty = e.target === e.target.getStage();
         if (clickedOnEmpty) {
@@ -1983,11 +1991,9 @@ export default function PostcardEditor() {
             return;
         }
 
-        // Find which element was clicked
         const clickedElementId = e.target.attrs.id;
         if (!clickedElementId) return;
 
-        // Check if it's a text element
         const textElement = texts.find(t => t.id === clickedElementId);
         if (textElement) {
             setSelectedId(clickedElementId);
@@ -1995,7 +2001,6 @@ export default function PostcardEditor() {
             return;
         }
 
-        // Check if it's an image element
         const imageElement = images.find(i => i.id === clickedElementId);
         if (imageElement) {
             setSelectedId(clickedElementId);
@@ -2003,7 +2008,6 @@ export default function PostcardEditor() {
             return;
         }
 
-        // Check if it's a shape element
         const shapeElement = shapes.find(s => s.id === clickedElementId);
         if (shapeElement) {
             setSelectedId(clickedElementId);
@@ -2011,12 +2015,10 @@ export default function PostcardEditor() {
             return;
         }
 
-        // If no element found, deselect
         setSelectedId(null);
         setSelectedType(null);
     };
 
-    // Update z-index of elements
     const updateElementZIndex = (id, type, direction) => {
         const allElements = [
             ...texts.map((t) => ({ ...t, type: "text" })),
@@ -2028,13 +2030,12 @@ export default function PostcardEditor() {
 
         if ((direction === 'up' && elementIndex === allElements.length - 1) ||
             (direction === 'down' && elementIndex === 0)) {
-            return; // Cannot move further
+            return;
         }
 
         const newIndex = direction === 'up' ? elementIndex + 1 : elementIndex - 1;
         const targetElement = allElements[newIndex];
 
-        // Swap zIndex values
         const updatedElements = allElements.map(el => {
             if (el.id === id) {
                 return { ...el, zIndex: targetElement.zIndex };
@@ -2044,7 +2045,6 @@ export default function PostcardEditor() {
             return el;
         });
 
-        // Update state with new zIndex values
         const newTexts = updatedElements.filter(el => el.type === 'text').map(({ type, ...rest }) => rest);
         const newImages = updatedElements.filter(el => el.type === 'image').map(({ type, ...rest }) => rest);
         const newShapes = updatedElements.filter(el => el.type === 'shape').map(({ type, ...rest }) => rest);
@@ -2056,19 +2056,12 @@ export default function PostcardEditor() {
         });
     };
 
-    // Sort elements by zIndex for rendering
-    const allElements = [
-        ...texts.map((t) => ({ ...t, type: "text" })),
-        ...images.map((i) => ({ ...i, type: "image" })),
-        ...shapes.map((s) => ({ ...s, type: "shape" })),
-    ].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-
     const addIcon = (icon) => {
         const newText = {
             id: uuidv4(),
             text: icon,
-            x: 300, // Center of the 600px wide canvas
-            y: 200, // Center of the 400px tall canvas
+            x: 300,
+            y: 200,
             fontSize: 32,
             fontFamily: "Arial",
             fill: "#000000",
@@ -2091,13 +2084,11 @@ export default function PostcardEditor() {
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
-            console.log(storedUser);
             setUser(JSON.parse(storedUser));
         }
-    }, [])
+    }, []);
 
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
-
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
         setTimeout(() => {
@@ -2105,22 +2096,26 @@ export default function PostcardEditor() {
         }, 5000);
     };
 
-
     if (loading) {
         return (
-            <>
-                <div className="loading-container">
-                    <div className="spinner-border text-info" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <div className="loading-text">Saving your event..-</div>
+            <div className="loading-container">
+                <div className="spinner-border text-info" role="status">
+                    <span className="visually-hidden">Loading...</span>
                 </div>
-            </>
+                <div className="loading-text">Saving your event...</div>
+            </div>
         );
     }
+
+    // Sort elements by zIndex for rendering
+    const allElements = [
+        ...texts.map((t) => ({ ...t, type: "text" })),
+        ...images.map((i) => ({ ...i, type: "image" })),
+        ...shapes.map((s) => ({ ...s, type: "shape" })),
+    ].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
     return (
         <div className="editor-container">
-            {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i
@@ -2136,7 +2131,7 @@ export default function PostcardEditor() {
                     <span>{alert.message}</span>
                 </div>
             )}
-            {/* Left Sidebar */}
+
             <Sidebar
                 selectedId={selectedId}
                 selectedType={selectedType}
@@ -2158,9 +2153,7 @@ export default function PostcardEditor() {
                 onCenterEventTexts={handleCenterEventTexts}
             />
 
-            {/* Canvas Area */}
             <div className="editor-main">
-                {/* Navbar */}
                 <div className="editor-navbar">
                     <button className="back-button" onClick={() => window.history.back()}>
                         ← Back to Templates
@@ -2169,35 +2162,32 @@ export default function PostcardEditor() {
                     <div className="user-info">{user ? user.name : "Guest"}</div>
                 </div>
 
-                {/* Canvas */}
                 <div className="canvas-container">
                     <Stage
-                        width={600}
-                        height={700}
+                        width={400}
+                        height={500}
                         ref={stageRef}
                         onClick={handleCanvasClick}
                         onTap={handleCanvasClick}
                     >
                         <Layer>
+                            {/* Background - using the main template background image */}
                             {bgConfig.type === "image" && bgImage ? (
                                 <Image
                                     image={bgImage}
-                                    width={600}
-                                    height={700}
-                                    // Add these properties for object-fit: center behavior
-                                    offsetX={0}
-                                    offsetY={0}
-                                    crop={null}
-                                    // This will maintain aspect ratio and center the image
-                                    fillPatternImage={bgImage}
-                                    fillPatternRepeat="no-repeat"
-                                    fillPatternOffsetX={-(bgImage.width - 600) / 2}
-                                    fillPatternOffsetY={-(bgImage.height - 700) / 2}
-                                    fillPatternScaleX={600 / bgImage.width}
-                                    fillPatternScaleY={700 / bgImage.height}
+                                    width={400}
+                                    height={500}
+                                    x={0}
+                                    y={0}
                                 />
                             ) : (
-                                <Rect width={600} height={700} fill={bgConfig.value} />
+                                <Rect 
+                                    width={400} 
+                                    height={500} 
+                                    fill={bgConfig.value} 
+                                    x={0}
+                                    y={0}
+                                />
                             )}
 
                             {allElements.map((element) => {
@@ -2260,7 +2250,6 @@ export default function PostcardEditor() {
                 </div>
             </div>
 
-            {/* Right Sidebar */}
             <RightSidebar
                 elements={allElements}
                 selectedId={selectedId}

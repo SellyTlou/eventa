@@ -66,7 +66,7 @@ function Support() {
                                     Your success is our priority. Get the support you need to create unforgettable events.
                                 </p>
                                 <button 
-                                    className="btn btn-get-demo"
+                                    className="btns"
                                     onClick={handleCreateEvent}
                                 >
                                     Get Started

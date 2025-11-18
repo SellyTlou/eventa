@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "../App.css";
 import "../responce.css";
 import { Navbar, Footer, Login } from "./components";
+import { Star } from 'react-konva';
 
 function Index() {
     const [startIndex, setStartIndex] = useState(0);
@@ -287,7 +288,7 @@ function Index() {
                                         </p>
                                         <div className="btn-container">
                                             <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
-                                                Get Started For Free
+                                                Get Started
                                             </button>
                                         </div>
                                     </div>
@@ -310,7 +311,7 @@ function Index() {
                                         </p>
                                         <div className="btn-container">
                                             <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
-                                                Design Your Invite Now
+                                                Get Started
                                             </button>
                                         </div>
                                     </div>
@@ -333,7 +334,7 @@ function Index() {
                                         </p>
                                         <div className="btn-container">
                                             <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
-                                                Start Managing For Free
+                                                Get Started
                                             </button>
                                         </div>
                                     </div>
@@ -500,7 +501,7 @@ function Index() {
                                                 className="btn btn-create"
                                                 onClick={() => handleGetStartedClick(plan.name)}
                                             >
-                                                {plan.price === "Free" || plan.price === "R0" ? "Get Started Free" : "Choose Plan"}
+                                                {plan.price === "Free" || plan.price === "R0" ? "Get Started" : "Choose Plan"}
                                             </button>
                                         </div>
                                     </div>

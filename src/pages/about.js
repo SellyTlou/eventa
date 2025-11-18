@@ -44,15 +44,11 @@ function About() {
                                     with a platform built for effortless event management.
                                 </p>
                                 <button className="btn btn-create">
-                                    Get Started For Free
+                                    Get Started
                                 </button>
                             </div>
                             <div className="col-lg-6 image-content">
-                                <img 
-                                    src="/images/logo.png" 
-                                    alt="Eventa About" 
-                                    className="img-fluid" 
-                                />
+                                <img src="/images/chirs.png" alt="Celebrate with Evendi" className="img-fluid hero-image" />
                             </div>
                         </div>
                     </div>

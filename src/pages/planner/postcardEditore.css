@@ -221,7 +221,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+   padding: 24px;
     background: #ecf0f1;
     overflow: auto;
 }

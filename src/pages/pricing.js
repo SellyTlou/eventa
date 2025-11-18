@@ -12,6 +12,10 @@ function Pricing() {
     const [activeFaq, setActiveFaq] = useState(null);
     const navigate = useNavigate();
 
+    // New state for pricing plans
+    const [pricingPlans, setPricingPlans] = useState([]);
+    const [loadingPricing, setLoadingPricing] = useState(true);
+
     useEffect(() => {
         const handleResize = () => {
             // eslint-disable-next-line no-unused-vars
@@ -19,12 +23,130 @@ function Pricing() {
         };
 
         window.addEventListener('resize', handleResize);
+
+        // Fetch pricing plans when component mounts
+        fetchPricingPlans();
+
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
     const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
+
+    // Helper function to get default features based on package type
+    const getDefaultFeatures = (packageType, maxGuests, maxEvents) => {
+        const baseFeatures = [
+            `Up to ${maxGuests} guests per event`,
+            `Create up to ${maxEvents} events`,
+            "Event management tools",
+            "RSVP tracking"
+        ];
+
+        switch (packageType.toLowerCase()) {
+            case 'premium':
+                return [
+                    ...baseFeatures,
+                    "Access to premium templates",
+                    "Custom branding options",
+                    "Priority support",
+                    "Advanced RSVP analytics"
+                ];
+            case 'enterprise':
+                return [
+                    ...baseFeatures,
+                    "Dedicated account manager",
+                    "Custom integrations",
+                    "Team collaboration tools",
+                    "Unlimited events",
+                    "Advanced analytics"
+                ];
+            default: // basic/free
+                return [
+                    ...baseFeatures,
+                    "Access to basic templates",
+                    "Create and send invitations",
+                    "Basic support"
+                ];
+        }
+    };
+
+    // Default pricing plans fallback
+    const getDefaultPricingPlans = () => {
+        return [
+            {
+                id: 1,
+                name: "Basic",
+                price: "Free",
+                duration: "per month",
+                max_guests: 50,
+                max_events: 5,
+                features: getDefaultFeatures('basic', 50, 5),
+                isPopular: false
+            },
+            {
+                id: 2,
+                name: "Premium",
+                price: "R100",
+                duration: "per month",
+                max_guests: 200,
+                max_events: 20,
+                features: getDefaultFeatures('premium', 200, 20),
+                isPopular: true
+            },
+            {
+                id: 3,
+                name: "Enterprise",
+                price: "R750",
+                duration: "per month",
+                max_guests: 500,
+                max_events: 50,
+                features: getDefaultFeatures('enterprise', 500, 50),
+                isPopular: false
+            }
+        ];
+    };
+
+    const fetchPricingPlans = async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getAllPackages");
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+            console.log("Pricing plans data:", data);
+
+            if (data.success && data.packages) {
+                const formattedPlans = data.packages.map(pkg => ({
+                    id: pkg.package_id,
+                    name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
+                    price: pkg.price === 0 ? "Free" : `R${pkg.price}`,
+                    duration: "per month",
+                    max_guests: pkg.max_guests,
+                    max_events: pkg.max_events,
+                    features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type, pkg.max_guests, pkg.max_events),
+                    isPopular: pkg.package_type === 'premium' // Mark premium as most popular
+                }));
+                setPricingPlans(formattedPlans);
+            } else {
+                // Fallback to default plans if API fails
+                setPricingPlans(getDefaultPricingPlans());
+            }
+        } catch (err) {
+            console.error("Error fetching pricing plans:", err);
+            // Fallback to default plans
+            setPricingPlans(getDefaultPricingPlans());
+        } finally {
+            setLoadingPricing(false);
+        }
+    };
 
     const handleLoginClick = () => {
         setLoginMode("login");
@@ -48,117 +170,28 @@ function Pricing() {
         }
     };
 
+    // Updated pricing categories using API data
     const pricingCategories = {
-        "Personal Events": [
-            {
-                name: "Basic",
-                monthlyPrice: "R400",
-                yearlyPrice: "R2400",
-                description: "Perfect for small gatherings",
-                isPopular: false,
-                features: [
-                    "Up to 50 guests per event",
-                    "Create up to 5 events",
-                    "Access to basic templates",
-                    "Create and send invitations",
-                    "RSVP tracking",
-                    "Event management tools"
-                ],
-                ctaText: "Create my event",
-                ctaVariant: "btn-demo"
-            },
-            {
-                name: "Enterprise",
-                monthlyPrice: "R750",
-                yearlyPrice: "R4500",
-                description: "For large-scale events",
-                isPopular: false,
-                features: [
-                    "Up to 150 guests per event",
-                    "Create up to 10 events",
-                    "All Premium features",
-                    "Dedicated account manager",
-                    "Custom integrations",
-                    "Team collaboration tools",
-                    "Unlimited events"
-                ],
-                ctaText: "Create event",
-                ctaVariant: "btn-create"
-            },
-            {
-                name: "Premium",
-                monthlyPrice: "R100",
-                yearlyPrice: "R299.94",
-                description: "For premium events",
-                isPopular: true,
-                features: [
-                    "Up to 300 guests per event",
-                    "Create up to 20 events",
-                    "All Basic features",
-                    "Access to premium templates",
-                    "Custom branding options",
-                    "Priority support",
-                    "Advanced RSVP analytics"
-                ],
-                ctaText: "Create event",
-                ctaVariant: "btn-create"
-            }
-        ],
-        "Business & Nonprofit": [
-            {
-                name: "Basic",
-                monthlyPrice: "R400",
-                yearlyPrice: "R2400",
-                description: "For small businesses",
-                isPopular: false,
-                features: [
-                    "Up to 50 guests per event",
-                    "Create up to 5 events",
-                    "Access to basic templates",
-                    "Create and send invitations",
-                    "RSVP tracking",
-                    "Event management tools"
-                ],
-                ctaText: "Create event",
-                ctaVariant: "btn-create"
-            },
-            {
-                name: "Premium",
-                monthlyPrice: "R100",
-                yearlyPrice: "R599",
-                description: "For growing businesses",
-                isPopular: true,
-                features: [
-                    "Up to 200 guests per event",
-                    "Create up to 20 events",
-                    "All Basic features",
-                    "Access to premium templates",
-                    "Custom branding options",
-                    "Priority support",
-                    "Advanced RSVP analytics"
-                ],
-                ctaText: "Create event",
-                ctaVariant: "btn-create"
-            },
-            {
-                name: "Enterprise",
-                monthlyPrice: "R750",
-                yearlyPrice: "R4500",
-                description: "For large enterprises",
-                isPopular: false,
-                features: [
-                    "Up to 150 guests per event",
-                    "Create up to 10 events",
-                    "All Premium features",
-                    "Dedicated account manager",
-                    "Custom integrations",
-                    "Team collaboration tools",
-                    "Unlimited events"
-                ],
-                ctaText: "Create event",
-                ctaVariant: "btn-create"
-            }
-        ],
+        "Personal Events": pricingPlans.map(plan => ({
+            name: plan.name,
+            monthlyPrice: plan.price,
+            yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`, // 40% discount
+            description: `Perfect for ${plan.name.toLowerCase()} events`,
+            isPopular: plan.isPopular,
+            features: plan.features,
+            ctaText: plan.price === "Free" ? "Get Started Free" : "Create my event",
+            ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
+        })),
+        "Business & Nonprofit": pricingPlans.map(plan => ({
+            name: plan.name,
+            monthlyPrice: plan.price,
+            yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
+            description: `For ${plan.name.toLowerCase()} business needs`,
+            isPopular: plan.isPopular,
+            features: plan.features,
+            ctaText: "Create event",
+            ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
+        })),
         "Selling Tickets": [
             {
                 name: "Basic",
@@ -244,10 +277,33 @@ function Pricing() {
     };
 
     const calculateYearlySavings = (monthlyPrice) => {
+        if (monthlyPrice === "Free") return "Completely free forever";
         const monthly = parseFloat(monthlyPrice.replace('R', ''));
         const yearly = monthly * 12 * 0.6; // 40% discount
         return `Save R${Math.round(monthly * 12 - yearly)} per year`;
     };
+
+    // Show loading state
+    if (loadingPricing) {
+        return (
+            <>
+                <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
+                <div className="pricing-page">
+                    <section className="pricing-hero">
+                        <div className="container">
+                            <div className="row">
+                                <div className="col-12 text-center">
+                                    <h1>Plans designed to grow with your celebration</h1>
+                                    <p className="lead">Loading pricing plans...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <Footer />
+            </>
+        );
+    }
 
     return (
         <>
@@ -269,7 +325,7 @@ function Pricing() {
                             <div className="col-12 text-center">
                                 <h1>Plans designed to grow with your celebration</h1>
                                 <p className="lead">
-                                    Plan smarter with options designed for personal 
+                                    Plan smarter with options designed for personal
                                     gatherings, corporate events, or ticketed experiences.
                                 </p>
                             </div>
@@ -287,8 +343,8 @@ function Pricing() {
                                         Monthly
                                     </span>
                                     <label className="switch">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={billingCycle === "yearly"}
                                             onChange={(e) => setBillingCycle(e.target.checked ? "yearly" : "monthly")}
                                         />
@@ -333,7 +389,7 @@ function Pricing() {
                                             )}
                                             <h3>{plan.name}</h3>
                                             <p className="plan-description">{plan.description}</p>
-                                            
+
                                             <div className="price-tag">
                                                 <span className="price">
                                                     {billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
@@ -343,7 +399,7 @@ function Pricing() {
                                                 </span>
                                             </div>
 
-                                            {billingCycle === "yearly" && (
+                                            {billingCycle === "yearly" && plan.monthlyPrice !== "Free" && (
                                                 <div className="savings-text">
                                                     {calculateYearlySavings(plan.monthlyPrice)}
                                                 </div>
@@ -357,7 +413,7 @@ function Pricing() {
                                                 ))}
                                             </ul>
 
-                                            <button 
+                                            <button
                                                 className={`btn ${plan.ctaVariant} w-100`}
                                                 onClick={handleCreateEvent}
                                             >
@@ -384,8 +440,8 @@ function Pricing() {
                                 <div className="faq-container">
                                     {faqItems.map((faq, index) => (
                                         <div key={index} className="faq-item">
-                                            <div 
-                                                className="faq-question" 
+                                            <div
+                                                className="faq-question"
                                                 onClick={() => toggleFaq(index)}
                                             >
                                                 <span>{faq.question}</span>
@@ -421,7 +477,7 @@ function Pricing() {
                                     <p>We're working hard to bring you ticketing features</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowTicketMaintenance(false)}
                             >
@@ -437,7 +493,7 @@ function Pricing() {
                                 <h3>Coming Soon!</h3>
                                 <p>Our ticket selling feature is currently being developed and will be available in our next update.</p>
                                 <p>We're building a comprehensive ticketing system to make your event ticket sales seamless and efficient!</p>
-                                
+
                                 <div className="maintenance-tips">
                                     <h4>In the meantime, you can:</h4>
                                     <ul>
@@ -448,16 +504,16 @@ function Pricing() {
                                     </ul>
                                 </div>
                             </div>
-                            
+
                             <div className="modal-actions-new">
-                                <button 
+                                <button
                                     className="action-btn-new primary"
                                     onClick={() => setShowTicketMaintenance(false)}
                                 >
                                     <i className="bi bi-check-circle"></i>
                                     Got It
                                 </button>
-                                <button 
+                                <button
                                     className="action-btn-new secondary"
                                     onClick={handleCreateEvent}
                                 >

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import "../App.css";
 import "../responce.css";
 import "./sales.css";
 import { Navbar, Footer, Login } from "./components";
@@ -41,12 +40,12 @@ function Sales() {
                 
                 <section className="header-section">
                     <img
-                        src="/images/SalesHero.png"
+                        src="/images/salesImage.png"
                         alt="Sales hero background"
                         className="hero-bg-img"
                     />
 
-                    <div className="overlayer"/>
+                    <div className="overlay"></div>
                     <div className="container">
                         <div className="row ">
                             <div className="col-lg-7">
@@ -54,12 +53,7 @@ function Sales() {
                                 <p className="lead">
                                     No matter the size, we help organizations plan and execute successful events.
                                 </p>
-                                <button 
-                                    className="btn btn-get-demo"
-                                    onClick={handleCreateEvent}
-                                >
-                                    Get Demo
-                                </button>
+                                
                             </div>
                         </div>
                     </div>
@@ -124,45 +118,7 @@ function Sales() {
                     </div>
                 </section>
 
-                {/* CTA BANNER */}
-                <section
-                    className="cta-banner text-light d-flex align-items-center"
-                    style={{
-                        position: "relative"
-                    }}
-                    aria-label="CTA: Let's get your event started"
-                >
-                    <img
-                        src="/images/Sales.png"
-                        alt="CTA background"
-                        className="cta-bg-img"
-                    />
-
-                    <div
-                        className="cta-overlay"
-                        style={{
-                            position: "absolute",
-                            inset: 0,
-                            background: "rgba(0,0,0,0.35)",
-                        }}
-                        aria-hidden="true"
-                    />
-                    <div className="container position-relative text-center text-lg-start">
-                        <div className="row align-items-center">
-                            <div className="col-lg-8">
-                                <h3 className="fw-semibold">Let's get your event started.</h3>
-                            </div>
-                            <div>
-                                <button 
-                                    className="btn btn-get-demo"
-                                    onClick={handleCreateEvent}
-                                >
-                                    Get Demo
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+              
             </section>
 
             <Footer />

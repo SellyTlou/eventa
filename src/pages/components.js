@@ -280,8 +280,9 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                 <div className="container">
                     <div className="row bottom-nav-row">
                         <div className="col-md-3 logo-container">
-                            <img src="/images/logo.png" alt="Eventa Logo" className="logo img-fluid" />
-                        </div>
+                            <a href="/">
+                                <img src="/images/logo.png" alt="Eventa Logo" className="logo img-fluid" />
+                            </a>                        </div>
                         <div className="col-md-6">
                             <ul className="nav-list nav ">
                                 <li className="nav-item">
@@ -365,8 +366,9 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                 <div className="container-fluid">
                     <div className="row align-items-center py-2">
                         <div className="col-6">
-                            <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
-                        </div>
+                            <a href="/">
+                                <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
+                            </a>                        </div>
                         <div className="col-6 text-end">
                             <button
                                 className="mobile-menu-toggle"
@@ -463,7 +465,7 @@ export function Footer() {
             <div className="container">
                 <div className="row top-footer-row">
                     <div className='col-lg-4'>
-                        <img src="/images/logo.png" alt="Eventa Logo" className="footer-logo img-fluid mb-3" />
+                        <img src="/images/White logo.png" alt="Eventa Logo" className="footer-logo img-fluid mb-3" />
                         <p className="about-description">
                             Evenda is the smarter way to plan and manage your events. Whether it's a wedding, birthday, corporate gathering,
                             or casual hangout, Evenda makes it simple to create invitations, track RSVPs, and keep guests engaged — all in one place.
@@ -586,7 +588,7 @@ export function LoginNav() {
                                     <button onClick={goToProfile} className="dropdown-item">
                                         <i className="bi bi-person"></i>Profile
                                     </button>
-                                   
+
                                     <button className="dropdown-item" onClick={logOut}>
                                         <i className="bi bi-box-arrow-right"></i>Logout
                                     </button>
@@ -1143,7 +1145,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 }
 
 // Helper: fetch with timeout to avoid hanging requests
-const fetchWithTimeout = (resource, options = {}, timeout = 15000) => { 
+const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
             reject(new Error('Request timed out'));
