@@ -368,7 +368,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                         <div className="col-6">
                             <a href="/">
                                 <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
-                            </a>                        </div>
+                          </a>                        </div>
                         <div className="col-6 text-end">
                             <button
                                 className="mobile-menu-toggle"

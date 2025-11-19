@@ -943,138 +943,138 @@ try {
     }
 
     if ($fun === "guestRsvp") {
-    $guest_id            = generateGuestID();
-    $event_id            = $_POST['event_id'] ?? '';
-    $name                = trim($_POST['name'] ?? '');
-    $email               = trim($_POST['email'] ?? '');
-    $phone               = trim($_POST['phone'] ?? ''); // ADD THIS LINE
-    $attending           = $_POST['attending'] ?? '';
-    $message             = trim($_POST['message'] ?? '');
-    $guestCount          = (int) ($_POST['guestCount'] ?? 0);
-    $totalRplyGuestCount = (int) ($_POST['totalRplyGuestCount'] ?? 0);
-    $totalEventLimit     = (int) ($_POST['totalEventLimit'] ?? 0);
+            $guest_id            = generateGuestID();
+            $event_id            = $_POST['event_id'] ?? '';
+            $name                = trim($_POST['name'] ?? '');
+            $email               = trim($_POST['email'] ?? '');
+            $phone               = trim($_POST['phone'] ?? ''); // ADD THIS LINE
+            $attending           = $_POST['attending'] ?? '';
+            $message             = trim($_POST['message'] ?? '');
+            $guestCount          = (int) ($_POST['guestCount'] ?? 0);
+            $totalRplyGuestCount = (int) ($_POST['totalRplyGuestCount'] ?? 0);
+            $totalEventLimit     = (int) ($_POST['totalEventLimit'] ?? 0);
 
-    $totalGuests = ($attending === 'yes') ? ($guestCount + 1) : 0;
+            $totalGuests = ($attending === 'yes') ? ($guestCount + 1) : 0;
 
-    // Validation
-    if (empty($event_id) || empty($name) || empty($email) || empty($attending)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Missing required fields: event_id, name, email, or attending",
-        ]);
-        exit;
-    }
+            // Validation
+            if (empty($event_id) || empty($name) || empty($email) || empty($attending)) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Missing required fields: event_id, name, email, or attending",
+                ]);
+                exit;
+            }
 
-    try {
-        $pdo->beginTransaction();
+            try {
+                $pdo->beginTransaction();
 
-        // === 1. Check capacity ===
-        $remainingSpots = $totalEventLimit - $totalRplyGuestCount;
+                // === 1. Check capacity ===
+                $remainingSpots = $totalEventLimit - $totalRplyGuestCount;
 
-        if ($remainingSpots <= 0) {
-            echo json_encode([
-                "success" => false,
-                "message" => "Event is full — 0 guest slots left.",
-            ]);
+                if ($remainingSpots <= 0) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Event is full — 0 guest slots left.",
+                    ]);
+                    exit;
+                }
+
+                if ($totalGuests > $remainingSpots) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Only {$remainingSpots} guest spot(s) left. Please reduce your guest count.",
+                    ]);
+                    exit;
+                }
+
+                // === 2. Check if guest already RSVP'd ===
+                $checkStmt = $pdo->prepare("
+                    SELECT guest_id FROM rsvp
+                    WHERE event_id = :event_id AND email = :email
+                ");
+                $checkStmt->execute([
+                    ':event_id' => $event_id,
+                    ':email'    => $email,
+                ]);
+                $existingGuest = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+                // === 3. Insert or Update RSVP (with phone) ===
+                if ($existingGuest) {
+                    $updateStmt = $pdo->prepare("
+                        UPDATE rsvp
+                        SET name = :name,
+                            phone = :phone,  -- ADD THIS LINE
+                            attending = :attending,
+                            guest_count = :guest_count,
+                            updated_at = NOW()
+                        WHERE guest_id = :guest_id
+                    ");
+                    $updateStmt->execute([
+                        ':name'        => $name,
+                        ':phone'       => $phone,  // ADD THIS LINE
+                        ':attending'   => $attending,
+                        ':guest_count' => $totalGuests,
+                        ':guest_id'    => $existingGuest['guest_id'],
+                    ]);
+
+                    $final_guest_id = $existingGuest['guest_id'];
+                } else {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO rsvp
+                        (guest_id, event_id, name, email, phone, attending, guest_count, created_at)  -- ADD phone COLUMN
+                        VALUES (:guest_id, :event_id, :name, :email, :phone, :attending, :guest_count, NOW())  -- ADD :phone
+                    ");
+                    $stmt->execute([
+                        ':guest_id'    => $guest_id,
+                        ':event_id'    => $event_id,
+                        ':name'        => $name,
+                        ':email'       => $email,
+                        ':phone'       => $phone,  // ADD THIS LINE
+                        ':attending'   => $attending,
+                        ':guest_count' => $totalGuests,
+                    ]);
+
+                    $final_guest_id = $guest_id;
+                }
+
+                // === 4. Save Message to rsvp_messages (if not empty) ===
+                if (! empty($message)) {
+                    $msgStmt = $pdo->prepare("
+                        INSERT INTO rsvp_messages
+                        (event_id, guest_id, guest_name, guest_email, guest_phone, message, created_at)  -- ADD guest_phone
+                        VALUES (:event_id, :guest_id, :guest_name, :guest_email, :guest_phone, :message, NOW())
+                        ON DUPLICATE KEY UPDATE
+                            message = VALUES(message),
+                            guest_phone = VALUES(guest_phone),  -- ADD THIS LINE
+                            created_at = NOW()
+                    ");
+                    $msgStmt->execute([
+                        ':event_id'    => $event_id,
+                        ':guest_id'    => $final_guest_id,
+                        ':guest_name'  => $name,
+                        ':guest_email' => $email,
+                        ':guest_phone' => $phone,  // ADD THIS LINE
+                        ':message'     => $message,
+                    ]);
+                }
+
+                $pdo->commit();
+
+                echo json_encode([
+                    "success"  => true,
+                    "message"  => $existingGuest ? "RSVP updated!" : "RSVP submitted!",
+                    "guest_id" => $final_guest_id,
+                ]);
+
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database error: " . $e->getMessage(),
+                ]);
+            }
             exit;
-        }
-
-        if ($totalGuests > $remainingSpots) {
-            echo json_encode([
-                "success" => false,
-                "message" => "Only {$remainingSpots} guest spot(s) left. Please reduce your guest count.",
-            ]);
-            exit;
-        }
-
-        // === 2. Check if guest already RSVP'd ===
-        $checkStmt = $pdo->prepare("
-            SELECT guest_id FROM rsvp
-            WHERE event_id = :event_id AND email = :email
-        ");
-        $checkStmt->execute([
-            ':event_id' => $event_id,
-            ':email'    => $email,
-        ]);
-        $existingGuest = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-        // === 3. Insert or Update RSVP (with phone) ===
-        if ($existingGuest) {
-            $updateStmt = $pdo->prepare("
-                UPDATE rsvp
-                SET name = :name,
-                    phone = :phone,  -- ADD THIS LINE
-                    attending = :attending,
-                    guest_count = :guest_count,
-                    updated_at = NOW()
-                WHERE guest_id = :guest_id
-            ");
-            $updateStmt->execute([
-                ':name'        => $name,
-                ':phone'       => $phone,  // ADD THIS LINE
-                ':attending'   => $attending,
-                ':guest_count' => $totalGuests,
-                ':guest_id'    => $existingGuest['guest_id'],
-            ]);
-
-            $final_guest_id = $existingGuest['guest_id'];
-        } else {
-            $stmt = $pdo->prepare("
-                INSERT INTO rsvp
-                (guest_id, event_id, name, email, phone, attending, guest_count, created_at)  -- ADD phone COLUMN
-                VALUES (:guest_id, :event_id, :name, :email, :phone, :attending, :guest_count, NOW())  -- ADD :phone
-            ");
-            $stmt->execute([
-                ':guest_id'    => $guest_id,
-                ':event_id'    => $event_id,
-                ':name'        => $name,
-                ':email'       => $email,
-                ':phone'       => $phone,  // ADD THIS LINE
-                ':attending'   => $attending,
-                ':guest_count' => $totalGuests,
-            ]);
-
-            $final_guest_id = $guest_id;
-        }
-
-        // === 4. Save Message to rsvp_messages (if not empty) ===
-        if (! empty($message)) {
-            $msgStmt = $pdo->prepare("
-                INSERT INTO rsvp_messages
-                (event_id, guest_id, guest_name, guest_email, guest_phone, message, created_at)  -- ADD guest_phone
-                VALUES (:event_id, :guest_id, :guest_name, :guest_email, :guest_phone, :message, NOW())
-                ON DUPLICATE KEY UPDATE
-                    message = VALUES(message),
-                    guest_phone = VALUES(guest_phone),  -- ADD THIS LINE
-                    created_at = NOW()
-            ");
-            $msgStmt->execute([
-                ':event_id'    => $event_id,
-                ':guest_id'    => $final_guest_id,
-                ':guest_name'  => $name,
-                ':guest_email' => $email,
-                ':guest_phone' => $phone,  // ADD THIS LINE
-                ':message'     => $message,
-            ]);
-        }
-
-        $pdo->commit();
-
-        echo json_encode([
-            "success"  => true,
-            "message"  => $existingGuest ? "RSVP updated!" : "RSVP submitted!",
-            "guest_id" => $final_guest_id,
-        ]);
-
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
     }
-    exit;
-}
 
     if ($fun === "getRSVPResponses") {
         $event_id = $_POST['event_id'] ?? '';
@@ -2272,7 +2272,6 @@ try {
         }
     }
 
-    // UPDATED generateReport FUNCTION (QUEUE REMOVED)
     if ($fun === "generateReport") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
         $reportType  = $_POST['report_type'] ?? '';
@@ -2359,7 +2358,6 @@ try {
         exit;
     }
 
-    // UPDATED backupDatabase FUNCTION (QUEUE REMOVED)
     if ($fun === "backupDatabase") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
 
@@ -2426,7 +2424,6 @@ try {
         return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
     }
 
-    // Enhanced Invitation Analytics Functions
     if ($fun === "getInvitationAnalytics") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
 
@@ -2812,60 +2809,94 @@ try {
     }
 
     if ($fun === 'cancelEvent') {
-        $event_id = $_POST['event_id'] ?? '';
-        $user_id  = $_POST['user_id'] ?? '';
+            $event_id = $_POST['event_id'] ?? '';
+            $user_id  = $_POST['user_id'] ?? '';
 
-        if (empty($event_id)) {
-            echo json_encode(["success" => false, "message" => "Missing required fields"]);
-            exit;
-        }
-
-        try {
-            // Update event status to 'cancelled'
-            $stmt = $pdo->prepare("UPDATE events SET status = 'cancelled' WHERE event_id = ?");
-            $stmt->execute([$event_id]);
-
-            if ($stmt->rowCount() > 0) {
-                $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                $logStmt->execute([
-                    ':user_id'     => $user_id,
-                    ':action'      => 'Event Reactivated',
-                    ':description' => "Event ID '{$event_id}' was reactivated at " . date('Y-m-d H:i:s'),
-                ]);
-
-                echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
-            } else {
-                echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
+            if (empty($event_id)) {
+                echo json_encode(["success" => false, "message" => "Missing event ID"]);
+                exit;
             }
 
-        } catch (PDOException $e) {
-            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-        }
-        exit;
+            try {
+                // First verify the event exists and belongs to the user
+                $verifyStmt = $pdo->prepare("SELECT event_id, event_name FROM events WHERE event_id = ? AND user_id = ?");
+                $verifyStmt->execute([$event_id, $user_id]);
+                $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$event) {
+                    echo json_encode(["success" => false, "message" => "Event not found or you don't have permission to cancel it"]);
+                    exit;
+                }
+
+                // Update event status to 'cancelled'
+                $stmt = $pdo->prepare("UPDATE events SET status = 'cancelled', updated_at = NOW() WHERE event_id = ?");
+                $stmt->execute([$event_id]);
+
+                if ($stmt->rowCount() > 0) {
+                    // ✅ CORRECTED: Log as Event Cancelled
+                    $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                    $logStmt->execute([
+                        ':user_id'     => $user_id,
+                        ':action'      => 'Event Cancelled',  // ← CORRECTED
+                        ':description' => "Event '{$event['event_name']}' was cancelled at " . date('Y-m-d H:i:s'),  // ← CORRECTED
+                    ]);
+
+                    echo json_encode([
+                        "success" => true, 
+                        "message" => "Event cancelled successfully",
+                        "event_name" => $event['event_name']
+                    ]);
+                } else {
+                    echo json_encode(["success" => false, "message" => "Event not found or already cancelled"]);
+                }
+
+            } catch (PDOException $e) {
+                echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
     }
 
     if ($fun === 'reactivateEvent') {
-        $event_id = $_POST['event_id'] ?? '';
+            $event_id = $_POST['event_id'] ?? '';
+            $user_id  = $_POST['user_id'] ?? '';
 
-        if (empty($event_id)) {
-            echo json_encode(["success" => false, "message" => "Missing required fields"]);
-            exit;
-        }
-
-        try {
-            $stmt = $pdo->prepare("UPDATE events SET status = 'Active' WHERE event_id = ?");
-            $stmt->execute([$event_id]);
-
-            if ($stmt->rowCount() > 0) {
-                echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
-            } else {
-                echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
+            if (empty($event_id)) {
+                echo json_encode(["success" => false, "message" => "Missing event ID"]);
+                exit;
             }
 
-        } catch (PDOException $e) {
-            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-        }
-        exit;
+            try {
+                // Verify event exists and belongs to user
+                $verifyStmt = $pdo->prepare("SELECT event_id, event_name FROM events WHERE event_id = ? AND user_id = ?");
+                $verifyStmt->execute([$event_id, $user_id]);
+                $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$event) {
+                    echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
+                    exit;
+                }
+
+                // Reactivate event - set status based on previous published state
+                $stmt = $pdo->prepare("UPDATE events SET status = CASE WHEN published = 1 THEN 'published' ELSE 'draft' END WHERE event_id = ?");
+                $stmt->execute([$event_id]);
+
+                if ($stmt->rowCount() > 0) {
+                    $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                    $logStmt->execute([
+                        ':user_id'     => $user_id,
+                        ':action'      => 'Event Reactivated',
+                        ':description' => "Event '{$event['event_name']}' was reactivated at " . date('Y-m-d H:i:s'),
+                    ]);
+
+                    echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
+                } else {
+                    echo json_encode(["success" => false, "message" => "Event not found or already active"]);
+                }
+
+            } catch (PDOException $e) {
+                echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
     }
 
     if ($fun === "removeGuests") {
