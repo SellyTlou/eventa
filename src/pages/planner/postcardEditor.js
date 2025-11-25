@@ -129,28 +129,35 @@ const centerEventTexts = (texts, canvasWidth = 600, canvasHeight = 400) => {
     return [...otherTexts, ...recenteredTexts];
 };
 
-// Component for draggable text
-const DraggableText = ({ textConfig, isSelected, onSelect, onChange }) => {
+// Check if current design is using a fixed template
+const isFixedTemplate = (texts) => {
+  // If texts have specific IDs from templates, consider it fixed
+  const templateTextIds = ["text-title", "text-date", "text-time", "text-location"];
+  return texts.some(text => templateTextIds.includes(text.id));
+};
+
+// Component for draggable text - Modified for fixed templates
+const DraggableText = ({ textConfig, isSelected, onSelect, onChange, isFixedTemplate }) => {
     const shapeRef = useRef();
     const trRef = useRef();
 
     React.useEffect(() => {
-        if (isSelected && trRef.current && shapeRef.current) {
+        if (isSelected && trRef.current && shapeRef.current && !isFixedTemplate) {
             trRef.current.nodes([shapeRef.current]);
             trRef.current.getLayer().batchDraw();
         }
-    }, [isSelected]);
+    }, [isSelected, isFixedTemplate]);
 
     return (
         <>
             <Text
                 ref={shapeRef}
                 {...textConfig}
-                draggable
+                draggable={!isFixedTemplate} // Only draggable if not fixed template
                 onClick={onSelect}
                 onTap={onSelect}
                 onDblClick={onSelect}
-                onDragEnd={(e) => {
+                onDragEnd={!isFixedTemplate ? (e) => {
                     const newX = e.target.x();
                     const newY = e.target.y();
                     onChange({
@@ -160,8 +167,8 @@ const DraggableText = ({ textConfig, isSelected, onSelect, onChange }) => {
                         offsetX: textConfig.offsetX || textConfig.x,
                         offsetY: textConfig.offsetY || textConfig.y
                     });
-                }}
-                onTransformEnd={() => {
+                } : undefined}
+                onTransformEnd={!isFixedTemplate ? () => {
                     const node = shapeRef.current;
                     const scaleX = node.scaleX();
                     const scaleY = node.scaleY();
@@ -176,11 +183,11 @@ const DraggableText = ({ textConfig, isSelected, onSelect, onChange }) => {
                         fontSize: Math.max(8, textConfig.fontSize * scaleY),
                         width: textConfig.width ? textConfig.width * scaleX : undefined
                     });
-                }}
+                } : undefined}
                 offsetX={textConfig.width ? textConfig.width / 2 : 0}
                 offsetY={textConfig.fontSize ? textConfig.fontSize / 2 : 0}
             />
-            {isSelected && <Transformer ref={trRef} rotateEnabled={true} />}
+            {isSelected && !isFixedTemplate && <Transformer ref={trRef} rotateEnabled={true} />}
         </>
     );
 };
@@ -340,90 +347,38 @@ const CenterButton = ({ onClick }) => (
     </div>
 );
 
-// Sidebar component
-const Sidebar = ({
-    selectedId,
-    selectedType,
-    texts,
-    images,
-    shapes,
-    setTexts,
-    setImages,
-    setShapes,
-    bgConfig,
-    setBgConfig,
-    addText,
-    addShape,
-    addIcon,
-    handleImageUpload,
-    deleteSelectedItem,
-    downloadImage,
-    historyActions,
-    onCenterEventTexts
-}) => {
-    const selectedText = selectedType === "text" ? texts.find((t) => t.id === selectedId) : null;
-    const selectedImg = selectedType === "image" ? images.find((i) => i.id === selectedId) : null;
-    const selectedShape = selectedType === "shape" ? shapes.find((s) => s.id === selectedId) : null;
+// NEW: Simplified Text Controls for Fixed Templates
+const FixedTemplateTextControls = ({ selectedText, selectedId, setTexts, texts }) => (
+    <div className="control-section">
+        <h3>Template Text Colors</h3>
+        <p className="template-notice" style={{fontSize: '12px', color: '#bdc3c7', marginBottom: '15px'}}>
+          This template uses fixed positioning. You can only change text colors.
+        </p>
+        
+        <label className="control-label">
+            Text Color:
+            <input
+                type="color"
+                value={selectedText.fill}
+                onChange={(e) =>
+                    setTexts(
+                        texts.map((t) =>
+                            t.id === selectedId ? { ...t, fill: e.target.value } : t
+                        )
+                    )
+                }
+            />
+        </label>
+    </div>
+);
 
-    return (
-        <aside className="editor-sidebar">
-            <div className="sidebar-header">
-                <h2>Design Tools</h2>
-                <div className="history-controls">
-                    <button onClick={historyActions.undo} disabled={historyActions.index === 0} className="history-btn">
-                        ↶ Undo
-                    </button>
-                    <button onClick={historyActions.redo} disabled={historyActions.index === historyActions.history.length - 1} className="history-btn">
-                        ↷ Redo
-                    </button>
-                </div>
-            </div>
+// Updated Text Controls Component
+const TextControls = ({ selectedText, selectedId, setTexts, texts, isFixedTemplate }) => {
+  if (isFixedTemplate) {
+    return <FixedTemplateTextControls selectedText={selectedText} selectedId={selectedId} setTexts={setTexts} texts={texts} />;
+  }
 
-            <div className="sidebar-content">
-                <CenterButton onClick={onCenterEventTexts} />
-
-                {selectedId && (
-                    <div className="control-section">
-                        <button className="danger-btn" onClick={deleteSelectedItem}>
-                            🗑️ Delete Selected
-                        </button>
-                    </div>
-                )}
-
-                {selectedText && (
-                    <TextControls selectedText={selectedText} selectedId={selectedId} setTexts={setTexts} texts={texts} />
-                )}
-
-                {selectedImg && (
-                    <ImageControls selectedImg={selectedImg} selectedId={selectedId} setImages={setImages} images={images} />
-                )}
-
-                {selectedShape && (
-                    <ShapeControls selectedShape={selectedShape} selectedId={selectedId} setShapes={setShapes} shapes={shapes} />
-                )}
-
-                <BackgroundControls bgConfig={bgConfig} setBgConfig={setBgConfig} />
-
-                <IconElements addIcon={addIcon} />
-
-                <AddElements
-                    addText={addText}
-                    addShape={addShape}
-                    handleImageUpload={handleImageUpload}
-                />
-
-                <div className="control-section">
-                    <button className="save-btn" onClick={downloadImage}>
-                        💾 Save PostCard
-                    </button>
-                </div>
-            </div>
-        </aside>
-    );
-};
-
-// Text Controls Component
-const TextControls = ({ selectedText, selectedId, setTexts, texts }) => (
+  return (
     <div className="control-section">
         <h3>Text Settings</h3>
         <label className="control-label">
@@ -652,7 +607,8 @@ const TextControls = ({ selectedText, selectedId, setTexts, texts }) => (
             />
         </label>
     </div>
-);
+  );
+};
 
 // Image Controls Component
 const ImageControls = ({ selectedImg, selectedId, setImages, images }) => (
@@ -1403,8 +1359,13 @@ const BackgroundControls = ({ bgConfig, setBgConfig }) => (
     </div>
 );
 
-// Add Elements Component
-const AddElements = ({ addText, addShape, handleImageUpload }) => (
+// Add Elements Component - Hide for fixed templates
+const AddElements = ({ addText, addShape, handleImageUpload, isFixedTemplate }) => {
+  if (isFixedTemplate) {
+    return null; // Hide add elements for fixed templates
+  }
+
+  return (
     <div className="control-section">
         <h3>Add Elements</h3>
         <button onClick={addText} className="add-btn">➕ Add Text</button>
@@ -1420,15 +1381,17 @@ const AddElements = ({ addText, addShape, handleImageUpload }) => (
             <button onClick={() => addShape("arrow")} className="shape-btn">➡️ Arrow</button>
         </div>
     </div>
-);
+  );
+};
 
-// Right Sidebar Component
+// Fixed Right Sidebar Component
 const RightSidebar = ({
-    elements,
+    elements = [],
     selectedId,
     setSelectedId,
     setSelectedType,
-    updateElementZIndex
+    updateElementZIndex,
+    downloadImage
 }) => (
     <aside className="right-sidebar">
         <h3>Layers</h3>
@@ -1477,6 +1440,96 @@ const RightSidebar = ({
         </div>
     </aside>
 );
+
+// Updated Sidebar component
+const Sidebar = ({
+    selectedId,
+    selectedType,
+    texts,
+    images,
+    shapes,
+    setTexts,
+    setImages,
+    setShapes,
+    bgConfig,
+    setBgConfig,
+    addText,
+    addShape,
+    addIcon,
+    handleImageUpload,
+    deleteSelectedItem,
+    downloadImage,
+    historyActions,
+    onCenterEventTexts,
+    isFixedTemplate // Add this new prop
+}) => {
+    const selectedText = selectedType === "text" ? texts.find((t) => t.id === selectedId) : null;
+    const selectedImg = selectedType === "image" ? images.find((i) => i.id === selectedId) : null;
+    const selectedShape = selectedType === "shape" ? shapes.find((s) => s.id === selectedId) : null;
+
+    return (
+        <aside className="editor-sidebar">
+            <div className="sidebar-header">
+                <h2>Design Tools</h2>
+                <div className="history-controls">
+                    <button onClick={historyActions.undo} disabled={historyActions.index === 0} className="history-btn">
+                        ↶ Undo
+                    </button>
+                    <button onClick={historyActions.redo} disabled={historyActions.index === historyActions.history.length - 1} className="history-btn">
+                        ↷ Redo
+                    </button>
+                </div>
+            </div>
+
+            <div className="sidebar-content">
+                {!isFixedTemplate && <CenterButton onClick={onCenterEventTexts} />}
+
+                {selectedId && (
+                    <div className="control-section">
+                        <button className="danger-btn" onClick={deleteSelectedItem}>
+                            🗑️ Delete Selected
+                        </button>
+                    </div>
+                )}
+
+                {selectedText && (
+                    <TextControls 
+                        selectedText={selectedText} 
+                        selectedId={selectedId} 
+                        setTexts={setTexts} 
+                        texts={texts} 
+                        isFixedTemplate={isFixedTemplate}
+                    />
+                )}
+
+                {selectedImg && (
+                    <ImageControls selectedImg={selectedImg} selectedId={selectedId} setImages={setImages} images={images} />
+                )}
+
+                {selectedShape && (
+                    <ShapeControls selectedShape={selectedShape} selectedId={selectedId} setShapes={setShapes} shapes={shapes} />
+                )}
+
+                <BackgroundControls bgConfig={bgConfig} setBgConfig={setBgConfig} />
+
+                {!isFixedTemplate && <IconElements addIcon={addIcon} />}
+
+                <AddElements
+                    addText={addText}
+                    addShape={addShape}
+                    handleImageUpload={handleImageUpload}
+                    isFixedTemplate={isFixedTemplate}
+                />
+
+                <div className="control-section" style={{marginTop: 'auto'}}>
+                    <button className="save-btn" onClick={downloadImage}>
+                        💾 Save PostCard
+                    </button>
+                </div>
+            </div>
+        </aside>
+    );
+};
 
 // Function to get event data from localStorage
 const getEventDataFromStorage = () => {
@@ -1677,62 +1730,65 @@ export default function PostcardEditor() {
         "Anonymous"
     );
 
+    // Check if current design is using a fixed template
+    const isFixedTemplateMode = isFixedTemplate(texts);
+
     // Load template data and event data when component mounts
-// Load template data and event data when component mounts
-useEffect(() => {
-    if (template && template.data) {
-        const eventData = getEventDataFromStorage();
-        const templateData = { ...template.data };
-        
-        // Remove the dark overlay shape from template data
-        if (templateData.shapes) {
-            templateData.shapes = templateData.shapes.filter(
-                shape => shape.id !== "390:12" // Remove dark overlay
-            );
+    useEffect(() => {
+        if (template && template.data) {
+            const eventData = getEventDataFromStorage();
+            const templateData = { ...template.data };
+            
+            // Remove the dark overlay shape from template data
+            if (templateData.shapes) {
+                templateData.shapes = templateData.shapes.filter(
+                    shape => shape.id !== "390:12" // Remove dark overlay
+                );
+            }
+
+            // Get the main background image from template and remove it from images array
+            const mainBgImage = templateData.images?.find(img => img.id === "390:10");
+            const filteredImages = templateData.images?.filter(img => img.id !== "390:10") || [];
+
+            // Replace template texts with event data while maintaining styles
+            let updatedTexts = [];
+            if (templateData.texts && eventData) {
+                updatedTexts = templateData.texts.map(templateText => {
+                    let newText = { ...templateText };
+                    
+                    // Replace text content based on template text content
+                    if (templateText.text.includes("Welcome To") && eventData.eventName) {
+                        newText.text = `Welcome To ${eventData.eventName}`;
+                    } else if (templateText.text.includes("Date :") && eventData.eventStartDate) {
+                        newText.text = `Date : ${eventData.eventStartDate}`;
+                    } else if (templateText.text.includes("Time:") && eventData.eventStartTime && eventData.eventEndTime) {
+                        newText.text = `Time: ${eventData.eventStartTime} - ${eventData.eventEndTime}`;
+                    } else if (templateText.text.includes("Location :") && eventData.eventLocation) {
+                        newText.text = `Location : ${eventData.eventLocation}`;
+                    }
+                    // Keep the original text if no event data matches
+                    return newText;
+                });
+            } else {
+                updatedTexts = templateData.texts || [];
+            }
+
+            // Set the main background image as the background
+            const newBgConfig = mainBgImage ? 
+                { type: "image", value: mainBgImage.src } : 
+                templateData.bgConfig || { type: "color", value: "#ffffff" };
+
+            // Update state with template data (without the duplicate background image)
+            setState(prev => ({
+                ...prev,
+                texts: updatedTexts,
+                images: filteredImages, // Use filtered images without the background
+                shapes: templateData.shapes || [],
+                bgConfig: newBgConfig
+            }));
         }
+    }, [template]);
 
-        // Get the main background image from template and remove it from images array
-        const mainBgImage = templateData.images?.find(img => img.id === "390:10");
-        const filteredImages = templateData.images?.filter(img => img.id !== "390:10") || [];
-
-        // Replace template texts with event data while maintaining styles
-        let updatedTexts = [];
-        if (templateData.texts && eventData) {
-            updatedTexts = templateData.texts.map(templateText => {
-                let newText = { ...templateText };
-                
-                // Replace text content based on template text content
-                if (templateText.text.includes("Welcome To") && eventData.eventName) {
-                    newText.text = `Welcome To ${eventData.eventName}`;
-                } else if (templateText.text.includes("Date :") && eventData.eventStartDate) {
-                    newText.text = `Date : ${eventData.eventStartDate}`;
-                } else if (templateText.text.includes("Time:") && eventData.eventStartTime && eventData.eventEndTime) {
-                    newText.text = `Time: ${eventData.eventStartTime} - ${eventData.eventEndTime}`;
-                } else if (templateText.text.includes("Location :") && eventData.eventLocation) {
-                    newText.text = `Location : ${eventData.eventLocation}`;
-                }
-                // Keep the original text if no event data matches
-                return newText;
-            });
-        } else {
-            updatedTexts = templateData.texts || [];
-        }
-
-        // Set the main background image as the background
-        const newBgConfig = mainBgImage ? 
-            { type: "image", value: mainBgImage.src } : 
-            templateData.bgConfig || { type: "color", value: "#ffffff" };
-
-        // Update state with template data (without the duplicate background image)
-        setState(prev => ({
-            ...prev,
-            texts: updatedTexts,
-            images: filteredImages, // Use filtered images without the background
-            shapes: templateData.shapes || [],
-            bgConfig: newBgConfig
-        }));
-    }
-}, [template]);
     // Update state with history tracking
     const updateState = (newState) => {
         setState((prev) => ({ ...prev, ...newState }));
@@ -2187,6 +2243,7 @@ useEffect(() => {
                 downloadImage={downloadImage}
                 historyActions={historyActions}
                 onCenterEventTexts={handleCenterEventTexts}
+                isFixedTemplate={isFixedTemplateMode}
             />
 
             <div className="editor-main">
@@ -2194,7 +2251,10 @@ useEffect(() => {
                     <button className="back-button" onClick={() => window.history.back()}>
                         ← Back to Templates
                     </button>
-                    <div className="navbar-title">{template?.title || "Postcard"} Editor</div>
+                    <div className="navbar-title">
+                        {template?.title || "Postcard"} Editor
+                        {isFixedTemplateMode && <span style={{fontSize: '12px', color: '#7f8c8d', marginLeft: '10px'}}>(Template Mode)</span>}
+                    </div>
                     <div className="user-info">{user ? user.name : "Guest"}</div>
                 </div>
 
@@ -2242,6 +2302,7 @@ useEffect(() => {
                                                     texts: texts.map((txt) => (txt.id === element.id ? newAttrs : txt))
                                                 })
                                             }
+                                            isFixedTemplate={isFixedTemplateMode}
                                         />
                                     );
                                 } else if (element.type === "image") {
@@ -2292,6 +2353,7 @@ useEffect(() => {
                 setSelectedId={setSelectedId}
                 setSelectedType={setSelectedType}
                 updateElementZIndex={updateElementZIndex}
+                downloadImage={downloadImage}
             />
         </div>
     );

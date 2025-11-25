@@ -4613,7 +4613,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
     );
 };
 
-// Event Management Tab Content with Logging
+// Event Management Tab Content with Logging - UPDATED WITH STYLE FIXES
 const EventManagementTabContent = ({
     adminUserId,
     logActivity,
@@ -4637,6 +4637,12 @@ const EventManagementTabContent = ({
         violation_severity: 'medium'
     });
 
+    // ADD SEARCH AND FILTER STATES
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('created_at');
+    const [sortOrder, setSortOrder] = useState('desc');
+
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     const violationReasons = [
@@ -4650,11 +4656,64 @@ const EventManagementTabContent = ({
 
     useEffect(() => {
         if (activeSection === 'reported') {
-            fetchReportedEventsLocal(); // Use local function
+            fetchReportedEventsLocal();
         } else {
-            fetchAllEventsLocal(); // Use local function
+            fetchAllEventsLocal();
         }
     }, [activeSection]);
+
+    // ADD FILTERED EVENTS COMPUTATION
+    const filteredEvents = useMemo(() => {
+        const events = activeSection === 'reported' ? reportedEvents : allEvents;
+        
+        if (!events || !Array.isArray(events)) return [];
+
+        let filtered = [...events];
+
+        // Apply search filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(event => 
+                event.event_name?.toLowerCase().includes(query) ||
+                event.user_name?.toLowerCase().includes(query) ||
+                event.event_owner_name?.toLowerCase().includes(query)
+            );
+        }
+
+        // Apply status filter for all events tab
+        if (activeSection === 'all' && statusFilter !== 'all') {
+            filtered = filtered.filter(event => {
+                if (statusFilter === 'published') {
+                    return event.published === 1 || event.published === true || event.status === 'published';
+                } else if (statusFilter === 'draft') {
+                    return event.published === 0 || event.published === false || event.status === 'draft';
+                }
+                return true;
+            });
+        }
+
+        // Apply sorting
+        filtered.sort((a, b) => {
+            let aValue, bValue;
+
+            if (sortBy === 'event_name') {
+                aValue = a.event_name || '';
+                bValue = b.event_name || '';
+                return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            } else if (sortBy === 'created_at') {
+                aValue = new Date(a.created_at || a.event_created_at || 0);
+                bValue = new Date(b.created_at || b.event_created_at || 0);
+                return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+            } else if (sortBy === 'user_name') {
+                aValue = a.user_name || a.event_owner_name || '';
+                bValue = b.user_name || b.event_owner_name || '';
+                return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            }
+            return 0;
+        });
+
+        return filtered;
+    }, [allEvents, reportedEvents, activeSection, searchQuery, statusFilter, sortBy, sortOrder]);
 
     // Local function to fetch reported events
     const fetchReportedEventsLocal = async () => {
@@ -4722,6 +4781,50 @@ const EventManagementTabContent = ({
         }
     };
 
+    // FIXED: Proper event status checking
+    const isEventPublished = (event) => {
+        // Check multiple possible published field names and values
+        const published = event.published;
+        const status = event.status;
+        
+        // Handle different data types: boolean, number, string
+        if (published !== undefined && published !== null) {
+            if (typeof published === 'boolean') return published;
+            if (typeof published === 'number') return published === 1;
+            if (typeof published === 'string') {
+                return published === '1' || published === 'true' || published === 'published';
+            }
+        }
+        
+        // Check status field as fallback
+        if (status) {
+            return status === 'published' || status === 'active';
+        }
+        
+        return false;
+    };
+
+    // FIXED: viewEventPreview function
+    const viewEventPreview = (event) => {
+        console.log('Event preview clicked:', {
+            event_name: event.event_name,
+            published: event.published,
+            status: event.status,
+            isPublished: isEventPublished(event)
+        });
+
+        // Use the fixed published check
+        if (!isEventPublished(event)) {
+            setSelectedEvent(event);
+            setShowUnpublishedModal(true);
+            return;
+        }
+
+        // Open event in new tab for preview
+        window.open(`/rsvpForm?event_id=${event.event_id}`, '_blank');
+        logActivity('Event Previewed', `Previewed published event: ${event.event_name}`);
+    };
+
     const handleDeleteEvent = async () => {
         if (!selectedEvent) return;
 
@@ -4760,12 +4863,10 @@ const EventManagementTabContent = ({
                     violation_severity: 'medium'
                 });
 
-                // ✅ USE triggerRefresh and available functions only
                 if (triggerRefresh) {
-                    triggerRefresh(); // This should refresh all parent data
+                    triggerRefresh();
                 }
 
-                // Also refresh the specific data we have access to
                 if (fetchDashboardData) {
                     await fetchDashboardData();
                 }
@@ -4773,7 +4874,6 @@ const EventManagementTabContent = ({
                     await fetchInvitationAnalytics();
                 }
 
-                // Refresh current tab data using local functions
                 if (activeSection === 'reported') {
                     await fetchReportedEventsLocal();
                 } else {
@@ -4809,7 +4909,7 @@ const EventManagementTabContent = ({
 
             const data = await response.json();
             if (data.success) {
-                fetchReportedEventsLocal(); // Use local function
+                fetchReportedEventsLocal();
                 logActivity('Report Dismissed', 'Dismissed an event report as invalid');
                 printAlert('Report dismissed successfully', 'success');
             } else {
@@ -4826,17 +4926,24 @@ const EventManagementTabContent = ({
         return violation ? violation.label : type;
     };
 
-    const viewEventPreview = (event) => {
-        // Check if event is published
-        if (!event.published || event.published === 0 || event.status === 'draft') {
-            // Show modal message for unpublished events
-            setSelectedEvent(event);
-            setShowUnpublishedModal(true);
-            return;
-        }
+    // ADD: Clear search function
+    const clearSearch = () => {
+        setSearchQuery('');
+    };
 
-        // Open event in new tab for preview
-        window.open(`/rsvpForm?event_id=${event.event_id}`, '_blank');
+    // ADD: Handle sort function
+    const handleSort = (column) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('desc');
+        }
+    };
+
+    const getSortIcon = (column) => {
+        if (sortBy !== column) return '';
+        return sortOrder === 'asc' ? '↑' : '↓';
     };
 
     return (
@@ -4863,12 +4970,65 @@ const EventManagementTabContent = ({
                     </div>
                     <button
                         className="btn btn-outline"
-                        onClick={activeSection === 'reported' ? fetchReportedEventsLocal : fetchAllEventsLocal} // Use local functions
+                        onClick={activeSection === 'reported' ? fetchReportedEventsLocal : fetchAllEventsLocal}
                         disabled={loading}
                     >
                         <i className="bi bi-arrow-clockwise"></i> Refresh
                     </button>
                 </div>
+            </div>
+
+            {/* ADD SEARCH AND FILTER CONTROLS - UPDATED WITH SMALLER SEARCH BAR */}
+            <div className="table-controls event-management-controls">
+                <div className="search-box-compact">
+                    <i className="bi bi-search"></i>
+                    <input
+                        type="text"
+                        placeholder={`Search ${activeSection === 'reported' ? 'reported' : 'all'} events...`}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="compact-search-input"
+                    />
+                    {searchQuery && (
+                        <button className="clear-search" onClick={clearSearch}>
+                            <i className="bi bi-x"></i>
+                        </button>
+                    )}
+                </div>
+                
+                {activeSection === 'all' && (
+                    <div className="filter-controls">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="all">All Statuses</option>
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                        </select>
+                        
+                        <button
+                            className={`sort-btn ${sortBy === 'event_name' ? 'active' : ''}`}
+                            onClick={() => handleSort('event_name')}
+                        >
+                            Name {getSortIcon('event_name')}
+                        </button>
+                        
+                        <button
+                            className={`sort-btn ${sortBy === 'created_at' ? 'active' : ''}`}
+                            onClick={() => handleSort('created_at')}
+                        >
+                            Date {getSortIcon('created_at')}
+                        </button>
+                        
+                        <button
+                            className={`sort-btn ${sortBy === 'user_name' ? 'active' : ''}`}
+                            onClick={() => handleSort('user_name')}
+                        >
+                            Owner {getSortIcon('user_name')}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {loading && <div className="loading">Loading events...</div>}
@@ -4878,22 +5038,43 @@ const EventManagementTabContent = ({
                     <div className="section-header">
                         <h3>Pending Event Reports</h3>
                         <p>Review and take action on reported events</p>
+                        {searchQuery && (
+                            <div className="search-results-info">
+                                Showing {filteredEvents.length} of {reportedEvents.length} reported events
+                            </div>
+                        )}
                     </div>
 
-                    {reportedEvents.length === 0 ? (
+                    {filteredEvents.length === 0 ? (
                         <div className="no-data">
                             <i className="bi bi-check-circle"></i>
-                            <p>No pending event reports</p>
+                            <p>
+                                {searchQuery 
+                                    ? 'No reported events found matching your search' 
+                                    : 'No pending event reports'
+                                }
+                            </p>
+                            {searchQuery && (
+                                <button onClick={clearSearch} className="btn btn-outline">
+                                    Clear Search
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="reported-events-grid">
-                            {reportedEvents.map(report => (
+                            {filteredEvents.map(report => (
                                 <div key={report.id} className="reported-event-card">
                                     <div className="event-header">
                                         <h4>{report.event_name}</h4>
-                                        <span className="report-date">
-                                            Reported: {new Date(report.reported_at).toLocaleDateString()}
-                                        </span>
+                                        <div className="event-meta">
+                                            {/* UPDATED STATUS BADGES WITH COLORS */}
+                                            <span className={`status-badge ${isEventPublished(report) ? 'status-published' : 'status-draft'}`}>
+                                                {isEventPublished(report) ? 'Published' : 'Draft'}
+                                            </span>
+                                            <span className="report-date">
+                                                Reported: {new Date(report.reported_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     <div className="event-details">
@@ -4942,10 +5123,9 @@ const EventManagementTabContent = ({
                                             <i className="bi bi-x-circle"></i> Dismiss Report
                                         </button>
                                         <button
-                                            className={`btn btn-secondary ${!report.published ? 'disabled' : ''}`}
+                                            className={`btn btn-secondary`}
                                             onClick={() => viewEventPreview(report)}
-                                            disabled={!report.published}
-                                            title={!report.published ? "Event not published - cannot preview" : "View Event"}
+                                            title={isEventPublished(report) ? "View Event" : "Event not published - cannot preview"}
                                         >
                                             <i className="bi bi-eye"></i> View Event
                                         </button>
@@ -4961,54 +5141,91 @@ const EventManagementTabContent = ({
                 <div className="all-events-section">
                     <div className="section-header">
                         <h3>All Events</h3>
-                        <p>Manage all events in the system</p>
+                        {searchQuery && (
+                            <div className="search-results-info">
+                                Showing {filteredEvents.length} of {allEvents.length} events
+                                {statusFilter !== 'all' && ` (${statusFilter} only)`}
+                            </div>
+                        )}
                     </div>
 
                     <div className="events-table">
                         <div className="table-header">
-                            <span>Event Name</span>
-                            <span>Owner</span>
-                            <span>Created</span>
+                            <span className="sortable" onClick={() => handleSort('event_name')}>
+                                Event Name {getSortIcon('event_name')}
+                            </span>
+                            <span className="sortable" onClick={() => handleSort('user_name')}>
+                                Owner {getSortIcon('user_name')}
+                            </span>
+                            <span className="sortable" onClick={() => handleSort('created_at')}>
+                                Created {getSortIcon('created_at')}
+                            </span>
                             <span>Status</span>
                             <span>Reports</span>
                             <span>Actions</span>
                         </div>
 
-                        {allEvents.map(event => (
-                            <div key={event.event_id} className="table-row">
-                                <span className="event-name">{event.event_name}</span>
-                                <span>{event.user_name}</span>
-                                <span>{new Date(event.created_at).toLocaleDateString()}</span>
-                                <span>
-                                    <span className={`status-badge ${event.published ? 'active' : 'draft'}`}>
-                                        {event.published ? 'Published' : 'Draft'}
+                        <div className="table-body">
+                            {filteredEvents.map(event => (
+                                <div key={event.event_id} className="table-row">
+                                    <span className="event-name">{event.event_name}</span>
+                                    <span>{event.user_name}</span>
+                                    <span>{new Date(event.created_at).toLocaleDateString()}</span>
+                                    {/* UPDATED STATUS BADGES WITH COLORS */}
+                                    <span>
+                                        <span className={`status-badge ${isEventPublished(event) ? 'status-published' : 'status-draft'}`}>
+                                            {isEventPublished(event) ? 'Published' : 'Draft'}
+                                        </span>
                                     </span>
-                                </span>
-                                <span>
-                                    {event.report_count > 0 ? (
-                                        <span className="report-count warning">{event.report_count} reports</span>
-                                    ) : (
-                                        <span className="report-count">No reports</span>
-                                    )}
-                                </span>
-                                <span className="actions">
-                                    <button
-                                        className={`btn-icon view-btn ${!event.published ? 'disabled' : ''}`}
-                                        onClick={() => viewEventPreview(event)}
-                                        disabled={!event.published}
-                                        title={!event.published ? "Event not published - cannot preview" : "View Event"}
+                                    <span>
+                                        {event.report_count > 0 ? (
+                                            <span className="report-count warning">{event.report_count} reports</span>
+                                        ) : (
+                                            <span className="report-count">No reports</span>
+                                        )}
+                                    </span>
+                                    <span className="actions">
+                                        <button
+                                            className={`btn-icon view-btn`}
+                                            onClick={() => viewEventPreview(event)}
+                                            title={isEventPublished(event) ? "View Event" : "Event not published - cannot preview"}
+                                        >
+                                            <i className="bi bi-eye"></i>
+                                        </button>
+                                        <button
+                                            className="btn-icon delete-btn"
+                                            onClick={() => openDeleteModal(event)}
+                                            title="Delete Event"
+                                        >
+                                            <i className="bi bi-trash"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {filteredEvents.length === 0 && (
+                            <div className="no-data">
+                                <i className="bi bi-calendar-x"></i>
+                                <p>
+                                    {searchQuery || statusFilter !== 'all' 
+                                        ? 'No events found matching your criteria' 
+                                        : 'No events found'
+                                    }
+                                </p>
+                                {(searchQuery || statusFilter !== 'all') && (
+                                    <button 
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setStatusFilter('all');
+                                        }} 
+                                        className="btn btn-outline"
                                     >
-                                        <i className="bi bi-eye"></i>
+                                        Clear Filters
                                     </button>
-                                    <button
-                                        className="btn-icon delete-btn"
-                                        onClick={() => openDeleteModal(event)}
-                                    >
-                                        <i className="bi bi-trash"></i>
-                                    </button>
-                                </span>
+                                )}
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             )}

@@ -41,6 +41,12 @@ const EventsDashboard = () => {
     const [affectedDeleteGuests, setAffectedDeleteGuests] = useState([]);
     const [sendingDeleteMessage, setSendingDeleteMessage] = useState(false);
     const [showDeleteMessageStep, setShowDeleteMessageStep] = useState(false);
+
+    // Reserve modal state
+    const [showReserveModal, setShowReserveModal] = useState(false);
+    const [reserveEvent, setReserveEvent] = useState(null);
+    const [reserveStats, setReserveStats] = useState({ yes: 0, no: 0, maybe: 0 });
+
     const [user, setUserData] = useState(null);
 
     // Navbar states
@@ -53,6 +59,46 @@ const EventsDashboard = () => {
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
         setTimeout(() => setAlert({ show: false, message: "", type: "" }), 5000);
+    };
+
+    // Helper function to validate base64 images
+    const getValidImageSrc = (imageData) => {
+        if (!imageData) {
+            return "/images/default-event.jpg";
+        }
+        
+        // Check if it's a complete base64 data URL
+        if (typeof imageData === 'string') {
+            // Check if it starts with data:image and has sufficient length
+            if (imageData.startsWith('data:image') && imageData.length > 100) {
+                // Basic validation - check if it has the complete structure
+                const parts = imageData.split(',');
+                if (parts.length === 2 && parts[1].length > 10) {
+                    return imageData;
+                }
+            }
+            
+            // Check if it's a truncated base64 (starts with data:image but is too short)
+            if (imageData.startsWith('data:image') && imageData.length < 100) {
+                console.warn('Truncated base64 image detected');
+                return "/images/default-event.jpg";
+            }
+        }
+        
+        return "/images/default-event.jpg";
+    };
+
+    // Reserve modal functions
+    const showReserveStats = (event, stats) => {
+        setReserveEvent(event);
+        setReserveStats(stats);
+        setShowReserveModal(true);
+    };
+
+    const closeReserveModal = () => {
+        setShowReserveModal(false);
+        setReserveEvent(null);
+        setReserveStats({ yes: 0, no: 0, maybe: 0 });
     };
 
     // Navbar functions
@@ -853,7 +899,7 @@ const EventsDashboard = () => {
                                     <i className="bi bi-chevron-bar-down"></i>
 
                                     {dropdownOpen && (
-                                        <div className="dropdown-menu show mobile-dropdown"> {/* Added mobile-dropdown class */}
+                                        <div className="dropdown-menu show mobile-dropdown">
                                             <button onClick={goToProfile} className="dropdown-item">
                                                 <i className="bi bi-person"></i> Profile
                                             </button>
@@ -942,7 +988,7 @@ const EventsDashboard = () => {
                         </div>
                     </div>
 
-                    {/* EVENTS GRID */}
+                    {/* EVENTS GRID - UPDATED CARD DESIGN */}
                     <div className="events-grid">
                         {displayedEvents.length > 0 ? (
                             displayedEvents.map((event) => {
@@ -1031,61 +1077,85 @@ const EventsDashboard = () => {
                                             </div>
                                         )}
 
-                                        {/* Card – click blocked if cancelled */}
+                                        {/* UPDATED CARD DESIGN - Image top, horizontal details, buttons bottom */}
                                         <div
-                                            className="event-card"
+                                            className="event-card modern-design"
                                             onClick={() => handleEventClick(event.event_id)}
                                             style={{
                                                 cursor: cancelled ? "not-allowed" : "pointer",
                                                 opacity: cancelled ? 0.7 : 1
                                             }}
                                         >
-                                            <div className="event-media">
+                                            {/* Event Image - Top Half */}
+                                            <div className="event-image-section">
                                                 <img
-                                                    src={event.event_image || "/api/placeholder/400/250"}
+                                                    src={getValidImageSrc(event.event_image)}
                                                     alt={event.event_name}
-                                                    onError={(e) => (e.target.src = "/api/placeholder/400/250")}
-                                                    className={cancelled ? "cancelled-image" : ""}
+                                                    onError={(e) => {
+                                                        console.warn('Invalid event image, using fallback for event:', event.event_id);
+                                                        e.target.src = "/images/default-event.jpg";
+                                                    }}
+                                                    className="event-main-image"
                                                 />
-                                                <div className="event-overlay">
-                                                    <i className="bi bi-calendar3-event"></i>
+                                            </div>
+
+                                            {/* Event Details - Middle Section with HORIZONTAL LAYOUT */}
+                                            <div className="event-details-section">
+                                                <h3 className="event-title">{event.event_name}</h3>
+
+                                                <div className="event-details-horizontal">
+                                                    {/* Date */}
+                                                    <div className="detail-horizontal">
+                                                        <div className="detail-icon">
+                                                            <i className="bi bi-calendar3"></i>
+                                                        </div>
+                                                        <div className="detail-content">
+                                                            <div className="detail-label">DATE</div>
+                                                            <div className="detail-value">
+                                                                {event.event_start_date ? new Date(event.event_start_date).toLocaleDateString('en-US', {
+                                                                    month: 'short',
+                                                                    day: 'numeric',
+                                                                    year: 'numeric'
+                                                                }) : 'TBD'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Time */}
+                                                    <div className="detail-horizontal">
+                                                        <div className="detail-icon">
+                                                            <i className="bi bi-clock"></i>
+                                                        </div>
+                                                        <div className="detail-content">
+                                                            <div className="detail-label">TIME</div>
+                                                            <div className="detail-value">
+                                                                {event.event_start_time && event.event_end_time 
+                                                                    ? `${event.event_start_time} - ${event.event_end_time}`
+                                                                    : event.event_start_time || 'TBD'
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Location */}
+                                                    <div className="detail-horizontal">
+                                                        <div className="detail-icon">
+                                                            <i className="bi bi-geo-alt"></i>
+                                                        </div>
+                                                        <div className="detail-content">
+                                                            <div className="detail-label">LOCATION</div>
+                                                            <div className="detail-value">
+                                                                {event.event_location || 'Location TBD'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className="event-body">
-                                                <h3 className="event-title">{event.event_name}</h3>
-
-                                                <div className="event-datetime">
-                                                    <div className="date-group">
-                                                        <i className="bi bi-calendar"></i>
-                                                        <span>{formatDateTime(event.event_start_date, event.event_start_time)}</span>
-                                                    </div>
-                                                    {event.event_end_date && (
-                                                        <div className="date-group">
-                                                            <i className="bi bi-calendar-check"></i>
-                                                            <span>{formatDateTime(event.event_end_date, event.event_end_time)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="rsvp-metrics">
-                                                    <div className="metric yes">
-                                                        <div className="metric-number">{stats.yes}</div>
-                                                        <div className="metric-label">Yes</div>
-                                                    </div>
-                                                    <div className="metric maybe">
-                                                        <div className="metric-number">{stats.maybe}</div>
-                                                        <div className="metric-label">Maybe</div>
-                                                    </div>
-                                                    <div className="metric no">
-                                                        <div className="metric-number">{stats.no}</div>
-                                                        <div className="metric-label">No</div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="event-footer">
+                                            {/* Buttons - Bottom Section */}
+                                                <div className="event-actions-section">
                                                     <button
-                                                        className={`action-btn ${published && !cancelled ? "primary" : "secondary"} ${cancelled ? "disabled" : ""}`}
+                                                        className={`action-btn ${cancelled ? "disabled" : published ? "view-event-btn" : "complete-setup-btn"}`}
                                                     >
                                                         {cancelled ? (
                                                             <>
@@ -1093,16 +1163,26 @@ const EventsDashboard = () => {
                                                             </>
                                                         ) : published ? (
                                                             <>
-                                                                <i className="bi bi-gear"></i> Manage
+                                                                <i className="bi bi-eye"></i> VIEW EVENT
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <i className="bi bi-arrow-right"></i> Complete Setup
+                                                                <i className="bi bi-arrow-right"></i> COMPLETE SETUP
                                                             </>
                                                         )}
                                                     </button>
+                                                    
+                                                    <button
+                                                        className="action-btn reserve-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            showReserveStats(event, stats);
+                                                        }}
+                                                        disabled={cancelled}
+                                                    >
+                                                        <i className="bi bi-people"></i> RESERVE
+                                                    </button>
                                                 </div>
-                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -1131,6 +1211,74 @@ const EventsDashboard = () => {
                         </div>
                     )}
                 </div>
+
+                {/* RESERVE MODAL */}
+                {showReserveModal && reserveEvent && (
+                    <div className="modal-backdrop">
+                        <div className="modal-container">
+                            <div className="modal-header">
+                                <h2><i className="bi bi-people"></i> Reserve Stats</h2>
+                                <button className="modal-close" onClick={closeReserveModal}>
+                                    <i className="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            <div className="modal-body">
+                                <div className="reserve-modal-content">
+                                    <h3 className="reserve-event-title">{reserveEvent.event_name}</h3>
+                                    
+                                    <div className="reserve-stats-grid">
+                                        <div className="reserve-stat-card confirmed">
+                                            <div className="stat-icon">
+                                                <i className="bi bi-check-circle"></i>
+                                            </div>
+                                            <div className="stat-content">
+                                                <div className="stat-number">{reserveStats.yes}</div>
+                                                <div className="stat-label">Confirmed</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="reserve-stat-card pending">
+                                            <div className="stat-icon">
+                                                <i className="bi bi-clock"></i>
+                                            </div>
+                                            <div className="stat-content">
+                                                <div className="stat-number">{reserveStats.maybe}</div>
+                                                <div className="stat-label">Maybe</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="reserve-stat-card declined">
+                                            <div className="stat-icon">
+                                                <i className="bi bi-x-circle"></i>
+                                            </div>
+                                            <div className="stat-content">
+                                                <div className="stat-number">{reserveStats.no}</div>
+                                                <div className="stat-label">Declined</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="reserve-stat-card total">
+                                            <div className="stat-icon">
+                                                <i className="bi bi-people"></i>
+                                            </div>
+                                            <div className="stat-content">
+                                                <div className="stat-number">{reserveStats.yes + reserveStats.maybe + reserveStats.no}</div>
+                                                <div className="stat-label">Total Responses</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions">
+                                <button type="button" className="btn-primary" onClick={closeReserveModal}>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* EDIT MODAL */}
                 {showEditModal && (

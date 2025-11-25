@@ -844,39 +844,51 @@ try {
         exit;
     }
 
-    if ($fun === "getUserEvents") {
-        $userID = $_POST['userID'] ?? '';
+    if ($fun === "getUserEvents") { 
+                $userID = $_POST['userID'] ?? '';
 
-        if (! $userID) {
-            echo json_encode([
-                "success" => false,
-                "message" => "Missing user ID",
-            ]);
-            exit;
-        }
+                if (! $userID) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Missing user ID",
+                    ]);
+                    exit;
+                }
 
-        try {
-            $stmt = $pdo->prepare("
-            SELECT *
-            FROM events
-            WHERE user_id = :user_id
-              AND (is_deleted = 0 OR is_deleted IS NULL)
-            ORDER BY created_at DESC
-         ");
-            $stmt->execute([":user_id" => $userID]);
-            $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("
+                        SELECT *
+                        FROM events
+                        WHERE user_id = :user_id
+                        AND (is_deleted = 0 OR is_deleted IS NULL)
+                        ORDER BY created_at DESC
+                    ");
+                    $stmt->execute([":user_id" => $userID]);
+                    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode([
-                "success" => true,
-                "events"  => $events,
-            ]);
-        } catch (PDOException $e) {
-            echo json_encode([
-                "success" => false,
-                "message" => "Database error: " . $e->getMessage(),
-            ]);
-        }
-        exit;
+                    // ADD DEBUG LOGGING
+                    error_log("User Events Debug - User: " . $userID . ", Count: " . count($events));
+                    if (count($events) > 0) {
+                        $firstEvent = $events[0];
+                        error_log("First Event Fields: " . implode(', ', array_keys($firstEvent)));
+                        error_log("Has event_image: " . (isset($firstEvent['event_image']) ? 'YES' : 'NO'));
+                        if (isset($firstEvent['event_image'])) {
+                            error_log("event_image type: " . gettype($firstEvent['event_image']));
+                            error_log("event_image length: " . strlen($firstEvent['event_image']));
+                        }
+                    }
+
+                    echo json_encode([
+                        "success" => true,
+                        "events"  => $events,
+                    ]);
+                } catch (PDOException $e) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Database error: " . $e->getMessage(),
+                    ]);
+                }
+                exit;
     }
 
     if ($fun === "getUserEventsCount") {
@@ -1309,6 +1321,7 @@ try {
         exit;
     }
 
+    
     if ($fun === "getUserPackage") {
         $user_id = $_POST['user_id'] ?? '';
 
@@ -1331,6 +1344,39 @@ try {
             echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
         }
         exit;
+    }
+
+    if ($fun === "getUserPackage") {
+            $user_id = $_POST['user_id'] ?? '';
+            
+            if (empty($user_id)) {
+                echo json_encode(["success" => false, "message" => "User ID required"]);
+                exit;
+            }
+            
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT up.*, p.package_type, p.features 
+                    FROM user_packages up 
+                    LEFT JOIN packagetb p ON up.package_id = p.package_id 
+                    WHERE up.user_id = ?
+                ");
+                $stmt->execute([$user_id]);
+                $userPackage = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($userPackage) {
+                    echo json_encode(["success" => true, "userPackage" => $userPackage]);
+                } else {
+                    // Return basic package as default
+                    echo json_encode(["success" => true, "userPackage" => [
+                        "package_type" => "basic",
+                        "features" => "{}"
+                    ]]);
+                }
+            } catch (PDOException $e) {
+                echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
     }
 
     if ($fun === "getAllPackages") {
@@ -4074,6 +4120,86 @@ try {
             echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
         }
         exit;
+    }
+
+    if ($fun === "exportGuestData") {
+            $event_id = $_POST['event_id'] ?? '';
+            $user_id = $_POST['user_id'] ?? '';
+            $guest_ids = $_POST['guest_ids'] ?? ''; // For selected guests export
+
+            if (empty($event_id)) {
+                echo json_encode(["success" => false, "message" => "Event ID required"]);
+                exit;
+            }
+
+            try {
+                // Build the query
+                $query = "
+                    SELECT 
+                        r.name,
+                        r.email,
+                        r.phone,
+                        r.attending,
+                        r.guest_count,
+                        r.created_at,
+                        rm.message as guest_message,
+                        e.event_name
+                    FROM rsvp r
+                    LEFT JOIN rsvp_messages rm ON r.guest_id = rm.guest_id AND r.event_id = rm.event_id
+                    LEFT JOIN events e ON r.event_id = e.event_id
+                    WHERE r.event_id = :event_id
+                ";
+
+                $params = [':event_id' => $event_id];
+
+                // If specific guest IDs are provided, filter by them
+                if (!empty($guest_ids)) {
+                    $guest_ids_array = explode(',', $guest_ids);
+                    $placeholders = str_repeat('?,', count($guest_ids_array) - 1) . '?';
+                    $query .= " AND r.guest_id IN ($placeholders)";
+                    $params = array_merge($params, $guest_ids_array);
+                }
+
+                $query .= " ORDER BY r.created_at DESC";
+
+                $stmt = $pdo->prepare($query);
+                $stmt->execute($params);
+                $guests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($guests)) {
+                    echo json_encode(["success" => false, "message" => "No guest data found to export"]);
+                    exit;
+                }
+
+                // Generate CSV content
+                $csvContent = "Name,Email,Phone,Attending Status,Guest Count,Response Date,Message,Event Name\n";
+                
+                foreach ($guests as $guest) {
+                    $csvContent .= sprintf(
+                        '"%s","%s","%s","%s","%s","%s","%s","%s"' . "\n",
+                        $guest['name'] ?? '',
+                        $guest['email'] ?? '',
+                        $guest['phone'] ?? '',
+                        $guest['attending'] ?? 'No response',
+                        $guest['guest_count'] ?? '1',
+                        date('Y-m-d H:i:s', strtotime($guest['created_at'])),
+                        str_replace('"', '""', $guest['guest_message'] ?? ''),
+                        $guest['event_name'] ?? ''
+                    );
+                }
+
+                // Return the CSV data
+                echo json_encode([
+                    "success" => true,
+                    "csv_data" => $csvContent,
+                    "filename" => "guest_list_" . ($guest['event_name'] ?? 'event') . "_" . date('Y-m-d') . ".csv",
+                    "total_guests" => count($guests)
+                ]);
+
+            } catch (PDOException $e) {
+                echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            }
+            exit;
     }
 
     if ($fun === "updatePaymentStatus") {

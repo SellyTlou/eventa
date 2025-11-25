@@ -4,6 +4,7 @@ import "../../alert.css";
 import { useNavigate } from "react-router-dom";
 import { logOut, DashboardHeader, DashboardSidebar } from "../components";
 import RSVPBinaryTree from "../utils/RSVPTree";
+import { canUseFeature, getPackageInfo } from "../utils/packageFeatures";
 
 const RSVPResponses = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -21,6 +22,11 @@ const RSVPResponses = () => {
     const [messageType, setMessageType] = useState("bulk");
     const [selectedGuestForMessage, setSelectedGuestForMessage] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [exportLoading, setExportLoading] = useState(false);
+
+    // NEW: Package states
+    const [userPackage, setUserPackage] = useState(null);
+    const [packageInfo, setPackageInfo] = useState(null);
 
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
@@ -67,6 +73,11 @@ const RSVPResponses = () => {
     const bulkActionRef = useRef(null);
     const navigate = useNavigate();
 
+    // NEW: Package feature checks
+    const canExport = userPackage ? canUseFeature(userPackage, "exportRSVP") : false;
+    const canBulkMessage = userPackage ? canUseFeature(userPackage, "bulkMessages") : false;
+    const canRemoveGuests = userPackage ? canUseFeature(userPackage, "guestRemoval") : false;
+
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
@@ -75,7 +86,42 @@ const RSVPResponses = () => {
             navigate("/");
             return;
         }
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+
+        // NEW: Fetch user package
+        const fetchUserPackage = async () => {
+            try {
+                const API_URL = process.env.REACT_APP_API_URL;
+                const formData = new FormData();
+                formData.append("function", "getUserPackage");
+                formData.append("user_id", userData.user_id);
+                
+                const response = await fetch(`${API_URL}/query.php`, { 
+                    method: "POST", 
+                    body: formData 
+                });
+                const data = await response.json();
+                
+                if (data.success && data.userPackage) {
+                    setUserPackage(data.userPackage);
+                    setPackageInfo(getPackageInfo(data.userPackage));
+                } else {
+                    // Default to basic package
+                    const basicPackage = { package_type: "basic" };
+                    setUserPackage(basicPackage);
+                    setPackageInfo(getPackageInfo(basicPackage));
+                }
+            } catch (error) {
+                console.error("Error fetching user package:", error);
+                // Default to basic on error
+                const basicPackage = { package_type: "basic" };
+                setUserPackage(basicPackage);
+                setPackageInfo(getPackageInfo(basicPackage));
+            }
+        };
+
+        fetchUserPackage();
 
         const handleClickOutside = (event) => {
             if (bulkActionRef.current && !bulkActionRef.current.contains(event.target)) {
@@ -181,19 +227,117 @@ const RSVPResponses = () => {
         }
     };
 
-    const handleBulkAction = (action) => {
+    // UPDATED: Export functions with package checks
+    const exportGuestData = async (exportType = 'all') => {
+        // Check package permission
+        if (!canExport) {
+            printAlert("Export feature is not available in your current package. Upgrade to Premium or Enterprise.", "warning");
+            return;
+        }
+
+        setExportLoading(true);
+        try {
+            const eventId = localStorage.getItem("selectedEventId");
+            const userId = user?.user_id;
+            
+            console.log("Exporting data - Event ID:", eventId, "User ID:", userId, "Type:", exportType);
+            
+            if (!eventId || !userId) {
+                printAlert("Missing required data for export", "error");
+                setExportLoading(false);
+                return;
+            }
+
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "exportGuestData");
+            formData.append("event_id", eventId);
+            formData.append("user_id", userId);
+
+            // Add guest IDs if exporting selected guests
+            if (exportType === 'selected' && selectedGuests.size > 0) {
+                formData.append("guest_ids", Array.from(selectedGuests).join(","));
+                console.log("Exporting selected guests:", Array.from(selectedGuests));
+            }
+
+            console.log("Sending export request to:", `${API_URL}/query.php`);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            // Check if response is OK
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Export response:", data);
+
+            if (data.success && data.csv_data) {
+                // Create and download the CSV file
+                const blob = new Blob([data.csv_data], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", data.filename || `guest_export_${Date.now()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                const guestCount = exportType === 'selected' ? selectedGuests.size : data.total_guests;
+                printAlert(`Successfully exported ${guestCount} guest(s)`, "success");
+                
+            } else {
+                printAlert(data.message || "Failed to export data", "error");
+            }
+
+        } catch (error) {
+            console.error("Export error:", error);
+            printAlert("Export failed: " + error.message, "error");
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
+    // UPDATED: Export selected guests with package check
+    const exportSelectedGuests = async () => {
         if (selectedGuests.size === 0) {
+            printAlert("Please select guests to export", "warning");
+            return;
+        }
+        await exportGuestData('selected');
+    };
+
+    // UPDATED: Export all function
+    const exportAllGuests = async () => {
+        await exportGuestData('all');
+    };
+
+    // UPDATED: Bulk action handler with package checks
+    const handleBulkAction = (action) => {
+        if (selectedGuests.size === 0 && action !== 'exportAll') {
             printAlert("Please select at least one guest", "warning");
             return;
         }
 
         switch (action) {
             case "message":
+                if (!canBulkMessage) {
+                    printAlert("Bulk messaging is not available in your current package. Upgrade to Premium or Enterprise.", "warning");
+                    return;
+                }
                 setMessageType("bulk");
                 setMessageContent("");
                 setMessageModalOpen(true);
                 break;
             case "remove":
+                if (!canRemoveGuests) {
+                    printAlert("Guest removal is not available in your current package. Upgrade to Premium or Enterprise.", "warning");
+                    return;
+                }
                 const guestCount = selectedGuests.size;
                 showConfirm(
                     "Remove Guests",
@@ -202,6 +346,12 @@ const RSVPResponses = () => {
                         removeSelectedGuests();
                     }
                 );
+                break;
+            case "export":
+                exportSelectedGuests();
+                break;
+            case "exportAll":
+                exportAllGuests();
                 break;
             default:
                 break;
@@ -309,6 +459,8 @@ const RSVPResponses = () => {
 
     return (
         <div className="dashboard-container">
+            {/* REMOVED: Package Info Banner - No banner at the top */}
+
             {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
@@ -365,22 +517,32 @@ const RSVPResponses = () => {
                 user={user}
                 eventStatus={eventStatus}
                 onToggleSidebar={toggleSidebar}
+                userPackage={userPackage}
             />
 
             {/* SIDEBAR */}
             <DashboardSidebar
                 isMobileOpen={sidebarOpen}
                 onClose={closeSidebar}
+                userPackage={userPackage}
             />
 
             {/* MAIN CONTENT */}
             <div className="dashboard-content">
                 <div className="content-header">
-                    <div className="header-title">
-                        <h2>RSVP Responses</h2>
-                        {eventData && <p className="event-subtitle">for "{eventData.event_name}"</p>}
-                    </div>
                     <div className="header-actions">
+                        {/* UPDATED: Export Button with package restriction */}
+                        <button 
+                            className={`btn btn-success btn-sm ${!canExport ? 'feature-disabled' : ''}`}
+                            onClick={() => exportGuestData('all')}
+                            disabled={exportLoading || !filteredResponses.length || !canExport}
+                            title={!canExport ? "Upgrade to Premium or Enterprise to export data" : "Export all guest data"}
+                        >
+                            <i className="bi bi-download"></i> 
+                            {exportLoading ? "Exporting..." : "Export All"}
+                            {!canExport && <i className="bi bi-lock-fill lock-icon"></i>}
+                        </button>
+                        
                         <div className="filter-dropdown">
                             <select value={responseFilter} onChange={(e) => setResponseFilter(e.target.value)} className="filter-select">
                                 <option value="all">All Responses</option>
@@ -408,25 +570,46 @@ const RSVPResponses = () => {
                     </div>
                 </div>
 
-                {/* Bulk Actions Bar */}
+                {/* UPDATED: Bulk Actions Bar with package restrictions */}
                 {selectedGuests.size > 0 && (
                     <div className="bulk-actions-bar">
                         <div className="bulk-info">
                             <strong>{selectedGuests.size}</strong> guest(s) selected
                         </div>
                         <div ref={bulkActionRef} className="bulk-actions">
+                            {/* UPDATED: Export Selected Button */}
                             <button
-                                className="btn btn-primary btn-sm"
+                                className={`btn btn-success btn-sm ${!canExport ? 'feature-disabled' : ''}`}
+                                onClick={() => handleBulkAction("export")}
+                                disabled={exportLoading || !canExport}
+                                title={!canExport ? "Upgrade to Premium or Enterprise to export data" : "Export selected guests"}
+                            >
+                                <i className="bi bi-download"></i> Export Selected
+                                {!canExport && <i className="bi bi-lock-fill lock-icon"></i>}
+                            </button>
+                            
+                            {/* UPDATED: Bulk Message Button */}
+                            <button
+                                className={`btn btn-primary btn-sm ${!canBulkMessage ? 'feature-disabled' : ''}`}
                                 onClick={() => handleBulkAction("message")}
+                                disabled={!canBulkMessage}
+                                title={!canBulkMessage ? "Upgrade to Premium or Enterprise for bulk messaging" : "Send message to selected guests"}
                             >
                                 <i className="bi bi-envelope"></i> Send Message
+                                {!canBulkMessage && <i className="bi bi-lock-fill lock-icon"></i>}
                             </button>
+                            
+                            {/* UPDATED: Remove Button */}
                             <button
-                                className="btn btn-danger btn-sm"
+                                className={`btn btn-danger btn-sm ${!canRemoveGuests ? 'feature-disabled' : ''}`}
                                 onClick={() => handleBulkAction("remove")}
+                                disabled={!canRemoveGuests}
+                                title={!canRemoveGuests ? "Upgrade to Premium or Enterprise to remove guests" : "Remove selected guests"}
                             >
                                 <i className="bi bi-trash"></i> Remove
+                                {!canRemoveGuests && <i className="bi bi-lock-fill lock-icon"></i>}
                             </button>
+                            
                             <button
                                 className="btn btn-outline btn-sm"
                                 onClick={() => setSelectedGuests(new Set())}
@@ -460,7 +643,8 @@ const RSVPResponses = () => {
                                     <th>Email</th>
                                     <th>Attending</th>
                                     <th>Guests</th>
-                                    <th>date</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -483,6 +667,15 @@ const RSVPResponses = () => {
                                             </td>
                                             <td className="guest-count">{r.guest_count}</td>
                                             <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                                            <td>
+                                                <button
+                                                    className="btn-icon message-btn"
+                                                    onClick={() => openIndividualMessage(r)}
+                                                    title="Send Message"
+                                                >
+                                                    <i className="bi bi-envelope"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                     );
                                 }) : (
