@@ -3516,7 +3516,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     };
 
     const getActiveSubscriptions = (packageType) => {
-        return activeSubscriptions[packageType] || 0;
+        // Ensure count is displayed as a normal integer (no leading zeros)
+        const val = activeSubscriptions[packageType] || 0;
+        return typeof val === 'string' ? parseInt(val, 10) : val;
     };
 
     const formatCurrency = (amount) => {

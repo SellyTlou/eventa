@@ -423,16 +423,14 @@ function Pricing() {
                                             <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
                                                 {plan.isContactSales ? (
                                                     <>
-                                                        <div className="enterprise-pill">Enterprise</div>
-                                                        <h2 className="get-in-touch">Get in touch</h2>
-
+                                                        <div className="enterprise-label large-green">Enterprise</div>
+                                                        <div className="basic-label get-in-touch-label">Get in touch</div>
 
                                                         <ul className="features-list contact-features">
                                                             {plan.features.map((feature, featureIndex) => (
                                                                 <li key={featureIndex}>
                                                                     <i className="bi bi-check2-circle text-success me-2"></i>
                                                                     {feature}
-                                                                    <i className="bi bi-info-circle ms-2 info-small"></i>
                                                                 </li>
                                                             ))}
                                                         </ul>

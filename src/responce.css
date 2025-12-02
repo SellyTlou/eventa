@@ -500,25 +500,23 @@
         gap: 12px;
     }
 
-    .pricing-card.contact-card .enterprise-pill {
-        background: #E6F6EE; /* soft green */
-        color: #137A53;
-        display: inline-block;
-        padding: 6px 14px;
-        border-radius: 18px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        margin-top: -12px;
-        margin-bottom: 8px;
+    /* Make Enterprise label larger and green (fixed selector and nesting) */
+    .pricing-card.contact-card .enterprise-label.large-green {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #28a745;
+        margin-bottom: 0.2em;
     }
 
+    /* explicit styling for the Get in touch element (avoid empty ruleset) */
     .pricing-card.contact-card .get-in-touch {
-        font-size: 1.85rem;
-        color: #2E1650; /* premium purple tone */
-        margin: 0;
+        font-size: 0.95rem;
         font-weight: 700;
-        padding-bottom: 6px;
+        color: inherit;
+        text-align: center;
+        padding: 6px 10px;
     }
+    
 
     .outlined-contact {
         border: 2px solid #572F6F; /* purple outline */
@@ -535,10 +533,10 @@
         padding: 8px 0;
     }
 
+    /* provide a minimal info-small style instead of leaving it empty */
     .pricing-card.contact-card .info-small {
-        color: #9b9b9b;
         font-size: 0.9rem;
-        vertical-align: middle;
+        color: #6c6c6c;
     }
 
     .pricing-card.contact-card .see-all-features {
@@ -866,4 +864,30 @@ Create Event Page Styling
     .actions {
         flex-direction: column;
     }
+}
+
+
+/* Style for the Enterprise label - green shadow effect */
+.pricing-card.contact-card .enterprise-label.large-green {
+    font-size: 1.4rem; /* Slightly smaller than get in touch */
+    font-weight: 700;
+    color: #000; /* Black text */
+    margin-bottom: 0.3em;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(40, 167, 69, 0.3); /* Green shadow */
+    letter-spacing: 0.5px;
+}
+
+/* Style for the Get in Touch label - looks like other card labels */
+.pricing-card.contact-card .get-in-touch-label {
+    background-color: transparent; /* No background */
+    color: #000; /* Black text like other cards */
+    padding: 0;
+    border-radius: 0;
+    font-size: 1.6rem; /* Main heading size */
+    font-weight: 800; /* Bold like other cards */
+    display: block;
+    margin-bottom: 0.8em;
+    border: none; /* No border */
+    text-align: center;
 }
