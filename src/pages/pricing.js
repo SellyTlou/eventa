@@ -33,6 +33,7 @@ function Pricing() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
     const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
+    const [showContactSalesModal, setShowContactSalesModal] = useState(false);
 
     // Helper function to get default features based on package type
     const getDefaultFeatures = (packageType, maxGuests, maxEvents) => {
@@ -79,9 +80,9 @@ function Pricing() {
                 name: "Basic",
                 price: "Free",
                 duration: "per month",
-                max_guests: 50,
+                max_guests: 250,
                 max_events: 5,
-                features: getDefaultFeatures('basic', 50, 5),
+                features: getDefaultFeatures('basic', 250, 5),
                 isPopular: false
             },
             {
@@ -89,9 +90,9 @@ function Pricing() {
                 name: "Premium",
                 price: "R100",
                 duration: "per month",
-                max_guests: 200,
+                max_guests: 1700,
                 max_events: 20,
-                features: getDefaultFeatures('premium', 200, 20),
+                features: getDefaultFeatures('premium', 1700, 20),
                 isPopular: true
             },
             {
@@ -99,9 +100,9 @@ function Pricing() {
                 name: "Enterprise",
                 price: "R750",
                 duration: "per month",
-                max_guests: 500,
+                max_guests: 1000,
                 max_events: 50,
-                features: getDefaultFeatures('enterprise', 500, 50),
+                features: getDefaultFeatures('enterprise', 1000, 50),
                 isPopular: false
             }
         ];
@@ -124,16 +125,27 @@ function Pricing() {
             console.log("Pricing plans data:", data);
 
             if (data.success && data.packages) {
-                const formattedPlans = data.packages.map(pkg => ({
-                    id: pkg.package_id,
-                    name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
-                    price: pkg.price === 0 ? "Free" : `R${pkg.price}`,
-                    duration: "per month",
-                    max_guests: pkg.max_guests,
-                    max_events: pkg.max_events,
-                    features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type, pkg.max_guests, pkg.max_events),
-                    isPopular: pkg.package_type === 'premium' // Mark premium as most popular
-                }));
+                // Base feature limits - hardcoded per plan type
+                const baseFeatureLimits = {
+                    'basic': { max_guests: 250, max_events: 5 },
+                    'premium': { max_guests: 1700, max_events: 20 },
+                    'enterprise': { max_guests: 1000, max_events: 50 }
+                };
+
+                const formattedPlans = data.packages.map(pkg => {
+                    // Use hardcoded base features instead of API values
+                    const limits = baseFeatureLimits[pkg.package_type.toLowerCase()] || baseFeatureLimits['basic'];
+                    return {
+                        id: pkg.package_id,
+                        name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
+                        price: pkg.price === 0 ? "Free" : `R${pkg.price}`,
+                        duration: "per month",
+                        max_guests: limits.max_guests,  // Use hardcoded limit
+                        max_events: limits.max_events,  // Use hardcoded limit
+                        features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type, limits.max_guests, limits.max_events),
+                        isPopular: pkg.package_type === 'premium'
+                    };
+                });
                 setPricingPlans(formattedPlans);
             } else {
                 // Fallback to default plans if API fails
@@ -182,16 +194,39 @@ function Pricing() {
             ctaText: plan.price === "Free" ? "Get Started Free" : "Get started",
             ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
         })),
-        "Business & Nonprofit": pricingPlans.map(plan => ({
-            name: plan.name,
-            monthlyPrice: plan.price,
-            yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
-            description: `For ${plan.name.toLowerCase()} business needs`,
-            isPopular: plan.isPopular,
-            features: plan.features,
-            ctaText: "Get started",
-            ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
-        })),
+        "Business": [
+            ...pricingPlans.map(plan => ({
+                name: plan.name,
+                monthlyPrice: plan.price,
+                yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
+                description: `For ${plan.name.toLowerCase()} business needs`,
+                isPopular: plan.isPopular,
+                features: plan.features,
+                ctaText: "Get started",
+                ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
+            })),
+            {
+                name: "Get in Touch",
+                monthlyPrice: "Custom",
+                yearlyPrice: "Custom",
+                description: "For large-scale business events",
+                isPopular: false,
+                features: [
+                    "Manage large-scale events",
+                    "Your brand, ad-free",
+                    "Custom data fields",
+                    "Custom fonts",
+                    "Email whitelabeling",
+                    "Self check-in kiosk",
+                    "Single sign-on (SSO)",
+                    "Priority support",
+                    "Dedicated Account Manager"
+                ],
+                ctaText: "Coming soon",
+                ctaVariant: "btn-create",
+                isContactSales: true
+            }
+        ],
         "Selling Tickets": [
             {
                 name: "Basic",
@@ -378,50 +413,82 @@ function Pricing() {
 
                 {/* Pricing Cards - Only show if activeCategory is NOT "Selling Tickets" */}
                 {activeCategory !== "Selling Tickets" && (
-                    <section className="pricing-cards-section">
+                    <section className={`pricing-cards-section ${activeCategory === 'Business' ? 'business' : ''}`}>
                         <div className="container">
                             <div className="row justify-content-center">
-                                {pricingCategories[activeCategory].map((plan, index) => (
-                                    <div key={index} className={`col-lg-4 pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
-                                        <div className="pricing-card text-center">
-                                            {plan.isPopular && (
-                                                <div className="popular-badge">MOST POPULAR</div>
-                                            )}
-                                            <h3>{plan.name}</h3>
-                                            <p className="plan-description">{plan.description}</p>
+                                {pricingCategories[activeCategory].map((plan, index) => {
+                                    const colClass = activeCategory === 'Business' ? 'col-lg-3' : 'col-lg-4';
+                                    return (
+                                        <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
+                                            <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
+                                                {plan.isContactSales ? (
+                                                    <>
+                                                        <div className="enterprise-pill">Enterprise</div>
+                                                        <h2 className="get-in-touch">Get in touch</h2>
 
-                                            <div className="price-tag">
-                                                <span className="price">
-                                                    {billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
-                                                </span>
-                                                <span className="duration">
-                                                    {billingCycle === "monthly" ? "/month" : "/year"}
-                                                </span>
+
+                                                        <ul className="features-list contact-features">
+                                                            {plan.features.map((feature, featureIndex) => (
+                                                                <li key={featureIndex}>
+                                                                    <i className="bi bi-check2-circle text-success me-2"></i>
+                                                                    {feature}
+                                                                    <i className="bi bi-info-circle ms-2 info-small"></i>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+
+                                                        <div className="contact-cta-wrapper">
+                                                            <button
+                                                                className={`btn ${plan.ctaVariant} outlined-contact w-100`}
+                                                                onClick={() => setShowContactSalesModal(true)}
+                                                            >
+                                                                {plan.ctaText}
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {plan.isPopular && (
+                                                            <div className="popular-badge">MOST POPULAR</div>
+                                                        )}
+                                                        <h3>{plan.name}</h3>
+                                                        <p className="plan-description">{plan.description}</p>
+
+                                                        <div className="price-tag">
+                                                            <span className="price">
+                                                                {billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                                                            </span>
+                                                            <span className="duration">
+                                                                {billingCycle === "monthly" ? "/month" : "/year"}
+                                                            </span>
+                                                        </div>
+
+                                                        {billingCycle === "yearly" && plan.monthlyPrice !== "Free" && (
+                                                            <div className="savings-text">
+                                                                {calculateYearlySavings(plan.monthlyPrice)}
+                                                            </div>
+                                                        )}
+
+                                                        <ul className="features-list">
+                                                            {plan.features.map((feature, featureIndex) => (
+                                                                <li key={featureIndex}>
+                                                                    <i className="bi bi-check2-circle"></i> {feature}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+
+                                                        <button
+                                                            className={`btn ${plan.ctaVariant} w-100`}
+                                                            onClick={handleCreateEvent}
+                                                        >
+                                                            {plan.ctaText}
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
-
-                                            {billingCycle === "yearly" && plan.monthlyPrice !== "Free" && (
-                                                <div className="savings-text">
-                                                    {calculateYearlySavings(plan.monthlyPrice)}
-                                                </div>
-                                            )}
-
-                                            <ul className="features-list">
-                                                {plan.features.map((feature, featureIndex) => (
-                                                    <li key={featureIndex}>
-                                                        <i className="bi bi-check2-circle"></i> {feature}
-                                                    </li>
-                                                ))}
-                                            </ul>
-
-                                            <button
-                                                className={`btn ${plan.ctaVariant} w-100`}
-                                                onClick={handleCreateEvent}
-                                            >
-                                                {plan.ctaText}
-                                            </button>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </section>
@@ -519,6 +586,66 @@ function Pricing() {
                                 >
                                     <i className="bi bi-calendar-event"></i>
                                     Create Free Event
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Contact Sales Maintenance Modal */}
+            {showContactSalesModal && (
+                <div className="modal-overlay-new" onClick={() => setShowContactSalesModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-people"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Contact Sales</h2>
+                                    <p>Our sales desk is temporarily unavailable — we're working on it.</p>
+                                </div>
+                            </div>
+                            <button
+                                className="close-btn-new"
+                                onClick={() => setShowContactSalesModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="maintenance-message">
+                                <div className="maintenance-icon">
+                                    <i className="bi bi-envelope-paper"></i>
+                                </div>
+                                <h3>Get in touch</h3>
+                                <p>We're preparing a dedicated sales experience for enterprise customers. Please check back soon or contact support for early access.</p>
+
+                                <div className="maintenance-tips">
+                                    <h4>Quick options:</h4>
+                                    <ul>
+                                        <li>Send us an email at <a href="mailto:sales@eventa.co.za">sales@eventa.co.za</a></li>
+                                        <li>Contact support for early access inquiries</li>
+                                        <li>Leave your details and we'll reach out</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions-new">
+                                <button
+                                    className="action-btn-new primary"
+                                    onClick={() => setShowContactSalesModal(false)}
+                                >
+                                    <i className="bi bi-check-circle"></i>
+                                    Got It
+                                </button>
+                                <button
+                                    className="action-btn-new secondary"
+                                    onClick={() => { setShowContactSalesModal(false); handleCreateEvent(); }}
+                                >
+                                    <i className="bi bi-calendar-event"></i>
+                                    Create Event
                                 </button>
                             </div>
                         </div>

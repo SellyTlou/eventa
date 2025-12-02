@@ -137,6 +137,12 @@ const RSVPResponses = () => {
         if (!eventId) return navigate("/eventsDashboard");
         fetchRSVPResponses(eventId);
         fetchEventStatusByID(eventId);
+        // Poll for new RSVP responses (keeps admin view reasonably fresh)
+        const pollInterval = setInterval(() => {
+            fetchRSVPResponses(eventId);
+        }, 10000); // every 10 seconds
+
+        return () => clearInterval(pollInterval);
     }, []);
 
     const fetchRSVPResponses = async (eventId) => {
@@ -326,7 +332,15 @@ const RSVPResponses = () => {
         switch (action) {
             case "message":
                 if (!canBulkMessage) {
-                    printAlert("Bulk messaging is not available in your current package. Upgrade to Premium or Enterprise.", "warning");
+                    // Show upgrade prompt with CTA
+                    showConfirm(
+                        "Bulk Messaging Locked",
+                        "Bulk messaging (sending to 2 or more guests) is not available on your current plan. Upgrade to Premium or Enterprise to unlock this feature.",
+                        () => {
+                            navigate('/upgrade_package');
+                        },
+                        () => setBulkActionOpen(false)
+                    );
                     return;
                 }
                 setMessageType("bulk");
@@ -392,6 +406,17 @@ const RSVPResponses = () => {
     };
 
     const sendMessage = async () => {
+        // Prevent bulk sends for packages that don't allow bulk messaging
+        if (messageType === 'bulk' && !canBulkMessage) {
+            // Prompt user to upgrade from within the modal
+            showConfirm(
+                'Bulk Messaging Locked',
+                'Bulk messaging (2+ recipients) is not available on your current plan. Upgrade to Premium or Enterprise to unlock sending messages to multiple guests.',
+                () => navigate('/pricing'),
+                () => setMessageModalOpen(false)
+            );
+            return;
+        }
         if (!messageContent.trim()) {
             printAlert("Please enter a message", "warning");
             return;
@@ -417,6 +442,8 @@ const RSVPResponses = () => {
             }
 
             formData.append("guest_ids", guestIds);
+            // Add user id so server can enforce package limits
+            formData.append("user_id", user?.user_id || '');
 
             console.log("Sending message with guest IDs:", guestIds);
             console.log("Message type:", messageType);

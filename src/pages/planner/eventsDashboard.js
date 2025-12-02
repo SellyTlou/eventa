@@ -67,24 +67,32 @@ const EventsDashboard = () => {
             return "/images/default-event.jpg";
         }
         
-        // Check if it's a complete base64 data URL
-        if (typeof imageData === 'string') {
-            // Check if it starts with data:image and has sufficient length
-            if (imageData.startsWith('data:image') && imageData.length > 100) {
-                // Basic validation - check if it has the complete structure
-                const parts = imageData.split(',');
-                if (parts.length === 2 && parts[1].length > 10) {
-                    return imageData;
-                }
-            }
-            
-            // Check if it's a truncated base64 (starts with data:image but is too short)
-            if (imageData.startsWith('data:image') && imageData.length < 100) {
-                console.warn('Truncated base64 image detected');
+        // Convert to string if needed
+        let imageSrc = typeof imageData === 'string' ? imageData : String(imageData);
+        
+        // If it's a URL (absolute or relative), return it directly
+        if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://') || imageSrc.startsWith('/')) {
+            return imageSrc;
+        }
+
+        // If it already starts with data:image, return as-is (it's already in the correct format)
+        if (imageSrc.startsWith('data:image')) {
+            if (imageSrc.length > 100) {
+                return imageSrc;
+            } else {
+                console.warn('Truncated base64 image detected, length:', imageSrc.length);
                 return "/images/default-event.jpg";
             }
         }
         
+        // If it's a raw base64 string (doesn't start with data:image), convert it
+        // This handles cases where only the base64 part is stored without the MIME type prefix
+        if (imageSrc.length > 50 && !imageSrc.includes(' ') && !imageSrc.includes('/')) {
+            // Looks like a raw base64 string, wrap it
+            return `data:image/png;base64,${imageSrc}`;
+        }
+        
+        // Fallback to default
         return "/images/default-event.jpg";
     };
 
@@ -452,6 +460,7 @@ const EventsDashboard = () => {
 
             const guestIds = affectedGuests.map(g => g.guest_id).join(",");
             formData.append("guest_ids", guestIds);
+            formData.append("user_id", user?.user_id || '');
 
             const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
                 method: "POST",
@@ -581,6 +590,7 @@ const EventsDashboard = () => {
 
             const guestIds = affectedDeleteGuests.map(g => g.guest_id).join(",");
             formData.append("guest_ids", guestIds);
+            formData.append("user_id", user?.user_id || '');
 
             const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
                 method: "POST",

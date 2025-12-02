@@ -3,12 +3,12 @@ import '../alert.css';
 import { useEffect, useState, useRef } from "react"
 import { NavLink } from "react-router-dom";
 import { useNavigate, Routes, Route, useLocation } from "react-router-dom";
+import { canUseFeature } from "./utils/packageFeatures";
 
 // Import your pages
 import Index from './index';
 import Features from '../pages/feature';
 import Pricing from '../pages/pricing';
-import About from '../pages/about';
 import CreateEvent from '../pages/createEvent';
 import Sales from '../pages/salse';
 import AdminDashboard from '../pages/admin/AdminDeshboard';
@@ -177,7 +177,6 @@ export function SessionHandler() {
                 <Route path="/" element={<Index />} />
                 <Route path="/feature" element={<Features />} />
                 <Route path="/pricing" element={<Pricing />} />
-                <Route path="/about" element={<About />} />
                 <Route path="/createEvent" element={<CreateEvent />} />
                 <Route path="/sales" element={<Sales />} />
                 <Route path="/admindashboard" element={<AdminDashboard />} />
@@ -318,17 +317,6 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                 </li>
                                 <li className="nav-item">
                                     <NavLink
-                                        to="/about"
-                                        className={({ isActive }) =>
-                                            `nav-link ${isActive ? "active" : ""}`
-                                        }
-                                    >
-                                        About Us
-                                    </NavLink>
-                                </li>
-
-                                <li className="nav-item">
-                                    <NavLink
                                         to="/sales"
                                         className={({ isActive }) =>
                                             `nav-link ${isActive ? "active" : ""}`
@@ -423,17 +411,6 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                             </li>
                             <li className="mobile-nav-item">
                                 <NavLink
-                                    to="/about"
-                                    className={({ isActive }) =>
-                                        `mobile-nav-link ${isActive ? "active" : ""}`
-                                    }
-                                    onClick={toggleMobileMenu}
-                                >
-                                    About Us
-                                </NavLink>
-                            </li>
-                            <li className="mobile-nav-item">
-                                <NavLink
                                     to="/support"
                                     className={({ isActive }) =>
                                         `mobile-nav-link ${isActive ? "active" : ""}`
@@ -477,7 +454,7 @@ export function Footer() {
                             <li><a href="/">Home</a></li>
                             <li><a href="/">Features</a></li>
                             <li><a href="/">Pricing</a></li>
-                            <li><a href="/">About Us</a></li>
+
                             <li><a href="/">Support</a></li>
                         </ul>
                     </div>
@@ -661,7 +638,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             }
 
             if (apiUrl === "/api") {
-                apiUrl = "http://sellytlou-001-site1.ltempurl.com/api";
+                apiUrl = "http://mfanafuthi-001-site1.rtempurl.com/api";
             }
 
             const formDataToSend = new FormData();
@@ -766,6 +743,13 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             console.log("Sending request to:", API_URL);
             const url = `${API_URL}/query.php`;
 
+            // quick pre-check so we can fail fast with a helpful message (avoids a long timeout)
+            const check = await checkApiReachable(API_URL, 5000);
+            if (!check.ok) {
+                const reason = check.error || `HTTP ${check.status || 'no response'}`;
+                throw new Error(`Unable to reach API at ${API_URL} — ${reason}`);
+            }
+
             const response = await fetchWithTimeout(url, {
                 method: "POST",
                 body: formDataToSend
@@ -854,7 +838,15 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             }
         } catch (error) {
             console.error("Registration Error:", error);
-            printAlert(`Error: ${error.message}`, 'error');
+
+            // Provide a clearer message when the request timed out or when the API can't be reached
+            if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('timed out')) {
+                printAlert(`Request timed out when contacting the API. Make sure your PHP server (Apache/XAMPP) is running and that REACT_APP_API_URL points to the correct address. API: ${process.env.REACT_APP_API_URL}`, 'error');
+            } else if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('unable to reach api')) {
+                printAlert(`${error.message}. Make sure your backend is running and accessible from your browser.`, 'error');
+            } else {
+                printAlert(`Error: ${error.message}`, 'error');
+            }
         } finally {
             setLoading(false);
         }
@@ -1167,6 +1159,25 @@ const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
     });
 };
 
+// Small helper to quickly verify API reaches the server before attempting large requests
+const checkApiReachable = async (baseUrl, timeout = 5000) => {
+    try {
+        const form = new FormData();
+        form.append('function', 'getAllPackages'); // lightweight, public endpoint
+
+        const resp = await fetchWithTimeout(`${baseUrl}/query.php`, {
+            method: 'POST',
+            body: form
+        }, timeout);
+
+        if (!resp.ok) return { ok: false, status: resp.status };
+        const json = await resp.json();
+        return { ok: true, body: json };
+    } catch (err) {
+        return { ok: false, error: err.message || String(err) };
+    }
+};
+
 
 export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -1243,7 +1254,7 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
     );
 }
 
-export function DashboardSidebar({ isMobileOpen, onClose }) {
+export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -1272,6 +1283,8 @@ export function DashboardSidebar({ isMobileOpen, onClose }) {
         onClose?.();
     };
 
+    const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : true;
+
     const navigationItems = [
         {
             section: 'Event Planning',
@@ -1285,7 +1298,7 @@ export function DashboardSidebar({ isMobileOpen, onClose }) {
         {
             section: 'Event Analytics',
             items: [
-                { path: '/attendance_stats', icon: 'bi-graph-up', label: 'Attendance Stats', onClick: goToAttendanceStats },
+                { path: '/attendance_stats', icon: 'bi-graph-up', label: 'Attendance Stats', onClick: goToAttendanceStats, disabled: !canViewAttendance },
                 { path: '/guest_insights', icon: 'bi-people', label: 'Guest Insights', onClick: goToGuest }
             ]
         }
@@ -1313,8 +1326,13 @@ export function DashboardSidebar({ isMobileOpen, onClose }) {
                             {section.items.map((item, itemIndex) => (
                                 <li
                                     key={itemIndex}
-                                    className={isActive(item.path) ? "active" : ""}
-                                    onClick={item.onClick}
+                                    className={`${isActive(item.path) ? "active" : ""} ${item.disabled ? 'disabled-nav' : ''}`}
+                                    onClick={() => {
+                                        // Always allow navigation to the page (do not redirect to pricing)
+                                        // Page will handle feature gating / upgrade CTAs itself.
+                                        item.onClick && item.onClick();
+                                        onClose?.();
+                                    }}
                                 >
                                     <i className={`bi ${item.icon}`}></i>
                                     {item.label}

@@ -19,6 +19,8 @@ $guest_ids = $_POST['guest_ids'] ?? '';
 $message   = $_POST['message'] ?? '';
 $event_id  = $_POST['event_id'] ?? '';
 $API_URL   = $_POST['API_URL'] ?? '';
+// server requires user_id so we can enforce package-based limits
+$user_id   = $_POST['user_id'] ?? '';
 
 if (empty($guest_ids) || empty($message) || empty($event_id) || empty($API_URL)) {
     echo json_encode([
@@ -45,6 +47,28 @@ try {
     $guest_ids_array = array_filter(explode(',', $guest_ids));
     if (empty($guest_ids_array)) {
         echo json_encode(["success" => false, "message" => "No valid guest IDs"]);
+        exit;
+    }
+
+    // If sending to multiple recipients, ensure user's package allows bulk messaging
+    $recipientCount = count($guest_ids_array);
+    if (empty($user_id)) {
+        echo json_encode(["success" => false, "message" => "Missing user_id. This request requires authentication."]);
+        exit;
+    }
+
+    try {
+        $pkgStmt = $pdo->prepare("SELECT p.package_type FROM user_packages up LEFT JOIN packagetb p ON up.package_id = p.package_id WHERE up.user_id = ? LIMIT 1");
+        $pkgStmt->execute([$user_id]);
+        $pkg = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+        $packageType = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : 'basic';
+
+        if ($recipientCount > 1 && !in_array($packageType, ['premium', 'enterprise'])) {
+            echo json_encode(["success" => false, "message" => "Bulk messaging (2+ recipients) is not available on your current plan. Upgrade to Premium or Enterprise."]);
+            exit;
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
         exit;
     }
 

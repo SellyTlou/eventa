@@ -1997,6 +1997,13 @@ export default function PostcardEditor() {
                 return false;
             }
 
+            // Log image data info for debugging
+            console.log('Image data type:', typeof imageData);
+            console.log('Image data length:', imageData ? imageData.length : 0);
+            if (imageData) {
+                console.log('Image data starts with:', imageData.substring(0, 50));
+            }
+
             const formData = new FormData();
             formData.append("function", "saveEvent");
             formData.append("userID", user.user_id);

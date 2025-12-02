@@ -372,6 +372,13 @@
         max-width: 33.333333%;
     }
 
+    /* Business view: show four smaller cards in a row */
+    .pricing-cards-section.business .pricing-card-wrapper {
+        flex: 0 0 25%;
+        max-width: 25%;
+        padding: 8px;
+    }
+
     /* Special case for Business & Nonprofit and Selling Tickets which have 2 cards */
     .pricing-card-wrapper:nth-child(2):last-child {
         flex: 0 0 50%;
@@ -476,6 +483,70 @@
 @media (min-width: 768px) and (max-width: 991px) {
     .pricing-card {
         padding: 25px;
+    }
+
+    /* Smaller card sizing for Business cards so the contact card sits in same row */
+    .pricing-cards-section.business .pricing-card {
+        padding: 18px;
+        min-height: 420px;
+    }
+
+    /* Get-in-touch contact card visuals */
+    .pricing-card.contact-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    .pricing-card.contact-card .enterprise-pill {
+        background: #E6F6EE; /* soft green */
+        color: #137A53;
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 18px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-top: -12px;
+        margin-bottom: 8px;
+    }
+
+    .pricing-card.contact-card .get-in-touch {
+        font-size: 1.85rem;
+        color: #2E1650; /* premium purple tone */
+        margin: 0;
+        font-weight: 700;
+        padding-bottom: 6px;
+    }
+
+    .outlined-contact {
+        border: 2px solid #572F6F; /* purple outline */
+        background: transparent;
+        color: #572F6F;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 10px;
+    }
+
+    .pricing-card.contact-card .contact-features li {
+        font-size: 0.92rem;
+        text-align: left;
+        padding: 8px 0;
+    }
+
+    .pricing-card.contact-card .info-small {
+        color: #9b9b9b;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+
+    .pricing-card.contact-card .see-all-features {
+        margin-top: 6px;
+        color: #6b2f6f;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
     }
 
     .price-tag .price {

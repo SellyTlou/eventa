@@ -4,6 +4,8 @@ export const packageFeatures = {
         name: "basic",
         features: {
             exportRSVP: false,
+            // Block attendance stats entirely for Basic
+            attendanceStats: false,
             guestInsights: false,
             bulkMessages: false,
             guestRemoval: false,
@@ -16,6 +18,7 @@ export const packageFeatures = {
         name: "premium", 
         features: {
             exportRSVP: true,
+            attendanceStats: true,
             guestInsights: true,
             bulkMessages: true,
             guestRemoval: true,
@@ -28,6 +31,7 @@ export const packageFeatures = {
         name: "enterprise",
         features: {
             exportRSVP: true,
+            attendanceStats: true,
             guestInsights: true,
             bulkMessages: true,
             guestRemoval: true,

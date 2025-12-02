@@ -59,7 +59,7 @@ export const templates = {
           },
           {
             id: "text-location",
-            text: "Location : 22 smith jozi 25",
+            text: "Location : ",
             x: 200,
             y: 440,
             fontSize: 16,

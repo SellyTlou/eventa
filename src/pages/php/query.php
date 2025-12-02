@@ -1,5 +1,5 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:3000");
+header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
@@ -355,14 +355,19 @@ function generateReportData($pdo, $reportType, $dateRange)
     }
 }
 
+function getTotalCount($pdo, $table)
+    {
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM {$table}");
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
+
 if (! isset($_POST['function'])) {
     echo json_encode(["error" => "No function specified"]);
     exit;
 }
 
 $fun = $_POST['function'];
-
-try {
 
     if ($fun === "register") {
         $name     = $_POST['name'] ?? '';
@@ -635,6 +640,13 @@ try {
         $eventLocation   = $_POST['eventLocation'] ?? '';
         $eventUrlImage   = $_POST['eventUrlImage'] ?? '';
         $eventDesignData = $_POST['eventDesignData'] ?? '';
+        
+        // Log image data for debugging
+        error_log("saveEvent - Image data type: " . gettype($eventUrlImage));
+        error_log("saveEvent - Image data length: " . strlen($eventUrlImage));
+        if (!empty($eventUrlImage)) {
+            error_log("saveEvent - Image data starts with: " . substr($eventUrlImage, 0, 50));
+        }
 
         $createdAt = date('Y-m-d H:i:s');
 
@@ -684,6 +696,45 @@ try {
                 WHERE event_id = :event_id AND user_id = :user_id
             ");
 
+                // convert and save large/base64 images for updates too
+                $eventImageToSave = $eventUrlImage;
+                try {
+                    if (!empty($eventUrlImage) && (strlen($eventUrlImage) > 50000 || preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,/', $eventUrlImage))) {
+                        $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'events';
+                        if (!is_dir($uploadDir)) {
+                            mkdir($uploadDir, 0755, true);
+                        }
+
+                        if (preg_match('/^data:(image\/(png|jpeg|jpg|gif));base64,(.*)$/', $eventUrlImage, $imgMatches)) {
+                            $mime = $imgMatches[1];
+                            $base64data = $imgMatches[3];
+                        } else {
+                            $base64data = $eventUrlImage;
+                            $mime = 'image/png';
+                        }
+
+                        $ext = 'png';
+                        if (strpos($mime, 'jpeg') !== false || strpos($mime, 'jpg') !== false) $ext = 'jpg';
+                        if (strpos($mime, 'gif') !== false) $ext = 'gif';
+
+                        $filename = $eventID . '_' . time() . '.' . $ext;
+                        $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+                        $decoded = base64_decode($base64data);
+                        if ($decoded !== false && @file_put_contents($filePath, $decoded) !== false) {
+                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+                            $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/events/' . $filename;
+                            $eventImageToSave = $fileUrl;
+                            error_log("saveEvent(update) - saved image to file: " . $filePath . " -> " . $fileUrl);
+                        } else {
+                            error_log("saveEvent(update) - failed to write image file for event " . $eventID);
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log('saveEvent(update) - Exception when saving image file: ' . $e->getMessage());
+                }
+
                 $stmt->execute([
                     ':event_name'       => $eventName,
                     ':event_start_date' => $eventStartDate,
@@ -691,7 +742,7 @@ try {
                     ':event_end_date'   => $eventEndDate,
                     ':event_end_time'   => $eventEndTime,
                     ':event_location'   => $eventLocation,
-                    ':event_image'      => $eventUrlImage,
+                    ':event_image'      => $eventImageToSave,
                     ':design_data'      => $eventDesignData,
                     ':updated_at'       => $createdAt,
                     ':event_id'         => $eventID,
@@ -714,6 +765,52 @@ try {
                       :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at";
 
                 $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
+                // If eventUrlImage looks like a data URI / base64 and is large, save the image to a file
+                $eventImageToSave = $eventUrlImage;
+                try {
+                    if (!empty($eventUrlImage) && (strlen($eventUrlImage) > 50000 || preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,/', $eventUrlImage))) {
+                        // Ensure uploads directory exists
+                        $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'events';
+                        if (!is_dir($uploadDir)) {
+                            mkdir($uploadDir, 0755, true);
+                        }
+
+                        // Extract base64 payload
+                        if (preg_match('/^data:(image\/(png|jpeg|jpg|gif));base64,(.*)$/', $eventUrlImage, $imgMatches)) {
+                            $mime = $imgMatches[1];
+                            $base64data = $imgMatches[3];
+                        } else {
+                            // fallback: assume raw base64
+                            $base64data = $eventUrlImage;
+                            $mime = 'image/png';
+                        }
+
+                        // choose extension
+                        $ext = 'png';
+                        if (strpos($mime, 'jpeg') !== false || strpos($mime, 'jpg') !== false) $ext = 'jpg';
+                        if (strpos($mime, 'gif') !== false) $ext = 'gif';
+
+                        $filename = $eventID . '_' . time() . '.' . $ext;
+                        $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+
+                        // Decode and save
+                        $decoded = base64_decode($base64data);
+                        if ($decoded !== false && @file_put_contents($filePath, $decoded) !== false) {
+                            // Build URL for saved file (use server host + script dir)
+                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+                            $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/events/' . $filename;
+                            $eventImageToSave = $fileUrl;
+                            error_log("saveEvent - saved image to file: " . $filePath . " -> " . $fileUrl);
+                        } else {
+                            error_log("saveEvent - failed to write image file for event " . $eventID);
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log('saveEvent - Exception when saving image file: ' . $e->getMessage());
+                }
+
                 $stmt->execute([
                     ':user_id'          => $userID,
                     ':user_name'        => $userName,
@@ -724,7 +821,7 @@ try {
                     ':event_end_date'   => $eventEndDate,
                     ':event_end_time'   => $eventEndTime,
                     ':event_location'   => $eventLocation,
-                    ':event_image'      => $eventUrlImage,
+                    ':event_image'      => $eventImageToSave,
                     ':design_data'      => $eventDesignData,
                     ':created_at'       => $createdAt,
                     ':updated_at'       => $createdAt,
@@ -875,6 +972,7 @@ try {
                         if (isset($firstEvent['event_image'])) {
                             error_log("event_image type: " . gettype($firstEvent['event_image']));
                             error_log("event_image length: " . strlen($firstEvent['event_image']));
+                            error_log("event_image first 80 chars: " . substr($firstEvent['event_image'], 0, 80));
                         }
                     }
 
@@ -1321,31 +1419,6 @@ try {
         exit;
     }
 
-    
-    if ($fun === "getUserPackage") {
-        $user_id = $_POST['user_id'] ?? '';
-
-        if (! $user_id) {
-            echo json_encode(["success" => false, "message" => "Missing user ID"]);
-            exit;
-        }
-
-        try {
-            $stmt = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = :user_id");
-            $stmt->execute([":user_id" => $user_id]);
-            $userPackage = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($userPackage) {
-                echo json_encode(["success" => true, "userPackage" => $userPackage]);
-            } else {
-                echo json_encode(["success" => false, "message" => "No package found"]);
-            }
-        } catch (PDOException $e) {
-            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-        }
-        exit;
-    }
-
     if ($fun === "getUserPackage") {
             $user_id = $_POST['user_id'] ?? '';
             
@@ -1355,24 +1428,54 @@ try {
             }
             
             try {
-                $stmt = $pdo->prepare("
-                    SELECT up.*, p.package_type, p.features 
-                    FROM user_packages up 
-                    LEFT JOIN packagetb p ON up.package_id = p.package_id 
-                    WHERE up.user_id = ?
-                ");
+                $stmt = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = ? LIMIT 1");
                 $stmt->execute([$user_id]);
-                $userPackage = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($userPackage) {
-                    echo json_encode(["success" => true, "userPackage" => $userPackage]);
-                } else {
-                    // Return basic package as default
+                $up = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (! $up) {
                     echo json_encode(["success" => true, "userPackage" => [
                         "package_type" => "basic",
-                        "features" => "{}"
+                        "features" => "{}",
+                        "event_limit" => 0,
+                        "event_used" => 0
                     ]]);
+                    exit;
                 }
+
+                $userPackage = $up;
+
+                // Enrich userPackage with data from packagetb if package_id present
+                if (!empty($up['package_id'])) {
+                    $pkgStmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_id = ? LIMIT 1");
+                    $pkgStmt->execute([$up['package_id']]);
+                    $pkg = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($pkg) {
+                        $userPackage['package_id'] = $pkg['package_id'];
+                        $userPackage['package_type'] = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : ($userPackage['package_type'] ?? 'basic');
+                        $userPackage['features'] = $pkg['features'] ?? '';
+                    }
+                }
+
+                // Fallback: try to find a package record by package_type
+                if ((empty($userPackage['package_id']) || empty($userPackage['features'])) && !empty($userPackage['package_type'])) {
+                    $ptype = strtolower($userPackage['package_type']);
+                    $pkgByTypeStmt = $pdo->prepare("SELECT * FROM packagetb WHERE LOWER(package_type) = ? LIMIT 1");
+                    $pkgByTypeStmt->execute([$ptype]);
+                    $pkgByType = $pkgByTypeStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($pkgByType) {
+                        $userPackage['package_id'] = $pkgByType['package_id'];
+                        $userPackage['package_type'] = strtolower($pkgByType['package_type']);
+                        $userPackage['features'] = $pkgByType['features'] ?? '';
+                    }
+                }
+
+                if (!isset($userPackage['package_type']) || empty($userPackage['package_type'])) {
+                    $userPackage['package_type'] = 'basic';
+                } else {
+                    $userPackage['package_type'] = strtolower($userPackage['package_type']);
+                }
+
+                echo json_encode(["success" => true, "userPackage" => $userPackage]);
             } catch (PDOException $e) {
                 echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
             }
@@ -1631,7 +1734,6 @@ try {
         exit;
     }
 
-// REPLACE your getSystemActivity function with this SAFE version:
     if ($fun === "getSystemActivity") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
         $limit       = (int) ($_POST['limit'] ?? 5);
@@ -1996,7 +2098,18 @@ try {
         $price       = $_POST['price'] ?? '';
         $features    = $_POST['features'] ?? '';
 
+        // Log incoming request
+        error_log("[updatePackage] Incoming request at " . date('Y-m-d H:i:s'));
+        error_log("[updatePackage] Admin User ID: " . $adminUserId);
+        error_log("[updatePackage] Package ID: " . $packageId);
+        error_log("[updatePackage] Package Type: " . $packageType);
+        error_log("[updatePackage] Max Guests: " . $maxGuests);
+        error_log("[updatePackage] Max Events: " . $maxEvents);
+        error_log("[updatePackage] Price: " . $price);
+        error_log("[updatePackage] Features length: " . strlen($features));
+
         if (! verifyAdminAccess($pdo, $adminUserId)) {
+            error_log("[updatePackage] ❌ ADMIN VERIFICATION FAILED for user: " . $adminUserId);
             echo json_encode([
                 "success" => false,
                 "message" => "Unauthorized: Admin access required",
@@ -2004,19 +2117,29 @@ try {
             exit;
         }
 
-        if (! $packageId || ! $packageType || ! $maxGuests || ! $maxEvents || ! $price) {
+        error_log("[updatePackage] ✅ Admin verification passed");
+
+        if (! $packageId || ! $packageType || ! $maxGuests || ! $maxEvents || ! $price === '') {
+            error_log("[updatePackage] ❌ Missing fields - packageId: " . ($packageId ? 'OK' : 'MISSING') . 
+                     ", packageType: " . ($packageType ? 'OK' : 'MISSING') . 
+                     ", maxGuests: " . ($maxGuests !== '' ? 'OK' : 'MISSING') . 
+                     ", maxEvents: " . ($maxEvents !== '' ? 'OK' : 'MISSING') . 
+                     ", price: " . ($price !== '' ? 'OK' : 'MISSING'));
             echo json_encode(["success" => false, "message" => "Missing required fields"]);
             exit;
         }
 
+        error_log("[updatePackage] ✅ All fields present");
+
         try {
+            error_log("[updatePackage] Executing UPDATE query...");
             $stmt = $pdo->prepare("
             UPDATE packagetb
             SET package_type = :package_type, max_guests = :max_guests, max_events = :max_events, price = :price, features = :features
             WHERE package_id = :package_id
         ");
 
-            $stmt->execute([
+            $result = $stmt->execute([
                 ':package_type' => $packageType,
                 ':max_guests'   => (int) $maxGuests,
                 ':max_events'   => (int) $maxEvents,
@@ -2025,16 +2148,31 @@ try {
                 ':package_id'   => $packageId,
             ]);
 
-            echo json_encode([
-                "success" => true,
-                "message" => "Package updated successfully",
-            ]);
+            $rowCount = $stmt->rowCount();
+            error_log("[updatePackage] ✅ UPDATE executed - Rows affected: " . $rowCount);
+
+            if ($rowCount > 0) {
+                error_log("[updatePackage] ✅ SUCCESSFUL - Package " . $packageId . " updated");
+                echo json_encode([
+                    "success" => true,
+                    "message" => "Package updated successfully",
+                    "rows_updated" => $rowCount
+                ]);
+            } else {
+                error_log("[updatePackage] ⚠️ WARNING - No rows updated. Package ID may not exist: " . $packageId);
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Package not found or no changes made"
+                ]);
+            }
 
         } catch (PDOException $e) {
-            error_log("Package update error: " . $e->getMessage());
+            error_log("[updatePackage] ❌ DATABASE ERROR: " . $e->getMessage());
+            error_log("[updatePackage] SQL State: " . $e->getCode());
             echo json_encode([
                 "success" => false,
                 "message" => "Database error: " . $e->getMessage(),
+                "error_code" => $e->getCode()
             ]);
         }
         exit;
@@ -2461,13 +2599,6 @@ try {
             ]);
         }
         exit;
-    }
-
-    function getTotalCount($pdo, $table)
-    {
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM {$table}");
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
     }
 
     if ($fun === "getInvitationAnalytics") {
@@ -4171,6 +4302,28 @@ try {
                     exit;
                 }
 
+                // Server-side: check whether the user has permission to export
+                try {
+                    if (empty($user_id)) {
+                        echo json_encode(["success" => false, "message" => "User ID required for export"]);
+                        exit;
+                    }
+
+                    $pkgStmt = $pdo->prepare("SELECT p.package_type FROM user_packages up LEFT JOIN packagetb p ON up.package_id = p.package_id WHERE up.user_id = ? LIMIT 1");
+                    $pkgStmt->execute([$user_id]);
+                    $pkg = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+
+                    $packageType = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : 'basic';
+                    $allowedForExport = in_array($packageType, ['premium', 'enterprise']);
+                    if (! $allowedForExport) {
+                        echo json_encode(["success" => false, "message" => "Exporting guest data is not available in your current plan. Upgrade to Premium or Enterprise."]);
+                        exit;
+                    }
+                } catch (PDOException $e) {
+                    echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+                    exit;
+                }
+
                 // Generate CSV content
                 $csvContent = "Name,Email,Phone,Attending Status,Guest Count,Response Date,Message,Event Name\n";
                 
@@ -4252,6 +4405,4 @@ try {
         exit;
     }
 
-} catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => "General error: " . $e->getMessage()]);
-}
+?>

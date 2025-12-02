@@ -3375,12 +3375,29 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             formData.append('features', editForm.features);
             formData.append('admin_user_id', adminUserId);
 
+            // Detailed logging for debugging
+            console.group('📦 Package Update Debug Info');
+            console.log('⏱️ Timestamp:', new Date().toISOString());
+            console.log('🆔 Admin User ID:', adminUserId);
+            console.log('🆔 Package ID:', editingPlan);
+            console.log('📝 Package Type:', editForm.package_type);
+            console.log('👥 Max Guests:', editForm.max_guests);
+            console.log('📅 Max Events:', editForm.max_events);
+            console.log('💰 Price:', editForm.price);
+            console.log('✨ Features:', editForm.features);
+            console.log('🌐 API URL:', API_BASE_URL);
+            console.groupEnd();
+
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
 
+            console.log('📡 Network Response Status:', response.status, response.statusText);
+
             const data = await response.json();
+            console.log('✅ Server Response:', JSON.stringify(data, null, 2));
+
             if (data.success) {
                 setAllPlans(prevPlans =>
                     prevPlans.map(plan =>
@@ -3398,6 +3415,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 );
                 printAlert('Package updated successfully!', 'success');
             } else {
+                console.error('❌ Server error response:', data.message);
                 if (data.message && data.message.includes("Unauthorized")) {
                     printAlert('Access denied: Admin privileges required', 'error');
                 } else {
@@ -3406,7 +3424,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 logActivity('Package Update Failed', `Failed to update package: ${data.message}`);
             }
         } catch (error) {
-            console.error('Error updating package:', error);
+            console.error('❌ Error updating package:', error);
+            console.error('🔍 Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
             printAlert('Error updating package', 'error');
             logActivity('Package Update Error', `Package update error: ${error.message}`);
         }

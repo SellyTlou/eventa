@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import './attendance_stats.css';
 import './main.css';
+import { canUseFeature, getPackageInfo } from "../utils/packageFeatures";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -32,8 +33,18 @@ const AttendanceStats = () => {
         monthlyTrend: []
     });
 
+    // NEW: Package states
+    const [userPackage, setUserPackage] = useState(null);
+    const [packageInfo, setPackageInfo] = useState(null);
+
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
+
+    // NEW: Package feature checks
+    // Block entire attendance stats UI for Basic users with the dedicated flag
+    const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : false;
+    const canViewAdvancedStats = userPackage ? canUseFeature(userPackage, "guestInsights") : false;
+    const canViewHistoricalData = userPackage ? canUseFeature(userPackage, "advancedAnalytics") : false;
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
@@ -50,7 +61,44 @@ const AttendanceStats = () => {
             navigate("/");
             return;
         }
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+
+        // NEW: Fetch user package
+        const fetchUserPackage = async () => {
+            try {
+                const API_URL = process.env.REACT_APP_API_URL;
+                const formData = new FormData();
+                formData.append("function", "getUserPackage");
+                formData.append("user_id", userData.user_id);
+                
+                const response = await fetch(`${API_URL}/query.php`, { 
+                    method: "POST", 
+                    body: formData 
+                });
+                const data = await response.json();
+                
+                if (data.success && data.userPackage) {
+                    setUserPackage(data.userPackage);
+                    setPackageInfo(getPackageInfo(data.userPackage));
+                    console.log("✅ Package loaded:", data.userPackage.package_type);
+                } else {
+                    // Default to basic package
+                    const basicPackage = { package_type: "Basic" };
+                    setUserPackage(basicPackage);
+                    setPackageInfo(getPackageInfo(basicPackage));
+                    console.log("⚠️ Defaulting to Basic package");
+                }
+            } catch (error) {
+                console.error("Error fetching user package:", error);
+                // Default to basic on error
+                const basicPackage = { package_type: "Basic" };
+                setUserPackage(basicPackage);
+                setPackageInfo(getPackageInfo(basicPackage));
+            }
+        };
+
+        fetchUserPackage();
 
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -68,11 +116,19 @@ const AttendanceStats = () => {
             navigate("/eventsDashboard");
             return;
         }
+        if (!canViewAttendance) {
+            // Basic users: skip fetching large stats data and show upgrade prompt
+            setLoading(false);
+            return;
+        }
+
         fetchEventData(eventId);
         fetchRSVPData(eventId);
         fetchEventStatusByID(eventId);
-        fetchAttendanceStats();
-    }, [navigate]);
+        if (canViewHistoricalData) {
+            fetchAttendanceStats();
+        }
+    }, [navigate, canViewHistoricalData]);
 
     const fetchEventData = async (eventId) => {
         try {
@@ -111,10 +167,9 @@ const AttendanceStats = () => {
             });
             const data = await response.json();
 
-            console.log("RSVP API Response:", data); // Debug log
+            console.log("RSVP API Response:", data);
 
             if (data.success && data.responses) {
-                // Use the actual responses from API
                 setRsvpData(data.responses);
                 if (data.event) {
                     setEventData(prev => ({ ...prev, ...data.event }));
@@ -152,8 +207,9 @@ const AttendanceStats = () => {
     };
 
     const fetchAttendanceStats = async () => {
+        if (!canViewHistoricalData) return;
+        
         try {
-            // You can keep mock data for global stats or implement real API later
             const mockStats = {
                 overall: {
                     total_events: 12,
@@ -184,17 +240,18 @@ const AttendanceStats = () => {
         if (!rsvpData.length) return {
             attending: 0, notAttending: 0, maybe: 0, totalGuests: 0,
             totalResponses: 0, responseRate: 0, responseTimeline: [],
-            weeklyTimeline: [], monthlyTimeline: [], guestDistribution: []
+            weeklyTimeline: [], monthlyTimeline: [], guestDistribution: [],
+            capacityUsage: 0, averageGuests: 0
         };
 
         // Process RSVP responses
-        const attending = rsvpData.filter(r => r.attending === 'Yes').length;
-        const notAttending = rsvpData.filter(r => r.attending === 'No').length;
-        const maybe = rsvpData.filter(r => r.attending === 'Maybe').length;
+        const attending = rsvpData.filter(r => r.attending === 'Yes' || r.attending === 'yes').length;
+        const notAttending = rsvpData.filter(r => r.attending === 'No' || r.attending === 'no').length;
+        const maybe = rsvpData.filter(r => r.attending === 'Maybe' || r.attending === 'maybe').length;
 
         const totalGuests = rsvpData.reduce((sum, r) => {
             const guestCount = parseInt(r.guest_count || 0, 10);
-            return sum + (guestCount > 0 ? guestCount : 1); // Assume at least 1 guest per RSVP
+            return sum + (guestCount > 0 ? guestCount : 1);
         }, 0);
 
         const totalResponses = rsvpData.length;
@@ -203,11 +260,15 @@ const AttendanceStats = () => {
         const invitationsSent = eventData?.guest_limit || 150;
         const responseRate = Math.round((totalResponses / invitationsSent) * 100);
 
-        // DAILY Timeline (last 30 days)
+        // Calculate capacity usage and average guests
+        const capacityUsage = Math.round((attending / (eventData?.guest_limit || 100)) * 100);
+        const averageGuests = totalResponses > 0 ? (totalGuests / totalResponses).toFixed(1) : 0;
+
+        // DAILY Timeline (last 30 days) - Available for all packages
         const last30Days = Array.from({ length: 30 }, (_, i) => {
             const date = new Date();
-            date.setDate(date.getDate() - (29 - i)); // Last 30 days including today
-            return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+            date.setDate(date.getDate() - (29 - i));
+            return date.toISOString().split('T')[0];
         });
 
         const dailyTimelineMap = {};
@@ -225,58 +286,62 @@ const AttendanceStats = () => {
         const responseTimeline = Object.entries(dailyTimelineMap)
             .map(([date, count]) => ({ date, count }));
 
-        // WEEKLY Timeline (last 12 weeks)
+        // WEEKLY Timeline (last 12 weeks) - Only for Premium/Enterprise
         const weeklyTimelineMap = {};
-        const last12Weeks = Array.from({ length: 12 }, (_, i) => {
-            const date = new Date();
-            date.setDate(date.getDate() - (7 * (11 - i))); // Last 12 weeks
-            const year = date.getFullYear();
-            const week = getWeekNumber(date);
-            return `${year}-W${week.toString().padStart(2, '0')}`;
-        });
+        if (canViewAdvancedStats) {
+            const last12Weeks = Array.from({ length: 12 }, (_, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() - (7 * (11 - i)));
+                const year = date.getFullYear();
+                const week = getWeekNumber(date);
+                return `${year}-W${week.toString().padStart(2, '0')}`;
+            });
 
-        last12Weeks.forEach(week => weeklyTimelineMap[week] = 0);
+            last12Weeks.forEach(week => weeklyTimelineMap[week] = 0);
 
-        rsvpData.forEach(r => {
-            if (r.created_at) {
-                const responseDate = new Date(r.created_at);
-                const year = responseDate.getFullYear();
-                const week = getWeekNumber(responseDate);
-                const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
+            rsvpData.forEach(r => {
+                if (r.created_at) {
+                    const responseDate = new Date(r.created_at);
+                    const year = responseDate.getFullYear();
+                    const week = getWeekNumber(responseDate);
+                    const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
 
-                if (weeklyTimelineMap[weekKey] !== undefined) {
-                    weeklyTimelineMap[weekKey]++;
+                    if (weeklyTimelineMap[weekKey] !== undefined) {
+                        weeklyTimelineMap[weekKey]++;
+                    }
                 }
-            }
-        });
+            });
+        }
 
         const weeklyTimeline = Object.entries(weeklyTimelineMap)
             .map(([week, count]) => ({ week, count }));
 
-        // MONTHLY Timeline (last 6 months)
+        // MONTHLY Timeline (last 6 months) - Only for Premium/Enterprise
         const monthlyTimelineMap = {};
-        const last6Months = Array.from({ length: 6 }, (_, i) => {
-            const date = new Date();
-            date.setMonth(date.getMonth() - (5 - i)); // Last 6 months
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            return `${year}-${month}`;
-        });
+        if (canViewAdvancedStats) {
+            const last6Months = Array.from({ length: 6 }, (_, i) => {
+                const date = new Date();
+                date.setMonth(date.getMonth() - (5 - i));
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                return `${year}-${month}`;
+            });
 
-        last6Months.forEach(month => monthlyTimelineMap[month] = 0);
+            last6Months.forEach(month => monthlyTimelineMap[month] = 0);
 
-        rsvpData.forEach(r => {
-            if (r.created_at) {
-                const responseDate = new Date(r.created_at);
-                const year = responseDate.getFullYear();
-                const month = (responseDate.getMonth() + 1).toString().padStart(2, '0');
-                const monthKey = `${year}-${month}`;
+            rsvpData.forEach(r => {
+                if (r.created_at) {
+                    const responseDate = new Date(r.created_at);
+                    const year = responseDate.getFullYear();
+                    const month = (responseDate.getMonth() + 1).toString().padStart(2, '0');
+                    const monthKey = `${year}-${month}`;
 
-                if (monthlyTimelineMap[monthKey] !== undefined) {
-                    monthlyTimelineMap[monthKey]++;
+                    if (monthlyTimelineMap[monthKey] !== undefined) {
+                        monthlyTimelineMap[monthKey]++;
+                    }
                 }
-            }
-        });
+            });
+        }
 
         const monthlyTimeline = Object.entries(monthlyTimelineMap)
             .map(([month, count]) => ({ month, count }));
@@ -285,7 +350,7 @@ const AttendanceStats = () => {
         const distributionMap = { 1: 0, 2: 0, 3: 0, '4+': 0 };
 
         rsvpData.forEach(r => {
-            if (r.attending === 'Yes') {
+            if (r.attending === 'Yes' || r.attending === 'yes') {
                 const guestCount = parseInt(r.guest_count || 1, 10);
                 if (guestCount === 1) {
                     distributionMap[1]++;
@@ -310,6 +375,8 @@ const AttendanceStats = () => {
             totalGuests,
             totalResponses,
             responseRate,
+            capacityUsage,
+            averageGuests,
             responseTimeline,
             weeklyTimeline,
             monthlyTimeline,
@@ -325,6 +392,63 @@ const AttendanceStats = () => {
     };
 
     const stats = computeStats();
+
+    // === PACKAGE-BASED STATS CARDS ===
+    const getAdditionalStats = () => {
+        if (!canViewAdvancedStats) {
+            // BASIC PACKAGE - Limited stats (no upgrade card shown)
+            return [
+                {
+                    title: "Response Rate",
+                    value: `${stats.responseRate}%`,
+                    description: "Based on invitations sent",
+                    type: "basic",
+                    icon: "bi bi-percent"
+                },
+                {
+                    title: "Total Guests",
+                    value: stats.totalGuests,
+                    description: "Including additional guests",
+                    type: "basic", 
+                    icon: "bi bi-people"
+                }
+            ];
+        }
+
+        // PREMIUM/ENTERPRISE PACKAGE - Full stats
+        return [
+            {
+                title: "Response Rate",
+                value: `${stats.responseRate}%`,
+                description: "Based on invitations sent",
+                type: "advanced",
+                icon: "bi bi-percent"
+            },
+            {
+                title: "Total Guests", 
+                value: stats.totalGuests,
+                description: "Including additional guests",
+                type: "advanced",
+                icon: "bi bi-people"
+            },
+            {
+                title: "Capacity Usage",
+                value: `${stats.capacityUsage}%`,
+                description: "Current vs maximum capacity",
+                type: "advanced",
+                icon: "bi bi-bar-chart"
+            },
+            {
+                title: "Average Guests",
+                value: stats.averageGuests,
+                description: "Guests per RSVP",
+                type: "advanced", 
+                icon: "bi bi-calculator"
+            }
+        ];
+    };
+
+    const additionalStats = getAdditionalStats();
 
     // === CHART DATA ===
     const pieData = {
@@ -360,7 +484,7 @@ const AttendanceStats = () => {
         }],
     };
 
-    // Weekly Timeline (Last 12 weeks)
+    // Weekly Timeline (Last 12 weeks) - Only for Premium/Enterprise
     const weeklyTimelineData = {
         labels: stats.weeklyTimeline.map(w => {
             const [year, week] = w.week.split('-W');
@@ -374,7 +498,7 @@ const AttendanceStats = () => {
         }],
     };
 
-    // Monthly Timeline (Last 6 months)
+    // Monthly Timeline (Last 6 months) - Only for Premium/Enterprise
     const monthlyTimelineData = {
         labels: stats.monthlyTimeline.map(m => {
             const [year, month] = m.month.split('-');
@@ -387,28 +511,6 @@ const AttendanceStats = () => {
             borderRadius: 4
         }],
     };
-
-    // // Historical trend (you can keep your existing mock data or replace with real data)
-    // const monthlyTrendData = {
-    //     labels: globalStats.monthlyTrend.map(m => {
-    //         const [year, month] = m.month.split('-');
-    //         return new Date(year, month - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    //     }),
-    //     datasets: [
-    //         {
-    //             label: 'Attendance',
-    //             data: globalStats.monthlyTrend.map(m => m.total_attendance),
-    //             backgroundColor: '#10b981',
-    //             borderRadius: 4
-    //         },
-    //         {
-    //             label: 'RSVPs',
-    //             data: globalStats.monthlyTrend.map(m => m.total_rsvps),
-    //             backgroundColor: '#3b82f6',
-    //             borderRadius: 4
-    //         }
-    //     ],
-    // };
 
     const chartOptions = {
         responsive: true,
@@ -440,6 +542,7 @@ const AttendanceStats = () => {
             }
         }
     };
+
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
     };
@@ -478,140 +581,208 @@ const AttendanceStats = () => {
                 </div>
             )}
 
-             {/* HEADER */}
-                        <DashboardHeader
-                            user={user}
-                            eventStatus={eventStatus}
-                            onToggleSidebar={toggleSidebar}
-                        />
+            {/* HEADER */}
+            <DashboardHeader
+                user={user}
+                eventStatus={eventStatus}
+                onToggleSidebar={toggleSidebar}
+                userPackage={userPackage}
+            />
             
-                        {/* SIDEBAR */}
-                        <DashboardSidebar
-                            isMobileOpen={sidebarOpen}
-                            onClose={closeSidebar}
-                        />
+            {/* SIDEBAR */}
+            <DashboardSidebar
+                isMobileOpen={sidebarOpen}
+                onClose={closeSidebar}
+                userPackage={userPackage}
+            />
 
             {/* MAIN CONTENT */}
             <div className="attendance-content">
                 <div className="content-header">
                     <h1>Attendance Statistics</h1>
                     <p>Comprehensive overview of your event attendance and RSVP data</p>
+                    {/* package-specific messaging removed - feature lock will show on each item */}
                 </div>
 
                 {/* Stats Cards */}
-                <div className="stats-overview">
+                    <div className="stats-overview">
                     <div className="stat-card primary">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="stat-icon"><i className="bi bi-people-fill"></i></div>
-                        <div className="stat-content"><h3>{stats.totalResponses}</h3><p>Total RSVPs</p></div>
+                        <div className="stat-content"><h3>{canViewAttendance ? stats.totalResponses : '—'}</h3><p>Total RSVPs</p></div>
                     </div>
                     <div className="stat-card success">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="stat-icon"><i className="bi bi-check-circle-fill"></i></div>
-                        <div className="stat-content"><h3>{stats.attending}</h3><p>Confirmed Attendance</p></div>
+                        <div className="stat-content"><h3>{canViewAttendance ? stats.attending : '—'}</h3><p>Confirmed Attendance</p></div>
                     </div>
                     <div className="stat-card warning">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="stat-icon"><i className="bi bi-question-circle-fill"></i></div>
-                        <div className="stat-content"><h3>{stats.maybe}</h3><p>Maybe Attending</p></div>
+                        <div className="stat-content"><h3>{canViewAttendance ? stats.maybe : '—'}</h3><p>Maybe Attending</p></div>
                     </div>
                     <div className="stat-card danger">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="stat-icon"><i className="bi bi-x-circle-fill"></i></div>
-                        <div className="stat-content"><h3>{stats.notAttending}</h3><p>Not Attending</p></div>
+                        <div className="stat-content"><h3>{canViewAttendance ? stats.notAttending : '—'}</h3><p>Not Attending</p></div>
                     </div>
                     <div className="stat-card info">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="stat-icon"><i className="bi bi-graph-up-arrow"></i></div>
-                        <div className="stat-content"><h3>{stats.responseRate}%</h3><p>Response Rate</p></div>
+                        <div className="stat-content"><h3>{canViewAttendance ? `${stats.responseRate}%` : '—'}</h3><p>Response Rate</p></div>
                     </div>
                 </div>
 
-                {/* Charts */}
+                
+
                 {/* Charts */}
                 <div className="charts-grid">
                     <div className="chart-card">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon chart" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="chart-header">
                             <h3>Response Breakdown</h3>
                             <span className="chart-subtitle">Distribution of RSVP responses</span>
                         </div>
                         <div className="chart-wrapper">
                             <Pie data={pieData} options={pieOptions} />
+                            {!canViewAttendance && (
+                                <div className="overlay-locked" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-key-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     <div className="chart-card">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon chart" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="chart-header">
                             <h3>Guests per RSVP</h3>
                             <span className="chart-subtitle">Number of guests per confirmed RSVP</span>
                         </div>
                         <div className="chart-wrapper">
                             <Bar data={barGuestData} options={chartOptions} />
+                            {!canViewAttendance && (
+                                <div className="overlay-locked" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-key-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     <div className="chart-card full-width">
+                        {!canViewAttendance && (
+                            <button className="feature-key-icon chart" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-key-fill" />
+                            </button>
+                        )}
                         <div className="chart-header">
                             <h3>Daily Response Timeline</h3>
                             <span className="chart-subtitle">RSVP responses over the last 30 days</span>
                         </div>
                         <div className="chart-wrapper">
                             <Bar data={barTimelineData} options={chartOptions} />
+                            {!canViewAttendance && (
+                                <div className="overlay-locked" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-key-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    <div className="chart-card full-width">
-                        <div className="chart-header">
-                            <h3>Weekly Response Trend</h3>
-                            <span className="chart-subtitle">RSVP responses over the last 12 weeks</span>
+                    {/* Premium/Enterprise Only Charts */}
+                    {canViewAdvancedStats && stats.weeklyTimeline.length > 0 && (
+                        <div className="chart-card full-width">
+                            <div className="chart-header">
+                                <h3>Weekly Response Trend</h3>
+                                <span className="chart-subtitle">RSVP responses over the last 12 weeks</span>
+                                <span className="premium-badge">Premium+</span>
+                            </div>
+                            <div className="chart-wrapper">
+                                <Bar data={weeklyTimelineData} options={chartOptions} />
+                            </div>
                         </div>
-                        <div className="chart-wrapper">
-                            <Bar data={weeklyTimelineData} options={chartOptions} />
-                        </div>
-                    </div>
+                    )}
 
-                    <div className="chart-card full-width">
-                        <div className="chart-header">
-                            <h3>Monthly Response Trend</h3>
-                            <span className="chart-subtitle">RSVP responses over the last 6 months</span>
+                    {canViewAdvancedStats && stats.monthlyTimeline.length > 0 && (
+                        <div className="chart-card full-width">
+                            <div className="chart-header">
+                                <h3>Monthly Response Trend</h3>
+                                <span className="chart-subtitle">RSVP responses over the last 6 months</span>
+                                <span className="premium-badge">Premium+</span>
+                            </div>
+                            <div className="chart-wrapper">
+                                <Bar data={monthlyTimelineData} options={chartOptions} />
+                            </div>
                         </div>
-                        <div className="chart-wrapper">
-                            <Bar data={monthlyTimelineData} options={chartOptions} />
-                        </div>
-                    </div>
-
-                    {/* <div className="chart-card full-width">
-                        <div className="chart-header">
-                            <h3>Historical Performance</h3>
-                            <span className="chart-subtitle">Attendance vs RSVPs across all events</span>
-                        </div>
-                        <div className="chart-wrapper">
-                            <Bar data={monthlyTrendData} options={chartOptions} />
-                        </div>
-                    </div> */}
+                    )}
                 </div>
 
-                {/* Additional Stats */}
+                {/* PACKAGE-BASED ADDITIONAL STATS */}
                 <div className="additional-stats">
-                    <div className="stats-card">
-                        <h4>Response Rate</h4>
-                        <div className="progress-stat">
-                            <div className="progress-bar">
-                                <div className="progress-fill" style={{ width: `${stats.responseRate}%` }}></div>
+                    {additionalStats.map((stat, index) => (
+                        <div 
+                            key={index} 
+                            className={`stats-card ${stat.type === 'upgrade' ? 'upgrade-card' : ''}`}
+                        >
+                            {!canViewAttendance && (
+                                <button className="feature-key-icon small" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-key-fill" />
+                                </button>
+                            )}
+                            <div className="stats-card-header">
+                                <i className={stat.icon}></i>
+                                <h4>{stat.title}</h4>
+                                {stat.type === 'upgrade' && <i className="bi bi-lock-fill lock-icon"></i>}
                             </div>
-                            <span>{stats.responseRate}%</span>
+                            
+                            {stat.type === 'upgrade' ? (
+                                <div className="upgrade-content">
+                                    <p>{stat.content}</p>
+                                    <button 
+                                        className="btn-upgrade-sm"
+                                        onClick={() => navigate("/pricing")}
+                                    >
+                                        Upgrade to {stat.package}
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className={`big-number ${stat.type}`}>
+                                        {stat.value}
+                                    </div>
+                                    <p>{stat.description}</p>
+                                </>
+                            )}
                         </div>
-                        <p>Based on {eventData?.guest_limit || 150} invitations sent</p>
-                    </div>
-                    <div className="stats-card">
-                        <h4>Total Guests</h4>
-                        <div className="big-number">{stats.totalGuests}</div>
-                        <p>Including additional guests</p>
-                    </div>
-                    <div className="stats-card">
-                        <h4>Event Capacity</h4>
-                        <div className="capacity-info">
-                            <span className="current">{stats.attending}</span>
-                            <span className="separator">/</span>
-                            <span className="total">{eventData?.guest_limit || 100}</span>
-                        </div>
-                        <p>Current attendance vs capacity</p>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>

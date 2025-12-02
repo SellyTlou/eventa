@@ -407,15 +407,20 @@ const Manage_my_event = () => {
         updateEventGuestLimit();
     };
 
-    const handlePublishEvent = () => {
+    const handlePublishEvent = async () => {
         if (guestLimit === 0) {
             printAlert("Please select a guest limit greater than 0.", "warning");
             return;
         }
 
         if (currentPlan && currentPlan.hasPackage && currentPlan.available_events > 0) {
-            updateEventStatus();
-            updateEventUsedCount();
+            // Ensure the event usage is recorded before marking the event published
+            const updated = await updateEventUsedCount();
+            if (updated) {
+                await updateEventStatus();
+            } else {
+                printAlert("Failed to record event usage. Publish aborted.", "error");
+            }
         } else {
             printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
         }
@@ -497,13 +502,17 @@ const Manage_my_event = () => {
             console.log(data);
             if (data.success) {
                 console.log("Event used count updated and package assigned to event");
-                fetchUserPackage(user.user_id);
+                // Refresh package info and return success
+                await fetchUserPackage(user.user_id);
+                return true;
             } else {
-                printAlert("Failed to update event count.", "error");
+                printAlert("Failed to update event count: " + (data.message || ''), "error");
+                return false;
             }
         } catch (err) {
             console.error("Error updating event used count:", err);
             printAlert("Error updating event count.", "error");
+            return false;
         }
     };
 

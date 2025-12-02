@@ -460,3 +460,39 @@
 .attendance-content::-webkit-scrollbar-thumb:hover {
     background: #a0aec0;
 }
+
+/* Feature lock key icon (top-left of cards / charts) */
+.feature-key-icon {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 6px;
+    border: 1px solid #e6edf6;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 30;
+    color: #2b6cb0;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.feature-key-icon:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(43, 108, 176, 0.12); }
+.feature-key-icon.chart { top: 12px; left: 12px; }
+.feature-key-icon.small { padding: 4px; top: 10px; left: 10px; font-size: 0.9rem; }
+
+/* Overlay for locked charts */
+.chart-card { position: relative; }
+.chart-card .overlay-locked {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+/* Locked value styling */
+.locked-value { color: #9aa4b2; font-weight: 700; }
