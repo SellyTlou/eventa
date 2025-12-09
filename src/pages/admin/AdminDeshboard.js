@@ -3521,6 +3521,24 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         return typeof val === 'string' ? parseInt(val, 10) : val;
     };
 
+    const getPaidSubscriptions = () => {
+        // Calculate total paid subscriptions (excluding FREE tier)
+        const paidTypes = ['basic', 'premium', 'enterprise'];
+        return paidTypes.reduce((total, type) => {
+            const val = activeSubscriptions[type] || 0;
+            const count = typeof val === 'string' ? parseInt(val, 10) : val;
+            return total + count;
+        }, 0);
+    };
+
+    const getTotalActiveUsers = () => {
+        // Calculate total active users (including FREE tier)
+        return Object.values(activeSubscriptions).reduce((total, val) => {
+            const count = typeof val === 'string' ? parseInt(val, 10) : val;
+            return total + count;
+        }, 0);
+    };
+
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-ZA', {
             style: 'currency',
@@ -3547,6 +3565,28 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             <div className="admin-content-header">
                 <h2>Pricing & Payments Management</h2>
                 <div className="header-actions">
+                    <div className="stats-cards">
+                        <div className="stat-card">
+                            <div className="stat-icon">
+                                <i className="bi bi-people"></i>
+                            </div>
+                            <div className="stat-content">
+                                <label>Total Active Users</label>
+                                <p className="stat-number">{getTotalActiveUsers()}</p>
+                                <small>Including FREE tier</small>
+                            </div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon">
+                                <i className="bi bi-credit-card"></i>
+                            </div>
+                            <div className="stat-content">
+                                <label>Paid Subscriptions</label>
+                                <p className="stat-number">{getPaidSubscriptions()}</p>
+                                <small>Premium plans only</small>
+                            </div>
+                        </div>
+                    </div>
                     <div className="tab-buttons">
                         <button
                             className={`tab-button ${activeSection === 'plans' ? 'active' : ''}`}
@@ -3590,11 +3630,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <li>
                                         <strong>Active Users:</strong> {getActiveSubscriptions(plan.package_type)}
                                     </li>
-                                    {packageUsageStats.find(stat => stat.package_id === plan.package_id) && (
-                                        <li>
-                                            <strong>Avg Usage:</strong> {Math.round(packageUsageStats.find(stat => stat.package_id === plan.package_id)?.avg_events_used || 0)} events
-                                        </li>
-                                    )}
 
                                     {parseFeatures(plan.features).map((feature, index) => (
                                         <li key={index}>{feature}</li>
@@ -3840,6 +3875,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 <div className="form-group">
                                     <label>Package Type *</label>
                                     <select value={editForm.package_type} onChange={(e) => handleEditChange('package_type', e.target.value)}>
+                                        <option value="free">Free</option>
                                         <option value="basic">Basic</option>
                                         <option value="premium">Premium</option>
                                         <option value="enterprise">Enterprise</option>

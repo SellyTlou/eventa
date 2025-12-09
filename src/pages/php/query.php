@@ -1420,91 +1420,136 @@ $fun = $_POST['function'];
     }
 
     if ($fun === "getUserPackage") {
-            $user_id = $_POST['user_id'] ?? '';
-            
-            if (empty($user_id)) {
-                echo json_encode(["success" => false, "message" => "User ID required"]);
-                exit;
-            }
-            
-            try {
-                $stmt = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = ? LIMIT 1");
-                $stmt->execute([$user_id]);
-                $up = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if (! $up) {
-                    echo json_encode(["success" => true, "userPackage" => [
-                        "package_type" => "basic",
-                        "features" => "{}",
-                        "event_limit" => 0,
-                        "event_used" => 0
-                    ]]);
+                $user_id = $_POST['user_id'] ?? '';
+                
+                if (empty($user_id)) {
+                    echo json_encode(["success" => false, "message" => "User ID required"]);
                     exit;
                 }
+                
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = ? LIMIT 1");
+                    $stmt->execute([$user_id]);
+                    $up = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                $userPackage = $up;
-
-                // Enrich userPackage with data from packagetb if package_id present
-                if (!empty($up['package_id'])) {
-                    $pkgStmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_id = ? LIMIT 1");
-                    $pkgStmt->execute([$up['package_id']]);
-                    $pkg = $pkgStmt->fetch(PDO::FETCH_ASSOC);
-                    if ($pkg) {
-                        $userPackage['package_id'] = $pkg['package_id'];
-                        $userPackage['package_type'] = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : ($userPackage['package_type'] ?? 'basic');
-                        $userPackage['features'] = $pkg['features'] ?? '';
+                    if (!$up) {
+                        // If no package found, default to FREE package
+                        $stmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_type = 'free' LIMIT 1");
+                        $stmt->execute();
+                        $freePackage = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($freePackage) {
+                            echo json_encode(["success" => true, "userPackage" => [
+                                "package_id" => $freePackage['package_id'],
+                                "package_type" => "free",
+                                "event_limit" => $freePackage['max_events'],
+                                "event_used" => 0,
+                                "created_at" => date('Y-m-d H:i:s')
+                            ]]);
+                        } else {
+                            echo json_encode(["success" => true, "userPackage" => [
+                                "package_type" => "free",
+                                "event_limit" => 1,
+                                "event_used" => 0,
+                                "created_at" => date('Y-m-d H:i:s')
+                            ]]);
+                        }
+                        exit;
                     }
-                }
 
-                // Fallback: try to find a package record by package_type
-                if ((empty($userPackage['package_id']) || empty($userPackage['features'])) && !empty($userPackage['package_type'])) {
-                    $ptype = strtolower($userPackage['package_type']);
-                    $pkgByTypeStmt = $pdo->prepare("SELECT * FROM packagetb WHERE LOWER(package_type) = ? LIMIT 1");
-                    $pkgByTypeStmt->execute([$ptype]);
-                    $pkgByType = $pkgByTypeStmt->fetch(PDO::FETCH_ASSOC);
-                    if ($pkgByType) {
-                        $userPackage['package_id'] = $pkgByType['package_id'];
-                        $userPackage['package_type'] = strtolower($pkgByType['package_type']);
-                        $userPackage['features'] = $pkgByType['features'] ?? '';
+                    $userPackage = $up;
+
+                    // Enrich userPackage with data from packagetb if package_id present
+                    if (!empty($up['package_id'])) {
+                        $pkgStmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_id = ? LIMIT 1");
+                        $pkgStmt->execute([$up['package_id']]);
+                        $pkg = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+                        if ($pkg) {
+                            $userPackage['package_id'] = $pkg['package_id'];
+                            $userPackage['package_type'] = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : ($userPackage['package_type'] ?? 'free');
+                            $userPackage['max_guests'] = $pkg['max_guests'] ?? 50;
+                            $userPackage['max_events'] = $pkg['max_events'] ?? 1;
+                            $userPackage['price'] = $pkg['price'] ?? 0;
+                        }
                     }
-                }
 
-                if (!isset($userPackage['package_type']) || empty($userPackage['package_type'])) {
-                    $userPackage['package_type'] = 'basic';
-                } else {
-                    $userPackage['package_type'] = strtolower($userPackage['package_type']);
-                }
+                    // Fallback: try to find a package record by package_type
+                    if ((empty($userPackage['package_id']) || empty($userPackage['package_type'])) && !empty($userPackage['package_type'])) {
+                        $ptype = strtolower($userPackage['package_type']);
+                        $pkgByTypeStmt = $pdo->prepare("SELECT * FROM packagetb WHERE LOWER(package_type) = ? LIMIT 1");
+                        $pkgByTypeStmt->execute([$ptype]);
+                        $pkgByType = $pkgByTypeStmt->fetch(PDO::FETCH_ASSOC);
+                        if ($pkgByType) {
+                            $userPackage['package_id'] = $pkgByType['package_id'];
+                            $userPackage['package_type'] = strtolower($pkgByType['package_type']);
+                            $userPackage['max_guests'] = $pkgByType['max_guests'] ?? 50;
+                            $userPackage['max_events'] = $pkgByType['max_events'] ?? 1;
+                            $userPackage['price'] = $pkgByType['price'] ?? 0;
+                        }
+                    }
 
-                echo json_encode(["success" => true, "userPackage" => $userPackage]);
+                    // If still no package_type found, default to free
+                    if (!isset($userPackage['package_type']) || empty($userPackage['package_type'])) {
+                        $userPackage['package_type'] = 'free';
+                        // Try to get free package from packagetb
+                        $freeStmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_type = 'free' LIMIT 1");
+                        $freeStmt->execute();
+                        $freePkg = $freeStmt->fetch(PDO::FETCH_ASSOC);
+                        if ($freePkg) {
+                            $userPackage['package_id'] = $freePkg['package_id'];
+                            $userPackage['max_guests'] = $freePkg['max_guests'] ?? 50;
+                            $userPackage['max_events'] = $freePkg['max_events'] ?? 1;
+                            $userPackage['price'] = $freePkg['price'] ?? 0;
+                        } else {
+                            $userPackage['max_guests'] = 50;
+                            $userPackage['max_events'] = 1;
+                            $userPackage['price'] = 0;
+                        }
+                    } else {
+                        // Ensure package_type is lowercase
+                        $userPackage['package_type'] = strtolower($userPackage['package_type']);
+                    }
+
+                    // Add fallback values for critical fields
+                    if (!isset($userPackage['event_limit']) || $userPackage['event_limit'] <= 0) {
+                        $userPackage['event_limit'] = $userPackage['max_events'] ?? 1;
+                    }
+                    
+                    if (!isset($userPackage['event_used'])) {
+                        $userPackage['event_used'] = 0;
+                    }
+
+                    echo json_encode(["success" => true, "userPackage" => $userPackage]);
+                } catch (PDOException $e) {
+                    echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+                }
+                exit;
+}
+
+    if ($fun === "getAllPackages") {
+            $adminUserId = $_POST['admin_user_id'] ?? '';
+
+            try {
+                // Add ORDER BY to ensure FREE comes first, then BASIC, PREMIUM, ENTERPRISE
+                $stmt = $pdo->prepare("SELECT * FROM packagetb 
+                                    ORDER BY 
+                                    CASE 
+                                        WHEN package_type = 'free' THEN 1
+                                        WHEN package_type = 'basic' THEN 2
+                                        WHEN package_type = 'premium' THEN 3
+                                        WHEN package_type = 'enterprise' THEN 4
+                                        ELSE 5
+                                    END, price ASC");
+                $stmt->execute();
+                $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                echo json_encode(["success" => true, "packages" => $packages]);
             } catch (PDOException $e) {
                 echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
             }
             exit;
     }
-
-    if ($fun === "getAllPackages") {
-        $adminUserId = $_POST['admin_user_id'] ?? '';
-
-        /* if (! verifyAdminAccess($pdo, $adminUserId)) {
-            echo json_encode([
-                "success" => false,
-                "message" => "Unauthorized: Admin access required",
-            ]);
-            exit;
-        }*/
-
-        try {
-            $stmt = $pdo->prepare("SELECT * FROM packagetb");
-            $stmt->execute();
-            $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            echo json_encode(["success" => true, "packages" => $packages]);
-        } catch (PDOException $e) {
-            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-        }
-        exit;
-    }
-
+    
     if ($fun === "updateEventUsedCount") {
         $user_id    = $_POST['user_id'] ?? '';
         $event_id   = $_POST['event_id'] ?? '';
@@ -1955,48 +2000,6 @@ $fun = $_POST['function'];
         }
         exit;
     }
-
-    // if ($fun === "logSystemActivity") {
-    //     $action      = $_POST['action'] ?? '';
-    //     $description = $_POST['description'] ?? '';
-    //     $userId      = $_POST['user_id'] ?? null;
-
-    //     try {
-    //         // Insert into queue table
-    //         $stmt = $pdo->prepare("
-    //         INSERT INTO system_activity (user_id, action, description)
-    //         VALUES (:user_id, :action, :description)
-    //     ");
-
-    //         $stmt->execute([
-    //             ':user_id'     => $userId,
-    //             ':action'      => $action,
-    //             ':description' => $description,
-    //         ]);
-
-    //         echo json_encode(["success" => true, "message" => "Activity queued"]);
-
-    //     } catch (PDOException $e) {
-    //         // Fallback: Direct insert
-    //         try {
-    //             $stmt = $pdo->prepare("
-    //             INSERT INTO system_activity (user_id, action, description, created_at)
-    //             VALUES (:user_id, :action, :description, NOW())
-    //         ");
-
-    //             $stmt->execute([
-    //                 ':user_id'     => $userId,
-    //                 ':action'      => $action,
-    //                 ':description' => $description,
-    //             ]);
-
-    //             echo json_encode(["success" => true, "message" => "Activity logged directly"]);
-    //         } catch (PDOException $e2) {
-    //             echo json_encode(["success" => false, "message" => "Failed to log activity"]);
-    //         }
-    //     }
-    //     exit;
-    // }
 
     if ($fun === "updateAdminProfile") {
         $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -2817,142 +2820,147 @@ $fun = $_POST['function'];
     }
 
     if ($fun === 'recordPayment') {
+                $user_id        = $_POST['user_id'] ?? '';
+                $user_name      = $_POST['user_name'] ?? '';
+                $package_id     = $_POST['package_id'] ?? '';
+                $package_name   = $_POST['package_name'] ?? '';
+                $amount         = $_POST['amount'] ?? 0;
+                $payment_method = $_POST['payment_method'] ?? '';
+                $payment_status = $_POST['payment_status'] ?? '';
 
-        $user_id        = $_POST['user_id'] ?? '';
-        $user_name      = $_POST['user_name'] ?? ''; // optional if you store it manually
-        $package_id     = $_POST['package_id'] ?? '';
-        $package_name   = $_POST['package_name'] ?? '';
-        $amount         = $_POST['amount'] ?? 0;
-        $payment_method = $_POST['payment_method'] ?? '';
-        $payment_status = $_POST['payment_status'] ?? '';
+                try {
+                    // ✅ Begin transaction
+                    $pdo->beginTransaction();
 
-        $payment_id = generateSimpleTransactionId($pdo);
-
-        try {
-            // ✅ Begin transaction
-            $pdo->beginTransaction();
-
-            /* -------------------------------------------------
-                1. Validate package
-                ------------------------------------------------- */
-            $pkgStmt = $pdo->prepare("
-                    SELECT package_type, max_events, max_guests, price
-                    FROM packagetb
-                    WHERE package_id = ?
-                ");
-            $pkgStmt->execute([$package_id]);
-            $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (! $package) {
-                $pdo->rollBack();
-                echo json_encode(["success" => false, "message" => "Invalid package_id"]);
-                exit;
-            }
-
-            $package_type = $package['package_type'];
-            $max_events   = $package['max_events'];
-            $max_guests   = $package['max_guests'];
-            $price        = $package['price'];
-
-            /* -------------------------------------------------
-                2. Get user name
-                ------------------------------------------------- */
-            $userStmt = $pdo->prepare("SELECT CONCAT(name, ' ', COALESCE(lastname, '')) AS full_name FROM users WHERE user_id = ?");
-            $userStmt->execute([$user_id]);
-            $user = $userStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (! $user) {
-                $pdo->rollBack();
-                echo json_encode(["success" => false, "message" => "User not found"]);
-                exit;
-            }
-
-            $user_full_name = $user['full_name'];
-
-            /* -------------------------------------------------
-                3. Insert payment record
-                ------------------------------------------------- */
-            $insertPayment = $pdo->prepare("
-                    INSERT INTO payment_history (
-                        payment_id, user_id, user_name,
-                        package_id, package_name,
-                        amount, payment_status, payment_method, payment_date
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-                ");
-            $insertPayment->execute([
-                $payment_id,
-                $user_id,
-                $user_full_name,
-                $package_id,
-                $package_type, // your table uses package_type as name
-                $amount,
-                $payment_status,
-                $payment_method,
-            ]);
-
-            /* -------------------------------------------------
-                4. Create or update user_packages
-                ------------------------------------------------- */
-            $checkPkg = $pdo->prepare("SELECT COUNT(*) FROM user_packages WHERE user_id = ?");
-            $checkPkg->execute([$user_id]);
-            $exists = (int) $checkPkg->fetchColumn();
-
-            if ($exists === 0) {
-                // New user package
-                $user_package_id = "PCK-" . strtoupper(substr(md5(uniqid()), 0, 6)) . "-" . time();
-
-                $insertPkg = $pdo->prepare("
-                        INSERT INTO user_packages (
-                            user_package_id, user_id, package_id,
-                            event_limit, event_used, created_at
-                        ) VALUES (?, ?, ?, ?, 0, NOW())
+                    /* -------------------------------------------------
+                        1. Validate package
+                        ------------------------------------------------- */
+                    $pkgStmt = $pdo->prepare("
+                        SELECT package_type, max_events, max_guests, price
+                        FROM packagetb
+                        WHERE package_id = ?
                     ");
-                $insertPkg->execute([
-                    $user_package_id, $user_id, $package_id, $max_events,
-                ]);
-            } else {
-                // Update existing package
-                $updatePkg = $pdo->prepare("
-                        UPDATE user_packages
-                        SET package_id = ?, event_limit = ?, updated_at = NOW()
+                    $pkgStmt->execute([$package_id]);
+                    $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$package) {
+                        $pdo->rollBack();
+                        echo json_encode(["success" => false, "message" => "Invalid package_id"]);
+                        exit;
+                    }
+
+                    $package_type = $package['package_type'];
+                    $max_events   = $package['max_events'];
+                    $max_guests   = $package['max_guests'];
+                    $price        = $package['price'];
+
+                    // Skip payment record creation for FREE package (price = 0)
+                    $payment_id = null;
+                    if ($price > 0) {
+                        $payment_id = generateSimpleTransactionId($pdo);
+                        
+                        /* -------------------------------------------------
+                            2. Get user name
+                            ------------------------------------------------- */
+                        $userStmt = $pdo->prepare("SELECT CONCAT(name, ' ', COALESCE(lastname, '')) AS full_name FROM users WHERE user_id = ?");
+                        $userStmt->execute([$user_id]);
+                        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$user) {
+                            $pdo->rollBack();
+                            echo json_encode(["success" => false, "message" => "User not found"]);
+                            exit;
+                        }
+
+                        $user_full_name = $user['full_name'];
+
+                        /* -------------------------------------------------
+                            3. Insert payment record (only for paid packages)
+                            ------------------------------------------------- */
+                        $insertPayment = $pdo->prepare("
+                            INSERT INTO payment_history (
+                                payment_id, user_id, user_name,
+                                package_id, package_name,
+                                amount, payment_status, payment_method, payment_date
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                        ");
+                        $insertPayment->execute([
+                            $payment_id,
+                            $user_id,
+                            $user_full_name,
+                            $package_id,
+                            $package_type,
+                            $amount,
+                            $payment_status,
+                            $payment_method,
+                        ]);
+                    }
+
+                    /* -------------------------------------------------
+                        4. Create or update user_packages (for both free and paid)
+                        ------------------------------------------------- */
+                    $checkPkg = $pdo->prepare("SELECT COUNT(*) FROM user_packages WHERE user_id = ?");
+                    $checkPkg->execute([$user_id]);
+                    $exists = (int) $checkPkg->fetchColumn();
+
+                    if ($exists === 0) {
+                        // New user package
+                        $user_package_id = "PCK-" . strtoupper(substr(md5(uniqid()), 0, 6)) . "-" . time();
+
+                        $insertPkg = $pdo->prepare("
+                            INSERT INTO user_packages (
+                                user_package_id, user_id, package_id,
+                                event_limit, event_used, created_at
+                            ) VALUES (?, ?, ?, ?, 0, NOW())
+                        ");
+                        $insertPkg->execute([
+                            $user_package_id, $user_id, $package_id, $max_events,
+                        ]);
+                    } else {
+                        // Update existing package
+                        $updatePkg = $pdo->prepare("
+                            UPDATE user_packages
+                            SET package_id = ?, event_limit = ?, updated_at = NOW()
+                            WHERE user_id = ?
+                        ");
+                        $updatePkg->execute([$package_id, $max_events, $user_id]);
+                    }
+
+                    /* -------------------------------------------------
+                        5. Assign package to all user's events
+                        ------------------------------------------------- */
+                    $updateEvents = $pdo->prepare("
+                        UPDATE events
+                        SET package_id = ?, updated_at = NOW()
                         WHERE user_id = ?
                     ");
-                $updatePkg->execute([$package_id, $max_events, $user_id]);
-            }
+                    $updateEvents->execute([$package_id, $user_id]);
+                    
+                    $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+                    $logStmt->execute([
+                        ':user_id'     => $user_id,
+                        ':action'      => 'New Package',
+                        ':description' => "Assigned {$package_type} package",
+                    ]);
 
-            /* -------------------------------------------------
-                5. Assign package to all user's events
-                ------------------------------------------------- */
-            $updateEvents = $pdo->prepare("
-                    UPDATE events
-                    SET package_id = ?, updated_at = NOW()
-                    WHERE user_id = ?
-                ");
-            $updateEvents->execute([$package_id, $user_id]);
-            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-            $logStmt->execute([
-                ':user_id'     => $user_id,
-                ':action'      => 'New Package',
-                ':description' => "Purchase new Package ",
-            ]);
+                    $pdo->commit();
 
-            $pdo->commit();
+                    echo json_encode([
+                        "success"    => true,
+                        "message"    => "Package assigned successfully",
+                        "payment_id" => $payment_id,
+                        "is_free"    => ($price == 0)
+                    ]);
 
-            echo json_encode([
-                "success"    => true,
-                "message"    => "Payment processed successfully",
-                "payment_id" => $payment_id,
-            ]);
-
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            echo json_encode([
-                "success" => false,
-                "message" => "Database error: " . $e->getMessage(),
-            ]);
-        }
-        exit;
-    }
+                } catch (PDOException $e) {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Database error: " . $e->getMessage(),
+                    ]);
+                }
+                exit;
+}
 
     if ($fun === "updateEventGuestLimit") {
         $event_id    = $_POST['event_id'] ?? '';

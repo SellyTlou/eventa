@@ -76,6 +76,16 @@ function Pricing() {
     const getDefaultPricingPlans = () => {
         return [
             {
+                id: 0,
+                name: "FREE",
+                price: "Free",
+                duration: "per month",
+                max_guests: 50,
+                max_events: 4,
+                features: getDefaultFeatures('basic', 50, 4),
+                isPopular: false
+            },
+            {
                 id: 1,
                 name: "Basic",
                 price: "Free",
@@ -127,6 +137,7 @@ function Pricing() {
             if (data.success && data.packages) {
                 // Base feature limits - hardcoded per plan type
                 const baseFeatureLimits = {
+                    'free': { max_guests: 50, max_events: 4 },
                     'basic': { max_guests: 250, max_events: 5 },
                     'premium': { max_guests: 1700, max_events: 20 },
                     'enterprise': { max_guests: 1000, max_events: 50 }
@@ -191,20 +202,33 @@ function Pricing() {
             description: `Perfect for ${plan.name.toLowerCase()} events`,
             isPopular: plan.isPopular,
             features: plan.features,
-            ctaText: plan.price === "Free" ? "Get Started Free" : "Get started",
+            ctaText: plan.price === "Free" ? "Get started for free" : "Get started",
             ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
         })),
         "Business": [
-            ...pricingPlans.map(plan => ({
-                name: plan.name,
-                monthlyPrice: plan.price,
-                yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
-                description: `For ${plan.name.toLowerCase()} business needs`,
-                isPopular: plan.isPopular,
-                features: plan.features,
-                ctaText: "Get started",
-                ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
-            })),
+            ...pricingPlans.filter(plan => plan.name.toLowerCase() !== 'free').map(plan => {
+                // Override guest counts for Business tab
+                let businessFeatures = plan.features;
+                if (plan.name.toLowerCase() === 'premium') {
+                    businessFeatures = plan.features.map(f => 
+                        f.includes('Up to') && f.includes('guests') ? 'Up to 1500 guests per event' : f
+                    );
+                } else if (plan.name.toLowerCase() === 'enterprise') {
+                    businessFeatures = plan.features.map(f => 
+                        f.includes('Up to') && f.includes('guests') ? 'Up to 1000 guests per event' : f
+                    );
+                }
+                return {
+                    name: plan.name,
+                    monthlyPrice: plan.price,
+                    yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
+                    description: `For ${plan.name.toLowerCase()} business needs`,
+                    isPopular: plan.isPopular,
+                    features: businessFeatures,
+                    ctaText: "Get started",
+                    ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
+                };
+            }),
             {
                 name: "Get in Touch",
                 monthlyPrice: "Custom",
@@ -417,13 +441,13 @@ function Pricing() {
                         <div className="container">
                             <div className="row justify-content-center">
                                 {pricingCategories[activeCategory].map((plan, index) => {
-                                    const colClass = activeCategory === 'Business' ? 'col-lg-3' : 'col-lg-4';
+                                    const colClass = activeCategory === 'Selling Tickets' ? 'col-lg-4' : 'col-lg-3'; // 4 cards per row for Personal and Business
                                     return (
                                         <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
                                             <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
                                                 {plan.isContactSales ? (
                                                     <>
-                                                        <div className="enterprise-label large-green">Enterprise</div>
+                                                        <div className="enterprise-label large-green">Advanced</div>
                                                         <div className="basic-label get-in-touch-label">Get in touch</div>
 
                                                         <ul className="features-list contact-features">
@@ -436,12 +460,9 @@ function Pricing() {
                                                         </ul>
 
                                                         <div className="contact-cta-wrapper">
-                                                            <button
-                                                                className={`btn ${plan.ctaVariant} outlined-contact w-100`}
-                                                                onClick={() => setShowContactSalesModal(true)}
-                                                            >
-                                                                {plan.ctaText}
-                                                            </button>
+                                                            <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
+                                                                Coming soon
+                                                            </div>
                                                         </div>
                                                     </>
                                                 ) : (
@@ -620,14 +641,6 @@ function Pricing() {
                                 <h3>Get in touch</h3>
                                 <p>We're preparing a dedicated sales experience for enterprise customers. Please check back soon or contact support for early access.</p>
 
-                                <div className="maintenance-tips">
-                                    <h4>Quick options:</h4>
-                                    <ul>
-                                        <li>Send us an email at <a href="mailto:sales@eventa.co.za">sales@eventa.co.za</a></li>
-                                        <li>Contact support for early access inquiries</li>
-                                        <li>Leave your details and we'll reach out</li>
-                                    </ul>
-                                </div>
                             </div>
 
                             <div className="modal-actions-new">

@@ -37,16 +37,23 @@ function Index() {
             console.log("Pricing plans data:", data);
 
             if (data.success && data.packages) {
-                const formattedPlans = data.packages.map(pkg => ({
-                    id: pkg.package_id,
-                    name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
-                    price: pkg.price === 0 ? "Free" : `R${pkg.price}`,
-                    duration: "per month",
-                    max_guests: pkg.max_guests,
-                    max_events: pkg.max_events,
-                    features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type, pkg.max_guests, pkg.max_events),
-                    isPopular: pkg.package_type === 'premium' // Mark premium as most popular
-                }));
+                const formattedPlans = data.packages.map(pkg => {
+                    const baseName = pkg.package_type.toUpperCase();
+                    // Special handling for free plan - show as "Free" not "FREE"
+                    const displayName = pkg.price == 0 ? "Free" : baseName;
+                    
+                    return {
+                        id: pkg.package_id,
+                        name: displayName,
+                        price: pkg.price == 0 ? "Free" : `R${pkg.price}`,
+                        duration: "per month",
+                        max_guests: pkg.max_guests,
+                        max_events: pkg.max_events,
+                        features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : 
+                            getDefaultFeatures(pkg.package_type, pkg.max_guests, pkg.max_events),
+                        isPopular: pkg.package_type.toUpperCase() === 'PREMIUM'
+                    };
+                });
                 setPricingPlans(formattedPlans);
             } else {
                 // Fallback to default plans if API fails
@@ -61,17 +68,19 @@ function Index() {
         }
     };
 
-    // Fallback function for features
+    // Fallback function for features (only used if API doesn't provide features)
     const getDefaultFeatures = (packageType, maxGuests, maxEvents) => {
+        const packageTypeUpper = packageType.toUpperCase();
+        
         const featuresMap = {
-            'free': [
+            'FREE': [
                 `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
                 `Up to ${maxGuests} guests`,
                 "Basic invitations",
                 "RSVP tracking",
                 "Email support"
             ],
-            'basic': [
+            'BASIC': [
                 `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
                 `Up to ${maxGuests} guests`,
                 "Customizable invitations",
@@ -79,7 +88,7 @@ function Index() {
                 "Guest management",
                 "Email support"
             ],
-            'premium': [
+            'PREMIUM': [
                 `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
                 `Up to ${maxGuests} guests`,
                 "Premium invitations",
@@ -88,9 +97,9 @@ function Index() {
                 "Automated reminders",
                 "Priority support"
             ],
-            'enterprise': [
-                "Unlimited events",
-                "Unlimited guests",
+            'ENTERPRISE': [
+                `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
+                `Up to ${maxGuests} guests`,
                 "Custom branding",
                 "Advanced analytics",
                 "Dedicated account manager",
@@ -98,17 +107,20 @@ function Index() {
                 "Custom integrations"
             ]
         };
-        return featuresMap[packageType] || ["Event management features"];
+        
+        return featuresMap[packageTypeUpper] || ["Event management features"];
     };
 
-    // Fallback default pricing plans
+    // Fallback default pricing plans (only used if API fails)
     const getDefaultPricingPlans = () => {
         return [
             {
                 id: 1,
                 name: "Free",
-                price: "R0",
+                price: "Free",
                 duration: "per month",
+                max_guests: 50,
+                max_events: 1,
                 features: [
                     "1 event",
                     "Up to 50 guests",
@@ -120,31 +132,53 @@ function Index() {
             },
             {
                 id: 2,
-                name: "Pro",
-                price: "R150",
+                name: "BASIC",
+                price: "R250",
                 duration: "per month",
+                max_guests: 50,
+                max_events: 6,
                 features: [
-                    "5 events",
-                    "Up to 500 guests",
+                    "6 events",
+                    "Up to 50 guests",
                     "Customizable invitations",
+                    "Guest management",
+                    "Email support"
+                ],
+                isPopular: false,
+            },
+            {
+                id: 3,
+                name: "PREMIUM",
+                price: "R400",
+                duration: "per month",
+                max_guests: 200,
+                max_events: 20,
+                features: [
+                    "20 events",
+                    "Up to 200 guests",
+                    "Premium invitations",
+                    "Advanced RSVP tracking",
                     "Seating charts",
                     "Automated reminders",
-                    "Priority support",
+                    "Priority support"
                 ],
                 isPopular: true,
             },
             {
-                id: 3,
-                name: "Enterprise",
-                price: "Contact us",
-                duration: "",
+                id: 4,
+                name: "ENTERPRISE",
+                price: "R750",
+                duration: "per month",
+                max_guests: 100,
+                max_events: 150,
                 features: [
-                    "Unlimited events",
-                    "Unlimited guests",
+                    "150 events",
+                    "Up to 100 guests",
+                    "Custom branding",
                     "Advanced analytics",
                     "Dedicated account manager",
-                    "Custom integrations",
-                    "White-label solutions",
+                    "API access",
+                    "Custom integrations"
                 ],
                 isPopular: false,
             },
@@ -252,11 +286,15 @@ function Index() {
         setShowMaintenance(true);
     };
 
-    const handleGetStartedClick = (planName) => {
-        if (planName === "Free" || planName === "free") {
+    const handleGetStartedClick = (planName, planId) => {
+        // Check if it's a free plan (price = 0 or name = Free)
+        const isFreePlan = planName.toLowerCase() === 'free' || planName === 'Free';
+        
+        if (isFreePlan) {
             window.location.href = "/createevent";
         } else {
-            window.location.href = "/upgrade_package";
+            // For paid plans, redirect to upgrade page with package ID
+            window.location.href = `/upgrade_package?package_id=${planId}`;
         }
     };
 
@@ -482,7 +520,7 @@ function Index() {
                         ) : (
                             <div className="row d-flex justify-content-center">
                                 {pricingPlans.map((plan) => (
-                                    <div key={plan.id || plan.name} className={`col-lg-4 pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
+                                    <div key={plan.id || plan.name} className={`col-lg-3 pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
                                         <div className="pricing-card text-center">
                                             {plan.isPopular && <div className="popular-badge">Most Popular</div>}
                                             <h3>{plan.name}</h3>
@@ -496,13 +534,13 @@ function Index() {
                                                         <i className="bi bi-check2-circle"></i> {feature}
                                                     </li>
                                                 ))}
-                                            </ul>
-                                            <button
-                                                className="btn btn-create"
-                                                onClick={() => handleGetStartedClick(plan.name)}
+                                            </ul>  
+                                            <button 
+                                                className="btn btn-create" 
+                                                onClick={() => handleGetStartedClick(plan.name, plan.id)}
                                             >
-                                                {plan.price === "Free" || plan.price === "R0" ? "Get Started" : "Choose Plan"}
-                                            </button>
+                                                {plan.price === "Free" ? "Get Started Free" : "Choose Plan"}
+                                            </button>                 
                                         </div>
                                     </div>
                                 ))}

@@ -40,7 +40,7 @@ function Sales() {
                 
                 <section className="header-section">
                     <img
-                        src="/images/salesImage.png"
+                        src="/images/saleeee.jpg"
                         alt="Sales hero background"
                         className="hero-bg-img"
                     />

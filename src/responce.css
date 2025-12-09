@@ -891,3 +891,30 @@ Create Event Page Styling
     border: none; /* No border */
     text-align: center;
 }
+
+/* Ensure features lists inside cards are left-aligned even when card text is centered */
+.pricing-card .features-list,
+.pricing-card .contact-features,
+.card .features-list,
+.card .contact-features,
+.features-list {
+    text-align: left;
+    list-style-position: inside;
+    margin-left: 0.3rem;
+    padding-left: 0;
+}
+
+.pricing-card.text-center .features-list,
+.pricing-card.text-center .contact-features,
+.card.text-center .features-list,
+.card.text-center .contact-features {
+    text-align: left;
+}
+
+.pricing-card .features-list li,
+.pricing-card .contact-features li,
+.features-list li {
+    display: list-item;
+    text-align: left;
+    padding-left: 0.2rem;
+}

@@ -9,7 +9,7 @@ class Database
     private $port   = 3306;
     private $pdo;
 
-/*private $host   = "mysql8001.site4now.net";
+    /*private $host   = "mysql8001.site4now.net";
     private $user   = "ac172e_mfanafu";
     private $pass   = "@Magcaba0203";
     private $dbname = "db_ac172e_mfanafu";
