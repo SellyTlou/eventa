@@ -31,6 +31,7 @@ import SecurityQuestionsModal from './SecurityQuestionsModal';
 import GuestInsights from './planner/guest_insights';
 import GuestMessageView from './guestMessageView';
 import ReportEvent from './ReportEvent';
+import SupportTicket from './SupportTicket';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -169,6 +170,7 @@ export const SessionWarningModal = ({ show, countdown, onStayLoggedIn, onLogout 
     );
 };
 
+
 export function SessionHandler() {
     const { showWarning, countdown, stayLoggedIn, logout } = useSessionTimeout(10, 10);
     return (
@@ -199,6 +201,7 @@ export function SessionHandler() {
                 <Route path="/guestMessageView" element={<GuestMessageView />} />
                 <Route path="/report-event" element={<ReportEvent />} />
                 <Route path="/security-questions" element={<SecurityQuestionsModal />} />
+                <Route path="/support-ticket" element={<SupportTicket />} />
             </Routes>
 
             <SessionWarningModal
