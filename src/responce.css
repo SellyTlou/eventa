@@ -498,6 +498,7 @@
         align-items: center;
         justify-content: flex-start;
         gap: 12px;
+        background-color: #db1d1d !important;
     }
 
     /* Make Enterprise label larger and green (fixed selector and nesting) */

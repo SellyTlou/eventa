@@ -1,13 +1,11 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import SupportTicket from "./pages/SupportTicket";
+import { BrowserRouter as Router } from "react-router-dom";
+import { SessionHandler } from "./pages/components";
 
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<SupportTicket />} />
-      </Routes>
+      <SessionHandler />
     </Router>
   );
 }
