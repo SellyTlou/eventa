@@ -64,7 +64,7 @@ try {
         $packageType = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : 'basic';
 
         if ($recipientCount > 1 && !in_array($packageType, ['premium', 'enterprise'])) {
-            echo json_encode(["success" => false, "message" => "Bulk messaging (2+ recipients) is not available on your current plan. Upgrade to Premium or Enterprise."]);
+            echo json_encode(["success" => false, "message" => "Bulk messaging (2+ recipients) is not available on your current plan. Upgrade to Premium or Advanced."]);
             exit;
         }
     } catch (PDOException $e) {

@@ -97,7 +97,7 @@ function Index() {
                 "Automated reminders",
                 "Priority support"
             ],
-            'ENTERPRISE': [
+            'ADVANCED': [
                 `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
                 `Up to ${maxGuests} guests`,
                 "Custom branding",
@@ -166,7 +166,7 @@ function Index() {
             },
             {
                 id: 4,
-                name: "ENTERPRISE",
+                name: "ADVANCED",
                 price: "R750",
                 duration: "per month",
                 max_guests: 100,

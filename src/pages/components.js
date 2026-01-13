@@ -31,6 +31,8 @@ import SecurityQuestionsModal from './SecurityQuestionsModal';
 import GuestInsights from './planner/guest_insights';
 import GuestMessageView from './guestMessageView';
 import ReportEvent from './ReportEvent';
+import AdminTicket from './AdminTicket';
+import TicketSelection from './TicketSelection';
 import SupportTicket from './SupportTicket';
 
 const clearAllLocalStorage = () => {
@@ -201,7 +203,10 @@ export function SessionHandler() {
                 <Route path="/guestMessageView" element={<GuestMessageView />} />
                 <Route path="/report-event" element={<ReportEvent />} />
                 <Route path="/security-questions" element={<SecurityQuestionsModal />} />
+                <Route path="/admin-ticket" element={<AdminTicket />} />
+                <Route path="/ticket-selection" element={<TicketSelection />} />
                 <Route path="/support-ticket" element={<SupportTicket />} />
+                
             </Routes>
 
             <SessionWarningModal

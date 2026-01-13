@@ -53,7 +53,7 @@ function Support() {
                 {/* Hero Section */}
                 <section className="header-section">
                     <img
-                        src="/images/support.png"
+                        src="/images/meee.jpg"
                         alt="Support hero background"
                         className="hero-bg-img"
                     />
@@ -129,6 +129,21 @@ function Support() {
                                     onClick={handleContactClick}
                                 >
                                     Call Now
+                                </button>
+                            </div>
+                            <div className="feature-card col-lg-4 col-md-6 col-12">
+                                <div className="feature-icon">
+                                    <i className="bi bi-ticket-perforated"></i>
+                                </div>
+                                <h4>Support Ticket</h4>
+                                <p>
+                                    Have a specific issue? Submit a detailed support ticket and our team will assist you promptly.
+                                </p>
+                                <button 
+                                    className="btn btn-view-more"
+                                    onClick={() => navigate('/ticket-selection')}
+                                >
+                                    Open Ticket
                                 </button>
                             </div>
                         </div>

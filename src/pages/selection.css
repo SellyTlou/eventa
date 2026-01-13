@@ -1,0 +1,79 @@
+/* Center whole page */
+.ticket-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f7f9fc;
+}
+
+/* White box */
+.ticket-container {
+  width: 60%;
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+/* Title */
+.ticket-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1a2b49;
+  margin-bottom: 10px;
+}
+
+/* Subtitle */
+.ticket-subtitle {
+  color: #677089;
+  margin-bottom: 35px;
+}
+
+/* Department list */
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Department item */
+.ticket-item {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #e6e9f1;
+  transition: 0.3s;
+  text-decoration: none;
+  background: #fff;
+}
+
+/* Hover effect */
+.ticket-item:hover {
+  background: #f0f5ff;
+  border-color: #2b6eff;
+}
+
+/* Blue section titles */
+.ticket-item h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2b6eff;
+}
+
+/* Description */
+.ticket-item p {
+  margin: 5px 0 0;
+  color: #6c7895;
+  text-align: left;
+}
+
+/* Email icon */
+.ticket-icon {
+  font-size: 28px;
+  color: #2b6eff;
+}
