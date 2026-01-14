@@ -1433,23 +1433,23 @@ $fun = $_POST['function'];
                     $up = $stmt->fetch(PDO::FETCH_ASSOC);
 
                     if (!$up) {
-                        // If no package found, default to FREE package
-                        $stmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_type = 'free' LIMIT 1");
+                        // If no package found, default to Basic package
+                        $stmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_type = 'basic' LIMIT 1");
                         $stmt->execute();
-                        $freePackage = $stmt->fetch(PDO::FETCH_ASSOC);
+                        $basicPackage = $stmt->fetch(PDO::FETCH_ASSOC);
                         
-                        if ($freePackage) {
+                        if ($basicPackage) {
                             echo json_encode(["success" => true, "userPackage" => [
-                                "package_id" => $freePackage['package_id'],
-                                "package_type" => "free",
-                                "event_limit" => $freePackage['max_events'],
+                                "package_id" => $basicPackage['package_id'],
+                                "package_type" => "basic",
+                                "event_limit" => $basicPackage['max_events'],
                                 "event_used" => 0,
                                 "created_at" => date('Y-m-d H:i:s')
                             ]]);
                         } else {
                             echo json_encode(["success" => true, "userPackage" => [
-                                "package_type" => "free",
-                                "event_limit" => 1,
+                                "package_type" => "basic",
+                                "event_limit" => 5,
                                 "event_used" => 0,
                                 "created_at" => date('Y-m-d H:i:s')
                             ]]);
@@ -1466,7 +1466,7 @@ $fun = $_POST['function'];
                         $pkg = $pkgStmt->fetch(PDO::FETCH_ASSOC);
                         if ($pkg) {
                             $userPackage['package_id'] = $pkg['package_id'];
-                            $userPackage['package_type'] = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : ($userPackage['package_type'] ?? 'free');
+                            $userPackage['package_type'] = isset($pkg['package_type']) ? strtolower($pkg['package_type']) : ($userPackage['package_type'] ?? 'basic');
                             $userPackage['max_guests'] = $pkg['max_guests'] ?? 50;
                             $userPackage['max_events'] = $pkg['max_events'] ?? 1;
                             $userPackage['price'] = $pkg['price'] ?? 0;
@@ -1488,22 +1488,22 @@ $fun = $_POST['function'];
                         }
                     }
 
-                    // If still no package_type found, default to free
+                    // If still no package_type found, default to basic
                     if (!isset($userPackage['package_type']) || empty($userPackage['package_type'])) {
-                        $userPackage['package_type'] = 'free';
-                        // Try to get free package from packagetb
-                        $freeStmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_type = 'free' LIMIT 1");
-                        $freeStmt->execute();
-                        $freePkg = $freeStmt->fetch(PDO::FETCH_ASSOC);
-                        if ($freePkg) {
-                            $userPackage['package_id'] = $freePkg['package_id'];
-                            $userPackage['max_guests'] = $freePkg['max_guests'] ?? 50;
-                            $userPackage['max_events'] = $freePkg['max_events'] ?? 1;
-                            $userPackage['price'] = $freePkg['price'] ?? 0;
+                        $userPackage['package_type'] = 'basic';
+                        // Try to get basic package from packagetb
+                        $basicStmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_type = 'basic' LIMIT 1");
+                        $basicStmt->execute();
+                        $basicPkg = $basicStmt->fetch(PDO::FETCH_ASSOC);
+                        if ($basicPkg) {
+                            $userPackage['package_id'] = $basicPkg['package_id'];
+                            $userPackage['max_guests'] = $basicPkg['max_guests'] ?? 250;
+                            $userPackage['max_events'] = $basicPkg['max_events'] ?? 5;
+                            $userPackage['price'] = $basicPkg['price'] ?? 50;
                         } else {
-                            $userPackage['max_guests'] = 50;
-                            $userPackage['max_events'] = 1;
-                            $userPackage['price'] = 0;
+                            $userPackage['max_guests'] = 250;
+                            $userPackage['max_events'] = 5;
+                            $userPackage['price'] = 50;
                         }
                     } else {
                         // Ensure package_type is lowercase
@@ -1530,14 +1530,13 @@ $fun = $_POST['function'];
             $adminUserId = $_POST['admin_user_id'] ?? '';
 
             try {
-                // Add ORDER BY to ensure FREE comes first, then BASIC, PREMIUM, ENTERPRISE
+                // Add ORDER BY to ensure BASIC comes first, then PREMIUM, ENTERPRISE
                 $stmt = $pdo->prepare("SELECT * FROM packagetb 
                                     ORDER BY 
                                     CASE 
-                                        WHEN package_type = 'free' THEN 1
-                                        WHEN package_type = 'basic' THEN 2
-                                        WHEN package_type = 'premium' THEN 3
-                                        WHEN package_type = 'enterprise' THEN 4
+                                        WHEN package_type = 'basic' THEN 1
+                                        WHEN package_type = 'premium' THEN 2
+                                        WHEN package_type = 'advanced' THEN 3
                                         ELSE 5
                                     END, price ASC");
                 $stmt->execute();
@@ -2897,7 +2896,7 @@ $fun = $_POST['function'];
                     }
 
                     /* -------------------------------------------------
-                        4. Create or update user_packages (for both free and paid)
+                        4. Create or update user_packages (for paid packages)
                         ------------------------------------------------- */
                     $checkPkg = $pdo->prepare("SELECT COUNT(*) FROM user_packages WHERE user_id = ?");
                     $checkPkg->execute([$user_id]);
@@ -4409,6 +4408,239 @@ $fun = $_POST['function'];
         } catch (Exception $e) {
             $pdo->rollBack();
             echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // Support Ticket Functions
+    function sendTicketResolvedEmail($email, $name, $subject) {
+        $BREVO_API_KEY = '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';
+        $payload = [
+            "sender" => ["email" => "ananiasndou0@gmail.com", "name" => "Eventa Support"],
+            "to" => [["email" => $email, "name" => $name]],
+            "subject" => "Your Support Ticket Has Been Resolved - Eventa",
+            "htmlContent" => "
+                <html>
+                <body style='font-family:Arial;background:#f9f9f9;padding:20px'>
+                    <div style='max-width:500px;margin:auto;background:white;padding:30px;border-radius:12px;text-align:center'>
+                        <h2 style='color:#8b6a35'>Ticket Resolved</h2>
+                        <p>Hi <strong>{$name}</strong>,</p>
+                        <p>Great news! Your support ticket regarding <strong>\"{$subject}\"</strong> has been resolved.</p>
+                        <p>Our team has addressed the issue and implemented the necessary fixes. If you have any further questions or need additional assistance, please don't hesitate to submit a new support ticket.</p>
+                        <p>Thank you for using Eventa and for your patience!</p>
+                        
+                        <p style='font-size:12px;color:#888'>
+                            — The Eventa Support Team
+                        </p>
+                    </div>
+                </body>
+                </html>",
+            "textContent" => "Hi {$name},\n\nYour support ticket regarding \"{$subject}\" has been resolved.\n\nOur team has addressed the issue. If you need further assistance, please submit a new ticket.\n\nThank you for using Eventa!\n\n— Eventa Support Team",
+        ];
+
+        $ch = curl_init("https://api.brevo.com/v3/smtp/email");
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                "api-key: $BREVO_API_KEY",
+                "Content-Type: application/json",
+                "Accept: application/json",
+            ],
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+        ]);
+
+        $response = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($status !== 201) {
+            // Log error but don't fail the status update
+            error_log("Failed to send ticket resolved email to {$email}: {$response}");
+        }
+    }
+
+    if ($fun === "submitTicket") {
+        $name = $_POST['name'] ?? '';
+        $email = $_POST['email'] ?? '';
+        $subject = $_POST['subject'] ?? '';
+        $department = $_POST['department'] ?? '';
+        $priority = $_POST['priority'] ?? 'medium';
+        $message = $_POST['message'] ?? '';
+        $user_id = $_POST['user_id'] ?? null; // Optional, for logged-in users
+
+        if (!$name || !$email || !$subject || !$department || !$message) {
+            echo json_encode(["success" => false, "message" => "Missing required fields"]);
+            exit;
+        }
+
+        try {
+            $attachment_path = null;
+            if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = 'uploads/tickets/';
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+                $file_name = uniqid() . '_' . basename($_FILES['attachment']['name']);
+                $target_path = $upload_dir . $file_name;
+                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $target_path)) {
+                    $attachment_path = $target_path;
+                }
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO support_tickets (user_id, name, email, subject, department, priority, message, attachment_path, status, created_at)
+                                   VALUES (:user_id, :name, :email, :subject, :department, :priority, :message, :attachment_path, 'Open', NOW())");
+            $stmt->execute([
+                ':user_id' => $user_id,
+                ':name' => $name,
+                ':email' => $email,
+                ':subject' => $subject,
+                ':department' => $department,
+                ':priority' => $priority,
+                ':message' => $message,
+                ':attachment_path' => $attachment_path
+            ]);
+
+            echo json_encode(["success" => true, "message" => "Ticket submitted successfully"]);
+        } catch (Exception $e) {
+            echo json_encode(["success" => false, "message" => "Error submitting ticket: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($fun === "getTickets") {
+        $status_filter = $_POST['status'] ?? 'All';
+        $department_filter = $_POST['department'] ?? 'All';
+        $search = $_POST['search'] ?? '';
+
+        try {
+            $query = "SELECT * FROM support_tickets WHERE 1=1";
+            $params = [];
+
+            if ($status_filter !== 'All') {
+                $query .= " AND status = :status";
+                $params[':status'] = $status_filter;
+            }
+            if ($department_filter !== 'All') {
+                $query .= " AND department = :department";
+                $params[':department'] = $department_filter;
+            }
+            if ($search) {
+                $query .= " AND subject LIKE :search";
+                $params[':search'] = '%' . $search . '%';
+            }
+
+            $query .= " ORDER BY created_at DESC";
+
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($params);
+            $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(["success" => true, "tickets" => $tickets]);
+        } catch (Exception $e) {
+            echo json_encode(["success" => false, "message" => "Error fetching tickets: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($fun === "updateTicketStatus") {
+        $ticket_id = $_POST['ticket_id'] ?? '';
+        $status = $_POST['status'] ?? '';
+
+        if (!$ticket_id || !$status) {
+            echo json_encode(["success" => false, "message" => "Missing ticket_id or status"]);
+            exit;
+        }
+
+        try {
+            // First, get the ticket details for email
+            $stmt = $pdo->prepare("SELECT name, email, subject FROM support_tickets WHERE id = :ticket_id");
+            $stmt->execute([':ticket_id' => $ticket_id]);
+            $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ticket) {
+                echo json_encode(["success" => false, "message" => "Ticket not found"]);
+                exit;
+            }
+
+            // Update the status
+            $stmt = $pdo->prepare("UPDATE support_tickets SET status = :status WHERE id = :ticket_id");
+            $stmt->execute([':status' => $status, ':ticket_id' => $ticket_id]);
+
+            // If status is "Resolved", send email notification
+            if ($status === "Resolved") {
+                sendTicketResolvedEmail($ticket['email'], $ticket['name'], $ticket['subject']);
+            }
+
+            echo json_encode(["success" => true, "message" => "Ticket status updated"]);
+        } catch (Exception $e) {
+            echo json_encode(["success" => false, "message" => "Error updating ticket: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // Business Packages Functions
+    if ($fun === "getBusinessPackages") {
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM business_packages ORDER BY price ASC");
+            $stmt->execute();
+            $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Parse features JSON
+            foreach ($packages as &$package) {
+                $package['features'] = json_decode($package['features'], true) ?? [];
+            }
+
+            echo json_encode(["success" => true, "packages" => $packages]);
+        } catch (Exception $e) {
+            echo json_encode(["success" => false, "message" => "Error fetching business packages: " . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($fun === "updateBusinessPackage") {
+        $id = $_POST['id'] ?? '';
+        $package_type = $_POST['package_type'] ?? '';
+        $name = $_POST['name'] ?? '';
+        $price = $_POST['price'] ?? '';
+        $max_guests = $_POST['max_guests'] ?? '';
+        $max_events = $_POST['max_events'] ?? '';
+        $features = $_POST['features'] ?? '';
+
+        if (!$id || !$package_type || !$name || $price === '' || $max_guests === '') {
+            echo json_encode(["success" => false, "message" => "Missing required fields"]);
+            exit;
+        }
+
+        try {
+            $features_json = json_encode(is_array($features) ? $features : [$features]);
+
+            $stmt = $pdo->prepare("UPDATE business_packages SET
+                                   package_type = :package_type,
+                                   name = :name,
+                                   price = :price,
+                                   max_guests = :max_guests,
+                                   max_events = :max_events,
+                                   features = :features,
+                                   updated_at = CURRENT_TIMESTAMP
+                                   WHERE id = :id");
+
+            $stmt->execute([
+                ':id' => $id,
+                ':package_type' => $package_type,
+                ':name' => $name,
+                ':price' => $price,
+                ':max_guests' => $max_guests,
+                ':max_events' => $max_events,
+                ':features' => $features_json
+            ]);
+
+            if ($stmt->rowCount() > 0) {
+                echo json_encode(["success" => true, "message" => "Business package updated successfully"]);
+            } else {
+                echo json_encode(["success" => false, "message" => "Package not found or no changes made"]);
+            }
+        } catch (Exception $e) {
+            echo json_encode(["success" => false, "message" => "Error updating business package: " . $e->getMessage()]);
         }
         exit;
     }

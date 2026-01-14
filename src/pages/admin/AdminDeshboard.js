@@ -4,6 +4,7 @@ import "../../App.css";
 import "../../index.css";
 import "../../alert.css"
 import activityQueue from "../activityQueue";
+import AdminTicket from "../AdminTicket";
 
 // ==================== PRODUCTION-READY TREE SET ====================
 class ActivityTreeSet {
@@ -1385,6 +1386,8 @@ function AdminDashboard() {
                     logActivity={logActivity}
                     printAlert={printAlert}
                 />;
+            case "tickets":
+                return <AdminTicket printAlert={printAlert} />;
             case "dashboard":
             default:
                 return <>
@@ -1481,7 +1484,7 @@ function AdminDashboard() {
                             <div className="logo-container">
                                 <i className="bi bi-building-gear"></i>
                                 <div className="logo-content">
-                                    <h3>Evendi Admin</h3>
+                                    <h3>Evendi</h3>
                                     <span>Control Center</span>
                                 </div>
                             </div>
@@ -1541,6 +1544,16 @@ function AdminDashboard() {
                                     <div className="nav-item-content">
                                         <i className="bi bi-graph-up"></i>
                                         <span>Revenue & Pricing</span>
+                                    </div>
+                                </li>
+
+                                <li
+                                    className={`admin-dashboard-nav-item ${activeTab === "tickets" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("tickets")}
+                                >
+                                    <div className="nav-item-content">
+                                        <i className="bi bi-headset"></i>
+                                        <span>Support Tickets</span>
                                     </div>
                                 </li>
                             </ul>
@@ -3044,15 +3057,18 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
 
 const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     const [activeSection, setActiveSection] = useState('plans');
+    const [packageCategory, setPackageCategory] = useState('personal'); // 'personal' or 'business'
     const [editingPlan, setEditingPlan] = useState(null);
     const [editForm, setEditForm] = useState({
         package_type: '',
+        name: '',
         max_guests: '',
         max_events: '',
         price: '',
         features: ''
     });
     const [allPlans, setAllPlans] = useState(plans);
+    const [businessPlans, setBusinessPlans] = useState([]);
     const [showEditModal, setShowEditModal] = useState(false);
 
     // Keep local plans in sync when parent prop `plans` changes
@@ -3088,6 +3104,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     useEffect(() => {
+        fetchBusinessPlans();
         if (activeSection === 'payments') {
             fetchPaymentHistory();
             fetchRevenueAnalytics();
@@ -3098,6 +3115,55 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             fetchPackageUsageStats();
         }
     }, [activeSection]);
+
+    useEffect(() => {
+    console.log('🔄 Business plans state updated:', businessPlans);
+    console.log('📊 Business plans count:', businessPlans.length);
+    
+    if (businessPlans.length > 0) {
+        console.log('📋 First business plan:', businessPlans[0]);
+        console.log('🔍 First plan features:', businessPlans[0].features);
+        console.log('🔍 First plan features type:', typeof businessPlans[0].features);
+    }
+}, [businessPlans]);
+
+useEffect(() => {
+    // Also log when packageCategory changes
+    console.log('📦 Package category changed to:', packageCategory);
+    console.log('🏢 Business plans available:', businessPlans.length);
+    console.log('👤 Personal plans available:', allPlans.length);
+}, [packageCategory, businessPlans, allPlans]);
+
+    const fetchBusinessPlans = async () => {
+    try {
+        console.log('Fetching business plans...');
+        
+        // FIX: Use 'function' parameter instead of 'action'
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            body: new URLSearchParams({ 
+                function: 'getBusinessPackages'  // Change from 'action' to 'function'
+            })
+        });
+        
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Business plans response:', data);
+        
+        if (data.success) {
+            setBusinessPlans(data.packages);
+            console.log('Business plans set:', data.packages);
+        } else {
+            console.error('Failed to fetch business plans:', data.message);
+        }
+    } catch (error) {
+        console.error('Error fetching business plans:', error);
+    }
+};
 
     const fetchPaymentHistory = async () => {
         try {
@@ -3307,25 +3373,46 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         logActivity('Payment Details Viewed', `Viewed payment details for transaction: ${payment.payment_id}`);
     };
 
-    // Helper function to parse features safely
-    const parseFeatures = (features) => {
-        if (!features) return [];
-        if (typeof features === 'string') {
+   // Helper function to parse features safely - UPDATED VERSION
+const parseFeatures = (features) => {
+    console.log('parseFeatures input:', features, 'Type:', typeof features);
+    
+    if (!features) return [];
+    
+    // If it's already an array, return it
+    if (Array.isArray(features)) {
+        console.log('Features is already an array');
+        return features.filter(f => f && typeof f === 'string');
+    }
+    
+    // If it's a string, try to parse as JSON first
+    if (typeof features === 'string') {
+        try {
+            // Try parsing as JSON (for business packages from PHP)
+            const parsed = JSON.parse(features);
+            console.log('Successfully parsed as JSON:', parsed);
+            if (Array.isArray(parsed)) {
+                return parsed.filter(f => f && typeof f === 'string');
+            }
+        } catch (e) {
+            console.log('Not JSON, treating as comma-separated string');
+            // If not valid JSON, treat as comma-separated string
             return features.split(',').map(f => f.trim()).filter(f => f.length > 0);
         }
-        if (Array.isArray(features)) {
-            return features.filter(f => f && typeof f === 'string');
-        }
-        return [];
-    };
+    }
+    
+    console.log('Returning empty array');
+    return [];
+};
 
     const startEditing = (plan) => {
-        setEditingPlan(plan.package_id);
+        setEditingPlan(plan.package_id || plan.id);
         const rawFeatures = plan.features || ''; // ← safety
         const parsedFeatures = parseFeatures(rawFeatures);
 
         setEditForm({
             package_type: plan.package_type || '',
+            name: plan.name || plan.package_type || '',
             max_guests: plan.max_guests || '',
             max_events: plan.max_events || '',
             price: plan.price || '',
@@ -3334,8 +3421,8 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         setShowEditModal(true);
 
         console.group('Edit Modal Opened');
-        console.log('Plan ID:', plan.package_id);
-        console.log('Plan Name:', formatPlanName(plan.package_type));
+        console.log('Plan ID:', plan.package_id || plan.id);
+        console.log('Plan Name:', formatPlanName(plan.package_type || plan.name));
         console.log('Raw Features (DB):', plan.features);
         console.log('Parsed Features:', parsedFeatures);
         console.log('Features String:', parsedFeatures.join(', '));
@@ -3366,25 +3453,38 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
 
         try {
             const formData = new FormData();
-            formData.append('function', 'updatePackage');
-            formData.append('package_id', editingPlan);
-            formData.append('package_type', editForm.package_type);
-            formData.append('max_guests', editForm.max_guests);
-            formData.append('max_events', editForm.max_events);
-            formData.append('price', editForm.price);
-            formData.append('features', editForm.features);
-            formData.append('admin_user_id', adminUserId);
+            const isBusinessPackage = packageCategory === 'business';
+
+            if (isBusinessPackage) {
+                formData.append('action', 'updateBusinessPackage');
+                formData.append('id', editingPlan);
+                formData.append('package_type', editForm.package_type);
+                formData.append('name', editForm.name || editForm.package_type);
+                formData.append('price', editForm.price);
+                formData.append('max_guests', editForm.max_guests);
+                formData.append('max_events', editForm.max_events);
+                formData.append('features', editForm.features);
+            } else {
+                formData.append('function', 'updatePackage');
+                formData.append('package_id', editingPlan);
+                formData.append('package_type', editForm.package_type);
+                formData.append('max_guests', editForm.max_guests);
+                formData.append('max_events', editForm.max_events);
+                formData.append('price', editForm.price);
+                formData.append('features', editForm.features);
+                formData.append('admin_user_id', adminUserId);
+            }
 
             // Detailed logging for debugging
             console.group('📦 Package Update Debug Info');
             console.log('⏱️ Timestamp:', new Date().toISOString());
-            console.log('🆔 Admin User ID:', adminUserId);
             console.log('🆔 Package ID:', editingPlan);
             console.log('📝 Package Type:', editForm.package_type);
             console.log('👥 Max Guests:', editForm.max_guests);
             console.log('📅 Max Events:', editForm.max_events);
             console.log('💰 Price:', editForm.price);
             console.log('✨ Features:', editForm.features);
+            console.log('🏢 Is Business Package:', isBusinessPackage);
             console.log('🌐 API URL:', API_BASE_URL);
             console.groupEnd();
 
@@ -3399,19 +3499,37 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             console.log('✅ Server Response:', JSON.stringify(data, null, 2));
 
             if (data.success) {
-                setAllPlans(prevPlans =>
-                    prevPlans.map(plan =>
-                        plan.package_id === editingPlan
-                            ? { ...plan, ...editForm }
-                            : plan
-                    )
-                );
+                if (isBusinessPackage) {
+                    setBusinessPlans(prevPlans =>
+                        prevPlans.map(plan =>
+                            plan.id === editingPlan
+                                ? { 
+                                    ...plan, 
+                                    package_type: editForm.package_type,
+                                    name: editForm.name || editForm.package_type, 
+                                    price: editForm.price, 
+                                    max_guests: editForm.max_guests,
+                                    max_events: editForm.max_events,
+                                    features: editForm.features 
+                                }
+                                : plan
+                        )
+                    );
+                } else {
+                    setAllPlans(prevPlans =>
+                        prevPlans.map(plan =>
+                            plan.package_id === editingPlan
+                                ? { ...plan, ...editForm }
+                                : plan
+                        )
+                    );
+                }
                 setEditingPlan(null);
                 setShowEditModal(false);
                 fetchActiveSubscriptions();
                 fetchPackageUsageStats();
                 logActivity('Package Updated',
-                    `Updated ${editForm.package_type} package: ${editForm.max_events} events, ${editForm.max_guests} guests, R${editForm.price}`
+                    `Updated ${editForm.package_type} package: ${editForm.max_events || 'N/A'} events, ${editForm.max_guests || 'N/A'} guests, R${editForm.price}`
                 );
                 printAlert('Package updated successfully!', 'success');
             } else {
@@ -3605,49 +3723,112 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             </div>
 
             {activeSection === 'plans' ? (
-                <div className="pricing-plans-grid">
-                    {allPlans.map(plan => (
-                        <div key={plan.package_id} className="pricing-plan-card">
-                            <div className="plan-header">
-                                <h3>{formatPlanName(plan.package_type)}</h3>
-                                <span className="plan-status active">Active</span>
-                            </div>
-
-                            <div className="plan-price">
-                                <span className="price-amount">R{plan.price || '0.00'}</span>
-                                <span className="price-interval"></span>
-                            </div>
-
-                            <div className="plan-subscriptions">
-                                <i className="bi bi-people"></i>
-                                <span>{getActiveSubscriptions(plan.package_type)} active subscriptions</span>
-                            </div>
-
-                            <div className="plan-features">
-                                <h4>Features:</h4>
-                                <ul>
-                                    
-                                    <li>
-                                        <strong>Active Users:</strong> {getActiveSubscriptions(plan.package_type)}
-                                    </li>
-
-                                    {parseFeatures(plan.features).map((feature, index) => (
-                                        <li key={index}>{feature}</li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="plan-actions">
-                                <button
-                                    className="btn btn-outline btn-sm"
-                                    onClick={() => startEditing(plan)}
-                                >
-                                    <i className="bi bi-pencil"></i> Edit
-                                </button>
-                            </div>
+                <>
+                    <div className="package-category-selector">
+                        <div className="selector-buttons">
+                            <button
+                                className={`category-btn ${packageCategory === 'personal' ? 'active' : ''}`}
+                                onClick={() => {
+                                    console.log('Switching to personal packages');
+                                    setPackageCategory('personal');
+                                }}
+                            >
+                                <i className="bi bi-person"></i> Personal Packages
+                            </button>
+                            <button
+                                className={`category-btn ${packageCategory === 'business' ? 'active' : ''}`}
+                                onClick={() => {
+                                    console.log('Switching to business packages');
+                                    setPackageCategory('business');
+                                }}
+                            >
+                                <i className="bi bi-building"></i> Business Packages
+                            </button>
                         </div>
-                    ))}
+                    </div>
+                    <div className="pricing-plans-grid">
+    {console.log('DEBUG - Current state:', {
+        packageCategory,
+        allPlansCount: allPlans.length,
+        businessPlansCount: businessPlans.length,
+        businessPlansData: businessPlans
+    })}
+
+    {/* Show empty message for business plans */}
+    {packageCategory === 'business' && businessPlans.length === 0 && (
+        <div className="empty-state">
+            <i className="bi bi-building"></i>
+            <h3>No Business Packages Found</h3>
+            <p>Check browser console for debugging information</p>
+            <button 
+                className="btn btn-primary" 
+                onClick={fetchBusinessPlans}
+                style={{ marginTop: '10px' }}
+            >
+                Retry Loading Business Plans
+            </button>
+        </div>
+    )}
+
+    {/* Render plans based on category */}
+    {(packageCategory === 'personal' ? allPlans : businessPlans).map(plan => {
+        console.log('Rendering plan:', plan);
+        
+        // For debugging: Log the features
+        console.log('Plan features raw:', plan.features);
+        console.log('Parsed features:', parseFeatures(plan.features));
+        
+        return (
+            <div key={plan.package_id || plan.id} className="pricing-plan-card">
+                <div className="plan-header">
+                    <h3>
+                        {/* Handle both naming conventions */}
+                        {formatPlanName(plan.package_type || plan.name)}
+                    </h3>
+                    <span className="plan-status active">Active</span>
                 </div>
+
+                <div className="plan-price">
+                    <span className="price-amount">R{plan.price || '0.00'}</span>
+                    <span className="price-interval"></span>
+                </div>
+
+                <div className="plan-subscriptions">
+                    <i className="bi bi-people"></i>
+                    <span>
+                        {/* Use plan.name for business, plan.package_type for personal */}
+                        {getActiveSubscriptions(plan.package_type || plan.name)} active subscriptions
+                    </span>
+                </div>
+
+                <div className="plan-features">
+                    <h4>Features:</h4>
+                    <ul>
+                        <li>
+                            <strong>Max Guests:</strong> {plan.max_guests || 'Unlimited'}
+                        </li>
+                        <li>
+                            <strong>Max Events:</strong> {plan.max_events || 'Unlimited'}
+                        </li>
+                        {parseFeatures(plan.features).map((feature, index) => (
+                            <li key={index}>{feature}</li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="plan-actions">
+                    <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => startEditing(plan)}
+                    >
+                        <i className="bi bi-pencil"></i> Edit
+                    </button>
+                </div>
+            </div>
+        );
+    })}
+</div>
+                </>
             ) : (
                 <div className="payment-history-section">
                     <div className="revenue-stats-grid">
@@ -3873,12 +4054,32 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                         <div className="modal-body">
                             <div className="form-grid">
                                 <div className="form-group">
+                                    <label>Package Name *</label>
+                                    <input 
+                                        type="text" 
+                                        value={editForm.name || editForm.package_type} 
+                                        onChange={(e) => handleEditChange('name', e.target.value)} 
+                                        placeholder="Enter package name" 
+                                    />
+                                </div>
+                                <div className="form-group">
                                     <label>Package Type *</label>
                                     <select value={editForm.package_type} onChange={(e) => handleEditChange('package_type', e.target.value)}>
-                                        <option value="free">Free</option>
-                                        <option value="basic">Basic</option>
-                                        <option value="premium">Premium</option>
-                                        <option value="enterprise">Enterprise</option>
+                                        {packageCategory === 'personal' ? (
+                                            <>
+                                                <option value="free">Free</option>
+                                                <option value="basic">Basic</option>
+                                                <option value="premium">Premium</option>
+                                                <option value="enterprise">Enterprise</option>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value="starter">Starter</option>
+                                                <option value="intermediate">Intermediate</option>
+                                                <option value="advance">Advance</option>
+                                                <option value="advance_plus">Advance Plus</option>
+                                            </>
+                                        )}
                                     </select>
                                 </div>
                                 <div className="form-group">
@@ -3886,8 +4087,8 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <input type="number" value={editForm.max_guests} onChange={(e) => handleEditChange('max_guests', e.target.value)} placeholder="Enter max guests" />
                                 </div>
                                 <div className="form-group">
-                                    <label>Max Events *</label>
-                                    <input type="number" value={editForm.max_events} onChange={(e) => handleEditChange('max_events', e.target.value)} placeholder="Enter max events" />
+                                    <label>Max Events</label>
+                                    <input type="number" value={editForm.max_events} onChange={(e) => handleEditChange('max_events', e.target.value)} placeholder="Enter max events (optional)" />
                                 </div>
                                 <div className="form-group">
                                     <label>Price (R) *</label>
@@ -3958,7 +4159,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 <button
                                     className="btn btn-primary"
                                     onClick={savePackage}
-                                    disabled={!editForm.package_type || !editForm.max_guests || !editForm.max_events || !editForm.price || !editForm.features.trim()}
+                                    disabled={
+                                        !editForm.package_type || 
+                                        !editForm.price || 
+                                        !editForm.features.trim() ||
+                                        !editForm.max_guests
+                                    }
                                 >
                                     Save Changes
                                 </button>
@@ -4147,6 +4353,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         </div>
     );
 };
+
 // Users Tab Content with Logging - FIXED LINKED LIST IMPLEMENTATION
 const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printAlert }) => {
     const [users, setUsers] = useState([]);

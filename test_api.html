@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Business Packages API</title>
+</head>
+<body>
+    <h1>Testing Business Packages API</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Loading...';
+
+            try {
+                const response = await fetch('http://localhost/eventa/src/pages/php/query.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'getBusinessPackages'
+                    })
+                });
+
+                const data = await response.json();
+                resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+
+                if (data.success && data.packages) {
+                    resultDiv.innerHTML += '<h2>Packages found: ' + data.packages.length + '</h2>';
+                    data.packages.forEach(pkg => {
+                        resultDiv.innerHTML += '<p>' + pkg.name + ' - R' + pkg.price + '</p>';
+                    });
+                } else {
+                    resultDiv.innerHTML += '<h2>No packages found or API error</h2>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<h2>Error: ' + error.message + '</h2>';
+            }
+        }
+    </script>
+</body>
+</html>

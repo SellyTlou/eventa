@@ -839,7 +839,7 @@ const Manage_my_event = () => {
                             <div className="package-details">
                                 <p><strong>Max Guests:</strong> {selectedPackage.maxGuest === Infinity ? "Unlimited" : selectedPackage.maxGuest}</p>
                                 <p><strong>Max Events:</strong> {selectedPackage.maxEvents === Infinity ? "Unlimited" : selectedPackage.maxEvents}</p>
-                                <p><strong>Price:</strong> {selectedPackage.price === 0 ? "Free" : `R${selectedPackage.price}`}</p>
+                                <p><strong>Price:</strong> R{selectedPackage.price}</p>
                                 <div className="features-list">
                                     <h4>Features:</h4>
                                     <ul>

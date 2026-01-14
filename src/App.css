@@ -2022,14 +2022,7 @@ Pricing Page Styling - PAGE SPECIFIC
   font-weight: 600;
 }
 
-.pricing-page .save-badge {
-  background: linear-gradient(135deg, #6f2da8);
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
+
 
 .pricing-page .switch {
   position: relative;

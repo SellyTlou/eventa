@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "../App.css";
 import "../responce.css";
 import { Navbar, Footer, Login } from "./components";
@@ -14,6 +14,7 @@ function Pricing() {
 
     // New state for pricing plans
     const [pricingPlans, setPricingPlans] = useState([]);
+    const [businessPlans, setBusinessPlans] = useState([]);
     const [loadingPricing, setLoadingPricing] = useState(true);
 
     useEffect(() => {
@@ -26,6 +27,7 @@ function Pricing() {
 
         // Fetch pricing plans when component mounts
         fetchPricingPlans();
+        fetchBusinessPlans();
 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -53,7 +55,7 @@ function Pricing() {
                     "Priority support",
                     "Advanced RSVP analytics"
                 ];
-            case 'enterprise':
+            case 'advanced':
                 return [
                     ...baseFeatures,
                     "Dedicated account manager",
@@ -76,19 +78,9 @@ function Pricing() {
     const getDefaultPricingPlans = () => {
         return [
             {
-                id: 0,
-                name: "FREE",
-                price: "Free",
-                duration: "per month",
-                max_guests: 50,
-                max_events: 4,
-                features: getDefaultFeatures('basic', 50, 4),
-                isPopular: false
-            },
-            {
                 id: 1,
                 name: "Basic",
-                price: "Free",
+                price: "R50",
                 duration: "per month",
                 max_guests: 250,
                 max_events: 5,
@@ -107,12 +99,12 @@ function Pricing() {
             },
             {
                 id: 3,
-                name: "Enterprise",
+                name: "Advanced",
                 price: "R750",
                 duration: "per month",
                 max_guests: 1000,
                 max_events: 50,
-                features: getDefaultFeatures('enterprise', 1000, 50),
+                features: getDefaultFeatures('advanced', 1000, 50),
                 isPopular: false
             }
         ];
@@ -120,7 +112,7 @@ function Pricing() {
 
     const fetchPricingPlans = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
             const formData = new FormData();
             formData.append("function", "getAllPackages");
 
@@ -137,10 +129,9 @@ function Pricing() {
             if (data.success && data.packages) {
                 // Base feature limits - hardcoded per plan type
                 const baseFeatureLimits = {
-                    'free': { max_guests: 50, max_events: 4 },
                     'basic': { max_guests: 250, max_events: 5 },
                     'premium': { max_guests: 1700, max_events: 20 },
-                    'enterprise': { max_guests: 1000, max_events: 50 }
+                    'advanced': { max_guests: 1000, max_events: 50 }
                 };
 
                 const formattedPlans = data.packages.map(pkg => {
@@ -171,6 +162,44 @@ function Pricing() {
         }
     };
 
+    const fetchBusinessPlans = async () => {
+        try {
+            console.log('Fetching business plans from pricing.js...');
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ action: 'getBusinessPackages' })
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+            console.log("Business plans data from pricing.js:", data);
+
+            if (data.success && data.packages) {
+                const formattedBusinessPlans = data.packages.map(pkg => ({
+                    id: pkg.id,
+                    name: pkg.name,
+                    monthlyPrice: pkg.price > 0 ? `R${pkg.price}` : 'Contact Sales',
+                    yearlyPrice: pkg.price > 0 ? `R${Math.round(pkg.price * 12 * 0.8)}` : 'Contact Sales', // 20% discount
+                    description: `Perfect for ${pkg.name.toLowerCase()}`,
+                    isPopular: pkg.package_type === 'advance',
+                    features: Array.isArray(pkg.features) ? pkg.features : JSON.parse(pkg.features || '[]'),
+                    ctaText: pkg.price > 0 ? "Get started" : "Contact Sales",
+                    ctaVariant: pkg.package_type === 'advance' ? "btn-create" : "btn-demo",
+                    isContactSales: pkg.price === 0 || pkg.price === '0.00'
+                }));
+                console.log('Setting business plans:', formattedBusinessPlans);
+                setBusinessPlans(formattedBusinessPlans);
+            } else {
+                console.error('Failed to fetch business plans from pricing.js:', data.message);
+            }
+        } catch (err) {
+            console.error("Error fetching business plans from pricing.js:", err);
+        }
+    };
+
     const handleLoginClick = () => {
         setLoginMode("login");
         setIsLoginOpen(true);
@@ -194,7 +223,8 @@ function Pricing() {
     };
 
     // Updated pricing categories using API data
-    const pricingCategories = {
+    console.log('pricingCategories Business plans:', businessPlans);
+    const pricingCategories = useMemo(() => ({
         "Personal Events": pricingPlans.map(plan => ({
             name: plan.name,
             monthlyPrice: plan.price,
@@ -205,49 +235,62 @@ function Pricing() {
             ctaText: plan.price === "Free" ? "Get started for free" : "Get started",
             ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
         })),
-        "Business": [
-            ...pricingPlans.filter(plan => plan.name.toLowerCase() !== 'free').map(plan => {
-                // Override guest counts for Business tab
-                let businessFeatures = plan.features;
-                if (plan.name.toLowerCase() === 'premium') {
-                    businessFeatures = plan.features.map(f => 
-                        f.includes('Up to') && f.includes('guests') ? 'Up to 1500 guests per event' : f
-                    );
-                } else if (plan.name.toLowerCase() === 'enterprise') {
-                    businessFeatures = plan.features.map(f => 
-                        f.includes('Up to') && f.includes('guests') ? 'Up to 1000 guests per event' : f
-                    );
-                }
-                return {
-                    name: plan.name,
-                    monthlyPrice: plan.price,
-                    yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
-                    description: `For ${plan.name.toLowerCase()} business needs`,
-                    isPopular: plan.isPopular,
-                    features: businessFeatures,
-                    ctaText: "Get started",
-                    ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
-                };
-            }),
+        "Business": businessPlans.length > 0 ? businessPlans.map(plan => {
+            console.log('Mapping business plan:', plan);
+            return {
+                name: plan.name,
+                monthlyPrice: plan.monthlyPrice,
+                yearlyPrice: plan.yearlyPrice,
+                description: plan.description,
+                isPopular: plan.isPopular,
+                features: plan.features,
+                ctaText: plan.ctaText,
+                ctaVariant: plan.ctaVariant,
+                isContactSales: plan.isContactSales
+            };
+        }) : [
             {
-                name: "Get in Touch",
-                monthlyPrice: "Custom",
-                yearlyPrice: "Custom",
+                name: "STARTER PLAN",
+                monthlyPrice: "R649.00",
+                yearlyPrice: "R7788.00",
+                description: "Perfect for starter business events",
+                isPopular: true,
+                features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
+                ctaText: "Get started",
+                ctaVariant: "btn-create",
+                isContactSales: false
+            },
+            {
+                name: "INTERMEDIATE PLAN",
+                monthlyPrice: "R2149.00",
+                yearlyPrice: "R25788.00",
+                description: "Perfect for intermediate business events",
+                isPopular: false,
+                features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
+                ctaText: "Get started",
+                ctaVariant: "btn-demo",
+                isContactSales: false
+            },
+            {
+                name: "ADVANCE PLAN",
+                monthlyPrice: "R6999.00",
+                yearlyPrice: "R83988.00",
+                description: "Perfect for advance business events",
+                isPopular: false,
+                features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In"],
+                ctaText: "Get started",
+                ctaVariant: "btn-demo",
+                isContactSales: false
+            },
+            {
+                name: "ADVANCE PLUS PLAN",
+                monthlyPrice: "Contact Sales",
+                yearlyPrice: "Contact Sales",
                 description: "For large-scale business events",
                 isPopular: false,
-                features: [
-                    "Manage large-scale events",
-                    "Your brand, ad-free",
-                    "Custom data fields",
-                    "Custom fonts",
-                    "Email whitelabeling",
-                    "Self check-in kiosk",
-                    "Single sign-on (SSO)",
-                    "Priority support",
-                    "Dedicated Account Manager"
-                ],
-                ctaText: "Coming soon",
-                ctaVariant: "btn-create",
+                features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
+                ctaText: "Contact Sales",
+                ctaVariant: "btn-demo",
                 isContactSales: true
             }
         ],
@@ -288,7 +331,7 @@ function Pricing() {
                 ctaVariant: "btn-create"
             },
             {
-                name: "Enterprise",
+                name: "Advanced",
                 monthlyPrice: "R99.99",
                 yearlyPrice: "R599.94",
                 description: "For professional ticketing",
@@ -306,16 +349,16 @@ function Pricing() {
                 ctaVariant: "btn-create"
             }
         ]
-    };
+    }), [pricingPlans, businessPlans]);
 
     const faqItems = [
         {
-            question: "What features can I use for free?",
-            answer: "Our Basic plan includes basic event creation, up to 50 guests per event, 5 events total, email invitations, RSVP tracking, and essential event management tools. It's perfect for small personal events and gatherings."
+            question: "What does the Basic plan include?",
+            answer: "Our Basic plan at R50/month includes event creation, up to 250 guests per event, 5 events total, email invitations, RSVP tracking, and essential event management tools. It's perfect for small to medium personal events and gatherings."
         },
         {
             question: "Do you offer a free trial?",
-            answer: "No, Instead of locking you into monthly subscriptions, we believe in paying only for what you use. Each event stands on its own - create basic events for free, and only upgrade to premium features when you need them for specific occasions."
+            answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R50/month to test our features. All plans include a 30-day money-back guarantee if you're not satisfied."
         },
         {
             question: "Do I get a discount if I pay yearly instead of monthly?",
@@ -327,7 +370,7 @@ function Pricing() {
         },
         {
             question: "Can I get a custom plan?",
-            answer: "Certainly! For large enterprises or unique requirements, we offer custom plans. Contact our sales team to discuss your specific needs and get a tailored solution."
+            answer: "Certainly! For large organizations or unique requirements, we offer custom plans. Contact our sales team to discuss your specific needs and get a tailored solution."
         }
     ];
 
@@ -410,7 +453,7 @@ function Pricing() {
                                         <span className="slider round"></span>
                                     </label>
                                     <span className={billingCycle === "yearly" ? "active" : ""}>
-                                        Yearly <span className="save-badge">save 40%</span>
+                                        Yearly <span className="save-badge"></span>
                                     </span>
                                 </div>
                             </div>
@@ -439,8 +482,10 @@ function Pricing() {
                 {activeCategory !== "Selling Tickets" && (
                     <section className={`pricing-cards-section ${activeCategory === 'Business' ? 'business' : ''}`}>
                         <div className="container">
+                            {console.log('Active category:', activeCategory, 'Plans:', pricingCategories[activeCategory])}
                             <div className="row justify-content-center">
-                                {pricingCategories[activeCategory].map((plan, index) => {
+                                {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
+                                    pricingCategories[activeCategory].map((plan, index) => {
                                     const colClass = activeCategory === 'Selling Tickets' ? 'col-lg-4' : 'col-lg-3'; // 4 cards per row for Personal and Business
                                     return (
                                         <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
@@ -507,7 +552,11 @@ function Pricing() {
                                             </div>
                                         </div>
                                     );
-                                })}
+                                })) : (
+                                    <div className="col-12 text-center">
+                                        <p>Loading business packages...</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </section>
