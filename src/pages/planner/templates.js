@@ -1,212 +1,147 @@
 export const templates = {
-  Birthday: [
+  Birthday: [],
+  BabyShower: [],
+
+  Wedding: [
     {
-      id: "bd02_elegant_pro",
-      title: "Elegant Professional",
-      description: "Top photo, bottom event details with icons",
-      image: "https://iili.io/fJY34St.md.png",
+      id: "439:22",
+      title: "Wedding Invitation – Floral",
+      description: "Elegant floral wedding invitation",
+      image: "https://iili.io/f8Pm0l9.png",
 
       data: {
-        bgConfig: {
-          type: "image",
-          value: "https://iili.io/fJ7D35Q.md.png"
-        },
-
-        images: [],
-
         texts: [
           {
-            id: "text-title",
-            text: "Welcome To Selly's Birthday Party",
-            x: 200,
-            y: 320,
-            fontSize: 28,
-            fontFamily: "Georgia",
-            fontStyle: "bold",
-            fill: "#2c3e50",
+            id: "439:30",
+            text: "We joyfully invite you to join us in our wedding",
+            x: 250,
+            y: 110,
+            fontSize: 14,
+            fontFamily: "Jaldi, sans-serif",
+            fill: "#E9456F",
             align: "center",
-            opacity: 1,
-            zIndex: 1000,
-            width: 360
+            rotation: 0,
+            opacity: 0.69,
+            zIndex: 10,
+            type: "text",
+            width: 400,
+            wrap: "word",
+            lineHeight: 1.5
           },
           {
-            id: "text-date",
-            text: "Date : 22 Sep 2015",
-            x: 200,
-            y: 380,
-            fontSize: 18,
-            fontFamily: "Helvetica",
-            fontStyle: "normal",
-            fill: "#34495e",
+            id: "439:28",
+            text: "Marena\n&\nErick",
+            x: 250,
+            y: 165,
+            fontSize: 40,
+            fontFamily: "'Mrs Saint Delafield', cursive",
+            fontWeight: "bolder",
+            fill: "#E9456F",
             align: "center",
+            rotation: 0,
             opacity: 1,
-            zIndex: 1001,
-            width: 300
+            zIndex: 11,
+            type: "text",
+            fontStyle: "italic", 
+            width: 400,
+            wrap: "none",
+            lineHeight: 1.2 
           },
           {
-            id: "text-time",
-            text: "Time: 18:00 - 06:00",
-            x: 200,
-            y: 410,
-            fontSize: 16,
-            fontFamily: "Helvetica",
-            fontStyle: "normal",
-            fill: "#34495e",
+            id: "439:29",
+            text: "at Botanical Gardens on 14 April 2025 at 09:00\nYour presence is cherished",
+            x: 250,
+            y: 290,
+            fontSize: 14,
+            fontFamily: "Jaldi, sans-serif",
+            fill: "#E9456F",
             align: "center",
-            opacity: 1,
-            zIndex: 1002,
-            width: 300
-          },
-          {
-            id: "text-location",
-            text: "Location : ",
-            x: 200,
-            y: 440,
-            fontSize: 16,
-            fontFamily: "Helvetica",
-            fontStyle: "normal",
-            fill: "#34495e",
-            align: "center",
-            opacity: 1,
-            zIndex: 1003,
-            width: 340
+            rotation: 0,
+            opacity: 0.69,
+            zIndex: 10,
+            type: "text",
+            width: 400,
+            wrap: "word",
+            lineHeight: 1.8
           }
         ],
 
-        shapes: [
-          {
-            id: "details-background",
-            shapeType: "rect",
-            x: 0,
-            y: 300,
-            width: 400,
-            height: 200,
-            fill: "#ffffff",
-            opacity: 0.95,
-            zIndex: 10
-          },
-          {
-            id: "divider-line",
-            shapeType: "line",
-            x: 50,
-            y: 300,
-            points: [0, 0, 300, 0],
-            stroke: "#e74c3c",
-            strokeWidth: 2,
-            opacity: 0.8,
-            zIndex: 11
-          }
-        ]
-      }
-    },
-    {
-      id: "bd01_birthday_rose",
-      title: "Selly's Birthday – Rose Frame",
-      description: "Elegant rose frame with centered event info",
-      image: "https://iili.io/fJY34St.md.png",
-
-      data: {
-        bgConfig: {
-          type: "image",
-          value: "https://iili.io/fJ7D35Q.md.png" 
-        },
-        
         images: [
           {
-            id: "rose-left",
-            src: "https://i.ibb.co/rRGdhbxL/image.png", 
-            x: 0,
-            y: 377,
-            width: 126,
-            height: 118,
-            opacity: 0.8,
-            zIndex: 20
+            id: "439:26",
+            src: "https://iili.io/f865AJe.png", // TOP LEFT ROSE - VERIFIED URL
+            x: -50,
+            y: 10,
+            width: 320,
+            height: 300,
+            rotation: -8,
+            opacity: 1,
+            zIndex: 5,
+            type: "image",
+            draggable: false
           },
           {
-            id: "rose-right",
-            src: "https://i.ibb.co/rRGdhbxL/image.png", 
-            x: 264,
-            y: 372,
-            width: 136,
-            height: 128,
-            opacity: 0.8,
-            zIndex: 21
-          }
-        ],
-
-        texts: [
-          {
-            id: "text-title",
-            text: "Welcome To Selly's Birthday Party",
-            x: 200,
-            y: 113,
-            fontSize: 24,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
+            id: "439:27",
+            src: "https://iili.io/f8iB9X1.png", // BOTTOM RIGHT ROSE - VERIFIED URL
+            x: 725,
+            y: 425,
+            width: 280,
+            height: 280,
+            rotation: 158,
             opacity: 1,
-            zIndex: 1000,
-            width: 360
-          },
-          {
-            id: "text-date",
-            text: "Date : 22 Sep 2015",
-            x: 200,
-            y: 203,
-            fontSize: 22,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
-            opacity: 1,
-            zIndex: 1001,
-            width: 300
-          },
-          {
-            id: "text-time",
-            text: "Time: 18:00 - 06:00",
-            x: 200,
-            y: 272,
-            fontSize: 22,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
-            opacity: 1,
-            zIndex: 1002,
-            width: 300
-          },
-          {
-            id: "text-location",
-            text: "Location : 22 smith jozi 25",
-            x: 200,
-            y: 346,
-            fontSize: 22,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
-            opacity: 1,
-            zIndex: 1003,
-            width: 340
+            zIndex: 5,
+            type: "image",
+            draggable: false
           }
         ],
 
         shapes: [
           {
-            id: "elegant-overlay",
+            id: "439:24",
+            shapeType: "circle",
+            x: 250,
+            y: 200,
+            radius: 180,
+            fill: "rgba(255, 255, 255, 0.85)",
+            stroke: "#E9456F",
+            strokeWidth: 2,
+            opacity: 1,
+            zIndex: 3,
+            type: "shape",
+            draggable: false
+          },
+          {
+            id: "background",
             shapeType: "rect",
             x: 0,
             y: 0,
-            width: 600,
-            height: 700,
-            fill: "#000000",
-            opacity: 0.18,
-            zIndex: 10
+            width: 500,
+            height: 400,
+            fill: "rgba(251, 231, 225, 0.85)",
+            rotation: 0,
+            opacity: 1,
+            zIndex: 1,
+            type: "shape",
+            draggable: false
           }
-        ]
+        ],
+
+        bgConfig: {
+          type: "color",
+          value: "rgba(251, 231, 225, 0.85)"
+        }
+      },
+
+      design: {
+        id: "439:22",
+        name: "Wedding invitation2",
+        type: "FRAME",
+        properties: {
+          size: { width: 500, height: 400 }
+        }
       }
     }
-  ]
+  ],
+
+  Graduation: []
 };
