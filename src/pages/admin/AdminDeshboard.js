@@ -3456,7 +3456,7 @@ const parseFeatures = (features) => {
             const isBusinessPackage = packageCategory === 'business';
 
             if (isBusinessPackage) {
-                formData.append('action', 'updateBusinessPackage');
+                formData.append('function', 'updateBusinessPackage');
                 formData.append('id', editingPlan);
                 formData.append('package_type', editForm.package_type);
                 formData.append('name', editForm.name || editForm.package_type);

@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react"
 import { NavLink } from "react-router-dom";
 import { useNavigate, Routes, Route, useLocation } from "react-router-dom";
 import { canUseFeature } from "./utils/packageFeatures";
+import ReCAPTCHA from "react-google-recaptcha";
+
 
 // Import your pages
 import Index from './index';
@@ -608,6 +610,8 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [unverifiedEmail, setUnverifiedEmail] = useState('');
     const [showSecurityModal, setShowSecurityModal] = useState(false);
     const [securityAnswers, setSecurityAnswers] = useState(null);
+    const [recaptchaToken, setRecaptchaToken] = useState(null);
+    const recaptchaRef = useRef(null);
 
     const navigate = useNavigate();
 
@@ -625,6 +629,11 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             setNeedsVerification(false);
             setUnverifiedEmail('');
             setSecurityAnswers(null);
+            setRecaptchaToken(null);
+            // Reset reCAPTCHA if ref exists
+            if (recaptchaRef.current) {
+                recaptchaRef.current.reset();
+            }
         }
     }, [isOpen, defaultMode]);
 
@@ -636,6 +645,39 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         setTimeout(() => {
             setAlert({ show: false, message: '', type: '' });
         }, 5000);
+    };
+
+    // Handle reCAPTCHA change
+    const handleRecaptchaChange = (token) => {
+        setRecaptchaToken(token);
+    };
+
+    // Handle reCAPTCHA expiration
+    const handleRecaptchaExpired = () => {
+        setRecaptchaToken(null);
+    };
+
+    const verifyRecaptcha = async () => {
+        if (!recaptchaToken) {
+            return { success: false, message: "Please complete the reCAPTCHA verification" };
+        }
+
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append('g-recaptcha-response', recaptchaToken);
+
+            const response = await fetch(`${API_URL}/verify_recaptcha.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error("reCAPTCHA verification error:", error);
+            return { success: false, message: "Failed to verify reCAPTCHA" };
+        }
     };
 
     const sendVerificationEmail = async (email, name) => {
@@ -747,6 +789,8 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 formDataToSend.append("password", formData.password);
             }
 
+            // Add reCAPTCHA token to the request
+            formDataToSend.append("recaptcha_token", recaptchaToken);
 
             console.log("Sending request to:", API_URL);
             const url = `${API_URL}/query.php`;
@@ -872,6 +916,19 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         setLoading(true);
         e.preventDefault();
 
+        // Verify reCAPTCHA first
+        const recaptchaResult = await verifyRecaptcha();
+        if (!recaptchaResult.success) {
+            printAlert(recaptchaResult.message, 'error');
+            setLoading(false);
+            // Reset reCAPTCHA
+            if (recaptchaRef.current) {
+                recaptchaRef.current.reset();
+                setRecaptchaToken(null);
+            }
+            return;
+        }
+
         if (isLogin) {
             await completeRegistration();
         } else {
@@ -960,6 +1017,11 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         setNeedsVerification(false);
         setUnverifiedEmail('');
         setSecurityAnswers(null);
+        setRecaptchaToken(null);
+        // Reset reCAPTCHA
+        if (recaptchaRef.current) {
+            recaptchaRef.current.reset();
+        }
     };
 
     const closeAlert = () => {
@@ -1091,6 +1153,17 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         </div>
                     )}
 
+                    {/* reCAPTCHA Component */}
+                    <div className="form-group recaptcha-container">
+                        <ReCAPTCHA
+                            ref={recaptchaRef}
+                            sitekey="6LdQzUgsAAAAAEK8OoRU4uUgN6evv10JSm06gx1V"
+                            onChange={handleRecaptchaChange}
+                            onExpired={handleRecaptchaExpired}
+                            theme="light"
+                        />
+                    </div>
+
                     {isLogin && (
                         <div className="login-options">
                             <label className="remember-me">
@@ -1121,7 +1194,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         </div>
                     )}
 
-                    <button type="submit" className="login-submit-btn" disabled={loading}>
+                    <button type="submit" className="login-submit-btn" disabled={loading || !recaptchaToken}>
                         {loading ? 'Please Wait...' : (isLogin ? 'Sign In' : 'Create Account')}
                     </button>
                 </form>
@@ -1147,6 +1220,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         </div>
     );
 }
+
 
 // Helper: fetch with timeout to avoid hanging requests
 const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {

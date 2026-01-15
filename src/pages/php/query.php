@@ -362,6 +362,88 @@ function getTotalCount($pdo, $table)
         return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
     }
 
+function verifyRecaptcha($secretKey, $responseToken) {
+    error_log("=== reCAPTCHA DEBUG START ===");
+    error_log("Received token: " . substr($responseToken, 0, 50) . "...");
+    error_log("Token length: " . strlen($responseToken));
+    
+    if (empty($responseToken)) {
+        error_log("ERROR: Empty token received");
+        error_log("=== reCAPTCHA DEBUG END ===");
+        return ['success' => false, 'message' => 'No reCAPTCHA token provided'];
+    }
+    
+    $url = 'https://www.google.com/recaptcha/api/siteverify';
+    $data = [
+        'secret' => $secretKey,
+        'response' => $responseToken,
+        'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+    ];
+    
+    error_log("Sending to Google with secret: " . substr($secretKey, 0, 10) . "...");
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => http_build_query($data),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/x-www-form-urlencoded'
+        ],
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    
+    error_log("cURL HTTP Code: " . $httpCode);
+    
+    if (curl_errno($ch)) {
+        error_log("cURL Error: " . $curlError);
+        curl_close($ch);
+        error_log("=== reCAPTCHA DEBUG END ===");
+        return ['success' => false, 'message' => 'Failed to contact reCAPTCHA service'];
+    }
+    
+    curl_close($ch);
+    
+    error_log("Google Response: " . $response);
+    
+    if ($response === FALSE) {
+        error_log("ERROR: Empty response from Google");
+        error_log("=== reCAPTCHA DEBUG END ===");
+        return ['success' => false, 'message' => 'Failed to contact reCAPTCHA service'];
+    }
+    
+    $responseData = json_decode($response, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("JSON Parse Error: " . json_last_error_msg());
+        error_log("=== reCAPTCHA DEBUG END ===");
+        return ['success' => false, 'message' => 'Invalid response from reCAPTCHA service'];
+    }
+    
+    error_log("Google Response Data: " . print_r($responseData, true));
+    
+    if ($responseData['success'] === true) {
+        error_log("SUCCESS: reCAPTCHA verified");
+        error_log("=== reCAPTCHA DEBUG END ===");
+        return $responseData;
+    } else {
+        $errorCodes = $responseData['error-codes'] ?? ['unknown-error'];
+        error_log("FAILED: reCAPTCHA errors: " . print_r($errorCodes, true));
+        error_log("=== reCAPTCHA DEBUG END ===");
+        return [
+            'success' => false, 
+            'message' => 'reCAPTCHA verification failed: ' . implode(', ', $errorCodes),
+            'error-codes' => $errorCodes
+        ];
+    }
+} 
+
 if (! isset($_POST['function'])) {
     echo json_encode(["error" => "No function specified"]);
     exit;
@@ -370,11 +452,23 @@ if (! isset($_POST['function'])) {
 $fun = $_POST['function'];
 
     if ($fun === "register") {
+
+        $recaptchaToken = $_POST['recaptcha_token'] ?? '';
+        $recaptchaSecret = "6LdQzUgsAAAAAEKAwBDIoLmTSxMRPSikQKAWwNVN";
+
+        // Verify reCAPTCHA
+        $recaptchaResult = verifyRecaptcha($recaptchaSecret, $recaptchaToken);
+        if (!$recaptchaResult['success']) {
+            echo json_encode(["success" => false, "message" => "reCAPTCHA verification failed. Please complete the 'I'm not a robot' checkbox."]);
+            exit;
+        }
+
         $name     = $_POST['name'] ?? '';
         $lastname = $_POST['lastname'] ?? '';
         $email    = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
         $userID   = generateUserID($pdo);
+
 
         if (! $name || ! $lastname || ! $email || ! $password) {
             echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -506,8 +600,22 @@ $fun = $_POST['function'];
     }
 
     if ($fun === "login") {
+
+        
+        $recaptchaToken = $_POST['recaptcha_token'] ?? '';
+        $recaptchaSecret = "6LdQzUgsAAAAAEKAwBDIoLmTSxMRPSikQKAWwNVN";
+
+        // Verify reCAPTCHA
+        $recaptchaResult = verifyRecaptcha($recaptchaSecret, $recaptchaToken);
+        if (!$recaptchaResult['success']) {
+            echo json_encode(["success" => false, "message" => "reCAPTCHA verification failed. Please complete the 'I'm not a robot' checkbox."]);
+            exit;
+        }
+        
+
         $email    = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
+
 
         try {
             $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
@@ -4585,9 +4693,9 @@ $fun = $_POST['function'];
             $stmt->execute();
             $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Parse features JSON
+            // Features are stored as comma-separated strings, no need to decode
             foreach ($packages as &$package) {
-                $package['features'] = json_decode($package['features'], true) ?? [];
+                // Keep as string
             }
 
             echo json_encode(["success" => true, "packages" => $packages]);
@@ -4612,8 +4720,7 @@ $fun = $_POST['function'];
         }
 
         try {
-            $features_json = json_encode(is_array($features) ? $features : [$features]);
-
+            // Features are stored as comma-separated string
             $stmt = $pdo->prepare("UPDATE business_packages SET
                                    package_type = :package_type,
                                    name = :name,
@@ -4631,7 +4738,7 @@ $fun = $_POST['function'];
                 ':price' => $price,
                 ':max_guests' => $max_guests,
                 ':max_events' => $max_events,
-                ':features' => $features_json
+                ':features' => $features
             ]);
 
             if ($stmt->rowCount() > 0) {

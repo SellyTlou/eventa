@@ -169,7 +169,7 @@ function Pricing() {
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ action: 'getBusinessPackages' })
+                body: new URLSearchParams({ function: 'getBusinessPackages' })
             });
 
             if (!response.ok) throw new Error("Network response was not ok");
@@ -185,8 +185,8 @@ function Pricing() {
                     yearlyPrice: pkg.price > 0 ? `R${Math.round(pkg.price * 12 * 0.8)}` : 'Contact Sales', // 20% discount
                     description: `Perfect for ${pkg.name.toLowerCase()}`,
                     isPopular: pkg.package_type === 'advance',
-                    features: Array.isArray(pkg.features) ? pkg.features : JSON.parse(pkg.features || '[]'),
-                    ctaText: pkg.price > 0 ? "Get started" : "Contact Sales",
+                    features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : [],
+                    ctaText: pkg.package_type === 'advance_plus' ? "GET IN TOUCH" : (pkg.price > 0 ? "Get started" : "Contact Sales"),
                     ctaVariant: pkg.package_type === 'advance' ? "btn-create" : "btn-demo",
                     isContactSales: pkg.price === 0 || pkg.price === '0.00'
                 }));

@@ -8983,3 +8983,48 @@ body,
     width: 100%;
   }
 }
+.recaptcha-container {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.recaptcha-container > div {
+    margin: 0 auto;
+}
+
+/* Disable submit button when no reCAPTCHA */
+.login-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* reCAPTCHA Styling */
+.recaptcha-container {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.grecaptcha-badge {
+    visibility: visible !important;
+}
+
+/* Optional: Custom styling for the reCAPTCHA container */
+.login-form .g-recaptcha > div > div {
+    margin: 0 auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .recaptcha-container {
+        transform: scale(0.85);
+        transform-origin: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .recaptcha-container {
+        transform: scale(0.75);
+    }
+}
