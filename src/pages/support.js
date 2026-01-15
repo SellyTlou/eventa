@@ -88,21 +88,6 @@ function Support() {
                         <div className="features-row">
                             <div className="feature-card col-lg-4 col-md-6 col-12">
                                 <div className="feature-icon">
-                                    <i className="bi bi-chat-dots"></i>
-                                </div>
-                                <h4>Live Chat</h4>
-                                <p>
-                                    Get instant help from our support team through live chat. Available 24/7 for all your urgent queries.
-                                </p>
-                                <button 
-                                    className="btn btn-view-more"
-                                    onClick={handleMaintenanceClick}
-                                >
-                                    Start Chat
-                                </button>
-                            </div>
-                            <div className="feature-card col-lg-4 col-md-6 col-12">
-                                <div className="feature-icon">
                                     <i className="bi bi-envelope"></i>
                                 </div>
                                 <h4>Email Support</h4>

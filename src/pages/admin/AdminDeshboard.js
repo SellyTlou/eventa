@@ -1568,6 +1568,7 @@ function AdminDashboard() {
                                 {activeTab === "invitations" && "Invitation Analytics"}
                                 {activeTab === "pricing" && "Pricing Management"}
                                 {activeTab === "users" && "User Administration"}
+                                {activeTab === "tickets" && "Support Tickets"}
                             </h1>
                             <div className="admin-header-actions">
                                 <div className="profile-section">
