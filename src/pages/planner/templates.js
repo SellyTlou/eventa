@@ -1,210 +1,312 @@
 export const templates = {
-  Birthday: [
+  Birthday: [],
+  BabyShower: [],
+  
+  Wedding: [
     {
-      id: "bd02_elegant_pro",
-      title: "Elegant Professional",
-      description: "Top photo, bottom event details with icons",
-      image: "https://iili.io/fJY34St.md.png",
+      id: "439:22",
+      title: "Wedding Invitation – Floral",
+      description: "Elegant floral wedding invitation",
+      image: "https://iili.io/f8Pm0l9.png",
 
       data: {
-        bgConfig: {
-          type: "image",
-          value: "https://iili.io/fJ7D35Q.md.png"
-        },
-
-        images: [],
-
         texts: [
           {
-            id: "text-title",
-            text: "Welcome To Selly's Birthday Party",
-            x: 200,
-            y: 320,
-            fontSize: 28,
-            fontFamily: "Georgia",
-            fontStyle: "bold",
-            fill: "#2c3e50",
+            id: "439:30",
+            text: "We joyfully invite you to join us in our wedding",
+            x: 250,
+            y: 110,
+            fontSize: 14,
+            fontFamily: "Jaldi, sans-serif",
+            fill: "#E9456F",
             align: "center",
-            opacity: 1,
-            zIndex: 1000,
-            width: 360
+            rotation: 0,
+            opacity: 0.69,
+            zIndex: 10,
+            type: "text",
+            width: 400,
+            wrap: "word",
+            lineHeight: 1.5
           },
           {
-            id: "text-date",
-            text: "Date : 22 Sep 2015",
-            x: 200,
-            y: 380,
-            fontSize: 18,
-            fontFamily: "Helvetica",
-            fontStyle: "normal",
-            fill: "#34495e",
+            id: "439:28",
+            text: "Marena\n&\nErick",
+            x: 250,
+            y: 165,
+            fontSize: 40,
+            fontFamily: "'Mrs Saint Delafield', cursive",
+            fontWeight: "bolder",
+            fill: "#E9456F",
             align: "center",
+            rotation: 0,
             opacity: 1,
-            zIndex: 1001,
-            width: 300
+            zIndex: 11,
+            type: "text",
+            fontStyle: "italic",
+            width: 400,
+            wrap: "none",
+            lineHeight: 1.2
           },
           {
-            id: "text-time",
-            text: "Time: 18:00 - 06:00",
-            x: 200,
-            y: 410,
-            fontSize: 16,
-            fontFamily: "Helvetica",
-            fontStyle: "normal",
-            fill: "#34495e",
+            id: "439:29",
+            text: "at Botanical Gardens on 14 April 2025 at 09:00\nYour presence is cherished",
+            x: 250,
+            y: 290,
+            fontSize: 14,
+            fontFamily: "Jaldi, sans-serif",
+            fill: "#E9456F",
             align: "center",
-            opacity: 1,
-            zIndex: 1002,
-            width: 300
-          },
-          {
-            id: "text-location",
-            text: "Location : ",
-            x: 200,
-            y: 440,
-            fontSize: 16,
-            fontFamily: "Helvetica",
-            fontStyle: "normal",
-            fill: "#34495e",
-            align: "center",
-            opacity: 1,
-            zIndex: 1003,
-            width: 340
+            rotation: 0,
+            opacity: 0.69,
+            zIndex: 10,
+            type: "text",
+            width: 400,
+            wrap: "word",
+            lineHeight: 1.8
           }
         ],
 
-        shapes: [
-          {
-            id: "details-background",
-            shapeType: "rect",
-            x: 0,
-            y: 300,
-            width: 400,
-            height: 200,
-            fill: "#ffffff",
-            opacity: 0.95,
-            zIndex: 10
-          },
-          {
-            id: "divider-line",
-            shapeType: "line",
-            x: 50,
-            y: 300,
-            points: [0, 0, 300, 0],
-            stroke: "#e74c3c",
-            strokeWidth: 2,
-            opacity: 0.8,
-            zIndex: 11
-          }
-        ]
-      }
-    },
-    {
-      id: "bd01_birthday_rose",
-      title: "Selly's Birthday – Rose Frame",
-      description: "Elegant rose frame with centered event info",
-      image: "https://iili.io/fJY34St.md.png",
-
-      data: {
-        bgConfig: {
-          type: "image",
-          value: "https://iili.io/fJ7D35Q.md.png" 
-        },
-        
         images: [
           {
-            id: "rose-left",
-            src: "https://i.ibb.co/rRGdhbxL/image.png", 
-            x: 0,
-            y: 377,
-            width: 126,
-            height: 118,
-            opacity: 0.8,
-            zIndex: 20
+            id: "439:26",
+            src: "https://iili.io/f865AJe.png",
+            x: -50,
+            y: 10,
+            width: 320,
+            height: 300,
+            rotation: -8,
+            opacity: 1,
+            zIndex: 5,
+            type: "image",
+            draggable: false
           },
           {
-            id: "rose-right",
-            src: "https://i.ibb.co/rRGdhbxL/image.png", 
-            x: 264,
-            y: 372,
-            width: 136,
-            height: 128,
-            opacity: 0.8,
-            zIndex: 21
-          }
-        ],
-
-        texts: [
-          {
-            id: "text-title",
-            text: "Welcome To Selly's Birthday Party",
-            x: 200,
-            y: 113,
-            fontSize: 24,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
+            id: "439:27",
+            src: "https://iili.io/f8iB9X1.png",
+            x: 725,
+            y: 425,
+            width: 280,
+            height: 280,
+            rotation: 158,
             opacity: 1,
-            zIndex: 1000,
-            width: 360
-          },
-          {
-            id: "text-date",
-            text: "Date : 22 Sep 2015",
-            x: 200,
-            y: 203,
-            fontSize: 22,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
-            opacity: 1,
-            zIndex: 1001,
-            width: 300
-          },
-          {
-            id: "text-time",
-            text: "Time: 18:00 - 06:00",
-            x: 200,
-            y: 272,
-            fontSize: 22,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
-            opacity: 1,
-            zIndex: 1002,
-            width: 300
-          },
-          {
-            id: "text-location",
-            text: "Location : 22 smith jozi 25",
-            x: 200,
-            y: 346,
-            fontSize: 22,
-            fontFamily: "Inter",
-            fontStyle: "bold",
-            fill: "#B729A6",
-            align: "center",
-            opacity: 1,
-            zIndex: 1003,
-            width: 340
+            zIndex: 5,
+            type: "image",
+            draggable: false
           }
         ],
 
         shapes: [
           {
-            id: "elegant-overlay",
+            id: "439:24",
+            shapeType: "circle",
+            x: 250,
+            y: 200,
+            radius: 180,
+            fill: "rgba(255, 255, 255, 0.85)",
+            stroke: "#E9456F",
+            strokeWidth: 2,
+            opacity: 1,
+            zIndex: 3,
+            type: "shape",
+            draggable: false
+          },
+          {
+            id: "background",
             shapeType: "rect",
             x: 0,
             y: 0,
-            width: 600,
-            height: 700,
-            fill: "#000000",
-            opacity: 0.18,
-            zIndex: 10
+            width: 500,
+            height: 400,
+            fill: "rgba(251, 231, 225, 0.85)",
+            rotation: 0,
+            opacity: 1,
+            zIndex: 1,
+            type: "shape",
+            draggable: false
           }
+        ],
+
+        bgConfig: {
+          type: "color",
+          value: "rgba(251, 231, 225, 0.85)"
+        }
+      },
+
+      design: {
+        id: "439:22",
+        name: "Wedding invitation2",
+        type: "FRAME",
+        properties: {
+          size: { width: 500, height: 400 }
+        }
+      }
+    }
+  ],
+  
+  Graduation: [
+    {
+      id: "459:63",
+      title: "Graduation Invitation – Lelo Editor",
+      description: "Edit your graduation invitation design",
+      image: "https://iili.io/f8mZhXe.png",
+      
+      data: {
+        texts: [
+          {
+            id: "T-27-05-2025",
+            name: "27/05/2025",
+            text: "27/05/2025",
+            x: 404,
+            y: 33,
+            fontSize: 35,
+            fontFamily: "Kalam, cursive",
+            fill: "#000000",
+            align: "left",
+            rotation: 0,
+            opacity: 1,
+            zIndex: 10,
+            type: "text",
+            width: 210,
+            wrap: "none",
+            lineHeight: 1.2
+          },
+          {
+            id: "T-invitation-text",
+            name: "You're cordially invite...",
+            text: "You're cordially invited to\njoin us in celebrating the\ngraduation of Lelo\nfrom MUT on [27/05/25]\nat 09:00. The ceremony\nwill take place at Mhlanga\nWe look forward to seeing\nyou there!!!",
+            x: 6,
+            y: 112,
+            fontSize: 20,
+            fontFamily: "Kalam, cursive",
+            fill: "#000000",
+            align: "center",
+            rotation: 0,
+            opacity: 1,
+            zIndex: 10,
+            type: "text",
+            width: 316,
+            wrap: "word",
+            lineHeight: 1.5
+          },
+          {
+            id: "T-lelos-graduation",
+            name: "Lelo's graduation",
+            text: "Lelo’s\ngraduation",
+            x: 245,
+            y: 60,
+            fontSize: 36,
+            fontFamily: "Kalam, cursive",
+            fill: "#F2D16D",
+            align: "center",
+            rotation: 0,
+            opacity: 1,
+            zIndex: 11,
+            type: "text",
+            width: 255,
+            wrap: "none",
+            lineHeight: 1.2
+          }
+        ],
+        images: [
+          {
+            id: "image-3",
+            name: "Graduation Cap",
+            src: "https://iili.io/f8mDLRp.png",
+            x: 160,
+            y: 90,
+            width: 174,
+            height: 178,
+            rotation: 7.1,
+            opacity: 1,
+            zIndex: 8,
+            type: "image",
+            draggable: true
+          },
+          {
+            id: "image-4",
+            name: "Two Hearts",
+            src: "https://iili.io/f8pqgl2.png",
+            x: 386,
+            y: 220,
+            width: 49,
+            height: 180,
+            rotation: -17.8,
+            opacity: 1,
+            zIndex: 7,
+            type: "image",
+            draggable: true
+          }
+        ],
+        shapes: [
+          {
+            id: "shape-1",
+            name: "Background",
+            shapeType: "rect",
+            x: 50,
+            y: 0,
+            width: 400,
+            height: 400,
+            fill: "#ffff",
+            rotation: 0,
+            opacity: 1,
+            zIndex: 0,
+            type: "shape",
+            draggable: false
+          },
+          {
+            id: "shape-2",
+            name: "Rotated Border",
+            shapeType: "rect",
+            x: 200,
+            y: 0,
+            width: 300,
+            height: 400,
+            fill: "transparent",
+            stroke: "#000000",
+            strokeWidth: 5,
+            rotation: 30,
+            opacity: 1,
+            zIndex: 2,
+            type: "shape",
+            draggable: false
+          }
+        ],
+        bgConfig: {
+          type: "color",
+          value: "#F2D16D"
+        }
+      },
+      design: {
+        id: "459:63",
+        name: "Graduation invitation",
+        type: "FRAME",
+        properties: {
+          size: { width: 500, height: 400 }
+        }
+      },
+      editor: {
+        tools: {
+          undo: true,
+          redo: true
+        },
+        centerEventInfo: {
+          background: {
+            color: "#e7d294"
+          },
+          uploadImage: {
+            enabled: true,
+            currentFile: null
+          },
+          removeBackground: true
+        },
+        layers: [
+          "shape-1",
+          "shape-2", 
+          "image-3",
+          "image-4",
+          "T-27-05-2025",
+          "T-invitation-text",
+          "T-lelos-graduation"
         ]
       }
     }

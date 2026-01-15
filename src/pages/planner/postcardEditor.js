@@ -89,21 +89,25 @@ const CornerTransformer = ({ selectedShapeName, ...props }) => {
     return <Transformer ref={trRef} {...props} />;
 };
 
-const centerEventTexts = (texts, canvasWidth = 600, canvasHeight = 400) => {
-    const eventTexts = texts.filter(text => text.zIndex >= 1000 && text.zIndex <= 1005);
-    const otherTexts = texts.filter(text => text.zIndex < 1000 || text.zIndex > 1005);
+const centerEventTexts = (texts, canvasWidth = 500, canvasHeight = 400) => {
+    // For template mode, only center texts that are from event data
+    const templateTextIds = ["439:28", "439:29", "439:30"]; // Your template text IDs
+    
+    const eventTexts = texts.filter(text => templateTextIds.includes(text.id));
+    const otherTexts = texts.filter(text => !templateTextIds.includes(text.id));
 
     if (eventTexts.length === 0) return texts;
 
-    // Sort event texts by zIndex to maintain order
-    eventTexts.sort((a, b) => a.zIndex - b.zIndex);
+    // Sort by y position
+    eventTexts.sort((a, b) => a.y - b.y);
 
-    const spacing = 25;
+    const spacing = 30;
     let totalHeight = 0;
 
     // Calculate total height needed
     eventTexts.forEach(text => {
-        const approxHeight = text.fontSize * 1.5; // Approximate line height
+        const lines = text.text.split('\n').length;
+        const approxHeight = text.fontSize * 1.5 * lines;
         totalHeight += approxHeight + spacing;
     });
 
@@ -114,6 +118,9 @@ const centerEventTexts = (texts, canvasWidth = 600, canvasHeight = 400) => {
 
     // Update positions to center within canvas
     const recenteredTexts = eventTexts.map(text => {
+        const lines = text.text.split('\n').length;
+        const approxHeight = text.fontSize * 1.5 * lines;
+        
         const newText = {
             ...text,
             x: canvasWidth / 2,
@@ -122,7 +129,7 @@ const centerEventTexts = (texts, canvasWidth = 600, canvasHeight = 400) => {
             offsetY: text.fontSize ? text.fontSize / 2 : 0
         };
 
-        currentY += text.fontSize * 1.5 + spacing;
+        currentY += approxHeight + spacing;
         return newText;
     });
 
@@ -2267,8 +2274,8 @@ export default function PostcardEditor() {
 
                 <div className="canvas-container">
                     <Stage
-                        width={400}
-                        height={500}
+                        width={500}
+                        height={400}
                         ref={stageRef}
                         onClick={handleCanvasClick}
                         onTap={handleCanvasClick}
@@ -2278,15 +2285,15 @@ export default function PostcardEditor() {
                             {bgConfig.type === "image" && bgImage ? (
                                 <Image
                                     image={bgImage}
-                                    width={400}
-                                    height={500}
+                                    width={500}
+                                    height={400}
                                     x={0}
                                     y={0}
                                 />
                             ) : (
                                 <Rect 
-                                    width={400} 
-                                    height={500} 
+                                    width={500} 
+                                    height={400} 
                                     fill={bgConfig.value} 
                                     x={0}
                                     y={0}

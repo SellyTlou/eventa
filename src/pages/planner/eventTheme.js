@@ -76,7 +76,7 @@ export default function EventTheme() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> 
 
           <section className="template-selection">
             <div className="container">
