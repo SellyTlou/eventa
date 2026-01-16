@@ -66,109 +66,100 @@ function AdminTicket({ printAlert }) {
     }
   };
 
-  const filteredTickets = tickets.filter(ticket => {
-    return (
-      (search === "" ||
-        ticket.subject.toLowerCase().includes(search.toLowerCase())) &&
-      (statusFilter === "All" || ticket.status === statusFilter) &&
-      (departmentFilter === "All" || ticket.department === departmentFilter)
-    );
-  });
+  const filteredTickets = tickets;
 
   if (loading) {
     return <div className="loading">Loading tickets...</div>;
   }
 
   return (
-    <div className="admin-ticket-container">
-      <h2 className="page-title">Support Tickets (Admin)</h2>
+    <section className="admin-dashboard-section">
+      <div className="admin-ticket-container">
+        <h2 className="page-title">Support Tickets (Admin)</h2>
 
-      {/* Filters */}
-      <div className="filters-container">
-        <input
-          type="text"
-          placeholder="Search subject..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="filter-input"
-        />
+        {/* Filters */}
+        <div className="filters-container">
+          <input
+            type="text"
+            placeholder="Search subject..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="filter-input"
+          />
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="All">All Status</option>
-          <option value="Open">Open</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Resolved">Resolved</option>
-        </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="All">All Status</option>
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Resolved">Resolved</option>
+          </select>
 
-        <select
-          value={departmentFilter}
-          onChange={(e) => setDepartmentFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="All">All Departments</option>
-          <option value="Technical">Technical</option>
-          <option value="Accounts">Accounts</option>
-          <option value="Sales">Sales</option>
-          <option value="RSVP">RSVP</option>
-          <option value="IT Support">IT Support</option>
-        </select>
-      </div>
+          <select
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="All">All Departments</option>
+            <option value="Technical">Technical</option>
+            <option value="Accounts">Accounts</option>
+            <option value="Sales">Sales</option>
+            <option value="RSVP">RSVP</option>
+            <option value="IT Support">IT Support</option>
+          </select>
+        </div>
 
-      {/* Tickets Table */}
-      <table className="ticket-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Subject</th>
-            <th>User</th>
-            <th>Email</th>
-            <th>Department</th>
-            <th>Priority</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>View</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredTickets.length === 0 ? (
+        {/* Tickets Table */}
+        <table className="ticket-table">
+          <thead>
             <tr>
-              <td colSpan="10" className="no-data">No tickets found</td>
+              <th>ID</th>
+              <th>Subject</th>
+              <th>User</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Date</th>
             </tr>
-          ) : (
-            filteredTickets.map((ticket) => (
-              <tr key={ticket.id}>
-                <td>{ticket.id}</td>
-                <td>{ticket.subject}</td>
-                <td>{ticket.name}</td>
-                <td>{ticket.email}</td>
-                <td>{ticket.department}</td>
-                <td>{ticket.priority}</td>
-                <td>
-                  <select
-                    value={ticket.status}
-                    onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
-                    className="status-select"
-                  >
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved">Resolved</option>
-                  </select>
-                </td>
-                <td>{new Date(ticket.created_at).toLocaleDateString()}</td>
-                <td>
-                  <button className="view-btn" onClick={() => printAlert(`Message: ${ticket.message}`, 'info')}>View</button>
-                </td>
+          </thead>
+
+          <tbody>
+            {filteredTickets.length === 0 ? (
+              <tr>
+                <td colSpan="9" className="no-data">No tickets found</td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+            ) : (
+              filteredTickets.map((ticket) => (
+                <tr key={ticket.id}>
+                  <td>{ticket.id}</td>
+                  <td>{ticket.subject}</td>
+                  <td>{ticket.name}</td>
+                  <td>{ticket.email}</td>
+                  <td>{ticket.department}</td>
+                  <td>{ticket.priority}</td>
+                  <td>
+                    <select
+                      value={ticket.status}
+                      onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
+                      className="status-select"
+                    >
+                      <option value="Open">Open</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Resolved">Resolved</option>
+                    </select>
+                  </td>
+                  <td>{new Date(ticket.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

@@ -1568,6 +1568,7 @@ function AdminDashboard() {
                                 {activeTab === "invitations" && "Invitation Analytics"}
                                 {activeTab === "pricing" && "Pricing Management"}
                                 {activeTab === "users" && "User Administration"}
+                                {activeTab === "tickets" && "Support Tickets"}
                             </h1>
                             <div className="admin-header-actions">
                                 <div className="profile-section">
@@ -3456,7 +3457,7 @@ const parseFeatures = (features) => {
             const isBusinessPackage = packageCategory === 'business';
 
             if (isBusinessPackage) {
-                formData.append('action', 'updateBusinessPackage');
+                formData.append('function', 'updateBusinessPackage');
                 formData.append('id', editingPlan);
                 formData.append('package_type', editForm.package_type);
                 formData.append('name', editForm.name || editForm.package_type);
