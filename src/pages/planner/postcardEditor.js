@@ -1546,7 +1546,20 @@ const getEventDataFromStorage = () => {
 
         const eventDataKey = `eventa_${deviceId}_current_event`;
         const data = localStorage.getItem(eventDataKey);
-        return data ? JSON.parse(data) : null;
+        
+        if (!data) return null;
+        
+        const eventData = JSON.parse(data);
+        
+        // Get ticket data
+        const ticketDataKey = `eventa_${deviceId}_ticket_config`;
+        const ticketData = localStorage.getItem(ticketDataKey);
+        
+        if (ticketData) {
+            eventData.ticketData = JSON.parse(ticketData);
+        }
+        
+        return eventData;
     } catch (error) {
         console.error('Error retrieving event data:', error);
         return null;
@@ -1993,66 +2006,121 @@ export default function PostcardEditor() {
     };
 
     const saveEventToDatabase = async (imageData) => {
-        try {
-            setLoading(true);
-            const user = JSON.parse(localStorage.getItem("user"));
-            const eventData = getEventDataFromStorage();
+    try {
+        setLoading(true);
+        const user = JSON.parse(localStorage.getItem("user"));
+        const eventData = getEventDataFromStorage();
 
-            if (!user || !eventData) {
-                printAlert("User or event data not found. Please try again.", "error");
-                setLoading(false);
-                return false;
-            }
-
-            // Log image data info for debugging
-            console.log('Image data type:', typeof imageData);
-            console.log('Image data length:', imageData ? imageData.length : 0);
-            if (imageData) {
-                console.log('Image data starts with:', imageData.substring(0, 50));
-            }
-
-            const formData = new FormData();
-            formData.append("function", "saveEvent");
-            formData.append("userID", user.user_id);
-            formData.append("userName", user.name);
-            formData.append("eventID", eventData.eventID || uuidv4());
-            formData.append("eventName", eventData.eventName || "");
-            formData.append("eventStartDate", eventData.eventStartDate || "");
-            formData.append("eventStartTime", eventData.eventStartTime || "");
-            formData.append("eventEndDate", eventData.eventEndDate || "");
-            formData.append("eventEndTime", eventData.eventEndTime || "");
-            formData.append("eventLocation", eventData.eventLocation || "");
-            formData.append("eventUrlImage", imageData);
-            formData.append("eventDesignData", JSON.stringify({
-                texts,
-                images,
-                shapes,
-                bgConfig
-            }));
-            const API_URL = process.env.REACT_APP_API_URL;
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                printAlert("Event saved successfully!", "success");
-                return true;
-            } else {
-                printAlert("Failed to save event.", "error");
-                return false;
-            }
-        } catch (error) {
-            console.error("Error saving event:", error);
-            printAlert("Error saving event. Please try again.", "error");
-            return false;
-        } finally {
+        if (!user || !eventData) {
+            printAlert("User or event data not found. Please try again.", "error");
             setLoading(false);
+            return false;
         }
-    };
+
+        // Get ticket data from localStorage
+        const deviceId = localStorage.getItem('eventa_device_id');
+        const ticketDataKey = `eventa_${deviceId}_ticket_config`;
+        const ticketData = localStorage.getItem(ticketDataKey);
+        const parsedTicketData = ticketData ? JSON.parse(ticketData) : null;
+
+        // Log image data info for debugging
+        console.log('Image data type:', typeof imageData);
+        console.log('Image data length:', imageData ? imageData.length : 0);
+        if (imageData) {
+            console.log('Image data starts with:', imageData.substring(0, 50));
+        }
+
+        const formData = new FormData();
+        formData.append("function", "saveEvent");
+        formData.append("userID", user.user_id);
+        formData.append("userName", user.name);
+        formData.append("eventID", eventData.eventID || uuidv4());
+        formData.append("eventName", eventData.eventName || "");
+        formData.append("eventStartDate", eventData.eventStartDate || "");
+        formData.append("eventStartTime", eventData.eventStartTime || "");
+        formData.append("eventEndDate", eventData.eventEndDate || "");
+        formData.append("eventEndTime", eventData.eventEndTime || "");
+        formData.append("eventLocation", eventData.eventLocation || "");
+        formData.append("eventUrlImage", imageData);
+        formData.append("eventDesignData", JSON.stringify({
+            texts,
+            images,
+            shapes,
+            bgConfig
+        }));
+        
+        // Add ticket data to formData if it exists
+        if (parsedTicketData) {
+            formData.append("hasTickets", parsedTicketData.hasTickets ? "1" : "0");
+            
+            if (parsedTicketData.hasTickets && parsedTicketData.config) {
+                // Add ticket configuration
+                const ticketConfig = parsedTicketData.config;
+                
+                // Early Bird
+                if (ticketConfig.earlyBird && ticketConfig.earlyBird.price) {
+                    formData.append("earlyBirdPrice", ticketConfig.earlyBird.price);
+                    formData.append("earlyBirdQuantity", ticketConfig.earlyBird.quantity || "");
+                }
+                
+                // General Admission
+                if (ticketConfig.general && ticketConfig.general.price) {
+                    formData.append("generalPrice", ticketConfig.general.price);
+                }
+                
+                // VIP
+                if (ticketConfig.vip && ticketConfig.vip.price) {
+                    formData.append("vipPrice", ticketConfig.vip.price);
+                }
+                
+                // VVIP
+                if (ticketConfig.vvip && ticketConfig.vvip.price) {
+                    formData.append("vvipPrice", ticketConfig.vvip.price);
+                }
+                
+                // Event Info
+                if (parsedTicketData.eventInfo) {
+                    formData.append("eventInfo", parsedTicketData.eventInfo);
+                }
+                
+                // Add ticket config as JSON
+                formData.append("ticketConfig", JSON.stringify(parsedTicketData));
+            }
+        }
+
+        const API_URL = process.env.REACT_APP_API_URL;
+
+        console.log("Saving event with ticket data:", parsedTicketData);
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
+
+        const result = await response.json();
+        console.log("Save event response:", result);
+
+        if (result.success) {
+            printAlert("Event saved successfully!", "success");
+            
+            // Clear ticket data from localStorage after successful save
+            if (deviceId) {
+                localStorage.removeItem(ticketDataKey);
+            }
+            
+            return true;
+        } else {
+            printAlert(result.message || "Failed to save event.", "error");
+            return false;
+        }
+    } catch (error) {
+        console.error("Error saving event:", error);
+        printAlert("Error saving event. Please try again.", "error");
+        return false;
+    } finally {
+        setLoading(false);
+    }
+};
 
     const downloadImage = async () => {
         setSelectedId(null);

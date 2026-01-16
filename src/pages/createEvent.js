@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import EventProgressBar from "./EventProgressBar";
 import "../App.css";
 import "../responce.css";
 import { Login } from "./components";
 import { useEventCreation } from "./eventDataCollector";
-import SecurityQuestionsModal from "./SecurityQuestionsModal";
 
 function CreateEvent() {
   const navigate = useNavigate();
@@ -18,22 +17,30 @@ function CreateEvent() {
   const [eventEndTime, setEventEndTime] = useState("13:15");
   const [timezone, setTimezone] = useState("Africa/Johannesburg");
   const [eventLocation, setEventLocation] = useState("");
-  const [lastname, setLastname] = useState("");
-  const [firstname, setFirstname] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [loginMode, setLoginMode] = useState("login");
   const [fieldErrors, setFieldErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [showSecurityModal, setShowSecurityModal] = useState(false);
-  const [securityAnswers, setSecurityAnswers] = useState(null);
+  const [user, setUser] = useState(null);
 
   const { saveStep1Data, saveStep2Data } = useEventCreation();
   const totalSteps = 3;
 
-  // Validation rules (removed eventUrl validation)
+  // Check if user is already logged in on component mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+      // If user is logged in, they start at step 1 (event name)
+      setCurrentStep(1);
+    } else {
+      // If user is not logged in, they need to login/signup first (step 3)
+      setCurrentStep(3);
+    }
+  }, []);
+
+  // Validation rules
   const validationRules = {
     eventName: {
       required: true,
@@ -69,38 +76,28 @@ function CreateEvent() {
     eventLocation: {
       maxLength: 200,
       message: "Location cannot exceed 200 characters"
-    },
-    fullName: {
-      required: true,
-      minLength: 2,
-      maxLength: 100,
-      pattern: /^[a-zA-Z\s\-'.]+$/,
-      message: "Full name must be 2-100 characters long and can only contain letters, spaces, hyphens, and apostrophes"
-    },
-    email: {
-      required: true,
-      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-      message: "Please enter a valid email address"
-    },
-    password: {
-      required: true,
-      minLength: 8,
-      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      message: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character"
-    },
-    confirmPassword: {
-      required: true,
-      match: true,
-      message: "Passwords do not match"
     }
   };
 
+  // Handle successful login
   const handleLoginSuccess = (userData) => {
     localStorage.setItem("user", JSON.stringify(userData));
-    navigate("/eventTheme");
+    setUser(userData);
+    setShowLoginPopup(false);
+    // After login, go to step 1 (event name)
+    setCurrentStep(1);
   };
 
-  // Helper function to get today's date in YYYY-MM-DD format
+  // Handle successful signup
+  const handleSignupSuccess = (userData) => {
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+    setShowLoginPopup(false);
+    // After signup, go to step 1 (event name)
+    setCurrentStep(1);
+  };
+
+  // Helper function to get today's date
   const getTodayDate = () => {
     return new Date().toISOString().split('T')[0];
   };
@@ -112,38 +109,32 @@ function CreateEvent() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      // Return the later date between start date and today
       return startDate > today ? eventStartDate : getTodayDate();
     }
     return getTodayDate();
   };
 
-  // Validation functions (removed eventUrl validation)
+  // Validation functions
   const validateField = (name, value, allValues = {}) => {
     const rules = validationRules[name];
     if (!rules) return "";
 
-    // Required validation
     if (rules.required && (!value || value.trim() === "")) {
       return "This field is required";
     }
 
-    // Min length validation
     if (rules.minLength && value && value.length < rules.minLength) {
       return `Must be at least ${rules.minLength} characters long`;
     }
 
-    // Max length validation
     if (rules.maxLength && value && value.length > rules.maxLength) {
       return `Cannot exceed ${rules.maxLength} characters`;
     }
 
-    // Pattern validation
     if (rules.pattern && value && !rules.pattern.test(value)) {
       return rules.message;
     }
 
-    // Future date validation - enhanced
     if (rules.futureDate && value) {
       const inputDate = new Date(value);
       const today = new Date();
@@ -154,7 +145,6 @@ function CreateEvent() {
       }
     }
 
-    // Date comparison validation - enhanced
     if (rules.afterStartDate && value && allValues.eventStartDate) {
       const startDate = new Date(allValues.eventStartDate);
       const endDate = new Date(value);
@@ -163,7 +153,6 @@ function CreateEvent() {
         return "End date cannot be before start date";
       }
       
-      // Also check if end date is in the past
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (endDate < today) {
@@ -171,7 +160,6 @@ function CreateEvent() {
       }
     }
 
-    // Time comparison validation
     if (rules.afterStartTime && value && allValues.eventStartTime && 
         allValues.eventStartDate && allValues.eventEndDate) {
       
@@ -185,11 +173,6 @@ function CreateEvent() {
       if (endDateTime <= startDateTime) {
         return "End time must be after start time";
       }
-    }
-
-    // Password match validation
-    if (rules.match && name === 'confirmPassword' && value !== allValues.password) {
-      return "Passwords do not match";
     }
 
     return "";
@@ -234,22 +217,6 @@ function CreateEvent() {
       }
     }
 
-    if (step === 3) {
-      const allValues = { password };
-      
-      const fullNameError = validateField("fullName", firstname + " " + lastname);
-      if (fullNameError) newErrors.fullName = fullNameError;
-
-      const emailError = validateField("email", email);
-      if (emailError) newErrors.email = emailError;
-
-      const passwordError = validateField("password", password);
-      if (passwordError) newErrors.password = passwordError;
-
-      const confirmPasswordError = validateField("confirmPassword", confirmPassword, allValues);
-      if (confirmPasswordError) newErrors.confirmPassword = confirmPasswordError;
-    }
-
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -264,93 +231,21 @@ function CreateEvent() {
       eventEndTime,
       eventName,
       eventLocation,
-      timezone,
-      fullName: firstname + " " + lastname,
-      email,
-      password,
-      confirmPassword
+      timezone
     };
     
     const error = validateField(fieldName, allValues[fieldName], allValues);
     setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
-  const handleSecurityQuestionsSave = (answers) => {
-    setSecurityAnswers(answers);
-    setShowSecurityModal(false);
-    // Continue with registration
-    completeRegistration();
+  const handleLoginClick = () => {
+    setLoginMode("login");
+    setShowLoginPopup(true);
   };
 
-  const completeRegistration = async () => {
-    try {
-        const formData = new FormData();
-        formData.append("function", "eventAccConfirm");
-        formData.append("name", firstname.trim());
-        formData.append("lastname", lastname.trim());
-        formData.append("email", email.trim());
-        formData.append("password", password);
-
-        const API_URL = process.env.REACT_APP_API_URL;
-
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData,
-        });
-
-        const result = await response.json();
-        console.log(result);
-
-        if (result.success) {
-            // ✅ ADD THIS LINE - Dispatch custom event when account is created
-            window.dispatchEvent(new CustomEvent('eventCreated'));
-            
-            // Save security questions for the new user
-            if (securityAnswers) {
-                await saveSecurityQuestions(result.user.user_id, securityAnswers);
-            }
-            
-            localStorage.setItem("user", JSON.stringify(result.user));
-            navigate("/eventTheme");
-        } else {
-            if (result.userExists) {
-                alert(result.message || "User already exists. Please log in.");
-                setShowLoginPopup(true);
-            } else {
-                alert(result.message || "Something went wrong!");
-            }
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Server error. Please try again later.");
-    }
-};
-
-  const saveSecurityQuestions = async (userId, answers) => {
-    try {
-      const API_URL = process.env.REACT_APP_API_URL;
-      const formData = new FormData();
-      formData.append("function", "saveSecurityQuestions");
-      formData.append("user_id", userId);
-      formData.append("question1", "What was the name of your first pet?");
-      formData.append("answer1", answers.answer1);
-      formData.append("question2", "What city were you born in?");
-      formData.append("answer2", answers.answer2);
-      formData.append("question3", "What is your mother's maiden name?");
-      formData.append("answer3", answers.answer3);
-
-      const response = await fetch(`${API_URL}/query.php`, {
-        method: "POST",
-        body: formData
-      });
-
-      const result = await response.json();
-      if (!result.success) {
-        console.error("Failed to save security questions:", result.message);
-      }
-    } catch (err) {
-      console.error("Error saving security questions:", err);
-    }
+  const handleSignupClick = () => {
+    setLoginMode("signup");
+    setShowLoginPopup(true);
   };
 
   const handleNext = async () => {
@@ -370,11 +265,6 @@ function CreateEvent() {
       } else if (step2SubStep === 2) {
         newTouched.eventLocation = true;
       }
-    } else if (currentStep === 3) {
-      newTouched.fullName = true;
-      newTouched.email = true;
-      newTouched.password = true;
-      newTouched.confirmPassword = true;
     }
     setTouched(newTouched);
 
@@ -398,7 +288,6 @@ function CreateEvent() {
         return;
       }
 
-      // Save step 2 data when all sub-steps are completed
       if (step2SubStep === 2) {
         const step2Data = {
           eventStartDate,
@@ -417,20 +306,24 @@ function CreateEvent() {
       }
     }
 
-    // Step 3: Account Information - Show security questions modal instead of immediate registration
-    if (currentStep === 3) {
-      setShowSecurityModal(true);
+    // If user is logged in and completed step 2, go to event theme
+    if (user && currentStep === 2 && step2SubStep === 2) {
+      navigate("/eventTheme");
       return;
     }
 
+    // If user is not logged in and reached step 3, show login/signup
+    if (!user && currentStep === 3) {
+      handleLoginClick();
+      return;
+    }
+
+    // Move to next step
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
       if (currentStep === 2) setStep2SubStep(1);
-    } else {
-      navigate("/eventTheme");
     }
   };
-  
 
   const handleBack = () => {
     if (currentStep === 2 && step2SubStep > 1) {
@@ -444,29 +337,22 @@ function CreateEvent() {
     setFieldErrors({});
   };
 
-  // Helper function to check if field should show error
   const shouldShowError = (fieldName) => {
     return touched[fieldName] && fieldErrors[fieldName];
   };
 
   return (
     <div>
-      {/* Login Popup */}
+      {/* Login/Signup Popup */}
       {showLoginPopup && (
         <Login
           isOpen={showLoginPopup}
           onClose={() => setShowLoginPopup(false)}
+          defaultMode={loginMode}
           onLoginSuccess={handleLoginSuccess}
+          onSignupSuccess={handleSignupSuccess}
         />
       )}
-
-      {/* Security Questions Modal */}
-      <SecurityQuestionsModal
-        isOpen={showSecurityModal}
-        onClose={() => setShowSecurityModal(false)}
-        onSave={handleSecurityQuestionsSave}
-        mode="registration"
-      />
 
       <div className="eventa-header-bar">
         <div className="eventa-header-logo">
@@ -484,12 +370,15 @@ function CreateEvent() {
         </button>
       </div>
 
-      <EventProgressBar currentStep={currentStep} totalSteps={totalSteps} />
+      {/* Show progress bar only if user is logged in and on step 1 or 2 */}
+      {user && currentStep !== 3 && (
+        <EventProgressBar currentStep={currentStep} totalSteps={totalSteps} />
+      )}
 
       <div className="create-event-container" id="createEventPage">
         <div className="create-event-body">
-          {/* Step 1: Event Name */}
-          {currentStep === 1 && (
+          {/* Step 1: Event Name (only shown if user is logged in) */}
+          {user && currentStep === 1 && (
             <div className="event-step">
               {error && <div className="form-error">{error}</div>}
               <h2 className="step-title">What's the name of your Event</h2>
@@ -514,8 +403,8 @@ function CreateEvent() {
             </div>
           )}
 
-          {/* Step 2: Event Details with sub-steps (removed URL sub-step) */}
-          {currentStep === 2 && (
+          {/* Step 2: Event Details (only shown if user is logged in) */}
+          {user && currentStep === 2 && (
             <div className="event-step">
               {error && <div className="form-error">{error}</div>}
               <h2 className="step-title">Event Details</h2>
@@ -650,126 +539,65 @@ function CreateEvent() {
             </div>
           )}
 
-          {/* Step 3: Account Information */}
-          {currentStep === 3 && (
+          {/* Step 3: Login/Signup Prompt (only shown if user is NOT logged in) */}
+          {!user && currentStep === 3 && (
             <div className="event-step">
-              {error && <div className="form-error">{error}</div>}
-              <h2 className="step-title">Account Information</h2>
-              <p className="step-subtitle">Create your account to manage your event</p>
-              <div className="form-group-event">
+              <h2 className="step-title">Account Required</h2>
+              <p className="step-subtitle">To create and manage your event, you need an account</p>
+              
+              <div className="account-prompt-container">
+                <div className="account-prompt-card">
+                  <h3>Already have an account?</h3>
+                  <p>Log in to continue creating your event</p>
+                  <button 
+                    className="btn-event btn-event-primary"
+                    onClick={handleLoginClick}
+                  >
+                    Log In
+                  </button>
+                </div>
                 
-                <label htmlFor="fullName">Firstname</label>
-                <input
-                  type="text"
-                  className={`form-control-event ${shouldShowError('fullName') ? 'error' : ''}`}
-                  id="fullName"
-                  placeholder="Your Firstname"
-                  value={firstname}
-                  onChange={(e) => setFirstname(e.target.value)}
-                  onBlur={() => handleBlur('fullName')}
-                />
-                {shouldShowError('fullName') && (
-                  <div className="field-error">
-                    <span className="error-icon">⚠</span>
-                    {fieldErrors.fullName}
-                  </div>
-                )}
-              </div>
-              <div className="form-group-event">
-                <label htmlFor="lastname">Lastname</label>
-                <input
-                  type="text"
-                  className={`form-control-event ${shouldShowError('fullName') ? 'error' : ''}`}
-                  id="lastname"
-                  placeholder="Your Lastname"
-                  value={lastname}
-                  onChange={(e) => setLastname(e.target.value)}
-                  onBlur={() => handleBlur('fullName')}
-                />
-              </div>
-              <div className="form-group-event">
-                <label htmlFor="email">Email Address</label>
-                <input
-                  type="email"
-                  className={`form-control-event ${shouldShowError('email') ? 'error' : ''}`}
-                  id="email"
-                  placeholder="Your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onBlur={() => handleBlur('email')}
-                />
-                {shouldShowError('email') && (
-                  <div className="field-error">
-                    <span className="error-icon">⚠</span>
-                    {fieldErrors.email}
-                  </div>
-                )}
-              </div>
-              <div className="form-group-event">
-                <label htmlFor="password">Password</label>
-                <input
-                  type="password"
-                  className={`form-control-event ${shouldShowError('password') ? 'error' : ''}`}
-                  id="password"
-                  placeholder="Create a password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onBlur={() => handleBlur('password')}
-                />
-                {shouldShowError('password') && (
-                  <div className="field-error">
-                    <span className="error-icon">⚠</span>
-                    {fieldErrors.password}
-                  </div>
-                )}
-                <div className="password-requirements">
-                  <small>Password must contain:</small>
-                  <ul>
-                    <li className={password.length >= 8 ? 'valid' : ''}>At least 8 characters</li>
-                    <li className={/[a-z]/.test(password) ? 'valid' : ''}>One lowercase letter</li>
-                    <li className={/[A-Z]/.test(password) ? 'valid' : ''}>One uppercase letter</li>
-                    <li className={/\d/.test(password) ? 'valid' : ''}>One number</li>
-                    <li className={/[@$!%*?&]/.test(password) ? 'valid' : ''}>One special character</li>
-                  </ul>
+                <div className="account-prompt-card">
+                  <h3>New to Eventa?</h3>
+                  <p>Create an account to start managing your events</p>
+                  <button 
+                    className="btn-event btn-event-secondary"
+                    onClick={handleSignupClick}
+                  >
+                    Sign Up
+                  </button>
                 </div>
               </div>
-              <div className="form-group-event">
-                <label htmlFor="confirmPassword">Confirm Password</label>
-                <input
-                  type="password"
-                  className={`form-control-event ${shouldShowError('confirmPassword') ? 'error' : ''}`}
-                  id="confirmPassword"
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  onBlur={() => handleBlur('confirmPassword')}
-                />
-                {shouldShowError('confirmPassword') && (
-                  <div className="field-error">
-                    <span className="error-icon">⚠</span>
-                    {fieldErrors.confirmPassword}
-                  </div>
-                )}
-              </div>
+              
+              <p className="text-muted small mt-3">
+                Don't worry, your event details are saved. You can continue where you left off after logging in.
+              </p>
             </div>
           )}
         </div>
 
+        {/* Footer with navigation buttons */}
         <div className="create-event-footer">
           <div>
-            {(currentStep > 1 || (currentStep === 2 && step2SubStep > 1)) && (
+            {((user && currentStep > 1) || (user && currentStep === 2 && step2SubStep > 1)) && (
               <button className="btn-event btn-event-back" onClick={handleBack}>
                 Back
               </button>
             )}
           </div>
           <div>
-            <button className="btn-event btn-event-next" onClick={handleNext}>
-              {currentStep === 1 && "NEXT: EVENT DETAILS"}
-              {currentStep === 2 && step2SubStep < 2 && "NEXT"}
-              {currentStep === 2 && step2SubStep === 2 && "NEXT: ACCOUNT INFO"}
-              {currentStep === 3 && "CREATE ACCOUNT & CONTINUE"}
-            </button>
+            {/* Show different button text based on state */}
+            {user ? (
+              <button className="btn-event btn-event-next" onClick={handleNext}>
+                {currentStep === 1 && "NEXT: EVENT DETAILS"}
+                {currentStep === 2 && step2SubStep < 2 && "NEXT"}
+                {currentStep === 2 && step2SubStep === 2 && "NEXT: EVENT THEME"}
+              </button>
+            ) : (
+              <button className="btn-event btn-event-next" onClick={handleNext}>
+                CONTINUE
+              </button>
+            )}
           </div>
         </div>
       </div>

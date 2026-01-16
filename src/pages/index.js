@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../App.css";
+import"../../src/pages/planner/main.css";
 import "../responce.css";
 import { Navbar, Footer, Login } from "./components";
 import { Star } from 'react-konva';

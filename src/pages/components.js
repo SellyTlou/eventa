@@ -34,6 +34,9 @@ import ReportEvent from './ReportEvent';
 import AdminTicket from './AdminTicket';
 import TicketSelection from './TicketSelection';
 import SupportTicket from './SupportTicket';
+import Ticket_Sale from './ticket_sales';
+import TicketEvent_details from './ticketEvent_details';
+import Ticket_payment from './ticket_payment';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -206,7 +209,9 @@ export function SessionHandler() {
                 <Route path="/admin-ticket" element={<AdminTicket />} />
                 <Route path="/ticket-selection" element={<TicketSelection />} />
                 <Route path="/support-ticket" element={<SupportTicket />} />
-                
+                <Route path="/ticket_sales" element={<Ticket_Sale />} />
+                <Route path="/ticketEvent_details" element={<TicketEvent_details />}/>
+                <Route path="/ticket_payment"element={<Ticket_payment/>}/>
             </Routes>
 
             <SessionWarningModal
@@ -263,6 +268,32 @@ const btnDangerStyle = {
 export function Navbar({ onLoginClick, onSignupClick }) {
     const [scrolled, setScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [user, setUser] = useState(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+    const navigate = useNavigate();
+
+    // Check if user is logged in
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+
+        // Listen for login/logout events
+        const handleUserChange = () => {
+            const updatedUser = localStorage.getItem("user");
+            setUser(updatedUser ? JSON.parse(updatedUser) : null);
+        };
+
+        window.addEventListener('userLoggedIn', handleUserChange);
+        window.addEventListener('userLoggedOut', handleUserChange);
+        
+        return () => {
+            window.removeEventListener('userLoggedIn', handleUserChange);
+            window.removeEventListener('userLoggedOut', handleUserChange);
+        };
+    }, []);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -277,8 +308,52 @@ export function Navbar({ onLoginClick, onSignupClick }) {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
+
+    const toggleDropdown = () => {
+        setDropdownOpen(prev => !prev);
+    };
+
+    const goToDashboard = () => {
+        navigate("/eventsDashboard");
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    };
+
+    const goToProfile = () => {
+        navigate("/Profile");
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    };
+
+    const logOut = () => {
+        localStorage.removeItem("user");
+        setUser(null);
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+        window.dispatchEvent(new CustomEvent('userLoggedOut'));
+        navigate("/");
+    };
+
+    const craeteEventClicked = () => {
+        navigate("/activeEventDetails");
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
     };
 
     return (
@@ -289,9 +364,10 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                         <div className="col-md-3 logo-container">
                             <a href="/">
                                 <img src="/images/logo.png" alt="Eventa Logo" className="logo img-fluid" />
-                            </a>                        </div>
+                            </a>
+                        </div>
                         <div className="col-md-6">
-                            <ul className="nav-list nav ">
+                            <ul className="nav-list nav">
                                 <li className="nav-item">
                                     <NavLink
                                         to="/"
@@ -311,6 +387,16 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                         }
                                     >
                                         Features
+                                    </NavLink>
+                                </li>
+                                <li className="nav-item">
+                                    <NavLink
+                                        to="/ticket_sales"
+                                        className={({ isActive }) =>
+                                            `nav-link ${isActive ? "active" : ""}`
+                                        }
+                                    >
+                                        Events
                                     </NavLink>
                                 </li>
                                 <li className="nav-item">
@@ -345,13 +431,51 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                 </li>
                             </ul>
                         </div>
-                        <div className="col-md-3  btns-container">
-                            <button className="btn signin-btn" onClick={onLoginClick}>
-                                <i className="bi bi-person-fill "></i> Sign In
-                            </button>
-                            <button className="btn signup-btn" onClick={onSignupClick}>
-                                <i className="bi bi-person-plus-fill "></i> Sign Up
-                            </button>
+                        <div className="col-md-3 btns-container">
+                            {/* Show profile dropdown when user is logged in, otherwise show login/signup buttons */}
+                            {user ? (
+                                <div className="logged-in-container">
+                                    <button className="btn dashboard-btn me-2" onClick={goToDashboard}>
+                                        <i className="bi bi-grid-fill me-1"></i> Dashboard
+                                    </button>
+                                    <div
+                                        ref={dropdownRef}
+                                        className={`profile-container ${dropdownOpen ? "open" : ""}`}
+                                    >
+                                        <div className="profile-trigger" onClick={toggleDropdown}>
+                                            <i className="bi bi-person-circle me-1"></i>
+                                            <span className="profile-name">{user.name || "User"}</span>
+                                            <i className="bi bi-chevron-down ms-1"></i>
+                                        </div>
+                                        {dropdownOpen && (
+                                            <div className="dropdown-menu">
+                                                <button onClick={goToDashboard} className="dropdown-item">
+                                                    <i className="bi bi-grid-fill me-2"></i> Dashboard
+                                                </button>
+                                                <button onClick={craeteEventClicked} className="dropdown-item">
+                                                    <i className="bi bi-plus-circle me-2"></i> New Event
+                                                </button>
+                                                <button onClick={goToProfile} className="dropdown-item">
+                                                    <i className="bi bi-person me-2"></i> Profile
+                                                </button>
+                                                <div className="dropdown-divider"></div>
+                                                <button className="dropdown-item" onClick={logOut}>
+                                                    <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="auth-buttons">
+                                    <button className="btn signin-btn" onClick={onLoginClick}>
+                                        <i className="bi bi-person-fill"></i> Sign In
+                                    </button>
+                                    {/* <button className="btn signup-btn" onClick={onSignupClick}>
+                                        <i className="bi bi-person-plus-fill"></i> Sign Up
+                                    </button> */}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -364,17 +488,52 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                         <div className="col-6">
                             <a href="/">
                                 <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
-                          </a>                        </div>
+                            </a>
+                        </div>
                         <div className="col-6 text-end">
-                            <button
-                                className="mobile-menu-toggle"
-                                onClick={toggleMobileMenu}
-                                aria-label="Toggle navigation menu"
-                            >
-                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
-                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
-                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
-                            </button>
+                            <div className="d-flex justify-content-end align-items-center">
+                                {user ? (
+                                    <div className="mobile-logged-in-container me-3">
+                                        <button className="btn mobile-dashboard-btn me-2" onClick={goToDashboard}>
+                                            <i className="bi bi-grid-fill"></i>
+                                        </button>
+                                        <div
+                                            ref={dropdownRef}
+                                            className="mobile-profile-container"
+                                        >
+                                            <div className="mobile-profile-trigger" onClick={toggleDropdown}>
+                                                <i className="bi bi-person-circle"></i>
+                                            </div>
+                                            {dropdownOpen && (
+                                                <div className="mobile-dropdown-menu">
+                                                    <button onClick={goToDashboard} className="mobile-dropdown-item">
+                                                        <i className="bi bi-grid-fill me-2"></i> Dashboard
+                                                    </button>
+                                                    <button onClick={craeteEventClicked} className="mobile-dropdown-item">
+                                                        <i className="bi bi-plus-circle me-2"></i> New Event
+                                                    </button>
+                                                    <button onClick={goToProfile} className="mobile-dropdown-item">
+                                                        <i className="bi bi-person me-2"></i> Profile
+                                                    </button>
+                                                    <div className="mobile-dropdown-divider"></div>
+                                                    <button className="mobile-dropdown-item" onClick={logOut}>
+                                                        <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
+                                <button
+                                    className="mobile-menu-toggle"
+                                    onClick={toggleMobileMenu}
+                                    aria-label="Toggle navigation menu"
+                                >
+                                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
+                                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
+                                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -390,7 +549,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                         `mobile-nav-link ${isActive ? "active" : ""}`
                                     }
                                     end
-                                    onClick={toggleMobileMenu}
+                                    onClick={() => setIsMobileMenuOpen(false)}
                                 >
                                     Home
                                 </NavLink>
@@ -401,7 +560,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                     className={({ isActive }) =>
                                         `mobile-nav-link ${isActive ? "active" : ""}`
                                     }
-                                    onClick={toggleMobileMenu}
+                                    onClick={() => setIsMobileMenuOpen(false)}
                                 >
                                     Features
                                 </NavLink>
@@ -412,7 +571,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                     className={({ isActive }) =>
                                         `mobile-nav-link ${isActive ? "active" : ""}`
                                     }
-                                    onClick={toggleMobileMenu}
+                                    onClick={() => setIsMobileMenuOpen(false)}
                                 >
                                     Pricing
                                 </NavLink>
@@ -423,18 +582,38 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                     className={({ isActive }) =>
                                         `mobile-nav-link ${isActive ? "active" : ""}`
                                     }
-                                    onClick={toggleMobileMenu}
+                                    onClick={() => setIsMobileMenuOpen(false)}
                                 >
                                     Support
                                 </NavLink>
                             </li>
                             <div className="mobile-buttons">
-                                <button className="btn mobile-signin-btn" onClick={onLoginClick}>
-                                    <i className="bi bi-person-fill me-2"></i> Sign In
-                                </button>
-                                <button className="btn mobile-signup-btn" onClick={onSignupClick}>
-                                    <i className="bi bi-person-plus-fill me-2"></i> Sign Up
-                                </button>
+                                {user ? (
+                                    <div className="mobile-user-info">
+                                        <div className="mobile-user-details">
+                                            <i className="bi bi-person-circle me-2"></i>
+                                            <span>{user.name || "User"}</span>
+                                        </div>
+                                        <button className="btn mobile-dashboard-full-btn" onClick={goToDashboard}>
+                                            <i className="bi bi-grid-fill me-2"></i> Dashboard
+                                        </button>
+                                        <button className="btn mobile-profile-btn" onClick={goToProfile}>
+                                            <i className="bi bi-person me-2"></i> Profile
+                                        </button>
+                                        <button className="btn mobile-logout-btn" onClick={logOut}>
+                                            <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button className="btn mobile-signin-btn" onClick={onLoginClick}>
+                                            <i className="bi bi-person-fill me-2"></i> Sign In
+                                        </button>
+                                        <button className="btn mobile-signup-btn" onClick={onSignupClick}>
+                                            <i className="bi bi-person-plus-fill me-2"></i> Sign Up
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </ul>
                     </div>
@@ -571,7 +750,7 @@ export function LoginNav() {
                             <i className="bi bi-chevron-bar-down"></i>
 
                             {dropdownOpen && (
-                                <div className="dropdown-menu"> 
+                                <div className="dropdown-menu">
                                     <button onClick={goToDashboared} className="dropdown-item">
                                         <i className="bi bi-grid-fill"></i> Dashboared
                                     </button>
@@ -797,7 +976,9 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     if (isAdmin) {
                         navigate("/adminDashboard");
                     } else {
-                        navigate("/eventsDashboard");
+                         setTimeout(() => {
+        window.location.reload();
+    }, 800);
                     }
 
                     onClose();

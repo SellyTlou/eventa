@@ -628,62 +628,76 @@ $fun = $_POST['function'];
         exit;
     }
 
-    if ($fun === "saveEvent") {
-        $userID          = $_POST['userID'] ?? '';
-        $userName        = $_POST['userName'] ?? '';
-        $eventID         = $_POST['eventID'] ?? '';
-        $eventName       = $_POST['eventName'] ?? '';
-        $eventStartDate  = $_POST['eventStartDate'] ?? '';
-        $eventStartTime  = $_POST['eventStartTime'] ?? '';
-        $eventEndDate    = $_POST['eventEndDate'] ?? '';
-        $eventEndTime    = $_POST['eventEndTime'] ?? '';
-        $eventLocation   = $_POST['eventLocation'] ?? '';
-        $eventUrlImage   = $_POST['eventUrlImage'] ?? '';
-        $eventDesignData = $_POST['eventDesignData'] ?? '';
-        
-        // Log image data for debugging
-        error_log("saveEvent - Image data type: " . gettype($eventUrlImage));
-        error_log("saveEvent - Image data length: " . strlen($eventUrlImage));
-        if (!empty($eventUrlImage)) {
-            error_log("saveEvent - Image data starts with: " . substr($eventUrlImage, 0, 50));
+  if ($fun === "saveEvent") {
+    $userID          = $_POST['userID'] ?? '';
+    $userName        = $_POST['userName'] ?? '';
+    $eventID         = $_POST['eventID'] ?? '';
+    $eventName       = $_POST['eventName'] ?? '';
+    $eventStartDate  = $_POST['eventStartDate'] ?? '';
+    $eventStartTime  = $_POST['eventStartTime'] ?? '';
+    $eventEndDate    = $_POST['eventEndDate'] ?? '';
+    $eventEndTime    = $_POST['eventEndTime'] ?? '';
+    $eventLocation   = $_POST['eventLocation'] ?? '';
+    $eventUrlImage   = $_POST['eventUrlImage'] ?? '';
+    $eventDesignData = $_POST['eventDesignData'] ?? '';
+    
+    // Ticket data
+    $hasTickets      = isset($_POST['hasTickets']) ? intval($_POST['hasTickets']) : 0;
+    $eventInfo       = $_POST['eventInfo'] ?? '';
+    $earlyBirdPrice  = isset($_POST['earlyBirdPrice']) ? floatval($_POST['earlyBirdPrice']) : 0.00;
+    $earlyBirdQuantity = isset($_POST['earlyBirdQuantity']) ? intval($_POST['earlyBirdQuantity']) : 0;
+    $generalPrice    = isset($_POST['generalPrice']) ? floatval($_POST['generalPrice']) : 0.00;
+    $vipPrice        = isset($_POST['vipPrice']) ? floatval($_POST['vipPrice']) : 0.00;
+    $vvipPrice       = isset($_POST['vvipPrice']) ? floatval($_POST['vvipPrice']) : 0.00;
+    $ticketConfig    = $_POST['ticketConfig'] ?? '{}';
+    
+    // Log image data for debugging
+    error_log("saveEvent - Image data type: " . gettype($eventUrlImage));
+    error_log("saveEvent - Image data length: " . strlen($eventUrlImage));
+    if (!empty($eventUrlImage)) {
+        error_log("saveEvent - Image data starts with: " . substr($eventUrlImage, 0, 50));
+    }
+    error_log("saveEvent - Has Tickets: " . $hasTickets);
+    error_log("saveEvent - Ticket Config: " . substr($ticketConfig, 0, 100));
+
+    $createdAt = date('Y-m-d H:i:s');
+
+    try {
+        // Set PHP memory limits
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', 300);
+
+        // Ensure UTF-8 encoding for all string data
+        $eventName       = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
+        $userName        = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
+        $eventLocation   = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
+        $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
+        $eventInfo       = mb_convert_encoding($eventInfo, 'UTF-8', 'UTF-8');
+        $ticketConfig    = mb_convert_encoding($ticketConfig, 'UTF-8', 'UTF-8');
+
+        // Remove any invalid UTF-8 characters
+        $eventDesignData = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $eventDesignData);
+        $ticketConfig    = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $ticketConfig);
+
+        // Check if eventDesignData is too large
+        $designDataSize = strlen($eventDesignData);
+        if ($designDataSize > 10000000) { // 10MB
+            echo json_encode([
+                "success" => false,
+                "message" => "Event design data is too large (" . round($designDataSize / 1024 / 1024, 2) . "MB). Please reduce the size.",
+            ]);
+            exit;
         }
 
-        $createdAt = date('Y-m-d H:i:s');
+        $checkStmt = $pdo->prepare("SELECT event_id FROM events WHERE event_id = :event_id AND user_id = :user_id");
+        $checkStmt->execute([
+            ':event_id' => $eventID,
+            ':user_id'  => $userID,
+        ]);
 
-        try {
-            // Set PHP memory limits
-            ini_set('memory_limit', '512M');
-            ini_set('max_execution_time', 300);
-
-            // Ensure UTF-8 encoding for all string data
-            $eventName       = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
-            $userName        = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
-            $eventLocation   = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
-            $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
-
-            // Remove any invalid UTF-8 characters
-            $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
-            $eventDesignData = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $eventDesignData);
-
-            // Check if eventDesignData is too large
-            $designDataSize = strlen($eventDesignData);
-            if ($designDataSize > 10000000) { // 10MB
-                echo json_encode([
-                    "success" => false,
-                    "message" => "Event design data is too large (" . round($designDataSize / 1024 / 1024, 2) . "MB). Please reduce the size.",
-                ]);
-                exit;
-            }
-
-            $checkStmt = $pdo->prepare("SELECT event_id FROM events WHERE event_id = :event_id AND user_id = :user_id");
-            $checkStmt->execute([
-                ':event_id' => $eventID,
-                ':user_id'  => $userID,
-            ]);
-
-            if ($checkStmt->fetch()) {
-                // Update existing event
-                $stmt = $pdo->prepare("UPDATE events SET
+        if ($checkStmt->fetch()) {
+            // Update existing event with ticket data
+            $stmt = $pdo->prepare("UPDATE events SET
                 event_name = :event_name,
                 event_start_date = :event_start_date,
                 event_start_time = :event_start_time,
@@ -692,170 +706,194 @@ $fun = $_POST['function'];
                 event_location = :event_location,
                 event_image = :event_image,
                 design_data = :design_data,
+                has_tickets = :has_tickets,
+                event_info = :event_info,
+                early_bird_price = :early_bird_price,
+                early_bird_quantity = :early_bird_quantity,
+                general_price = :general_price,
+                vip_price = :vip_price,
+                vvip_price = :vvip_price,
+                ticket_config = :ticket_config,
                 updated_at = :updated_at
                 WHERE event_id = :event_id AND user_id = :user_id
             ");
 
-                // convert and save large/base64 images for updates too
-                $eventImageToSave = $eventUrlImage;
-                try {
-                    if (!empty($eventUrlImage) && (strlen($eventUrlImage) > 50000 || preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,/', $eventUrlImage))) {
-                        $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'events';
-                        if (!is_dir($uploadDir)) {
-                            mkdir($uploadDir, 0755, true);
-                        }
-
-                        if (preg_match('/^data:(image\/(png|jpeg|jpg|gif));base64,(.*)$/', $eventUrlImage, $imgMatches)) {
-                            $mime = $imgMatches[1];
-                            $base64data = $imgMatches[3];
-                        } else {
-                            $base64data = $eventUrlImage;
-                            $mime = 'image/png';
-                        }
-
-                        $ext = 'png';
-                        if (strpos($mime, 'jpeg') !== false || strpos($mime, 'jpg') !== false) $ext = 'jpg';
-                        if (strpos($mime, 'gif') !== false) $ext = 'gif';
-
-                        $filename = $eventID . '_' . time() . '.' . $ext;
-                        $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
-                        $decoded = base64_decode($base64data);
-                        if ($decoded !== false && @file_put_contents($filePath, $decoded) !== false) {
-                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                            $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
-                            $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/events/' . $filename;
-                            $eventImageToSave = $fileUrl;
-                            error_log("saveEvent(update) - saved image to file: " . $filePath . " -> " . $fileUrl);
-                        } else {
-                            error_log("saveEvent(update) - failed to write image file for event " . $eventID);
-                        }
+            // Convert and save large/base64 images for updates too
+            $eventImageToSave = $eventUrlImage;
+            try {
+                if (!empty($eventUrlImage) && (strlen($eventUrlImage) > 50000 || preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,/', $eventUrlImage))) {
+                    $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'events';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
                     }
-                } catch (Exception $e) {
-                    error_log('saveEvent(update) - Exception when saving image file: ' . $e->getMessage());
-                }
 
-                $stmt->execute([
-                    ':event_name'       => $eventName,
-                    ':event_start_date' => $eventStartDate,
-                    ':event_start_time' => $eventStartTime,
-                    ':event_end_date'   => $eventEndDate,
-                    ':event_end_time'   => $eventEndTime,
-                    ':event_location'   => $eventLocation,
-                    ':event_image'      => $eventImageToSave,
-                    ':design_data'      => $eventDesignData,
-                    ':updated_at'       => $createdAt,
-                    ':event_id'         => $eventID,
-                    ':user_id'          => $userID,
-                ]);
-
-                // LOG THE ACTIVITY - Event updated
-                // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                // $logStmt->execute([
-                //     ':user_id'     => $userID,
-                //     ':action'      => 'Event Updated',
-                //     ':description' => "Event '{$eventName}' was updated",
-                // ]);
-            } else {
-                // Insert new event
-                $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
-                       event_end_date, event_end_time, event_location, event_image, design_data, created_at, updated_at";
-
-                $values = ":user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
-                      :event_end_date, :event_end_time, :event_location, :event_image, :design_data, :created_at, :updated_at";
-
-                $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
-                // If eventUrlImage looks like a data URI / base64 and is large, save the image to a file
-                $eventImageToSave = $eventUrlImage;
-                try {
-                    if (!empty($eventUrlImage) && (strlen($eventUrlImage) > 50000 || preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,/', $eventUrlImage))) {
-                        // Ensure uploads directory exists
-                        $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'events';
-                        if (!is_dir($uploadDir)) {
-                            mkdir($uploadDir, 0755, true);
-                        }
-
-                        // Extract base64 payload
-                        if (preg_match('/^data:(image\/(png|jpeg|jpg|gif));base64,(.*)$/', $eventUrlImage, $imgMatches)) {
-                            $mime = $imgMatches[1];
-                            $base64data = $imgMatches[3];
-                        } else {
-                            // fallback: assume raw base64
-                            $base64data = $eventUrlImage;
-                            $mime = 'image/png';
-                        }
-
-                        // choose extension
-                        $ext = 'png';
-                        if (strpos($mime, 'jpeg') !== false || strpos($mime, 'jpg') !== false) $ext = 'jpg';
-                        if (strpos($mime, 'gif') !== false) $ext = 'gif';
-
-                        $filename = $eventID . '_' . time() . '.' . $ext;
-                        $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
-
-                        // Decode and save
-                        $decoded = base64_decode($base64data);
-                        if ($decoded !== false && @file_put_contents($filePath, $decoded) !== false) {
-                            // Build URL for saved file (use server host + script dir)
-                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                            $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
-                            $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/events/' . $filename;
-                            $eventImageToSave = $fileUrl;
-                            error_log("saveEvent - saved image to file: " . $filePath . " -> " . $fileUrl);
-                        } else {
-                            error_log("saveEvent - failed to write image file for event " . $eventID);
-                        }
+                    if (preg_match('/^data:(image\/(png|jpeg|jpg|gif));base64,(.*)$/', $eventUrlImage, $imgMatches)) {
+                        $mime = $imgMatches[1];
+                        $base64data = $imgMatches[3];
+                    } else {
+                        $base64data = $eventUrlImage;
+                        $mime = 'image/png';
                     }
-                } catch (Exception $e) {
-                    error_log('saveEvent - Exception when saving image file: ' . $e->getMessage());
+
+                    $ext = 'png';
+                    if (strpos($mime, 'jpeg') !== false || strpos($mime, 'jpg') !== false) $ext = 'jpg';
+                    if (strpos($mime, 'gif') !== false) $ext = 'gif';
+
+                    $filename = $eventID . '_' . time() . '.' . $ext;
+                    $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+                    $decoded = base64_decode($base64data);
+                    if ($decoded !== false && @file_put_contents($filePath, $decoded) !== false) {
+                        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+                        $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/events/' . $filename;
+                        $eventImageToSave = $fileUrl;
+                        error_log("saveEvent(update) - saved image to file: " . $filePath . " -> " . $fileUrl);
+                    } else {
+                        error_log("saveEvent(update) - failed to write image file for event " . $eventID);
+                    }
                 }
-
-                $stmt->execute([
-                    ':user_id'          => $userID,
-                    ':user_name'        => $userName,
-                    ':event_id'         => $eventID,
-                    ':event_name'       => $eventName,
-                    ':event_start_date' => $eventStartDate,
-                    ':event_start_time' => $eventStartTime,
-                    ':event_end_date'   => $eventEndDate,
-                    ':event_end_time'   => $eventEndTime,
-                    ':event_location'   => $eventLocation,
-                    ':event_image'      => $eventImageToSave,
-                    ':design_data'      => $eventDesignData,
-                    ':created_at'       => $createdAt,
-                    ':updated_at'       => $createdAt,
-                ]);
-
-                // LOG THE ACTIVITY - Event created
-                // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-                // $logStmt->execute([
-                //     ':user_id'     => $userID,
-                //     ':action'      => 'Event Created',
-                //     ':description' => "New event '{$eventName}' created by {$userName}",
-                // ]);
+            } catch (Exception $e) {
+                error_log('saveEvent(update) - Exception when saving image file: ' . $e->getMessage());
             }
 
-            echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
+            $stmt->execute([
+                ':event_name'           => $eventName,
+                ':event_start_date'     => $eventStartDate,
+                ':event_start_time'     => $eventStartTime,
+                ':event_end_date'       => $eventEndDate,
+                ':event_end_time'       => $eventEndTime,
+                ':event_location'       => $eventLocation,
+                ':event_image'          => $eventImageToSave,
+                ':design_data'          => $eventDesignData,
+                ':has_tickets'          => $hasTickets,
+                ':event_info'           => $eventInfo,
+                ':early_bird_price'     => $earlyBirdPrice,
+                ':early_bird_quantity'  => $earlyBirdQuantity,
+                ':general_price'        => $generalPrice,
+                ':vip_price'            => $vipPrice,
+                ':vvip_price'           => $vvipPrice,
+                ':ticket_config'        => $ticketConfig,
+                ':updated_at'           => $createdAt,
+                ':event_id'             => $eventID,
+                ':user_id'              => $userID,
+            ]);
 
-        } catch (PDOException $e) {
-            // Handle specific MySQL errors
-            if (strpos($e->getMessage(), 'Incorrect string value') !== false) {
-                echo json_encode([
-                    "success" => false,
-                    "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8.",
-                ]);
-            } elseif (strpos($e->getMessage(), 'max_allowed_packet') !== false) {
-                echo json_encode([
-                    "success" => false,
-                    "message" => "Event data is too large. Please reduce the design complexity.",
-                ]);
-            } else {
-                echo json_encode(["success" => false, "message" => $e->getMessage()]);
+            // LOG THE ACTIVITY - Event updated
+            // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            // $logStmt->execute([
+            //     ':user_id'     => $userID,
+            //     ':action'      => 'Event Updated',
+            //     ':description' => "Event '{$eventName}' was updated",
+            // ]);
+        } else {
+            // Insert new event with ticket data
+            $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
+                   event_end_date, event_end_time, event_location, event_image, design_data,
+                   has_tickets, event_info, early_bird_price, early_bird_quantity,
+                   general_price, vip_price, vvip_price, ticket_config, created_at, updated_at";
+
+            $values = ":user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
+                  :event_end_date, :event_end_time, :event_location, :event_image, :design_data,
+                  :has_tickets, :event_info, :early_bird_price, :early_bird_quantity,
+                  :general_price, :vip_price, :vvip_price, :ticket_config, :created_at, :updated_at";
+
+            $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
+            
+            // Convert and save image
+            $eventImageToSave = $eventUrlImage;
+            try {
+                if (!empty($eventUrlImage) && (strlen($eventUrlImage) > 50000 || preg_match('/^data:image\/(png|jpeg|jpg|gif);base64,/', $eventUrlImage))) {
+                    $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'events';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+
+                    if (preg_match('/^data:(image\/(png|jpeg|jpg|gif));base64,(.*)$/', $eventUrlImage, $imgMatches)) {
+                        $mime = $imgMatches[1];
+                        $base64data = $imgMatches[3];
+                    } else {
+                        $base64data = $eventUrlImage;
+                        $mime = 'image/png';
+                    }
+
+                    $ext = 'png';
+                    if (strpos($mime, 'jpeg') !== false || strpos($mime, 'jpg') !== false) $ext = 'jpg';
+                    if (strpos($mime, 'gif') !== false) $ext = 'gif';
+
+                    $filename = $eventID . '_' . time() . '.' . $ext;
+                    $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+
+                    $decoded = base64_decode($base64data);
+                    if ($decoded !== false && @file_put_contents($filePath, $decoded) !== false) {
+                        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+                        $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/events/' . $filename;
+                        $eventImageToSave = $fileUrl;
+                        error_log("saveEvent - saved image to file: " . $filePath . " -> " . $fileUrl);
+                    } else {
+                        error_log("saveEvent - failed to write image file for event " . $eventID);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('saveEvent - Exception when saving image file: ' . $e->getMessage());
             }
+
+            $stmt->execute([
+                ':user_id'              => $userID,
+                ':user_name'            => $userName,
+                ':event_id'             => $eventID,
+                ':event_name'           => $eventName,
+                ':event_start_date'     => $eventStartDate,
+                ':event_start_time'     => $eventStartTime,
+                ':event_end_date'       => $eventEndDate,
+                ':event_end_time'       => $eventEndTime,
+                ':event_location'       => $eventLocation,
+                ':event_image'          => $eventImageToSave,
+                ':design_data'          => $eventDesignData,
+                ':has_tickets'          => $hasTickets,
+                ':event_info'           => $eventInfo,
+                ':early_bird_price'     => $earlyBirdPrice,
+                ':early_bird_quantity'  => $earlyBirdQuantity,
+                ':general_price'        => $generalPrice,
+                ':vip_price'            => $vipPrice,
+                ':vvip_price'           => $vvipPrice,
+                ':ticket_config'        => $ticketConfig,
+                ':created_at'           => $createdAt,
+                ':updated_at'           => $createdAt,
+            ]);
+
+            // LOG THE ACTIVITY - Event created
+            // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            // $logStmt->execute([
+            //     ':user_id'     => $userID,
+            //     ':action'      => 'Event Created',
+            //     ':description' => "New event '{$eventName}' created by {$userName}",
+            // ]);
         }
-        exit;
+
+        echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
+
+    } catch (PDOException $e) {
+        // Handle specific MySQL errors
+        if (strpos($e->getMessage(), 'Incorrect string value') !== false) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database encoding error. Please contact administrator to update database character set to UTF-8.",
+            ]);
+        } elseif (strpos($e->getMessage(), 'max_allowed_packet') !== false) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Event data is too large. Please reduce the design complexity.",
+            ]);
+        } else {
+            error_log("saveEvent PDO Exception: " . $e->getMessage());
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+        }
     }
+    exit;
+}
 
     if ($fun === "getusercount") {
 
@@ -4645,4 +4683,44 @@ $fun = $_POST['function'];
         exit;
     }
 
+    if ($fun === "getTicketEvents") {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                e.*,
+                u.name AS organizer_name,
+                u.email AS organizer_email
+            FROM events e
+            LEFT JOIN users u ON e.user_id = u.user_id
+            WHERE e.has_tickets = 1
+            ORDER BY COALESCE(e.event_start_date, e.created_at) ASC, e.created_at DESC
+        ");
+
+        $stmt->execute();
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($events as &$event) {
+            $event['has_tickets']     = (int)$event['has_tickets'];
+            $event['early_bird_price'] = (float)$event['early_bird_price'];
+            $event['general_price']   = (float)$event['general_price'];
+            $event['vip_price']       = (float)$event['vip_price'];
+            $event['vvip_price']      = (float)$event['vvip_price'];
+            // Ensure status is lowercase for consistent checking
+            $event['status']          = strtolower($event['status'] ?? 'draft');
+        }
+
+        echo json_encode([
+            "success" => true,
+            "events"  => $events,
+            "count"   => count($events),
+            "debug"   => "Query executed successfully"
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
 ?>

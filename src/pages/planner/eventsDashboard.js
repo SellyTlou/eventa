@@ -858,7 +858,7 @@ const EventsDashboard = () => {
                     <div className="loading-container">
                         <div className="loading-overlay">
                             <div className="loading-spinner"></div>
-                            <div className="loading-text">Loading your events...</div>
+                            <div className="loading-text">Loading events...</div>
                         </div>
                     </div>
                 )}

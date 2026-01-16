@@ -1,12 +1,107 @@
-import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./main.css";
 import { templates } from "./templates.js";
 import { LoginNav } from "../components";
 
+// Storage helper functions
+const saveEventDataToStorage = (eventData) => {
+  try {
+    let deviceId = localStorage.getItem('eventa_device_id');
+    if (!deviceId) {
+      deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('eventa_device_id', deviceId);
+    }
+
+    const eventDataKey = `eventa_${deviceId}_current_event`;
+    
+    if (eventData.ticketConfig) {
+      const ticketDataKey = `eventa_${deviceId}_ticket_config`;
+      localStorage.setItem(ticketDataKey, JSON.stringify(eventData.ticketConfig));
+      
+      const { ticketConfig, ...eventDataWithoutTickets } = eventData;
+      localStorage.setItem(eventDataKey, JSON.stringify(eventDataWithoutTickets));
+    } else {
+      localStorage.setItem(eventDataKey, JSON.stringify(eventData));
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error saving event data:', error);
+    return false;
+  }
+};
+
+const getEventDataFromStorage = () => {
+  try {
+    const deviceId = localStorage.getItem('eventa_device_id');
+    if (!deviceId) return null;
+
+    const eventDataKey = `eventa_${deviceId}_current_event`;
+    const data = localStorage.getItem(eventDataKey);
+    
+    if (!data) return null;
+    
+    const eventData = JSON.parse(data);
+    
+    const ticketDataKey = `eventa_${deviceId}_ticket_config`;
+    const ticketData = localStorage.getItem(ticketDataKey);
+    
+    if (ticketData) {
+      eventData.ticketConfig = JSON.parse(ticketData);
+    }
+    
+    return eventData;
+  } catch (error) {
+    console.error('Error retrieving event data:', error);
+    return null;
+  }
+};
+
+const saveTicketDataToStorage = (ticketData) => {
+  try {
+    const deviceId = localStorage.getItem('eventa_device_id');
+    if (!deviceId) return false;
+
+    const ticketDataKey = `eventa_${deviceId}_ticket_config`;
+    localStorage.setItem(ticketDataKey, JSON.stringify(ticketData));
+    
+    return true;
+  } catch (error) {
+    console.error('Error saving ticket data:', error);
+    return false;
+  }
+};
+
 export default function EventTheme() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState("All");
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [hasTickets, setHasTickets] = useState(null);
+  const [ticketConfig, setTicketConfig] = useState({
+    earlyBird: { price: "", quantity: "" },
+    general: { price: "" },
+    vip: { price: "" },
+    vvip: { price: "" }
+  });
+  const [eventInfo, setEventInfo] = useState("");
+  const [eventData, setEventData] = useState(null);
+
+  // Load existing event data on component mount
+  useEffect(() => {
+    const storedEventData = getEventDataFromStorage();
+    if (storedEventData) {
+      setEventData(storedEventData);
+      
+      // If we already have ticket config from previous step, pre-fill it
+      if (storedEventData.ticketConfig && storedEventData.ticketConfig.config) {
+        setTicketConfig(storedEventData.ticketConfig.config);
+        setEventInfo(storedEventData.ticketConfig.eventInfo || "");
+      }
+    }
+  }, []);
 
   // Build category list including "All"
   const allCategories = useMemo(() => {
@@ -43,10 +138,131 @@ export default function EventTheme() {
 
   const handleTemplateSelect = (templateId) => {
     const category = templateToCategoryMap.get(templateId);
-    navigate(`/postcardEditor?template=${templateId}&category=${category}`);
+    const template = allCategories[activeFilter].find(t => t.id === templateId);
+    setSelectedTemplate({ id: templateId, category, template });
+    setShowTicketModal(true);
   };
 
-  const handleBack = () => navigate(-1);
+  const handleBack = () => {
+    if (eventData?.eventName) {
+      navigate("/createEvent");
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleTicketOption = (option) => {
+    setHasTickets(option);
+    
+    // If no tickets, go directly to editor
+    if (option === false) {
+      navigateToEditor();
+    }
+  };
+
+  const handleInputChange = (type, field, value) => {
+    setTicketConfig(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value
+      }
+    }));
+  };
+
+  const saveTicketConfiguration = () => {
+    const ticketData = {
+      hasTickets: true,
+      config: ticketConfig,
+      eventInfo: eventInfo.trim()
+    };
+    
+    // Save ticket data to storage
+    saveTicketDataToStorage(ticketData);
+    
+    // Update main event data with ticket info
+    if (eventData) {
+      const updatedEventData = {
+        ...eventData,
+        hasTickets: true,
+        ticketConfig: ticketData
+      };
+      saveEventDataToStorage(updatedEventData);
+    }
+    
+    return ticketData;
+  };
+
+  const navigateToEditor = () => {
+    let ticketData = null;
+    
+    if (hasTickets) {
+      ticketData = saveTicketConfiguration();
+    } else {
+      // Save that this event has no tickets
+      const noTicketData = { hasTickets: false };
+      saveTicketDataToStorage(noTicketData);
+      
+      if (eventData) {
+        const updatedEventData = {
+          ...eventData,
+          hasTickets: false,
+          ticketConfig: noTicketData
+        };
+        saveEventDataToStorage(updatedEventData);
+      }
+    }
+
+    navigate(`/postcardEditor?template=${selectedTemplate.id}&category=${selectedTemplate.category}`, {
+      state: {
+        eventData: eventData,
+        template: selectedTemplate.template,
+        ticketConfig: ticketData
+      }
+    });
+    
+    // Reset modal state
+    setShowTicketModal(false);
+    setHasTickets(null);
+    setTicketConfig({
+      earlyBird: { price: "", quantity: "" },
+      general: { price: "" },
+      vip: { price: "" },
+      vvip: { price: "" }
+    });
+    setEventInfo("");
+  };
+
+  const handleSubmitTickets = () => {
+    // Validate ticket configuration
+    if (hasTickets) {
+      // Check Early Bird has both price and quantity if filled
+      if (ticketConfig.earlyBird.price && !ticketConfig.earlyBird.quantity) {
+        alert("Please enter quantity for Early Bird tickets");
+        return;
+      }
+      if (ticketConfig.earlyBird.quantity && !ticketConfig.earlyBird.price) {
+        alert("Please enter price for Early Bird tickets");
+        return;
+      }
+      
+      // Check if at least one ticket type has price
+      const hasValidTicket = Object.entries(ticketConfig).some(([type, config]) => {
+        if (type === 'earlyBird') {
+          return config.price && config.quantity && !isNaN(config.price) && !isNaN(config.quantity);
+        } else {
+          return config.price && !isNaN(config.price);
+        }
+      });
+      
+      if (!hasValidTicket) {
+        alert("Please enter price for at least one ticket type");
+        return;
+      }
+    }
+    
+    navigateToEditor();
+  };
 
   const currentTemplates = allCategories[activeFilter] || [];
 
@@ -81,6 +297,20 @@ export default function EventTheme() {
           <section className="template-selection">
             <div className="container">
               <h1>Select a Template</h1>
+              {eventData?.eventName && (
+                <div className="event-name-banner">
+                  Creating: <strong>{eventData.eventName}</strong>
+                  {eventData.eventStartDate && (
+                    <span className="event-date">
+                      on {new Date(eventData.eventStartDate).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <div className="template-filters">
                 {["All", "Birthday", "BabyShower", "Wedding", "Graduation"].map(filter => (
@@ -128,7 +358,172 @@ export default function EventTheme() {
           </section>
         </div>
       </section>
-    </>
 
+      {/* Ticket Configuration Modal */}
+      {showTicketModal && selectedTemplate && (
+        <div className="ticket-modal-overlay">
+          <div className="ticket-modal">
+            <div className="ticket-modal-header">
+              <h2>Ticket Configuration</h2>
+              <button className="close-btn" onClick={() => setShowTicketModal(false)}>×</button>
+            </div>
+            
+            <div className="ticket-modal-body">
+              {hasTickets === null ? (
+                // Step 1: Ask if event has tickets
+                <div className="ticket-option-step">
+                  <h3>Does your event require tickets?</h3>
+                  <p>You can sell tickets for your event or make it free entry.</p>
+                  
+                  <div className="ticket-options">
+                    <button 
+                      className="ticket-option-btn ticket-option-yes"
+                      onClick={() => handleTicketOption(true)}
+                    >
+                      <div className="option-icon">🎫</div>
+                      <div className="option-content">
+                        <h4>Yes, sell tickets</h4>
+                        <p>Set up paid tickets for your event</p>
+                      </div>
+                    </button>
+                    
+                    <button 
+                      className="ticket-option-btn ticket-option-no"
+                      onClick={() => handleTicketOption(false)}
+                    >
+                      <div className="option-icon">🎉</div>
+                      <div className="option-content">
+                        <h4>No, free entry</h4>
+                        <p>Create event without tickets</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Step 2: Ticket configuration form
+                <div className="ticket-config-step">
+                  <h3>Configure Your Tickets</h3>
+                  <p>Set prices for different ticket types</p>
+                  
+                  <div className="ticket-types-grid">
+                    {/* Early Bird Ticket - With Quantity */}
+                    <div className="ticket-type-card">
+                      <h4>Early Bird <span className="quantity-note">(Limited quantity)</span></h4>
+                      <div className="ticket-fields">
+                        <div className="form-group">
+                          <label>Price (R)</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.earlyBird.price}
+                            onChange={(e) => handleInputChange('earlyBird', 'price', e.target.value)}
+                            placeholder="e.g., 100"
+                            min="0"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Quantity</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.earlyBird.quantity}
+                            onChange={(e) => handleInputChange('earlyBird', 'quantity', e.target.value)}
+                            placeholder="e.g., 50"
+                            min="1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* General Admission - Only Price */}
+                    <div className="ticket-type-card">
+                      <h4>General Admission</h4>
+                      <div className="form-group">
+                        <label>Price (R)</label>
+                        <input
+                          type="number"
+                          value={ticketConfig.general.price}
+                          onChange={(e) => handleInputChange('general', 'price', e.target.value)}
+                          placeholder="e.g., 150"
+                          min="0"
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* VIP Ticket - Only Price */}
+                    <div className="ticket-type-card">
+                      <h4>VIP</h4>
+                      <div className="form-group">
+                        <label>Price (R)</label>
+                        <input
+                          type="number"
+                          value={ticketConfig.vip.price}
+                          onChange={(e) => handleInputChange('vip', 'price', e.target.value)}
+                          placeholder="e.g., 300"
+                          min="0"
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* VVIP Ticket - Only Price */}
+                    <div className="ticket-type-card">
+                      <h4>VVIP</h4>
+                      <div className="form-group">
+                        <label>Price (R)</label>
+                        <input
+                          type="number"
+                          value={ticketConfig.vvip.price}
+                          onChange={(e) => handleInputChange('vvip', 'price', e.target.value)}
+                          placeholder="e.g., 500"
+                          min="0"
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Event Info Textarea */}
+                  <div className="event-info-section">
+                    <h4>Event Information</h4>
+                    <textarea
+                      value={eventInfo}
+                      onChange={(e) => setEventInfo(e.target.value)}
+                      placeholder="Add any important information about your event, ticket terms, or special instructions..."
+                      rows="4"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="ticket-modal-footer">
+              {hasTickets === null ? (
+                <button 
+                  className="btn-back"
+                  onClick={() => setShowTicketModal(false)}
+                >
+                  Cancel
+                </button>
+              ) : (
+                <>
+                  <button 
+                    className="btn-back"
+                    onClick={() => setHasTickets(null)}
+                  >
+                    Back
+                  </button>
+                  <button 
+                    className="btn-submit"
+                    onClick={handleSubmitTickets}
+                  >
+                    Continue to Editor
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
