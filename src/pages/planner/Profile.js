@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Profile.css";
 import '../../alert.css';
-import { logOut } from "../components";
+import { logOut, LoginNav } from "../components";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -385,7 +385,7 @@ const Profile = () => {
         </div>
       )}
 
-      {/* HEADER */}
+      {/* HEADER 
       <div className="dashboard-header">
         <h1>Evenda</h1>
         <div className="header-tabs">
@@ -402,8 +402,8 @@ const Profile = () => {
             )}
           </div>
         </div>
-      </div>
-
+      </div>*/}
+<LoginNav />
       <section className="profilePage">
         <div className="container">
           <button className="btn-event btn-event-back" onClick={handleBack}>

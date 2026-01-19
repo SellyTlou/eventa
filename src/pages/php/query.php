@@ -4791,7 +4791,8 @@ $fun = $_POST['function'];
     }
 
     if ($fun === "getTicketEvents") {
-    try {
+
+     try {
         $stmt = $pdo->prepare("
             SELECT 
                 e.*,
@@ -4822,12 +4823,101 @@ $fun = $_POST['function'];
             "count"   => count($events),
             "debug"   => "Query executed successfully"
         ]);
+     } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+
+    exit;
+}
+
+  if ($fun === "processTicketPayment") {
+
+    $event_id              = $_POST['event_id'] ?? '';
+    $customer_email        = $_POST['customer_email'] ?? '';
+    $customer_first_name   = $_POST['customer_first_name'] ?? '';
+    $customer_last_name    = $_POST['customer_last_name'] ?? '';
+    $customer_phone        = $_POST['customer_phone'] ?? '';
+    $ticket_type           = $_POST['ticket_type'] ?? '';
+    $ticket_type_label     = $_POST['ticket_type_label'] ?? '';
+    $quantity              = $_POST['quantity'] ?? 0;
+    $unit_price            = $_POST['unit_price'] ?? 0;
+    $total_amount          = $_POST['total_amount'] ?? 0;
+    $payment_method        = $_POST['payment_method'] ?? '';
+    $payment_status        = $_POST['payment_status'] ?? '';
+    $transaction_id        = $_POST['transaction_id'] ?? '';
+
+    if (empty($transaction_id) || empty($event_id) ) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing required data"
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO bookings (
+                bookingId,
+                event_id,
+                customer_email,
+                customer_first_name,
+                customer_last_name,
+                customer_phone,
+                ticket_type,
+                ticket_type_label,
+                quantity,
+                unit_price,
+                total_amount,
+                payment_method,
+                payment_status,
+                created_at
+            ) VALUES (
+                :bookingId,
+                :event_id,
+                :customer_email,
+                :customer_first_name,
+                :customer_last_name,
+                :customer_phone,
+                :ticket_type,
+                :ticket_type_label,
+                :quantity,
+                :unit_price,
+                :total_amount,
+                :payment_method,
+                :payment_status,
+                NOW()
+            )
+        ");
+
+        $stmt->execute([
+            ':bookingId'            => $transaction_id,
+            ':event_id'             => $event_id,
+            ':customer_email'       => $customer_email,
+            ':customer_first_name'  => $customer_first_name,
+            ':customer_last_name'   => $customer_last_name,
+            ':customer_phone'       => $customer_phone,
+            ':ticket_type'          => $ticket_type,
+            ':ticket_type_label'    => $ticket_type_label,
+            ':quantity'             => $quantity,
+            ':unit_price'           => $unit_price,
+            ':total_amount'         => $total_amount,
+            ':payment_method'       => $payment_method,
+            ':payment_status'       => $payment_status,
+        ]);
+
+        echo json_encode([
+            "success" => true,
+            "bookingId" => $transaction_id
+        ]);
+
     } catch (PDOException $e) {
         echo json_encode([
             "success" => false,
             "message" => "Database error: " . $e->getMessage()
         ]);
     }
-    exit;
 }
 ?>

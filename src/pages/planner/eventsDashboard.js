@@ -4,6 +4,7 @@ import PriorityQueue from "js-priority-queue";
 import "./main.css";
 import "../../responce.css"
 import "../../alert.css";
+import { LoginNav } from "../components";
 
 const EventsDashboard = () => {
     const [events, setEvents] = useState([]);
@@ -887,7 +888,7 @@ const EventsDashboard = () => {
 
             <section className="eventsDashboard">
              
-                <nav className="eventsNavbar">
+               {/* <nav className="eventsNavbar">
                     <div className="container">
                         <div className="row align-items-center">
                             <div className="col-lg-2">
@@ -922,8 +923,8 @@ const EventsDashboard = () => {
                             </div>
                         </div>
                     </div>
-                </nav>
-
+                </nav>*/}
+<LoginNav />
                 <div className="container">
                     {/* HEADER */}
                     <div className="dashboard-header">

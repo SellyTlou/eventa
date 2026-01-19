@@ -511,7 +511,7 @@ Profile container dropdown
 
 .profile-container .dropdown-menu {
     position: absolute;
-    top: 100%;
+    top: 100% !important;
     right: 0;
     background-color: #ffffff;
     border-radius: 5px;

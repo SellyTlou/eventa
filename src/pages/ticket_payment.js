@@ -6,7 +6,7 @@ function Ticket_payment() {
   const location = useLocation();
   const navigate = useNavigate();
   const event = location.state?.event;
-  
+
   const [loading, setLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -14,6 +14,8 @@ function Ticket_payment() {
   const [paymentStarted, setPaymentStarted] = useState(false);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [bookingData, setBookingData] = useState(null);
+
   const [ticketData, setTicketData] = useState({
     email: "",
     firstName: "",
@@ -31,7 +33,7 @@ function Ticket_payment() {
   // If no event data, redirect back
   useEffect(() => {
     if (!event) {
-      navigate("/ticket-sales");
+      navigate("/ticket_sales");
     }
   }, [event, navigate]);
 
@@ -45,10 +47,10 @@ function Ticket_payment() {
 
   const calculateTotal = () => {
     if (!event) return 0;
-    
+
     let price = 0;
     const quantity = parseInt(ticketData.quantity) || 1;
-    
+
     switch (ticketData.ticketType) {
       case "early_bird":
         price = parseFloat(event.early_bird_price) || 0;
@@ -65,7 +67,7 @@ function Ticket_payment() {
       default:
         price = parseFloat(event.general_price) || 0;
     }
-    
+
     return (price * quantity).toFixed(2);
   };
 
@@ -101,83 +103,142 @@ function Ticket_payment() {
     setShowPaymentPopup(true);
   };
 
-  const recordPayment = async (paymentData) => {
+  const sendBookingPDF = async (booking) => {
+    if (!booking) {
+      setError("No booking data available to send PDF");
+      return false;
+    }
+
     try {
       const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
       const formData = new FormData();
-      
-      // Prepare payment data
-      const bookingData = {
-        function: "processTicketPayment",
-        event_id: event.event_id,
+
+      const pdfData = {
+        function: "sendPDF",
         event_name: event.event_name,
-        event_image: event.event_image,
-        event_date: event.event_start_date,
-        event_time: event.event_start_time,
-        event_location: event.event_location,
-        customer_email: ticketData.email,
-        customer_first_name: ticketData.firstName,
-        customer_last_name: ticketData.lastName,
-        customer_phone: ticketData.phone,
-        ticket_type: ticketData.ticketType,
-        ticket_type_label: getTicketTypeLabel(ticketData.ticketType),
-        quantity: ticketData.quantity,
-        unit_price: getTicketPrice(),
-        total_amount: calculateTotal(),
-        payment_method: selectedPaymentMethod,
-        payment_status: "completed",
-        transaction_id: "TXN_" + Date.now() + Math.random().toString(36).substr(2, 9),
+        event_image: event.event_image || "",
+        event_date: event.event_start_date || "",
+        event_time: event.event_start_time || "",
+        event_location: event.event_location || "",
+        event_id: event.event_id,
+        customer_email: booking.customer_email,
+        customer_first_name: booking.customer_first_name,
+        customer_last_name: booking.customer_last_name,
+        customer_phone: booking.customer_phone || "",
+        ticket_type: booking.ticket_type,
+        ticket_type_label: booking.ticket_type_label,
+        quantity: booking.quantity,
+        unit_price: booking.unit_price,
+        total_amount: booking.total_amount,
+        payment_method: booking.payment_method,
+        payment_status: booking.payment_status,
+        transaction_id: booking.transaction_id,
+        booking_id: booking.booking_id || booking.transaction_id,
+        booking_date: new Date().toISOString().split('T')[0]
       };
 
-      // Append all data to formData
-      Object.entries(bookingData).forEach(([key, value]) => {
+      Object.entries(pdfData).forEach(([key, value]) => {
         formData.append(key, value);
       });
 
-      const res = await fetch(`${API_URL}/query.php`, {
+      const response = await fetch(`${API_URL}/sendBookingPDF.php`, {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
       }
 
-      const text = await res.text();
+      const text = await response.text();
       if (!text.trim()) {
-        console.error("Empty response from server (processTicketPayment)");
-        throw new Error("Empty response from server");
+        throw new Error("Empty response from PDF endpoint");
       }
 
       let data;
       try {
         data = JSON.parse(text);
-      } catch (err) {
-        console.error("Invalid JSON from server:", text);
-        throw new Error("Invalid JSON response");
+      } catch {
+        throw new Error("Invalid JSON from PDF endpoint");
       }
 
       if (data.success) {
-        return {
-          success: true,
-          booking_id: data.booking_id,
-          transaction_id: data.transaction_id
-        };
+        console.log("PDF sent successfully");
+        return true;
       } else {
-        throw new Error(data.message || "Payment processing failed");
+        throw new Error(data.message || "PDF sending failed");
       }
     } catch (err) {
-      console.error("Payment recording error:", err);
-      return {
-        success: false,
-        error: err.message
-      };
+      console.error("PDF sending error:", err);
+      setError("Payment succeeded but could not send confirmation email: " + err.message);
+      return false;
     }
+  };
+
+  const recordPayment = async () => {
+    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+    
+    // Generate transaction ID
+    const transactionId = "TXN_" + Date.now() + Math.random().toString(36).substr(2, 9);
+
+    const bookingPayload = {
+      function: "processTicketPayment",
+      event_id: event.event_id,
+      customer_email: ticketData.email,
+      customer_first_name: ticketData.firstName, 
+      customer_last_name: ticketData.lastName,
+      customer_phone: ticketData.phone,
+      ticket_type: ticketData.ticketType,
+      ticket_type_label: getTicketTypeLabel(ticketData.ticketType),
+      quantity: ticketData.quantity,
+      unit_price: getTicketPrice(),
+      total_amount: calculateTotal(),
+      payment_method: selectedPaymentMethod,
+      payment_status: "completed",
+      transaction_id: transactionId,
+    };
+
+    const formData = new FormData();
+    Object.entries(bookingPayload).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+
+    const res = await fetch(`${API_URL}/query.php`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error ${res.status}`);
+    }
+
+    const text = await res.text();
+    if (!text.trim()) {
+      throw new Error("Empty response from server");
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Invalid JSON response from server");
+    }
+
+    if (!data.success) {
+      throw new Error(data.message || "Failed to record booking");
+    }
+
+    return {
+      ...bookingPayload,
+      booking_id: data.bookingId || transactionId,
+      bookingId: data.bookingId,
+      transaction_id: transactionId,
+    };
   };
 
   const getTicketPrice = () => {
     if (!event) return "0.00";
-    
+
     switch (ticketData.ticketType) {
       case "early_bird":
         return formatPrice(event.early_bird_price);
@@ -194,7 +255,7 @@ function Ticket_payment() {
 
   const processPayment = async (paymentData) => {
     if (processingPayment || paymentStarted) {
-      console.log("Payment already in progress, ignoring duplicate click");
+      console.log("Payment already in progress — ignoring");
       return;
     }
 
@@ -203,19 +264,20 @@ function Ticket_payment() {
     setError("");
 
     try {
+      // Simulate processing delay (remove or replace with real gateway in production)
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const paymentResult = await recordPayment(paymentData);
+      const newBooking = await recordPayment();
 
-      console.log("Payment success status:", paymentResult.success);
-      if (paymentResult.success) {
-        setPaymentSuccess(true);
-      } else {
-        throw new Error(paymentResult.error || "Payment recording failed");
-      }
-    } catch (error) {
-      console.error("Payment processing error:", error);
-      setError("An error occurred during payment processing. Please try again.");
+      setBookingData(newBooking);
+
+      // Send PDF **right after** successful DB insert
+      await sendBookingPDF(newBooking);
+
+      setPaymentSuccess(true);
+    } catch (err) {
+      console.error("Payment flow error:", err);
+      setError("An error occurred. Please try again.");
     } finally {
       setProcessingPayment(false);
       setPaymentStarted(false);
@@ -229,7 +291,10 @@ function Ticket_payment() {
     setError("");
   };
 
-  // Payment Form Components
+  // ────────────────────────────────────────────────
+  //   Your original payment form components (unchanged)
+  // ────────────────────────────────────────────────
+
   const CreditCardForm = ({ onSubmit }) => {
     const [cardData, setCardData] = useState({
       cardNumber: "",
@@ -243,7 +308,6 @@ function Ticket_payment() {
       e.preventDefault();
       setLoading(true);
 
-      // Simulate secure card validation
       setTimeout(() => {
         setLoading(false);
         onSubmit({
@@ -309,7 +373,7 @@ function Ticket_payment() {
           {loading ? (
             <>
               <div className="spinner-border spinner-border-sm" role="status"></div>
-              &nbsp;Processing Secure Payment...
+               Processing Secure Payment...
             </>
           ) : (
             `Pay Securely R${(parseFloat(calculateTotal()) + 15).toFixed(2)}`
@@ -356,7 +420,7 @@ function Ticket_payment() {
           {loading ? (
             <>
               <div className="spinner-border spinner-border-sm" role="status"></div>
-              &nbsp;Processing PayPal Payment...
+               Processing PayPal Payment...
             </>
           ) : (
             "Confirm Payment"
@@ -438,29 +502,43 @@ function Ticket_payment() {
           </div>
           <h2>Payment Successful!</h2>
           <p>Your tickets have been booked successfully.</p>
-          <p className="success-details">
-            A confirmation email with your e-tickets has been sent to <strong>{ticketData.email}</strong>
-          </p>
+
+          {bookingData && (
+            <div className="success-details">
+              <p><strong>Booking ID:</strong> {bookingData.booking_id || bookingData.transaction_id}</p>
+              <p><strong>Payment Method:</strong> {bookingData.payment_method}</p>
+              <p><strong>Email sent to:</strong> {bookingData.customer_email}</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="alert error mt-3">
+              {error}
+            </div>
+          )}
+
           <div className="success-actions">
-            <button 
+            <button
               className="btn-primary"
-              onClick={() => navigate("/ticket-sales")}
+              onClick={() => navigate("/ticket_sales")}
             >
               Browse More Events
             </button>
-            <button 
+            <button
               className="btn-secondary"
               onClick={() => window.print()}
             >
               <i className="fas fa-print"></i> Print Tickets
             </button>
           </div>
+
           <div className="ticket-summary">
             <h4>Booking Summary</h4>
             <p><strong>Event:</strong> {event.event_name}</p>
             <p><strong>Date:</strong> {formatDate(event.event_start_date)}</p>
-            <p><strong>Tickets:</strong> {ticketData.quantity} x {getTicketTypeLabel(ticketData.ticketType)}</p>
+            <p><strong>Tickets:</strong> {ticketData.quantity} × {getTicketTypeLabel(ticketData.ticketType)}</p>
             <p><strong>Total Paid:</strong> R {calculateTotal()}</p>
+            <p><strong>Confirmation Email:</strong> {ticketData.email}</p>
           </div>
         </div>
       </div>
@@ -474,14 +552,14 @@ function Ticket_payment() {
         <div className="event-summary">
           <div className="event-header">
             <h2>Event Details</h2>
-            <button 
+            <button
               className="back-btn"
               onClick={() => navigate(-1)}
             >
               <i className="fas fa-arrow-left"></i> Back
             </button>
           </div>
-          
+
           <div className="event-image">
             <img
               src={event.event_image || "/images/default-event.jpg"}
@@ -491,7 +569,7 @@ function Ticket_payment() {
               }}
             />
           </div>
-          
+
           <div className="event-info">
             <h3>{event.event_name}</h3>
             <p className="event-date">
@@ -501,7 +579,7 @@ function Ticket_payment() {
             <p className="event-location">
               <i className="fas fa-map-marker-alt"></i> {event.event_location || "Location TBA"}
             </p>
-            
+
             <div className="ticket-selection-summary">
               <h4>Your Selection</h4>
               <div className="selected-ticket">
@@ -519,13 +597,13 @@ function Ticket_payment() {
         {/* Right Column: Personal Info Form */}
         <div className="payment-form-container">
           <h2>Complete Your Booking</h2>
-          
+
           {error && (
             <div className="alert error">
               <i className="fas fa-exclamation-circle"></i> {error}
             </div>
           )}
-          
+
           <form>
             {/* Personal Information */}
             <div className="form-section">
@@ -552,7 +630,7 @@ function Ticket_payment() {
                   />
                 </div>
               </div>
-              
+
               <div className="form-row">
                 <div className="form-group">
                   <label>Email Address *</label>
@@ -632,7 +710,7 @@ function Ticket_payment() {
                   I agree to the terms and conditions and understand that tickets are non-refundable
                 </label>
               </div>
-              
+
               <div className="payment-total">
                 <div className="total-row">
                   <span>Subtotal</span>
@@ -647,9 +725,9 @@ function Ticket_payment() {
                   <span>R {(parseFloat(calculateTotal()) + 15).toFixed(2)}</span>
                 </div>
               </div>
-              
+
               <h3 className="payment-title">Choose Payment Method</h3>
-              
+
               <div className="payment-methods">
                 <button
                   className={`payment-option ${selectedPaymentMethod === 'credit-card' ? 'active' : ''}`}
@@ -676,7 +754,7 @@ function Ticket_payment() {
                   <small>Secure payments</small>
                 </button>
               </div>
-              
+
               <p className="secure-payment">
                 <i className="fas fa-lock"></i> Your payment is secure and encrypted
               </p>

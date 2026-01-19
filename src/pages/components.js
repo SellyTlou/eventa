@@ -266,363 +266,225 @@ const btnDangerStyle = {
     cursor: "pointer",
 };
 
+
 export function Navbar({ onLoginClick, onSignupClick }) {
-    const [scrolled, setScrolled] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [user, setUser] = useState(null);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const dropdownRef = useRef(null);
-    const navigate = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-    // Check if user is logged in
-    useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
+  const desktopDropdownRef = useRef(null);
+  const mobileDropdownRef = useRef(null);
 
-        // Listen for login/logout events
-        const handleUserChange = () => {
-            const updatedUser = localStorage.getItem("user");
-            setUser(updatedUser ? JSON.parse(updatedUser) : null);
-        };
+  const navigate = useNavigate();
 
-        window.addEventListener('userLoggedIn', handleUserChange);
-        window.addEventListener('userLoggedOut', handleUserChange);
+  /* ===============================
+     USER AUTH STATE
+  =============================== */
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setUser(JSON.parse(storedUser));
 
-        return () => {
-            window.removeEventListener('userLoggedIn', handleUserChange);
-            window.removeEventListener('userLoggedOut', handleUserChange);
-        };
-    }, []);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            if (window.scrollY > 50) {
-                setScrolled(true);
-            } else {
-                setScrolled(false);
-            }
-        };
-
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setDropdownOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
-
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
+    const handleUserChange = () => {
+      const updatedUser = localStorage.getItem("user");
+      setUser(updatedUser ? JSON.parse(updatedUser) : null);
     };
 
-    const toggleDropdown = () => {
-        setDropdownOpen(prev => !prev);
+    window.addEventListener("userLoggedIn", handleUserChange);
+    window.addEventListener("userLoggedOut", handleUserChange);
+
+    return () => {
+      window.removeEventListener("userLoggedIn", handleUserChange);
+      window.removeEventListener("userLoggedOut", handleUserChange);
+    };
+  }, []);
+
+ 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
     };
 
-    const goToDashboard = () => {
-        navigate("/eventsDashboard");
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        desktopDropdownRef.current &&
+        !desktopDropdownRef.current.contains(event.target) &&
+        mobileDropdownRef.current &&
+        !mobileDropdownRef.current.contains(event.target)
+      ) {
         setDropdownOpen(false);
-        setIsMobileMenuOpen(false);
+      }
     };
 
-    const goToProfile = () => {
-        navigate("/Profile");
-        setDropdownOpen(false);
-        setIsMobileMenuOpen(false);
-    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
-    const logOut = () => {
-        localStorage.removeItem("user");
-        setUser(null);
-        setDropdownOpen(false);
-        setIsMobileMenuOpen(false);
-        window.dispatchEvent(new CustomEvent('userLoggedOut'));
-        navigate("/");
-    };
+ 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen((prev) => !prev);
+  };
 
-    const craeteEventClicked = () => {
-        navigate("/activeEventDetails");
-        setDropdownOpen(false);
-        setIsMobileMenuOpen(false);
-    };
+  const toggleDropdown = (e) => {
+    e.stopPropagation();
+    setDropdownOpen((prev) => !prev);
+  };
 
-    return (
-        <>
-            <section className={`nav-section d-none d-md-block ${scrolled ? "scrolled" : ""}`}>
-                <div className="container">
-                    <div className="row bottom-nav-row">
-                        <div className="col-md-3 logo-container">
-                            <a href="/">
-                                <img src="/images/logo.png" alt="Eventa Logo" className="logo img-fluid" />
-                            </a>
-                        </div>
-                        <div className="col-md-6">
-                            <ul className="nav-list nav">
-                                <li className="nav-item">
-                                    <NavLink
-                                        to="/"
-                                        className={({ isActive }) =>
-                                            `nav-link ${isActive ? "active" : ""}`
-                                        }
-                                        end
-                                    >
-                                        Home
-                                    </NavLink>
-                                </li>
-                                <li className="nav-item">
-                                    <NavLink
-                                        to="/feature"
-                                        className={({ isActive }) =>
-                                            `nav-link ${isActive ? "active" : ""}`
-                                        }
-                                    >
-                                        Features
-                                    </NavLink>
-                                </li>
-                                <li className="nav-item">
-                                    <NavLink
-                                        to="/ticket_sales"
-                                        className={({ isActive }) =>
-                                            `nav-link ${isActive ? "active" : ""}`
-                                        }
-                                    >
-                                        Events
-                                    </NavLink>
-                                </li>
-                                <li className="nav-item">
-                                    <NavLink
-                                        to="/pricing"
-                                        className={({ isActive }) =>
-                                            `nav-link ${isActive ? "active" : ""}`
-                                        }
-                                    >
-                                        Pricing
-                                    </NavLink>
-                                </li>
-                                <li className="nav-item">
-                                    <NavLink
-                                        to="/sales"
-                                        className={({ isActive }) =>
-                                            `nav-link ${isActive ? "active" : ""}`
-                                        }
-                                    >
-                                        Sales
-                                    </NavLink>
-                                </li>
-                                <li className="nav-item">
-                                    <NavLink
-                                        to="/support"
-                                        className={({ isActive }) =>
-                                            `nav-link ${isActive ? "active" : ""}`
-                                        }
-                                    >
-                                        Support
-                                    </NavLink>
-                                </li>
-                            </ul>
-                        </div>
-                        <div className="col-md-3 btns-container">
-                            {/* Show profile dropdown when user is logged in, otherwise show login/signup buttons */}
-                            {user ? (
-                                <div className="logged-in-container">
-                                    <button className="btn dashboard-btn me-2" onClick={goToDashboard}>
-                                        <i className="bi bi-grid-fill me-1"></i> Dashboard
-                                    </button>
-                                    <div
-                                        ref={dropdownRef}
-                                        className={`profile-container ${dropdownOpen ? "open" : ""}`}
-                                    >
-                                        <div className="profile-trigger" onClick={toggleDropdown}>
-                                            <i className="bi bi-person-circle me-1"></i>
-                                            <span className="profile-name">{user.name || "User"}</span>
-                                            <i className="bi bi-chevron-down ms-1"></i>
-                                        </div>
-                                        {dropdownOpen && (
-                                            <div className="dropdown-menu">
-                                                <button onClick={goToDashboard} className="dropdown-item">
-                                                    <i className="bi bi-grid-fill me-2"></i> Dashboard
-                                                </button>
-                                                <button onClick={craeteEventClicked} className="dropdown-item">
-                                                    <i className="bi bi-plus-circle me-2"></i> New Event
-                                                </button>
-                                                <button onClick={goToProfile} className="dropdown-item">
-                                                    <i className="bi bi-person me-2"></i> Profile
-                                                </button>
-                                                <div className="dropdown-divider"></div>
-                                                <button className="dropdown-item" onClick={logOut}>
-                                                    <i className="bi bi-box-arrow-right me-2"></i> Logout
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="auth-buttons">
-                                    <button className="btn signin-btn" onClick={onLoginClick}>
-                                        <i className="bi bi-person-fill"></i> Sign In
-                                    </button>
-                                    {/* <button className="btn signup-btn" onClick={onSignupClick}>
-                                        <i className="bi bi-person-plus-fill"></i> Sign Up
-                                    </button> */}
-                                </div>
-                            )}
-                        </div>
+  const goToDashboard = () => {
+    navigate("/eventsDashboard");
+    closeAllMenus();
+  };
+
+  const goToProfile = () => {
+    navigate("/Profile");
+    closeAllMenus();
+  };
+
+  const createEventClicked = () => {
+    navigate("/activeEventDetails");
+    closeAllMenus();
+  };
+
+  const logOut = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    window.dispatchEvent(new CustomEvent("userLoggedOut"));
+    closeAllMenus();
+    navigate("/");
+  };
+
+  const closeAllMenus = () => {
+    setDropdownOpen(false);
+    setIsMobileMenuOpen(false);
+  };
+ const handleDropdownItemClick = (handler, e) => {
+        if (e) e.stopPropagation();
+        handler(e);
+    };
+ 
+  return (
+    <>
+      {/* ================= DESKTOP NAV ================= */}
+      <section className={`nav-section d-none d-md-block ${scrolled ? "scrolled" : ""}`}>
+        <div className="container">
+          <div className="row bottom-nav-row align-items-center">
+            <div className="col-md-3">
+              <a href="/">
+                <img src="/images/logo.png" alt="Logo" className="logo img-fluid" />
+              </a>
+            </div>
+
+            <div className="col-md-6">
+              <ul className="nav nav-list justify-content-center">
+                {["/", "/feature", "/ticket_sales", "/pricing", "/sales", "/support"].map(
+                  (path, i) => (
+                    <li className="nav-item" key={i}>
+                      <NavLink
+                        to={path}
+                        end={path === "/"}
+                        className={({ isActive }) =>
+                          `nav-link ${isActive ? "active" : ""}`
+                        }
+                      >
+                        {["Home", "Features", "Events", "Pricing", "Sales", "Support"][i]}
+                      </NavLink>
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+
+            <div className="col-md-3 btns-container">
+              {user ? (
+                <div className="logged-in-container">
+                  <button className="btn dashboard-btn" onClick={goToDashboard}>
+                    <i className="bi bi-grid-fill me-1"></i> Dashboard
+                  </button>
+
+                  <div ref={desktopDropdownRef} className="profile-container">
+                    <div className="profile-trigger" onClick={toggleDropdown}>
+                      <i className="bi bi-person-circle"></i>
+                      <span>{user.name || "User"}</span>
+                      <i className="bi bi-chevron-down"></i>
                     </div>
-                </div>
-            </section>
 
-            {/* Mobile Navigation */}
-            <section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
-                <div className="container-fluid">
-                    <div className="row align-items-center py-2">
-                        <div className="col-6">
-                            <a href="/">
-                                <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
-                            </a>
-                        </div>
-                        <div className="col-6 text-end">
-                            <div className="d-flex justify-content-end align-items-center">
-                                {user ? (
-                                    <div className="mobile-logged-in-container me-3">
-                                        <button className="btn mobile-dashboard-btn me-2" onClick={goToDashboard}>
-                                            <i className="bi bi-grid-fill"></i>
-                                        </button>
-                                        <div
-                                            ref={dropdownRef}
-                                            className="mobile-profile-container"
-                                        >
-                                            <div className="mobile-profile-trigger" onClick={toggleDropdown}>
-                                                <i className="bi bi-person-circle"></i>
-                                            </div>
-                                            {dropdownOpen && (
-                                                <div className="mobile-dropdown-menu">
-                                                    <button onClick={goToDashboard} className="mobile-dropdown-item">
-                                                        <i className="bi bi-grid-fill me-2"></i> Dashboard
-                                                    </button>
-                                                    <button onClick={craeteEventClicked} className="mobile-dropdown-item">
-                                                        <i className="bi bi-plus-circle me-2"></i> New Event
-                                                    </button>
-                                                    <button onClick={goToProfile} className="mobile-dropdown-item">
-                                                        <i className="bi bi-person me-2"></i> Profile
-                                                    </button>
-                                                    <div className="mobile-dropdown-divider"></div>
-                                                    <button className="mobile-dropdown-item" onClick={logOut}>
-                                                        <i className="bi bi-box-arrow-right me-2"></i> Logout
-                                                    </button>
-                                                </div>
-                                            )}
+                    {dropdownOpen && (
+                      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
+                                                <i className="bi bi-grid-fill me-2"></i> Dashboard
+                                            </button>
+                                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
+                                                <i className="bi bi-plus-circle me-2"></i> New Event
+                                            </button>
+                                            <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
+                                                <i className="bi bi-person me-2"></i> Profile
+                                            </button>
+                                            <div className="dropdown-divider"></div>
+                                            <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
+                                                <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                            </button>
                                         </div>
-                                    </div>
-                                ) : null}
-                                <button
-                                    className="mobile-menu-toggle"
-                                    onClick={toggleMobileMenu}
-                                    aria-label="Toggle navigation menu"
-                                >
-                                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
-                                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
-                                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    )}
+                  </div>
                 </div>
+              ) : (
+                <button className="btn signin-btn" onClick={onLoginClick}>
+                  Sign In
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
-                {/* Mobile Menu Dropdown */}
-                <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
-                    <div className="container-fluid">
-                        <ul className="mobile-nav-list">
-                            <li className="mobile-nav-item">
-                                <NavLink
-                                    to="/"
-                                    className={({ isActive }) =>
-                                        `mobile-nav-link ${isActive ? "active" : ""}`
-                                    }
-                                    end
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                    Home
-                                </NavLink>
-                            </li>
-                            <li className="mobile-nav-item">
-                                <NavLink
-                                    to="/feature"
-                                    className={({ isActive }) =>
-                                        `mobile-nav-link ${isActive ? "active" : ""}`
-                                    }
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                    Features
-                                </NavLink>
-                            </li>
-                            <li className="mobile-nav-item">
-                                <NavLink
-                                    to="/pricing"
-                                    className={({ isActive }) =>
-                                        `mobile-nav-link ${isActive ? "active" : ""}`
-                                    }
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                    Pricing
-                                </NavLink>
-                            </li>
-                            <li className="mobile-nav-item">
-                                <NavLink
-                                    to="/support"
-                                    className={({ isActive }) =>
-                                        `mobile-nav-link ${isActive ? "active" : ""}`
-                                    }
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                    Support
-                                </NavLink>
-                            </li>
-                            <div className="mobile-buttons">
-                                {user ? (
-                                    <div className="mobile-user-info">
-                                        <div className="mobile-user-details">
-                                            <i className="bi bi-person-circle me-2"></i>
-                                            <span>{user.name || "User"}</span>
-                                        </div>
-                                        <button className="btn mobile-dashboard-full-btn" onClick={goToDashboard}>
-                                            <i className="bi bi-grid-fill me-2"></i> Dashboard
-                                        </button>
-                                        <button className="btn mobile-profile-btn" onClick={goToProfile}>
-                                            <i className="bi bi-person me-2"></i> Profile
-                                        </button>
-                                        <button className="btn mobile-logout-btn" onClick={logOut}>
-                                            <i className="bi bi-box-arrow-right me-2"></i> Logout
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <button className="btn mobile-signin-btn" onClick={onLoginClick}>
-                                            <i className="bi bi-person-fill me-2"></i> Sign In
-                                        </button>
-                                        <button className="btn mobile-signup-btn" onClick={onSignupClick}>
-                                            <i className="bi bi-person-plus-fill me-2"></i> Sign Up
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </ul>
+      {/* ================= MOBILE NAV ================= */}
+      <section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
+        <div className="container-fluid py-2">
+          <div className="d-flex justify-content-between align-items-center">
+            <a href="/">
+              <img src="/images/logo.png" alt="Logo" className="mobile-logo" />
+            </a>
+
+            <div className="d-flex align-items-center">
+              {user && (
+                <div ref={mobileDropdownRef} className="mobile-profile-container me-2">
+                  <div className="mobile-profile-trigger" onClick={toggleDropdown}>
+                    <i className="bi bi-person-circle"></i>
+                  </div>
+
+                  {dropdownOpen && (
+                    <div
+                      className="mobile-dropdown-menu"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button onClick={goToDashboard}>Dashboard</button>
+                      <button onClick={createEventClicked}>New Event</button>
+                      <button onClick={goToProfile}>Profile</button>
+                      <button onClick={logOut}>Logout</button>
                     </div>
+                  )}
                 </div>
-            </section>
-        </>
-    );
+              )}
+
+              <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
+                <span className={`hamburger-line ${isMobileMenuOpen ? "line-1-open" : ""}`} />
+                <span className={`hamburger-line ${isMobileMenuOpen ? "line-2-open" : ""}`} />
+                <span className={`hamburger-line ${isMobileMenuOpen ? "line-3-open" : ""}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
 }
+
 
 export function Footer() {
     return (
@@ -688,24 +550,80 @@ export function Footer() {
 }
 
 export function LoginNav() {
+    const [scrolled, setScrolled] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const mobileMenuRef = useRef(null);
     const [user, setUser] = useState(null);
     const navigate = useNavigate();
 
-    const craeteEventClicked = () => {
+    // Handle scroll for sticky effect
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 50) {
+                setScrolled(true);
+            } else {
+                setScrolled(false);
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    const goToHome = (e) => {
+        if (e) e.stopPropagation();
+        navigate("/");
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    };
+
+    const createEventClicked = (e) => {
+        if (e) e.stopPropagation();
         navigate("/activeEventDetails");
-    }
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    };
 
-    const goToProfile = () => {
+    const goToProfile = (e) => {
+        if (e) e.stopPropagation();
         navigate("/Profile");
-    }
-    const goToDashboared = () => {
-        navigate("/eventsDashboard");
-    }
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    };
 
-    const toggleDropdown = () => {
+    const goToDashboard = (e) => {
+        if (e) e.stopPropagation();
+        navigate("/eventsDashboard");
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+    };
+
+    const logOut = (e) => {
+        if (e) e.stopPropagation();
+        localStorage.removeItem("user");
+        setUser(null);
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+        window.dispatchEvent(new CustomEvent('userLoggedOut'));
+        navigate("/");
+    };
+
+    const toggleDropdown = (e) => {
+        if (e) e.stopPropagation();
         setDropdownOpen(prev => !prev);
+    };
+
+    const toggleMobileMenu = (e) => {
+        if (e) e.stopPropagation();
+        setIsMobileMenuOpen(prev => !prev);
+    };
+
+    // Handle dropdown item clicks
+    const handleDropdownItemClick = (handler, e) => {
+        if (e) e.stopPropagation();
+        handler(e);
     };
 
     useEffect(() => {
@@ -713,62 +631,205 @@ export function LoginNav() {
         if (storedUser) {
             setUser(JSON.parse(storedUser));
         }
-    }, [])
+
+        // Listen for logout events
+        const handleUserLogout = () => {
+            setUser(null);
+        };
+
+        window.addEventListener('userLoggedOut', handleUserLogout);
+        return () => {
+            window.removeEventListener('userLoggedOut', handleUserLogout);
+        };
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
+            // Close dropdown if clicked outside
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setDropdownOpen(false);
+            }
+            
+            // Close mobile menu if clicked outside (except the hamburger button)
+            if (mobileMenuRef.current && 
+                !mobileMenuRef.current.contains(event.target) && 
+                !event.target.closest('.mobile-menu-toggle')) {
+                setIsMobileMenuOpen(false);
             }
         };
 
         document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("touchstart", handleClickOutside);
+        
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("touchstart", handleClickOutside);
         };
     }, []);
 
+    // Close mobile menu when window resizes to desktop
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 768) { // md breakpoint
+                setIsMobileMenuOpen(false);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        if (isMobileMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+        
+        return () => {
+            document.body.style.overflow = 'auto';
+        };
+    }, [isMobileMenuOpen]);
+
     return (
-        <nav className="eventsNavbar">
-            <div className="container">
-                <div className="row align-items-center">
-                    <div className="col-lg-2">
-                        <div className="logo-placeholder">
-                            <img src="/images/logo.png" alt="Logo" className="logo-img" />
+        <>
+            {/* Desktop Navigation */}
+            <nav className={`nav-section d-none d-md-block ${scrolled ? "scrolled" : ""}`}>
+                <div className="container">
+                    <div className="row bottom-nav-row">
+                        <div className="col-md-3 logo-container">
+                            <div onClick={goToHome} style={{ cursor: 'pointer' }}>
+                                <img src="/images/logo.png" alt="Eventa Logo" className="logo img-fluid" />
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="col-lg-10 navbar-right">
-                        <button className="btn btn-createEvevt" onClick={craeteEventClicked}>New Event</button>
-
-                        <div
-                            ref={dropdownRef}
-                            className={`profile-container ${dropdownOpen ? "open" : ""}`}
-                            onClick={toggleDropdown}
-                        >
-                            <i className="bi bi-person-circle"></i>
-                            <span>{user ? user.name : "Guest"}</span>
-                            <i className="bi bi-chevron-bar-down"></i>
-
-                            {dropdownOpen && (
-                                <div className="dropdown-menu">
-                                    <button onClick={goToDashboared} className="dropdown-item">
-                                        <i className="bi bi-grid-fill"></i> Dashboared
+                        
+                        <div className="col-md-3 btns-container">
+                            <div className="logged-in-container">
+                                <button className="btn home-btn" onClick={goToHome} >
+                                        <i className="bi bi-house-fill me-1"></i> Home
                                     </button>
-                                    <button onClick={goToProfile} className="dropdown-item">
-                                        <i className="bi bi-person"></i> Profile
-                                    </button>
-                                    <button className="dropdown-item" onClick={logOut}>
-                                        <i className="bi bi-box-arrow-right"></i> Logout
-                                    </button>
+                                <button className="btn dashboard-btn me-2" onClick={goToDashboard}>
+                                    <i className="bi bi-grid-fill me-1"></i> Dashboard
+                                </button>
+                                <button className="btn signup-btn me-2" onClick={createEventClicked}>
+                                    <i className="bi bi-plus-circle me-1"></i> New Event
+                                </button>
+                                <div
+                                    ref={dropdownRef}
+                                    className={`profile-container ${dropdownOpen ? "open" : ""}`}
+                                >
+                                    <div className="profile-trigger" onClick={toggleDropdown}>
+                                        <i className="bi bi-person-circle me-1"></i>
+                                        <span className="profile-name">{user ? user.name : "User"}</span>
+                                        <i className="bi bi-chevron-down ms-1"></i>
+                                    </div>
+                                    {dropdownOpen && (
+                                        <div className="dropdown-menu">
+                                            <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
+                                                <i className="bi bi-grid-fill me-2"></i> Dashboard
+                                            </button>
+                                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
+                                                <i className="bi bi-plus-circle me-2"></i> New Event
+                                            </button>
+                                            <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
+                                                <i className="bi bi-person me-2"></i> Profile
+                                            </button>
+                                            <div className="dropdown-divider"></div>
+                                            <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
+                                                <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </nav>
+            </nav>
 
+            {/* Mobile Navigation - Just hamburger menu */}
+            <section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
+                <div className="container-fluid">
+                    <div className="row align-items-center py-2">
+                        <div className="col-6">
+                            <div onClick={goToHome} style={{ cursor: 'pointer' }}>
+                                <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
+                            </div>
+                        </div>
+                        <div className="col-6 text-end">
+                            <button
+                                className="mobile-menu-toggle"
+                                onClick={toggleMobileMenu}
+                                aria-label="Toggle navigation menu"
+                            >
+                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
+                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
+                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile Sidebar/Popup Menu - Overlay style */}
+                {isMobileMenuOpen && (
+                    <div className="mobile-menu-overlay" onClick={() => setIsMobileMenuOpen(false)}>
+                        <div 
+                            ref={mobileMenuRef}
+                            className="mobile-menu-sidebar"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="mobile-menu-header">
+                                <div className="mobile-user-info">
+                                    <i className="bi bi-person-circle"></i>
+                                    <div className="mobile-user-details">
+                                        <div className="mobile-user-name">{user ? user.name : "Guest"}</div>
+                                        {user && user.email && (
+                                            <div className="mobile-user-email">{user.email}</div>
+                                        )}
+                                    </div>
+                                    <button 
+                                        className="mobile-menu-close"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                    >
+                                        <i className="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="mobile-menu-items">
+                                <button className="mobile-menu-item" onClick={goToHome}>
+                                    <i className="bi bi-house-door"></i>
+                                    <span>Home</span>
+                                </button>
+                                
+                                <button className="mobile-menu-item" onClick={goToDashboard}>
+                                    <i className="bi bi-grid-fill"></i>
+                                    <span>Dashboard</span>
+                                </button>
+                                
+                                <button className="mobile-menu-item" onClick={createEventClicked}>
+                                    <i className="bi bi-plus-circle"></i>
+                                    <span>New Event</span>
+                                </button>
+                                
+                                <button className="mobile-menu-item" onClick={goToProfile}>
+                                    <i className="bi bi-person"></i>
+                                    <span>Profile</span>
+                                </button>
+                                
+                                <div className="mobile-menu-divider"></div>
+                                
+                                <button className="mobile-menu-item logout-item" onClick={logOut}>
+                                    <i className="bi bi-box-arrow-right"></i>
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </section>
+        </>
     );
 }
 
@@ -1404,7 +1465,17 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
         setDropdownOpen(false);
     };
 
-    // Close dropdown when clicking outside
+     const handleDropdownItemClick = (handler, e) => {
+        if (e) e.stopPropagation();
+        handler(e);
+    };
+        const goToDashboard = (e) => {
+        if (e) e.stopPropagation();
+        navigate("/eventsDashboard");
+        };
+        const createEventClicked = () => {
+    navigate("/activeEventDetails");
+  };
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -1445,13 +1516,20 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
                     <i className="bi bi-chevron-bar-down"></i>
                     {dropdownOpen && (
                         <div className="dropdown-menu show">
-                            <button className="dropdown-item" onClick={goToProfile}>
-                                <i className="bi bi-person"></i>Profile
-                            </button>
-                            <button className="dropdown-item" onClick={logOut}>
-                                <i className="bi bi-box-arrow-right"></i>Logout
-                            </button>
-                        </div>
+                                            <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
+                                                <i className="bi bi-grid-fill me-2"></i> Dashboard
+                                            </button>
+                                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
+                                                <i className="bi bi-plus-circle me-2"></i> New Event
+                                            </button>
+                                            <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
+                                                <i className="bi bi-person me-2"></i> Profile
+                                            </button>
+                                            <div className="dropdown-divider"></div>
+                                            <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
+                                                <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                            </button>
+                                        </div>
                     )}
                 </div>
             </div>
