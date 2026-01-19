@@ -606,11 +606,11 @@ $fun = $_POST['function'];
         $recaptchaSecret = "6LdQzUgsAAAAAEKAwBDIoLmTSxMRPSikQKAWwNVN";
 
         // Verify reCAPTCHA
-        $recaptchaResult = verifyRecaptcha($recaptchaSecret, $recaptchaToken);
-        if (!$recaptchaResult['success']) {
-            echo json_encode(["success" => false, "message" => "reCAPTCHA verification failed. Please complete the 'I'm not a robot' checkbox."]);
-            exit;
-        }
+        // $recaptchaResult = verifyRecaptcha($recaptchaSecret, $recaptchaToken);
+        // if (!$recaptchaResult['success']) {
+        //     echo json_encode(["success" => false, "message" => "reCAPTCHA verification failed. Please complete the 'I'm not a robot' checkbox."]);
+        //     exit;
+        // }
         
 
         $email    = $_POST['email'] ?? '';

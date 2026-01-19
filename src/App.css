@@ -432,6 +432,261 @@ Nav styling
   }
 }
 
+/******************************
+Profile Dropdown Styles
+******************************/
+
+/* Desktop Profile Dropdown */
+.logged-in-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-container {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #333;
+  font-weight: 500;
+}
+
+.profile-trigger:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.profile-trigger i {
+  font-size: 1.2rem;
+}
+
+.profile-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 5px;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 1001; /* Higher than navbar */
+  display: block !important; /* Force display */
+  opacity: 1 !important; /* Force opacity */
+  visibility: visible !important; /* Force visibility */
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  background: none;
+  text-align: left;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: #007bff;
+}
+
+.dropdown-item i {
+  width: 20px;
+  margin-right: 10px;
+  color: #6c757d;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #dee2e6;
+  margin: 5px 0;
+  border: none;
+}
+
+/* Mobile Profile Dropdown */
+.mobile-profile-container {
+  position: relative;
+  display: inline-block;
+}
+
+.mobile-profile-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.mobile-profile-trigger:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.mobile-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 10px;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  z-index: 1001;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.mobile-dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  background: none;
+  text-align: left;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.mobile-dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: #007bff;
+}
+
+.mobile-dropdown-item i {
+  width: 20px;
+  margin-right: 10px;
+  color: #6c757d;
+}
+
+.mobile-dropdown-divider {
+  height: 1px;
+  background-color: #dee2e6;
+  margin: 5px 0;
+  border: none;
+}
+
+/* Mobile User Info Section */
+.mobile-user-info {
+  width: 100%;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.mobile-user-details {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
+  color: #333;
+  font-weight: 500;
+}
+
+.mobile-user-details i {
+  font-size: 1.5rem;
+  margin-right: 10px;
+  color: #6c757d;
+}
+
+.mobile-dashboard-full-btn,
+.mobile-profile-btn,
+.mobile-logout-btn {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  background-color: white;
+  color: #333;
+  font-weight: 500;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.mobile-dashboard-full-btn:hover,
+.mobile-profile-btn:hover {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.mobile-logout-btn:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+.mobile-dashboard-full-btn i,
+.mobile-profile-btn i,
+.mobile-logout-btn i {
+  margin-right: 10px;
+  width: 20px;
+}
+
+/* Ensure dropdowns are visible */
+.profile-container.open .dropdown-menu,
+.mobile-profile-container.open .mobile-dropdown-menu {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+}
+
+/* Remove any potential hiding from parent containers */
+.nav-section,
+.mobile-nav-section,
+.btns-container {
+  overflow: visible !important;
+}
+
+/* Fix for Bootstrap interference */
+.nav-section .dropdown-menu {
+  position: absolute !important;
+  inset: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
 
 /******************************
 Footer styling
