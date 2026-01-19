@@ -15,6 +15,7 @@ function Ticket_payment() {
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [bookingData, setBookingData] = useState(null);
+  const [printInvoice, setPrintInvoice] = useState(false);
 
   const [ticketData, setTicketData] = useState({
     email: "",
@@ -46,7 +47,7 @@ function Ticket_payment() {
   };
 
   const calculateTotal = () => {
-    if (!event) return 0;
+    if (!event) return "0.00";
 
     let price = 0;
     const quantity = parseInt(ticketData.quantity) || 1;
@@ -104,7 +105,7 @@ function Ticket_payment() {
   };
 
   const sendBookingPDF = async (booking) => {
-    if (!booking) {
+    if (!booking || !event) {
       setError("No booking data available to send PDF");
       return false;
     }
@@ -122,16 +123,16 @@ function Ticket_payment() {
         event_location: event.event_location || "",
         event_id: event.event_id,
         customer_email: booking.customer_email,
-        customer_first_name: booking.customer_first_name,
-        customer_last_name: booking.customer_last_name,
-        customer_phone: booking.customer_phone || "",
-        ticket_type: booking.ticket_type,
-        ticket_type_label: booking.ticket_type_label,
-        quantity: booking.quantity,
-        unit_price: booking.unit_price,
-        total_amount: booking.total_amount,
+        customer_first_name: ticketData.firstName,
+        customer_last_name: ticketData.lastName,
+        customer_phone: ticketData.phone || "",
+        ticket_type: ticketData.ticketType,
+        ticket_type_label: getTicketTypeLabel(ticketData.ticketType),
+        quantity: ticketData.quantity.toString(),
+        unit_price: getTicketPrice(),
+        total_amount: calculateTotal(),
         payment_method: booking.payment_method,
-        payment_status: booking.payment_status,
+        payment_status: "completed",
         transaction_id: booking.transaction_id,
         booking_id: booking.booking_id || booking.transaction_id,
         booking_date: new Date().toISOString().split('T')[0]
@@ -176,6 +177,10 @@ function Ticket_payment() {
   };
 
   const recordPayment = async () => {
+    if (!event) {
+      throw new Error("No event data available");
+    }
+
     const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
     
     // Generate transaction ID
@@ -190,7 +195,7 @@ function Ticket_payment() {
       customer_phone: ticketData.phone,
       ticket_type: ticketData.ticketType,
       ticket_type_label: getTicketTypeLabel(ticketData.ticketType),
-      quantity: ticketData.quantity,
+      quantity: ticketData.quantity.toString(),
       unit_price: getTicketPrice(),
       total_amount: calculateTotal(),
       payment_method: selectedPaymentMethod,
@@ -233,6 +238,8 @@ function Ticket_payment() {
       booking_id: data.bookingId || transactionId,
       bookingId: data.bookingId,
       transaction_id: transactionId,
+      customer_email: ticketData.email,
+      payment_method: selectedPaymentMethod,
     };
   };
 
@@ -291,9 +298,14 @@ function Ticket_payment() {
     setError("");
   };
 
-  // ────────────────────────────────────────────────
-  //   Your original payment form components (unchanged)
-  // ────────────────────────────────────────────────
+  const handlePrintInvoice = () => {
+    setPrintInvoice(true);
+    // Use setTimeout to ensure the invoice container is rendered before printing
+    setTimeout(() => {
+      window.print();
+      setPrintInvoice(false);
+    }, 100);
+  };
 
   const CreditCardForm = ({ onSubmit }) => {
     const [cardData, setCardData] = useState({
@@ -302,14 +314,14 @@ function Ticket_payment() {
       cvv: "",
       cardholderName: ""
     });
-    const [loading, setLoading] = useState(false);
+    const [formLoading, setFormLoading] = useState(false);
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      setLoading(true);
+      setFormLoading(true);
 
       setTimeout(() => {
-        setLoading(false);
+        setFormLoading(false);
         onSubmit({
           paymentMethod: "credit_card",
           provider: "Visa/MasterCard",
@@ -369,8 +381,8 @@ function Ticket_payment() {
           </div>
         </div>
 
-        <button type="submit" className="submit-payment-btn" disabled={loading}>
-          {loading ? (
+        <button type="submit" className="submit-payment-btn" disabled={formLoading}>
+          {formLoading ? (
             <>
               <div className="spinner-border spinner-border-sm" role="status"></div>
                Processing Secure Payment...
@@ -384,14 +396,14 @@ function Ticket_payment() {
   };
 
   const PayPalForm = ({ onSubmit }) => {
-    const [loading, setLoading] = useState(false);
+    const [formLoading, setFormLoading] = useState(false);
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      setLoading(true);
+      setFormLoading(true);
 
       setTimeout(() => {
-        setLoading(false);
+        setFormLoading(false);
         onSubmit({
           paymentMethod: "paypal",
           provider: "PayPal",
@@ -415,9 +427,9 @@ function Ticket_payment() {
         <button
           onClick={handleSubmit}
           className="submit-payment-btn paypal-btn"
-          disabled={loading}
+          disabled={formLoading}
         >
-          {loading ? (
+          {formLoading ? (
             <>
               <div className="spinner-border spinner-border-sm" role="status"></div>
                Processing PayPal Payment...
@@ -495,53 +507,157 @@ function Ticket_payment() {
 
   if (paymentSuccess) {
     return (
-      <div className="payment-success-container">
-        <div className="payment-success">
-          <div className="success-icon">
-            <i className="fas fa-check-circle"></i>
-          </div>
-          <h2>Payment Successful!</h2>
-          <p>Your tickets have been booked successfully.</p>
-
-          {bookingData && (
-            <div className="success-details">
-              <p><strong>Booking ID:</strong> {bookingData.booking_id || bookingData.transaction_id}</p>
-              <p><strong>Payment Method:</strong> {bookingData.payment_method}</p>
-              <p><strong>Email sent to:</strong> {bookingData.customer_email}</p>
+      <>
+        <div className="payment-success-container">
+          <div className="payment-success">
+            <div className="success-icon">
+              <i className="fas fa-check-circle"></i>
             </div>
-          )}
+            <h2>Payment Successful!</h2>
+            <p>Your tickets have been booked successfully.</p>
 
-          {error && (
-            <div className="alert error mt-3">
-              {error}
+            {bookingData && (
+              <div className="success-details">
+                <p><strong>Booking ID:</strong> {bookingData.booking_id || bookingData.transaction_id}</p>
+                <p><strong>Payment Method:</strong> {bookingData.payment_method}</p>
+                <p><strong>Email sent to:</strong> {bookingData.customer_email}</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="alert error mt-3">
+                {error}
+              </div>
+            )}
+
+            <div className="success-actions">
+              <button
+                className="btn-primary"
+                onClick={() => navigate("/ticket_sales")}
+              >
+                Browse More Events
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={handlePrintInvoice}
+              >
+                <i className="fas fa-print"></i> Print Invoice
+              </button>
             </div>
-          )}
 
-          <div className="success-actions">
-            <button
-              className="btn-primary"
-              onClick={() => navigate("/ticket_sales")}
-            >
-              Browse More Events
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => window.print()}
-            >
-              <i className="fas fa-print"></i> Print Tickets
-            </button>
-          </div>
-
-          <div className="ticket-summary">
-            <h4>Booking Summary</h4>
-            <p><strong>Event:</strong> {event.event_name}</p>
-            <p><strong>Date:</strong> {formatDate(event.event_start_date)}</p>
-            <p><strong>Tickets:</strong> {ticketData.quantity} × {getTicketTypeLabel(ticketData.ticketType)}</p>
-            <p><strong>Total Paid:</strong> R {calculateTotal()}</p>
-            <p><strong>Confirmation Email:</strong> {ticketData.email}</p>
+            <div className="ticket-summary">
+              <h4>Booking Summary</h4>
+              <p><strong>Event:</strong> {event.event_name}</p>
+              <p><strong>Date:</strong> {formatDate(event.event_start_date)}</p>
+              <p><strong>Tickets:</strong> {ticketData.quantity} × {getTicketTypeLabel(ticketData.ticketType)}</p>
+              <p><strong>Total Paid:</strong> R {calculateTotal()}</p>
+              <p><strong>Confirmation Email:</strong> {ticketData.email}</p>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Print-only invoice container */}
+        {printInvoice && (
+          <div className="invoice-print-container">
+            <div className="invoice-header">
+              {event.event_image && (
+                <img 
+                  src={event.event_image} 
+                  alt={event.event_name}
+                  onError={(e) => {
+                    e.target.src = "/images/default-event.jpg";
+                    e.target.style.display = "none";
+                  }}
+                />
+              )}
+              <h1>🎟️ Ticket Invoice</h1>
+              <p>Booking Confirmation</p>
+            </div>
+
+            <div className="invoice-details">
+              <div className="detail-row">
+                <span className="detail-label">Invoice Number:</span>
+                <span className="detail-value">{bookingData?.transaction_id || "N/A"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Booking Date:</span>
+                <span className="detail-value">{new Date().toLocaleDateString()}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Event Name:</span>
+                <span className="detail-value">{event.event_name}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Date:</span>
+                <span className="detail-value">{formatDate(event.event_start_date)}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Time:</span>
+                <span className="detail-value">{event.event_start_time || "TBA"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Venue:</span>
+                <span className="detail-value">{event.event_location || "TBA"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Customer:</span>
+                <span className="detail-value">{ticketData.firstName} {ticketData.lastName}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Email:</span>
+                <span className="detail-value">{ticketData.email}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Phone:</span>
+                <span className="detail-value">{ticketData.phone || "Not provided"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Ticket Type:</span>
+                <span className="detail-value">{getTicketTypeLabel(ticketData.ticketType)}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Quantity:</span>
+                <span className="detail-value">{ticketData.quantity}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Unit Price:</span>
+                <span className="detail-value">R {getTicketPrice()}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Subtotal:</span>
+                <span className="detail-value">R {calculateTotal()}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Service Fee:</span>
+                <span className="detail-value">R 15.00</span>
+              </div>
+              <div className="detail-row" style={{ fontWeight: 'bold', fontSize: '18px', borderTop: '2px solid #000' }}>
+                <span className="detail-label">Total Paid:</span>
+                <span className="detail-value">R {(parseFloat(calculateTotal()) + 15).toFixed(2)}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Payment Method:</span>
+                <span className="detail-value">{selectedPaymentMethod.replace('-', ' ').toUpperCase()}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Payment Status:</span>
+                <span className="detail-value" style={{ color: '#27ae60', fontWeight: 'bold' }}>COMPLETED</span>
+              </div>
+            </div>
+
+            <div className="ticket-number-print">
+              TICKET: {bookingData?.transaction_id ? `EVT-${event.event_name.substring(0, 3).toUpperCase()}-${bookingData.transaction_id.slice(-8)}` : "N/A"}
+            </div>
+
+            <div className="invoice-footer">
+              <p>Thank you for your booking!</p>
+              <p>Please present this invoice at the event entrance.</p>
+              <p>Eventa Tickets • support@eventa.com</p>
+              <p>Generated on: {new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -730,6 +846,7 @@ function Ticket_payment() {
 
               <div className="payment-methods">
                 <button
+                  type="button"
                   className={`payment-option ${selectedPaymentMethod === 'credit-card' ? 'active' : ''}`}
                   onClick={() => handlePaymentMethodSelect('credit-card')}
                 >
@@ -738,6 +855,7 @@ function Ticket_payment() {
                   <small>Visa, Mastercard, Amex</small>
                 </button>
                 <button
+                  type="button"
                   className={`payment-option ${selectedPaymentMethod === 'paypal' ? 'active' : ''}`}
                   onClick={() => handlePaymentMethodSelect('paypal')}
                 >
@@ -746,6 +864,7 @@ function Ticket_payment() {
                   <small>Fast & secure</small>
                 </button>
                 <button
+                  type="button"
                   className={`payment-option ${selectedPaymentMethod === 'stripe' ? 'active' : ''}`}
                   onClick={() => handlePaymentMethodSelect('stripe')}
                 >

@@ -638,3 +638,131 @@
     padding: 20px;
   }
 }
+
+/* Add these styles to your ticket_payment.css file */
+
+/* Print-specific styles */
+@media print {
+  /* Hide all buttons when printing */
+  .payment-success-container button,
+  .payment-success .success-actions,
+  .payment-success .btn-primary,
+  .payment-success .btn-secondary,
+  .back-btn,
+  .payment-popup,
+  .payment-popup-overlay {
+    display: none !important;
+  }
+  
+  /* Improve print layout */
+  .payment-success-container {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .payment-success {
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  .success-icon {
+    color: #27ae60 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .success-details,
+  .ticket-summary {
+    border: 1px solid #ddd !important;
+    background: white !important;
+  }
+  
+  /* Ensure proper spacing */
+  .payment-success h2,
+  .payment-success p,
+  .ticket-summary h4,
+  .ticket-summary p {
+    margin: 10px 0 !important;
+    padding: 0 !important;
+  }
+}
+
+/* For invoice printing with event image */
+.invoice-print-container {
+  display: none;
+}
+
+@media print {
+  .invoice-print-container {
+    display: block;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+    color: black;
+    font-family: Arial, sans-serif;
+  }
+  
+  .invoice-header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 20px;
+  }
+  
+  .invoice-header img {
+    max-width: 200px;
+    max-height: 150px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .invoice-details {
+    margin: 30px 0;
+  }
+  
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .detail-label {
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  
+  .detail-value {
+    color: #34495e;
+  }
+  
+  .ticket-number-print {
+    background: #2c3e50;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 18px;
+    border-radius: 4px;
+    margin: 20px 0;
+    letter-spacing: 2px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .invoice-footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 2px solid #3498db;
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 12px;
+  }
+}

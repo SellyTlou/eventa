@@ -470,7 +470,6 @@ try {
         $pdfString = $pdfContent;
     }
 
-    // Check if PDF is valid
     if (empty($pdfString)) {
         throw new Exception("PDF generation failed - empty output");
     }
@@ -478,7 +477,6 @@ try {
     // -------------------- SEND EMAIL VIA BREVO --------------------
     $BREVO_API_KEY = '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';
 
-    // FIXED EMAIL HTML - Properly formatted for email clients
     $htmlContent = '<!DOCTYPE html>
     <html>
     <head>
