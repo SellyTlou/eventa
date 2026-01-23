@@ -39,7 +39,7 @@ function Ticket_Sale() {
       const isPublished = event.published === 1 || event.published === "1";
       const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
       const isCancelled = isEventCancelled(event);
-    
+
       if (process.env.NODE_ENV !== "production") {
         console.log(`Event "${event.event_name}" - Published: ${isPublished}, Has Tickets: ${hasTickets}, Cancelled: ${isCancelled}`);
         return true;
@@ -62,7 +62,7 @@ function Ticket_Sale() {
   const handleClick = (event) => {
     const id = event.event_id || event.id;
     if (id) {
-     navigate(`/ticketEvent_details?id=${id}`);
+      navigate(`/ticketEvent_details?id=${id}`);
     }
   };
 
@@ -203,15 +203,14 @@ function Ticket_Sale() {
       {alert.show && (
         <div className={`custom-alert ${alert.type}`}>
           <i
-            className={`fas ${
-              alert.type === "error"
+            className={`fas ${alert.type === "error"
                 ? "fa-times-circle"
                 : alert.type === "success"
-                ? "fa-check-circle"
-                : alert.type === "warning"
-                ? "fa-exclamation-triangle"
-                : "fa-info-circle"
-            }`}
+                  ? "fa-check-circle"
+                  : alert.type === "warning"
+                    ? "fa-exclamation-triangle"
+                    : "fa-info-circle"
+              }`}
           />
           <span>{alert.message}</span>
         </div>
@@ -236,7 +235,7 @@ function Ticket_Sale() {
         <h2>Upcoming Ticket Events</h2>
         <span className="sub-text">Events with tickets on sale</span>
 
-         {/* <div className="debug-panel" style={{
+        {/* <div className="debug-panel" style={{
           background: "#f0f0f0",
           padding: "15px",
           borderRadius: "8px",
@@ -306,10 +305,10 @@ function Ticket_Sale() {
                       <span className="event-date">
                         {event.event_start_date
                           ? new Date(event.event_start_date).toLocaleDateString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
                           : "Date TBA"}
                       </span>
 
@@ -318,12 +317,17 @@ function Ticket_Sale() {
 
                       <div className="ticket-prices">
                         {parseFloat(String(event.early_bird_price)) > 0 && (
-                          <span className="price-tag early-bird">
+                          <span className={`price-tag early-bird ${event.early_bird_quantity <= 0 ? "sold-out" : ""}`}>
                             Early Bird: R{formatPrice(event.early_bird_price)}
-                            {event.early_bird_quantity && event.early_bird_quantity > 0 && 
-                              ` (${event.early_bird_quantity} left)`}
+
+                            {event.early_bird_quantity > 0 ? (
+                              <span> ({event.early_bird_quantity} tickets left)</span>
+                            ) : (
+                              <span className="sold-out-text"> — Sold Out</span>
+                            )}
                           </span>
                         )}
+
                         {parseFloat(String(event.general_price)) > 0 && (
                           <span className="price-tag general">
                             General: R{formatPrice(event.general_price)}
