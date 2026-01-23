@@ -35,7 +35,7 @@ export default function SupportTicket() {
     setLoading(true);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || `${window.location.origin}/eventa/src/pages/php`;
+      const API_URL = process.env.REACT_APP_API_URL || `../php`;
       const formDataToSend = new FormData();
       formDataToSend.append("function", "submitTicket");
       formDataToSend.append("name", formData.name);

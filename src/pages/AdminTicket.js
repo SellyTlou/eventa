@@ -10,7 +10,7 @@ function AdminTicket({ printAlert }) {
 
   const fetchTickets = async () => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || `${window.location.origin}/eventa/src/pages/php`;
+      const API_URL = process.env.REACT_APP_API_URL || `../php`;
       const formData = new FormData();
       formData.append("function", "getTickets");
       formData.append("status", statusFilter);

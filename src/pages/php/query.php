@@ -4607,51 +4607,84 @@ $fun = $_POST['function'];
         }
     }
 
-    if ($fun === "submitTicket") {
-        $name = $_POST['name'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $subject = $_POST['subject'] ?? '';
-        $department = $_POST['department'] ?? '';
-        $priority = $_POST['priority'] ?? 'medium';
-        $message = $_POST['message'] ?? '';
-        $user_id = $_POST['user_id'] ?? null; // Optional, for logged-in users
+   if ($fun === "submitTicket") {
+    // ADD THIS LINE:
+    error_log("=== TICKET SUBMISSION STARTED ===");
+    
+    $name = $_POST['name'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $subject = $_POST['subject'] ?? '';
+    $department = $_POST['department'] ?? '';
+    $priority = $_POST['priority'] ?? 'medium';
+    $message = $_POST['message'] ?? '';
+    $user_id = $_POST['user_id'] ?? null; // Optional, for logged-in users
+    
+    // ADD THESE LINES to see what data is received:
+    error_log("Name: " . $name);
+    error_log("Email: " . $email);
+    error_log("Subject: " . $subject);
+    error_log("Department: " . $department);
+    error_log("Message: " . substr($message, 0, 50) . "...");
 
-        if (!$name || !$email || !$subject || !$department || !$message) {
-            echo json_encode(["success" => false, "message" => "Missing required fields"]);
-            exit;
-        }
-
-        try {
-            $attachment_path = null;
-            if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-                $upload_dir = 'uploads/tickets/';
-                if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-                $file_name = uniqid() . '_' . basename($_FILES['attachment']['name']);
-                $target_path = $upload_dir . $file_name;
-                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $target_path)) {
-                    $attachment_path = $target_path;
-                }
-            }
-
-            $stmt = $pdo->prepare("INSERT INTO support_tickets (user_id, name, email, subject, department, priority, message, attachment_path, status, created_at)
-                                   VALUES (:user_id, :name, :email, :subject, :department, :priority, :message, :attachment_path, 'Open', NOW())");
-            $stmt->execute([
-                ':user_id' => $user_id,
-                ':name' => $name,
-                ':email' => $email,
-                ':subject' => $subject,
-                ':department' => $department,
-                ':priority' => $priority,
-                ':message' => $message,
-                ':attachment_path' => $attachment_path
-            ]);
-
-            echo json_encode(["success" => true, "message" => "Ticket submitted successfully"]);
-        } catch (Exception $e) {
-            echo json_encode(["success" => false, "message" => "Error submitting ticket: " . $e->getMessage()]);
-        }
+    if (!$name || !$email || !$subject || !$department || !$message) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
         exit;
     }
+
+    try {
+        // ADD THIS LINE:
+        error_log("Starting database operations...");
+        
+        $attachment_path = null;
+        if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+            error_log("Attachment found: " . $_FILES['attachment']['name']);
+            $upload_dir = 'uploads/tickets/';
+            if (!is_dir($upload_dir)) {
+                error_log("Creating directory: " . $upload_dir);
+                mkdir($upload_dir, 0755, true);
+            }
+            $file_name = uniqid() . '_' . basename($_FILES['attachment']['name']);
+            $target_path = $upload_dir . $file_name;
+            if (move_uploaded_file($_FILES['attachment']['tmp_name'], $target_path)) {
+                $attachment_path = $target_path;
+                error_log("File uploaded to: " . $target_path);
+            } else {
+                error_log("File upload failed!");
+            }
+        } else {
+            error_log("No attachment or upload error");
+        }
+        
+        // ADD THIS before the INSERT:
+        error_log("Executing INSERT into support_tickets...");
+        
+        $stmt = $pdo->prepare("INSERT INTO support_tickets (user_id, name, email, subject, department, priority, message, attachment_path, status, created_at)
+                               VALUES (:user_id, :name, :email, :subject, :department, :priority, :message, :attachment_path, 'Open', NOW())");
+        $stmt->execute([
+            ':user_id' => $user_id,
+            ':name' => $name,
+            ':email' => $email,
+            ':subject' => $subject,
+            ':department' => $department,
+            ':priority' => $priority,
+            ':message' => $message,
+            ':attachment_path' => $attachment_path
+        ]);
+        
+        // ADD THIS:
+        error_log("=== TICKET SUBMISSION SUCCESSFUL ===");
+        
+        echo json_encode(["success" => true, "message" => "Ticket submitted successfully"]);
+        
+    } catch (Exception $e) {
+        // ADD THIS to see the actual error:
+        error_log("ERROR in submitTicket: " . $e->getMessage());
+        error_log("SQL State: " . $e->getCode());
+        
+        echo json_encode(["success" => false, "message" => "Error submitting ticket: " . $e->getMessage()]);
+    }
+    exit;
+}
 
     if ($fun === "getTickets") {
         $status_filter = $_POST['status'] ?? 'All';
