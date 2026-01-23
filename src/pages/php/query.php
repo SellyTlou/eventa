@@ -5029,6 +5029,43 @@ $fun = $_POST['function'];
         exit;
     }
 
+    if ($fun === "getTicketSalesStats") 
+    {
+        $event_id = $_POST['event_id'] ?? '';
+        
+        if (empty($event_id)) {
+            echo json_encode(["success" => false, "message" => "Event ID required"]);
+            exit;
+        }
+        
+        try {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    ticket_type_label,
+                    SUM(quantity) as tickets_sold
+                FROM bookings 
+                WHERE event_id = :event_id 
+                AND payment_status = 'completed'
+                GROUP BY ticket_type_label
+                ORDER BY ticket_type_label
+            ");
+            
+            $stmt->execute([':event_id' => $event_id]);
+            $stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode([
+                "success" => true,
+                "ticket_stats" => $stats
+            ]);
+        } catch (PDOException $e) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Database error: " . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+
 
 
 ?>
