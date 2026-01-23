@@ -14,6 +14,7 @@ const EventsDashboard = () => {
     const [filters, setFilters] = useState({
         dateRange: "all",
         eventType: "all",
+        ticketType: "all",
         searchQuery: ""
     });
     const [rsvpStats, setRsvpStats] = useState({});
@@ -98,16 +99,63 @@ const EventsDashboard = () => {
     };
 
     // Reserve modal functions
-    const showReserveStats = (event, stats) => {
+    const showReserveStats = async (event, rsvpStats) => {
         setReserveEvent(event);
-        setReserveStats(stats);
+        
+        if (event.has_tickets) {
+            // Fetch ticket sales stats
+            try {
+                const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+                const formData = new FormData();
+                formData.append("function", "getTicketSalesStats");
+                formData.append("event_id", event.event_id);
+                
+                const res = await fetch(`${API_URL}/query.php`, {
+                    method: "POST",
+                    body: formData,
+                });
+                
+                const ticketData = await res.json();
+                if (ticketData.success) {
+                    // Combine ticket stats with RSVP stats
+                    setReserveStats({
+                        ticketStats: ticketData.ticket_stats,
+                        rsvpStats: rsvpStats,
+                        hasBoth: true
+                    });
+                } else {
+                    // Fallback to RSVP only
+                    setReserveStats({
+                        ticketStats: [],
+                        rsvpStats: rsvpStats,
+                        hasBoth: false
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching ticket stats:", error);
+                // Fallback to RSVP only
+                setReserveStats({
+                    ticketStats: [],
+                    rsvpStats: rsvpStats,
+                    hasBoth: false
+                });
+            }
+        } else {
+            // RSVP only
+            setReserveStats({
+                ticketStats: [],
+                rsvpStats: rsvpStats,
+                hasBoth: false
+            });
+        }
+        
         setShowReserveModal(true);
     };
 
     const closeReserveModal = () => {
         setShowReserveModal(false);
         setReserveEvent(null);
-        setReserveStats({ yes: 0, no: 0, maybe: 0 });
+        setReserveStats({ ticketStats: [], rsvpStats: { yes: 0, no: 0, maybe: 0 }, hasBoth: false });
     };
 
     // Navbar functions
@@ -360,18 +408,14 @@ const EventsDashboard = () => {
             result = result.filter((e) => e.event_name.toLowerCase().includes(q));
         }
 
-        // Event type filter
-        if (filters.eventType !== "all") {
+        // Ticket type filter
+        if (filters.ticketType !== "all") {
             result = result.filter((e) => {
-                const pub = isEventPublished(e);
-                const can = isEventCancelled(e);
-                switch (filters.eventType) {
-                    case "published":
-                        return pub && !can;
-                    case "unpublished":
-                        return !pub && !can;
-                    case "cancelled":
-                        return can;
+                switch (filters.ticketType) {
+                    case "ticket-events":
+                        return e.has_tickets === 1 || e.has_tickets === true || e.has_tickets === "1";
+                    case "rsvp-events":
+                        return !e.has_tickets || e.has_tickets === 0 || e.has_tickets === false || e.has_tickets === "0";
                     default:
                         return true;
                 }
@@ -887,44 +931,7 @@ const EventsDashboard = () => {
             )}
 
             <section className="eventsDashboard">
-             
-               {/* <nav className="eventsNavbar">
-                    <div className="container">
-                        <div className="row align-items-center">
-                            <div className="col-lg-2">
-                                <div className="logo-placeholder">
-                                    <img src="/images/logo.png" alt="Logo" className="logo-img" />
-                                </div>
-                            </div>
-
-                            <div className="col-lg-10 navbar-right">
-                                <button className="btn btn-createEvevt" onClick={craeteEventClicked}>New Event</button>
-
-                                <div
-                                    ref={dropdownRef}
-                                    className={`profile-container ${dropdownOpen ? "open" : ""}`}
-                                    onClick={toggleDropdown}
-                                >
-                                    <i className="bi bi-person-circle"></i>
-                                    <span>{user ? user.name : "Guest"}</span>
-                                    <i className="bi bi-chevron-bar-down"></i>
-
-                                    {dropdownOpen && (
-                                        <div className="dropdown-menu show mobile-dropdown">
-                                            <button onClick={goToProfile} className="dropdown-item">
-                                                <i className="bi bi-person"></i> Profile
-                                            </button>
-                                            <button className="dropdown-item" onClick={logOut}>
-                                                <i className="bi bi-box-arrow-right"></i> Logout
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </nav>*/}
-<LoginNav />
+                <LoginNav />
                 <div className="container">
                     {/* HEADER */}
                     <div className="dashboard-header">
@@ -953,7 +960,7 @@ const EventsDashboard = () => {
                         </div>
                     )}
 
-                    {/* COMBINED FILTERS SECTION */}
+                    {/* COMBINED FILTERS SECTION WITH LEGEND */}
                     <div className="dashboard-controls">
                         <div className="combined-filters">
                             <div className="filter-group search-group">
@@ -969,16 +976,32 @@ const EventsDashboard = () => {
                                 </div>
                             </div>
 
+                            {/* EVENT TYPE LEGEND */}
+                            <div className="filter-group legend-group">
+                                <div className="event-legend">
+                                    <div className="legend-title">Event Types:</div>
+                                    <div className="legend-items">
+                                        <div className="legend-item rsvp-legend">
+                                            <span className="legend-color rsvp-color"></span>
+                                            <span className="legend-text">RSVP</span>
+                                        </div>
+                                        <div className="legend-item ticket-legend">
+                                            <span className="legend-color ticket-color"></span>
+                                            <span className="legend-text">Ticket</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="filter-group">
                                 <select
-                                    value={filters.eventType}
-                                    onChange={(e) => handleFilterChange("eventType", e.target.value)}
+                                    value={filters.ticketType}
+                                    onChange={(e) => handleFilterChange("ticketType", e.target.value)}
                                     className="filter-select"
                                 >
-                                    <option value="all">All Events ({events.length})</option>
-                                    <option value="published">Published ({publishedEventsCount})</option>
-                                    <option value="unpublished">Draft ({unpublishedEventsCount})</option>
-                                    <option value="cancelled">Cancelled ({cancelledEventsCount})</option>
+                                    <option value="all">All Event Types</option>
+                                    <option value="ticket-events">Ticket Events</option>
+                                    <option value="rsvp-events">RSVP Events</option>
                                 </select>
                             </div>
 
@@ -1090,7 +1113,7 @@ const EventsDashboard = () => {
 
                                         {/* UPDATED CARD DESIGN - Image top, horizontal details, buttons bottom */}
                                         <div
-                                            className="event-card modern-design"
+                                            className={`event-card modern-design ${event.has_tickets ? 'ticket-event-card' : 'rsvp-event-card'}`}
                                             onClick={() => handleEventClick(event.event_id)}
                                             style={{
                                                 cursor: cancelled ? "not-allowed" : "pointer",
@@ -1191,7 +1214,7 @@ const EventsDashboard = () => {
                                                         }}
                                                         disabled={cancelled}
                                                     >
-                                                        <i className="bi bi-people"></i> RESERVE
+                                                        <i className="bi bi-people"></i> {event.has_tickets ? 'TICKET SALES' : 'RESERVE'}
                                                     </button>
                                                 </div>
                                         </div>
@@ -1228,7 +1251,7 @@ const EventsDashboard = () => {
                     <div className="modal-backdrop">
                         <div className="modal-container">
                             <div className="modal-header">
-                                <h2><i className="bi bi-people"></i> Reserve Stats</h2>
+                                <h2><i className="bi bi-people"></i> {reserveEvent.has_tickets ? 'Ticket Sales Stats' : 'Reserve Stats'}</h2>
                                 <button className="modal-close" onClick={closeReserveModal}>
                                     <i className="bi bi-x-lg"></i>
                                 </button>
@@ -1238,47 +1261,79 @@ const EventsDashboard = () => {
                                 <div className="reserve-modal-content">
                                     <h3 className="reserve-event-title">{reserveEvent.event_name}</h3>
                                     
-                                    <div className="reserve-stats-grid">
-                                        <div className="reserve-stat-card confirmed">
-                                            <div className="stat-icon">
-                                                <i className="bi bi-check-circle"></i>
-                                            </div>
-                                            <div className="stat-content">
-                                                <div className="stat-number">{reserveStats.yes}</div>
-                                                <div className="stat-label">Confirmed</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="reserve-stat-card pending">
-                                            <div className="stat-icon">
-                                                <i className="bi bi-clock"></i>
-                                            </div>
-                                            <div className="stat-content">
-                                                <div className="stat-number">{reserveStats.maybe}</div>
-                                                <div className="stat-label">Maybe</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="reserve-stat-card declined">
-                                            <div className="stat-icon">
-                                                <i className="bi bi-x-circle"></i>
-                                            </div>
-                                            <div className="stat-content">
-                                                <div className="stat-number">{reserveStats.no}</div>
-                                                <div className="stat-label">Declined</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="reserve-stat-card total">
-                                            <div className="stat-icon">
-                                                <i className="bi bi-people"></i>
-                                            </div>
-                                            <div className="stat-content">
-                                                <div className="stat-number">{reserveStats.yes + reserveStats.maybe + reserveStats.no}</div>
-                                                <div className="stat-label">Total Responses</div>
+                                    {reserveEvent.has_tickets ? (
+                                        // Ticket Sales Stats
+                                        <div className="reserve-stats-grid">
+                                            {Array.isArray(reserveStats.ticketStats) && reserveStats.ticketStats.length > 0 ? reserveStats.ticketStats.map((stat, index) => (
+                                                <div className="reserve-stat-card ticket-stat" key={index}>
+                                                    <div className="stat-icon">
+                                                        <i className="bi bi-ticket-perforated"></i>
+                                                    </div>
+                                                    <div className="stat-content">
+                                                        <div className="stat-number">{stat.tickets_sold || 0}</div>
+                                                        <div className="stat-label">{stat.ticket_type_label || 'Unknown'}</div>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <div className="no-stats">No tickets sold yet</div>
+                                            )}
+                                            
+                                            <div className="reserve-stat-card total">
+                                                <div className="stat-icon">
+                                                    <i className="bi bi-graph-up"></i>
+                                                </div>
+                                                <div className="stat-content">
+                                                    <div className="stat-number">
+                                                        {Array.isArray(reserveStats.ticketStats) ? reserveStats.ticketStats.reduce((sum, stat) => sum + (parseInt(stat.tickets_sold) || 0), 0) : 0}
+                                                    </div>
+                                                    <div className="stat-label">Total Tickets Sold</div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        // RSVP Stats
+                                        <div className="reserve-stats-grid">
+                                            <div className="reserve-stat-card confirmed">
+                                                <div className="stat-icon">
+                                                    <i className="bi bi-check-circle"></i>
+                                                </div>
+                                                <div className="stat-content">
+                                                    <div className="stat-number">{reserveStats.rsvpStats?.yes || 0}</div>
+                                                    <div className="stat-label">Confirmed</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="reserve-stat-card pending">
+                                                <div className="stat-icon">
+                                                    <i className="bi bi-clock"></i>
+                                                </div>
+                                                <div className="stat-content">
+                                                    <div className="stat-number">{reserveStats.rsvpStats?.maybe || 0}</div>
+                                                    <div className="stat-label">Maybe</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="reserve-stat-card declined">
+                                                <div className="stat-icon">
+                                                    <i className="bi bi-x-circle"></i>
+                                                </div>
+                                                <div className="stat-content">
+                                                    <div className="stat-number">{reserveStats.rsvpStats?.no || 0}</div>
+                                                    <div className="stat-label">Declined</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="reserve-stat-card total">
+                                                <div className="stat-icon">
+                                                    <i className="bi bi-people"></i>
+                                                </div>
+                                                <div className="stat-content">
+                                                    <div className="stat-number">{(reserveStats.yes || 0) + (reserveStats.maybe || 0) + (reserveStats.no || 0)}</div>
+                                                    <div className="stat-label">Total Responses</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
