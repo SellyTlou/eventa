@@ -4862,95 +4862,173 @@ $fun = $_POST['function'];
             "message" => "Database error: " . $e->getMessage()
         ]);
     }
-
     exit;
-}
+    }
+    
+    if ($fun === "processTicketPayment") {
 
-  if ($fun === "processTicketPayment") {
+        $event_id            = $_POST['event_id'] ?? '';
+        $customer_email      = $_POST['customer_email'] ?? '';
+        $customer_first_name = $_POST['customer_first_name'] ?? '';
+        $customer_last_name  = $_POST['customer_last_name'] ?? '';
+        $customer_phone      = $_POST['customer_phone'] ?? '';
+        $ticket_type         = $_POST['ticket_type'] ?? '';
+        $ticket_type_label   = $_POST['ticket_type_label'] ?? '';
+        $quantity            = (int)($_POST['quantity'] ?? 0);
+        $unit_price          = $_POST['unit_price'] ?? 0;
+        $total_amount        = $_POST['total_amount'] ?? 0;
+        $payment_method      = $_POST['payment_method'] ?? '';
+        $payment_status      = $_POST['payment_status'] ?? '';
+        $transaction_id      = $_POST['transaction_id'] ?? '';
 
-    $event_id              = $_POST['event_id'] ?? '';
-    $customer_email        = $_POST['customer_email'] ?? '';
-    $customer_first_name   = $_POST['customer_first_name'] ?? '';
-    $customer_last_name    = $_POST['customer_last_name'] ?? '';
-    $customer_phone        = $_POST['customer_phone'] ?? '';
-    $ticket_type           = $_POST['ticket_type'] ?? '';
-    $ticket_type_label     = $_POST['ticket_type_label'] ?? '';
-    $quantity              = $_POST['quantity'] ?? 0;
-    $unit_price            = $_POST['unit_price'] ?? 0;
-    $total_amount          = $_POST['total_amount'] ?? 0;
-    $payment_method        = $_POST['payment_method'] ?? '';
-    $payment_status        = $_POST['payment_status'] ?? '';
-    $transaction_id        = $_POST['transaction_id'] ?? '';
+        if (
+            empty($transaction_id) ||
+            empty($event_id) ||
+            empty($ticket_type) ||
+            $quantity <= 0
+        ) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Missing or invalid data"
+            ]);
+            exit;
+        }
 
-    if (empty($transaction_id) || empty($event_id) ) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Missing required data"
-        ]);
+        $qtyColumnMap = [
+            'early_bird' => 'early_bird_quantity',
+            'general'    => 'general_quantity',
+            'vip'        => 'vip_quantity',
+            'vvip'       => 'vvip_quantity',
+        ];
+
+        if (!isset($qtyColumnMap[$ticket_type])) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Invalid ticket type"
+            ]);
+            exit;
+        }
+
+        $qtyColumn = $qtyColumnMap[$ticket_type];
+
+        try {
+            $pdo->beginTransaction();
+
+            /** ONLY EARLY BIRD HAS QUANTITY */
+            if ($ticket_type === 'early_bird') {
+
+                // Lock event row
+                $checkStmt = $pdo->prepare("
+                    SELECT early_bird_quantity
+                    FROM events
+                    WHERE event_id = :event_id
+                    FOR UPDATE
+                ");
+                $checkStmt->execute([':event_id' => $event_id]);
+                $eventRow = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$eventRow) {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Event not found"
+                    ]);
+                    exit;
+                }
+
+                if ((int)$eventRow['early_bird_quantity'] < $quantity) {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Early Bird tickets sold out"
+                    ]);
+                    exit;
+                }
+            }
+
+            /** ✅ INSERT BOOKING (ALL TICKET TYPES) */
+            $stmt = $pdo->prepare("
+                INSERT INTO bookings (
+                    bookingId,
+                    event_id,
+                    customer_email,
+                    customer_first_name,
+                    customer_last_name,
+                    customer_phone,
+                    ticket_type,
+                    ticket_type_label,
+                    quantity,
+                    unit_price,
+                    total_amount,
+                    payment_method,
+                    payment_status,
+                    created_at
+                ) VALUES (
+                    :bookingId,
+                    :event_id,
+                    :customer_email,
+                    :customer_first_name,
+                    :customer_last_name,
+                    :customer_phone,
+                    :ticket_type,
+                    :ticket_type_label,
+                    :quantity,
+                    :unit_price,
+                    :total_amount,
+                    :payment_method,
+                    :payment_status,
+                    NOW()
+                )
+            ");
+
+            $stmt->execute([
+                ':bookingId'           => $transaction_id,
+                ':event_id'            => $event_id,
+                ':customer_email'      => $customer_email,
+                ':customer_first_name' => $customer_first_name,
+                ':customer_last_name'  => $customer_last_name,
+                ':customer_phone'      => $customer_phone,
+                ':ticket_type'         => $ticket_type,
+                ':ticket_type_label'   => $ticket_type_label,
+                ':quantity'            => $quantity,
+                ':unit_price'          => $unit_price,
+                ':total_amount'        => $total_amount,
+                ':payment_method'      => $payment_method,
+                ':payment_status'      => $payment_status,
+            ]);
+
+            /** 🔻 DEDUCT ONLY EARLY BIRD */
+            if ($ticket_type === 'early_bird') {
+                $updateStmt = $pdo->prepare("
+                    UPDATE events
+                    SET early_bird_quantity = early_bird_quantity - :qty
+                    WHERE event_id = :event_id
+                ");
+                $updateStmt->execute([
+                    ':qty'      => $quantity,
+                    ':event_id' => $event_id
+                ]);
+            }
+
+            $pdo->commit();
+
+            echo json_encode([
+                "success" => true,
+                "bookingId" => $transaction_id
+            ]);
+
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            echo json_encode([
+                "success" => false,
+                "message" => $e->getMessage()
+            ]);
+        }
+
+
         exit;
     }
 
-    try {
-        $stmt = $pdo->prepare("
-            INSERT INTO bookings (
-                bookingId,
-                event_id,
-                customer_email,
-                customer_first_name,
-                customer_last_name,
-                customer_phone,
-                ticket_type,
-                ticket_type_label,
-                quantity,
-                unit_price,
-                total_amount,
-                payment_method,
-                payment_status,
-                created_at
-            ) VALUES (
-                :bookingId,
-                :event_id,
-                :customer_email,
-                :customer_first_name,
-                :customer_last_name,
-                :customer_phone,
-                :ticket_type,
-                :ticket_type_label,
-                :quantity,
-                :unit_price,
-                :total_amount,
-                :payment_method,
-                :payment_status,
-                NOW()
-            )
-        ");
 
-        $stmt->execute([
-            ':bookingId'            => $transaction_id,
-            ':event_id'             => $event_id,
-            ':customer_email'       => $customer_email,
-            ':customer_first_name'  => $customer_first_name,
-            ':customer_last_name'   => $customer_last_name,
-            ':customer_phone'       => $customer_phone,
-            ':ticket_type'          => $ticket_type,
-            ':ticket_type_label'    => $ticket_type_label,
-            ':quantity'             => $quantity,
-            ':unit_price'           => $unit_price,
-            ':total_amount'         => $total_amount,
-            ':payment_method'       => $payment_method,
-            ':payment_status'       => $payment_status,
-        ]);
 
-        echo json_encode([
-            "success" => true,
-            "bookingId" => $transaction_id
-        ]);
-
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage()
-        ]);
-    }
-}
 ?>

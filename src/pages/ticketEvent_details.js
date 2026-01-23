@@ -10,8 +10,8 @@ function TicketEvent_details() {
   const [event, setEvent] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-   const [isLoginOpen, setIsLoginOpen] = useState(false);
-    const [loginMode, setLoginMode] = useState("login");
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [loginMode, setLoginMode] = useState("login");
 
   // Get ID from query parameter
   const queryParams = new URLSearchParams(location.search);
@@ -26,7 +26,7 @@ function TicketEvent_details() {
     }
   }, [id]);
 
-   const handleLoginClick = () => {
+  const handleLoginClick = () => {
     setLoginMode("login");
     setIsLoginOpen(true);
   };
@@ -41,7 +41,7 @@ function TicketEvent_details() {
     try {
       setLoading(true);
       setError("");
-      
+
       const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
       const formData = new FormData();
       formData.append("function", "getEventById");
@@ -57,7 +57,7 @@ function TicketEvent_details() {
       }
 
       const data = await res.json();
-      
+
       if (data.success && Array.isArray(data.events) && data.events.length > 0) {
         setEvent(data.events[0]);
       } else {
@@ -99,16 +99,16 @@ function TicketEvent_details() {
   // Get lowest price from available ticket types
   const getLowestPrice = () => {
     if (!event) return "0.00";
-    
+
     const prices = [
       parseFloat(String(event.early_bird_price)),
       parseFloat(String(event.general_price)),
       parseFloat(String(event.vip_price)),
       parseFloat(String(event.vvip_price)),
     ].filter(price => price > 0);
-    
+
     if (prices.length === 0) return "0.00";
-    
+
     return Math.min(...prices).toFixed(2);
   };
 
@@ -130,7 +130,7 @@ function TicketEvent_details() {
           <i className="fas fa-exclamation-circle error-icon"></i>
           <h2>Event Not Found</h2>
           <p>{error || "The event you're looking for doesn't exist or has been removed."}</p>
-          <button 
+          <button
             className="back-btn"
             onClick={() => navigate("/ticket-sales")}
           >
@@ -142,20 +142,20 @@ function TicketEvent_details() {
   }
 
   const getMapEmbedUrl = (location) => {
-  if (!location) return "";
-  const encodedLocation = encodeURIComponent(location);
-  return `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
-};
+    if (!location) return "";
+    const encodedLocation = encodeURIComponent(location);
+    return `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
+  };
 
   return (
     <div className="event-details-page">
 
-        <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
-            <Login
-              isOpen={isLoginOpen}
-              onClose={() => setIsLoginOpen(false)}
-              defaultMode={loginMode}
-            />
+      <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
+      <Login
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        defaultMode={loginMode}
+      />
 
       {/* TOP SECTION */}
       <div className="event-top">
@@ -182,11 +182,18 @@ function TicketEvent_details() {
               {event.event_start_time ? `${event.event_start_time}` : "Time TBA"}
               {event.event_end_time ? ` – ${event.event_end_time}` : ""}
             </p>
-            {event.early_bird_quantity && event.early_bird_quantity > 0 && (
-              <span className="limited">
-                {event.early_bird_quantity} Early Bird tickets left
-              </span>
+            {parseFloat(String(event.early_bird_price)) > 0 && (
+              event.early_bird_quantity > 0 ? (
+                <span className="limited">
+                  {event.early_bird_quantity} Early Bird tickets left
+                </span>
+              ) : (
+                <span className="limited sold-out">
+                  Early Bird Sold Out
+                </span>
+              )
             )}
+
           </div>
 
           <div className="price">
@@ -194,7 +201,7 @@ function TicketEvent_details() {
             <h2>R {getLowestPrice()}</h2>
           </div>
 
-          <button 
+          <button
             className="book-btn"
             onClick={handleBooking}
           >
@@ -228,7 +235,7 @@ function TicketEvent_details() {
         >
           Venue Information
         </button>
-       
+
         <button
           className={activeTab === "tickets" ? "active" : ""}
           onClick={() => setActiveTab("tickets")}
@@ -253,28 +260,28 @@ function TicketEvent_details() {
         )}
 
         {activeTab === "venue" && (
-  <div className="venue-content">
-    <h4>📍 {event.event_location || "Location TBA"}</h4>
+          <div className="venue-content">
+            <h4>📍 {event.event_location || "Location TBA"}</h4>
 
-    {event.event_location ? (
-      <div className="map-placeholder" style={{ padding: 0, overflow: "hidden" }}>
-        <iframe
-          title="Event Location Map"
-          src={getMapEmbedUrl(event.event_location)}
-          width="100%"
-          height="300"
-          style={{ border: 0, borderRadius: "10px" }}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
-      </div>
-    ) : (
-      <p style={{ color: "#666", marginTop: "15px" }}>
-        Location not available for this event.
-      </p>
-    )}
-  </div>
-)}
+            {event.event_location ? (
+              <div className="map-placeholder" style={{ padding: 0, overflow: "hidden" }}>
+                <iframe
+                  title="Event Location Map"
+                  src={getMapEmbedUrl(event.event_location)}
+                  width="100%"
+                  height="300"
+                  style={{ border: 0, borderRadius: "10px" }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+            ) : (
+              <p style={{ color: "#666", marginTop: "15px" }}>
+                Location not available for this event.
+              </p>
+            )}
+          </div>
+        )}
 
 
 
