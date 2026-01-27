@@ -929,3 +929,19 @@
     cursor: pointer;
     font-weight: 500;
 }
+
+@media (max-width: 480px) {
+    .guest-insights-content {
+        padding: 1rem;
+         overflow-x: hidden;
+    max-width: 100vw;
+    }
+}
+
+@media (max-width: 768px) {
+    .guest-insights-content {
+        padding: 1.2rem;
+         overflow-x: hidden;
+    max-width: 100vw;
+    }
+}

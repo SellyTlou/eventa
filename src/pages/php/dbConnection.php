@@ -1,8 +1,16 @@
 <?php
 class Database
 {
-     
-    private $host   = "localhost";
+      // PRODUCTION DATABASE (Webway Host)
+   /* private $host   = "localhost";
+    private $user   = "evendico_evendi";
+    private $pass   = "eHznbUVDEEna8GU8gDbW";
+    private $dbname = "evendico_evendi";
+    private $port   = 3306;
+    private $pdo;*/
+
+    // LOCALHOST DATABASE
+   private $host   = "localhost";
     private $user   = "root";
     private $pass   = "";
     private $dbname = "eventa";
@@ -15,6 +23,8 @@ class Database
     private $dbname = "db_ac172e_mfanafu";
     private $port   = 3306;
     private $pdo;*/
+
+    
 
     public function __construct()
     {

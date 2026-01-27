@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./UpgradePackage.css";
 import "../../alert.css";
 import "../../App.css";
-import { logOut } from "../components";
+import { logOut, LoginNav } from "../components";
 
 const UpgradePackage = () => {
     const [packages, setPackages] = useState([]);
@@ -319,7 +319,7 @@ const UpgradePackage = () => {
                     </div>
                 </div>
             )}
-            <div className="dashboard-header">
+            {/* <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
 
@@ -335,7 +335,8 @@ const UpgradePackage = () => {
                         )}
                     </div>
                 </div>
-            </div>
+            </div> */}
+            <LoginNav/>
             <div className="container">
 
                 <button className="btn-event btn-event-back" onClick={handleBack}>

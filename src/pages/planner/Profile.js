@@ -40,7 +40,6 @@ const Profile = () => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
-
   const validatePassword = (password) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
     return regex.test(password);
@@ -66,11 +65,23 @@ const Profile = () => {
 
         const userData = JSON.parse(storedUser);
         setUser(userData);
-        setEditForm({
-          name: userData.name || "",
-          lastname: userData.lastname || "",
-          email: userData.email || "",
-        });
+        
+        // Set edit form based on account type
+        if (userData.account_type === "business") {
+          setEditForm({
+            business_name: userData.business_name || "",
+            email: userData.email || "",
+            business_type: userData.business_type || "",
+            phone: userData.phone || "",
+            address: userData.address || "",
+          });
+        } else {
+          setEditForm({
+            name: userData.name || "",
+            lastname: userData.lastname || "",
+            email: userData.email || "",
+          });
+        }
 
         await fetchUserEvents(userData.user_id);
         await fetchUserPackage(userData.user_id);
@@ -90,7 +101,6 @@ const Profile = () => {
 
     fetchUserData();
   }, [navigate]);
-
 
   const toggleDropdown = () => setDropdownOpen(prev => !prev);
   const goToProfile = () => {
@@ -198,9 +208,18 @@ const Profile = () => {
       const formData = new FormData();
       formData.append("function", "updateUserProfile");
       formData.append("user_id", user.user_id);
-      formData.append("name", editForm.name);
-      formData.append("lastname", editForm.lastname);
-      formData.append("email", editForm.email);
+      
+      if (user.account_type === "business") {
+        formData.append("business_name", editForm.business_name);
+        formData.append("business_type", editForm.business_type);
+        formData.append("phone", editForm.phone);
+        formData.append("address", editForm.address);
+        formData.append("email", editForm.email);
+      } else {
+        formData.append("name", editForm.name);
+        formData.append("lastname", editForm.lastname);
+        formData.append("email", editForm.email);
+      }
 
       const emailChanged = user.email !== editForm.email;
       if (emailChanged) {
@@ -214,18 +233,33 @@ const Profile = () => {
 
       const data = await response.json();
       if (data.success) {
-        const updatedUser = {
-          ...user,
-          name: editForm.name,
-          lastname: editForm.lastname,
-          email: editForm.email,
-          verified: emailChanged ? 0 : user.verified
-        };
+        let updatedUser;
+        if (user.account_type === "business") {
+          updatedUser = {
+            ...user,
+            business_name: editForm.business_name,
+            business_type: editForm.business_type,
+            phone: editForm.phone,
+            address: editForm.address,
+            email: editForm.email,
+            verified: emailChanged ? 0 : user.verified
+          };
+        } else {
+          updatedUser = {
+            ...user,
+            name: editForm.name,
+            lastname: editForm.lastname,
+            email: editForm.email,
+            verified: emailChanged ? 0 : user.verified
+          };
+        }
+        
         setUser(updatedUser);
         localStorage.setItem("user", JSON.stringify(updatedUser));
 
         if (emailChanged) {
-          const emailResult = await sendVerificationEmail(editForm.email, editForm.name);
+          const emailResult = await sendVerificationEmail(editForm.email, 
+            user.account_type === "business" ? editForm.business_name : editForm.name);
           if (emailResult.success) {
             printAlert("Profile updated successfully! Verification email sent to your new email address.", "success");
           } else {
@@ -332,7 +366,8 @@ const Profile = () => {
 
   const handleResendVerification = async () => {
     try {
-      const result = await sendVerificationEmail(user.email, user.name);
+      const result = await sendVerificationEmail(user.email, 
+        user.account_type === "business" ? user.business_name : user.name);
       if (result.success) {
         printAlert("Verification email sent successfully! Please check your inbox.", "success");
       } else {
@@ -354,6 +389,24 @@ const Profile = () => {
     return (parseInt(userPackage.event_used) / parseInt(userPackage.event_limit)) * 100;
   };
 
+  // Get user display name based on account type
+  const getUserDisplayName = () => {
+    if (!user) return "";
+    if (user.account_type === "business") {
+      return user.business_name || "Business";
+    }
+    return `${user.name || ""} ${user.lastname || ""}`.trim();
+  };
+
+  // Get user avatar initials
+  const getAvatarInitials = () => {
+    if (!user) return "U";
+    if (user.account_type === "business") {
+      return (user.business_name || "B").charAt(0).toUpperCase();
+    }
+    return `${user.name?.charAt(0) || ""}${user.lastname?.charAt(0) || ""}`.toUpperCase();
+  };
+
   if (loading) {
     return (
       <>
@@ -369,7 +422,6 @@ const Profile = () => {
 
   return (
     <>
-
       {/* Custom Alert Popup */}
       {alert.show && (
         <div className={`custom-alert ${alert.type}`}>
@@ -385,25 +437,7 @@ const Profile = () => {
         </div>
       )}
 
-      {/* HEADER 
-      <div className="dashboard-header">
-        <h1>Evenda</h1>
-        <div className="header-tabs">
-          <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
-            <i className="bi bi-person-circle"></i>
-            <span>{user?.name || "Guest"}</span>
-            <i className="bi bi-chevron-bar-down"></i>
-            {dropdownOpen && (
-              <div className="dropdown-menu show">
-                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                <button className="dropdown-item"><i className="bi bi-gear"></i>Settings</button>
-                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>*/}
-<LoginNav />
+      <LoginNav />
       <section className="profilePage">
         <div className="container">
           <button className="btn-event btn-event-back" onClick={handleBack}>
@@ -413,25 +447,48 @@ const Profile = () => {
           <div className="profile-layout">
             {/* Sidebar */}
             <div className="profile-sidebar">
-              <div className="user-card">
+              <div className={`user-card ${user.account_type}`}>
                 <div className="user-avatar">
-                  {user?.name?.charAt(0)}{user?.lastname?.charAt(0)}
+                  {getAvatarInitials()}
+                  {user.account_type === "business" && (
+                    <div className="business-badge">
+                      <i className="bi bi-building"></i>
+                    </div>
+                  )}
                 </div>
                 <div className="user-info">
-                  <h3>{user?.name} {user?.lastname}</h3>
-                  <p>{user?.email}</p>
-                  {user?.verified === 0 && (
+                  <h3>{getUserDisplayName()}</h3>
+                  <p>{user.email}</p>
+                  
+                  <div className="account-type-badge">
+                    <span className={`badge ${user.account_type}`}>
+                      {user.account_type === "business" ? (
+                        <>
+                          <i className="bi bi-building me-1"></i>
+                          Business Account
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-person me-1"></i>
+                          Personal Account
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  
+                  {user.verified === 0 && (
                     <div className="verification-badge unverified">
                       <i className="bi bi-exclamation-triangle"></i>
                       Email Not Verified
                     </div>
                   )}
-                  {user?.verified === 1 && (
+                  {user.verified === 1 && (
                     <div className="verification-badge verified">
                       <i className="bi bi-check-circle"></i>
                       Email Verified
                     </div>
                   )}
+                  
                   <div className="user-stats">
                     <div className="stat">
                       <strong>{events.length}</strong>
@@ -441,6 +498,14 @@ const Profile = () => {
                       <strong>{getRemainingEvents()}</strong>
                       <span>Remaining</span>
                     </div>
+                    {user.account_type === "business" && user.business_type && (
+                      <div className="stat">
+                        <strong>
+                          <i className="bi bi-building"></i>
+                        </strong>
+                        <span>{user.business_type.replace('_', ' ')}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -451,7 +516,7 @@ const Profile = () => {
                   onClick={() => setActiveTab("profile")}
                 >
                   <i className="bi bi-person"></i>
-                  Profile Information
+                  {user.account_type === "business" ? "Business Profile" : "Profile Information"}
                 </button>
                 <button
                   className={`nav-item ${activeTab === "events" ? "active" : ""}`}
@@ -467,6 +532,15 @@ const Profile = () => {
                   <i className="bi bi-box-seam"></i>
                   My Package
                 </button>
+                {user.account_type === "business" && (
+                  <button
+                    className={`nav-item ${activeTab === "team" ? "active" : ""}`}
+                    onClick={() => setActiveTab("team")}
+                  >
+                    <i className="bi bi-people"></i>
+                    Team Members
+                  </button>
+                )}
                 <button
                   className={`nav-item ${activeTab === "security" ? "active" : ""}`}
                   onClick={() => setActiveTab("security")}
@@ -483,14 +557,14 @@ const Profile = () => {
               {activeTab === "profile" && (
                 <div className="tab-content">
                   <div className="tab-header">
-                    <h2>Profile Information</h2>
+                    <h2>{user.account_type === "business" ? "Business Profile" : "Profile Information"}</h2>
                     {!isEditing ? (
                       <button
                         className="edit-btn"
                         onClick={() => setIsEditing(true)}
                       >
                         <i className="bi bi-pencil"></i>
-                        Edit Profile
+                        Edit {user.account_type === "business" ? "Business" : "Profile"}
                       </button>
                     ) : (
                       <div className="edit-actions">
@@ -498,11 +572,21 @@ const Profile = () => {
                           className="cancel-btn"
                           onClick={() => {
                             setIsEditing(false);
-                            setEditForm({
-                              name: user.name,
-                              lastname: user.lastname,
-                              email: user.email,
-                            });
+                            if (user.account_type === "business") {
+                              setEditForm({
+                                business_name: user.business_name || "",
+                                email: user.email || "",
+                                business_type: user.business_type || "",
+                                phone: user.phone || "",
+                                address: user.address || "",
+                              });
+                            } else {
+                              setEditForm({
+                                name: user.name,
+                                lastname: user.lastname,
+                                email: user.email,
+                              });
+                            }
                             setEmailChanged(false);
                             setError("");
                           }}
@@ -520,8 +604,6 @@ const Profile = () => {
                     )}
                   </div>
 
-
-
                   {emailChanged && isEditing && (
                     <div className="email-change-warning">
                       <i className="bi bi-info-circle"></i>
@@ -530,48 +612,143 @@ const Profile = () => {
                   )}
 
                   <div className="profile-form">
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>First Name</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.name}
-                            onChange={(e) => handleInputChange("name", e.target.value)}
-                            className="form-input"
-                          />
-                        ) : (
-                          <div className="form-value">{user.name}</div>
-                        )}
-                      </div>
-                      <div className="form-group">
-                        <label>Last Name</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.lastname}
-                            onChange={(e) => handleInputChange("lastname", e.target.value)}
-                            className="form-input"
-                          />
-                        ) : (
-                          <div className="form-value">{user.lastname}</div>
-                        )}
-                      </div>
-                    </div>
+                    {user.account_type === "business" ? (
+                      <>
+                        <div className="form-group">
+                          <label>Business Name</label>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.business_name}
+                              onChange={(e) => handleInputChange("business_name", e.target.value)}
+                              className="form-input"
+                              placeholder="Enter business name"
+                            />
+                          ) : (
+                            <div className="form-value">{user.business_name}</div>
+                          )}
+                        </div>
+                        
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>Business Type</label>
+                            {isEditing ? (
+                              <select
+                                value={editForm.business_type}
+                                onChange={(e) => handleInputChange("business_type", e.target.value)}
+                                className="form-input"
+                              >
+                                <option value="">Select business type</option>
+                                <option value="sole_proprietor">Sole Proprietor</option>
+                                <option value="partnership">Partnership</option>
+                                <option value="llc">LLC</option>
+                                <option value="corporation">Corporation</option>
+                                <option value="non_profit">Non-Profit</option>
+                                <option value="event_planning">Event Planning Company</option>
+                                <option value="venue">Venue</option>
+                                <option value="catering">Catering Service</option>
+                                <option value="entertainment">Entertainment</option>
+                                <option value="other">Other</option>
+                              </select>
+                            ) : (
+                              <div className="form-value">{user.business_type?.replace('_', ' ') || "Not specified"}</div>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label>Phone Number</label>
+                            {isEditing ? (
+                              <input
+                                type="tel"
+                                value={editForm.phone}
+                                onChange={(e) => handleInputChange("phone", e.target.value)}
+                                className="form-input"
+                                placeholder="Enter phone number"
+                              />
+                            ) : (
+                              <div className="form-value">{user.phone || "Not specified"}</div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="form-group">
+                          <label>Business Address</label>
+                          {isEditing ? (
+                            <textarea
+                              value={editForm.address}
+                              onChange={(e) => handleInputChange("address", e.target.value)}
+                              className="form-input"
+                              placeholder="Enter business address"
+                              rows="3"
+                            />
+                          ) : (
+                            <div className="form-value">{user.address || "Not specified"}</div>
+                          )}
+                        </div>
+                        
+                        <div className="form-group">
+                          <label>Business Email</label>
+                          {isEditing ? (
+                            <input
+                              type="email"
+                              value={editForm.email}
+                              onChange={(e) => handleInputChange("email", e.target.value)}
+                              className="form-input"
+                              placeholder="Enter business email"
+                            />
+                          ) : (
+                            <div className="form-value">{user.email}</div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>First Name</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editForm.name}
+                                onChange={(e) => handleInputChange("name", e.target.value)}
+                                className="form-input"
+                                placeholder="Enter your first name"
+                              />
+                            ) : (
+                              <div className="form-value">{user.name}</div>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label>Last Name</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editForm.lastname}
+                                onChange={(e) => handleInputChange("lastname", e.target.value)}
+                                className="form-input"
+                                placeholder="Enter your last name"
+                              />
+                            ) : (
+                              <div className="form-value">{user.lastname}</div>
+                            )}
+                          </div>
+                        </div>
 
-                    <div className="form-group">
-                      <label>Email Address</label>
-                      {isEditing ? (
-                        <input
-                          type="email"
-                          value={editForm.email}
-                          onChange={(e) => handleInputChange("email", e.target.value)}
-                          className="form-input"
-                        />
-                      ) : (
-                        <div className="form-value">{user.email}</div>
-                      )}
-                    </div>
+                        <div className="form-group">
+                          <label>Email Address</label>
+                          {isEditing ? (
+                            <input
+                              type="email"
+                              value={editForm.email}
+                              onChange={(e) => handleInputChange("email", e.target.value)}
+                              className="form-input"
+                              placeholder="Enter your email"
+                            />
+                          ) : (
+                            <div className="form-value">{user.email}</div>
+                          )}
+                        </div>
+                      </>
+                    )}
 
                     {/* Only show verification notice if email is NOT verified */}
                     {!isEditing && user.verified === 0 && (
@@ -586,6 +763,25 @@ const Profile = () => {
                         </button>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Team Tab (Business Only) */}
+              {activeTab === "team" && user.account_type === "business" && (
+                <div className="tab-content">
+                  <div className="tab-header">
+                    <h2>Team Management</h2>
+                    <button className="add-member-btn">
+                      <i className="bi bi-plus-circle"></i>
+                      Add Team Member
+                    </button>
+                  </div>
+                  <div className="empty-state">
+                    <i className="bi bi-people"></i>
+                    <h3>Team Management Coming Soon</h3>
+                    <p>You'll be able to manage team members and permissions here.</p>
+                    <p className="text-muted">Feature will be available in the next update.</p>
                   </div>
                 </div>
               )}
@@ -626,6 +822,12 @@ const Profile = () => {
                               <i className="bi bi-calendar"></i>
                               {new Date(event.event_start_date).toLocaleDateString()}
                             </p>
+                            {user.account_type === "business" && (
+                              <p className="event-organizer">
+                                <i className="bi bi-person"></i>
+                                {event.organizer_name || user.business_name}
+                              </p>
+                            )}
                             <div className={`event-status ${event.is_published ? 'published' : 'draft'}`}>
                               {event.is_published ? 'Published' : 'Draft'}
                             </div>
@@ -637,7 +839,10 @@ const Profile = () => {
                     <div className="empty-state">
                       <i className="bi bi-calendar-x"></i>
                       <h3>No Events Yet</h3>
-                      <p>You haven't created any events yet.</p>
+                      <p>{user.account_type === "business" 
+                        ? "Your business hasn't created any events yet." 
+                        : "You haven't created any events yet."}
+                      </p>
                       <button
                         className="create-event-btn"
                         onClick={() => navigate("/activeEventDetails")}
@@ -655,16 +860,20 @@ const Profile = () => {
                   <div className="tab-header">
                     <h2>My Package</h2>
                     <button className="upgrade-btn" onClick={goToUpgradePackage}>
-                      Upgrade Package
+                      {user.account_type === "business" ? "Upgrade Business Plan" : "Upgrade Package"}
                     </button>
                   </div>
 
                   {userPackage ? (
                     <div className="package-card">
                       <div className="package-header">
-                        <h3>{packageDetails ?
-                          packageDetails.package_type.charAt(0).toUpperCase() + packageDetails.package_type.slice(1)
-                          : userPackage.package_id}
+                        <h3>
+                          {packageDetails ? (
+                            <>
+                              {packageDetails.package_type.charAt(0).toUpperCase() + packageDetails.package_type.slice(1)}
+                              {user.account_type === "business" && " Business Plan"}
+                            </>
+                          ) : userPackage.package_id}
                         </h3>
                         <div className="package-badge active">Active</div>
                       </div>
@@ -689,7 +898,13 @@ const Profile = () => {
                         {packageDetails && packageDetails.price && (
                           <div className="feature">
                             <i className="bi bi-check-circle"></i>
-                            <span>Price: ${parseFloat(packageDetails.price).toFixed(2)}</span>
+                            <span>Price: ${parseFloat(packageDetails.price).toFixed(2)}/month</span>
+                          </div>
+                        )}
+                        {user.account_type === "business" && (
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Account Type: Business</span>
                           </div>
                         )}
                       </div>
@@ -714,8 +929,8 @@ const Profile = () => {
                       <i className="bi bi-box-seam"></i>
                       <h3>No Package Found</h3>
                       <p>You don't have an active package yet.</p>
-                      <button className="create-event-btn"  onClick={goToUpgradePackage}>
-                        Choose a Package
+                      <button className="create-event-btn" onClick={goToUpgradePackage}>
+                        {user.account_type === "business" ? "Choose Business Plan" : "Choose a Package"}
                       </button>
                     </div>
                   )}
@@ -731,7 +946,7 @@ const Profile = () => {
 
                   <div className="security-section">
                     <h3>Change Password</h3>
-                    <p>Update your password to keep your account secure.</p>
+                    <p>Update your password to keep your {user.account_type === "business" ? "business" : "account"} secure.</p>
 
                     <div className="password-form">
                       <div className="form-group password-input-group">

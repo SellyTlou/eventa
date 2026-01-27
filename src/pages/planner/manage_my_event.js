@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import '../../alert.css';
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut, DashboardHeader, DashboardSidebar } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar,LoginNav } from "../components";
 
 
 const Manage_my_event = () => {

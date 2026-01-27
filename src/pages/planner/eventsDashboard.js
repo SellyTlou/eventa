@@ -1171,19 +1171,17 @@ const EventsDashboard = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Location */}
+                                                  
+                                                </div>
+                                                  {/* Location */}
                                                     <div className="detail-horizontal">
-                                                        <div className="detail-icon">
-                                                            <i className="bi bi-geo-alt"></i>
-                                                        </div>
+                                                        
                                                         <div className="detail-content">
-                                                            <div className="detail-label">LOCATION</div>
                                                             <div className="detail-value">
                                                                 {event.event_location || 'Location TBD'}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
                                             </div>
 
                                             {/* Buttons - Bottom Section */}

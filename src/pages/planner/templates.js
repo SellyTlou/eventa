@@ -2234,9 +2234,7 @@ export const templates = {
 
     
   ],
-  
-  
-  
+    
   Graduation: [
     {
   "id": "459:63",

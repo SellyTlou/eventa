@@ -268,223 +268,269 @@ const btnDangerStyle = {
 
 
 export function Navbar({ onLoginClick, onSignupClick }) {
-  const [scrolled, setScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [user, setUser] = useState(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const desktopDropdownRef = useRef(null);
-  const mobileDropdownRef = useRef(null);
+    const desktopDropdownRef = useRef(null);
+    const mobileDropdownRef = useRef(null);
 
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
-  /* ===============================
-     USER AUTH STATE
-  =============================== */
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    /* ===============================
+       USER AUTH STATE
+    =============================== */
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) setUser(JSON.parse(storedUser));
 
-    const handleUserChange = () => {
-      const updatedUser = localStorage.getItem("user");
-      setUser(updatedUser ? JSON.parse(updatedUser) : null);
+        const handleUserChange = () => {
+            const updatedUser = localStorage.getItem("user");
+            setUser(updatedUser ? JSON.parse(updatedUser) : null);
+        };
+
+        window.addEventListener("userLoggedIn", handleUserChange);
+        window.addEventListener("userLoggedOut", handleUserChange);
+
+        return () => {
+            window.removeEventListener("userLoggedIn", handleUserChange);
+            window.removeEventListener("userLoggedOut", handleUserChange);
+        };
+    }, []);
+
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 50);
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (
+                desktopDropdownRef.current &&
+                !desktopDropdownRef.current.contains(event.target) &&
+                mobileDropdownRef.current &&
+                !mobileDropdownRef.current.contains(event.target)
+            ) {
+                setDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
+    }, []);
+
+
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen((prev) => !prev);
     };
 
-    window.addEventListener("userLoggedIn", handleUserChange);
-    window.addEventListener("userLoggedOut", handleUserChange);
-
-    return () => {
-      window.removeEventListener("userLoggedIn", handleUserChange);
-      window.removeEventListener("userLoggedOut", handleUserChange);
-    };
-  }, []);
-
- 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+    const toggleDropdown = (e) => {
+        e.stopPropagation();
+        setDropdownOpen((prev) => !prev);
     };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const goToDashboard = () => {
+        navigate("/eventsDashboard");
+        closeAllMenus();
+    };
 
-  
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        desktopDropdownRef.current &&
-        !desktopDropdownRef.current.contains(event.target) &&
-        mobileDropdownRef.current &&
-        !mobileDropdownRef.current.contains(event.target)
-      ) {
+    const goToProfile = () => {
+        navigate("/Profile");
+        closeAllMenus();
+    };
+
+    const createEventClicked = () => {
+        navigate("/activeEventDetails");
+        closeAllMenus();
+    };
+
+    const logOut = () => {
+        localStorage.removeItem("user");
+        setUser(null);
+        window.dispatchEvent(new CustomEvent("userLoggedOut"));
+        closeAllMenus();
+        navigate("/");
+    };
+
+    const closeAllMenus = () => {
         setDropdownOpen(false);
-      }
+        setIsMobileMenuOpen(false);
     };
-
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
- 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen((prev) => !prev);
-  };
-
-  const toggleDropdown = (e) => {
-    e.stopPropagation();
-    setDropdownOpen((prev) => !prev);
-  };
-
-  const goToDashboard = () => {
-    navigate("/eventsDashboard");
-    closeAllMenus();
-  };
-
-  const goToProfile = () => {
-    navigate("/Profile");
-    closeAllMenus();
-  };
-
-  const createEventClicked = () => {
-    navigate("/activeEventDetails");
-    closeAllMenus();
-  };
-
-  const logOut = () => {
-    localStorage.removeItem("user");
-    setUser(null);
-    window.dispatchEvent(new CustomEvent("userLoggedOut"));
-    closeAllMenus();
-    navigate("/");
-  };
-
-  const closeAllMenus = () => {
-    setDropdownOpen(false);
-    setIsMobileMenuOpen(false);
-  };
- const handleDropdownItemClick = (handler, e) => {
+    const handleDropdownItemClick = (handler, e) => {
         if (e) e.stopPropagation();
         handler(e);
     };
- 
-  return (
-    <>
-      {/* ================= DESKTOP NAV ================= */}
-      <section className={`nav-section d-none d-md-block ${scrolled ? "scrolled" : ""}`}>
-        <div className="container">
-          <div className="row bottom-nav-row align-items-center">
-            <div className="col-md-3">
-              <a href="/">
-                <img src="/images/logo.png" alt="Logo" className="logo img-fluid" />
-              </a>
-            </div>
 
-            <div className="col-md-6">
-              <ul className="nav nav-list justify-content-center">
-                {["/", "/feature", "/ticket_sales", "/pricing", "/sales", "/support"].map(
-                  (path, i) => (
-                    <li className="nav-item" key={i}>
-                      <NavLink
-                        to={path}
-                        end={path === "/"}
-                        className={({ isActive }) =>
-                          `nav-link ${isActive ? "active" : ""}`
-                        }
-                      >
-                        {["Home", "Features", "Events", "Pricing", "Sales", "Support"][i]}
-                      </NavLink>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
+    return (
+        <>
+            {/* ================= DESKTOP NAV ================= */}
+            <section className={`nav-section d-none d-md-block ${scrolled ? "scrolled" : ""}`}>
+                <div className="container">
+                    <div className="row bottom-nav-row align-items-center">
+                        <div className="col-md-3">
+                            <a href="/">
+                                <img src="/images/logo.png" alt="Logo" className="logo img-fluid" />
+                            </a>
+                        </div>
 
-            <div className="col-md-3 btns-container">
-              {user ? (
-                <div className="logged-in-container">
-                  <button className="btn dashboard-btn" onClick={goToDashboard}>
-                    <i className="bi bi-grid-fill me-1"></i> Dashboard
-                  </button>
+                        <div className="col-md-6">
+                            <ul className="nav nav-list justify-content-center">
+                                {["/", "/feature", "/ticket_sales", "/pricing", "/sales", "/support"].map(
+                                    (path, i) => (
+                                        <li className="nav-item" key={i}>
+                                            <NavLink
+                                                to={path}
+                                                end={path === "/"}
+                                                className={({ isActive }) =>
+                                                    `nav-link ${isActive ? "active" : ""}`
+                                                }
+                                            >
+                                                {["Home", "Features", "Events", "Pricing", "Sales", "Support"][i]}
+                                            </NavLink>
+                                        </li>
+                                    )
+                                )}
+                            </ul>
+                        </div>
 
-                  <div ref={desktopDropdownRef} className="profile-container">
-                    <div className="profile-trigger" onClick={toggleDropdown}>
-                      <i className="bi bi-person-circle"></i>
-                      <span>{user.name || "User"}</span>
-                      <i className="bi bi-chevron-down"></i>
-                    </div>
+                        <div className="col-md-3 btns-container">
+                            {user ? (
+                                <div className="logged-in-container">
+                                    <button className="btn dashboard-btn" onClick={goToDashboard}>
+                                        <i className="bi bi-grid-fill me-1"></i> Dashboard
+                                    </button>
 
-                    {dropdownOpen && (
-                      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
-                                                <i className="bi bi-grid-fill me-2"></i> Dashboard
-                                            </button>
-                                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
-                                                <i className="bi bi-plus-circle me-2"></i> New Event
-                                            </button>
-                                            <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
-                                                <i className="bi bi-person me-2"></i> Profile
-                                            </button>
-                                            <div className="dropdown-divider"></div>
-                                            <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
-                                                <i className="bi bi-box-arrow-right me-2"></i> Logout
-                                            </button>
+                                    <div ref={desktopDropdownRef} className="profile-container">
+                                        <div className="profile-trigger" onClick={toggleDropdown}>
+                                            <i className="bi bi-person-circle"></i>
+                                            <span>{user.name || "User"}</span>
+                                            <i className="bi bi-chevron-down"></i>
                                         </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <button className="btn signin-btn" onClick={onLoginClick}>
-                  Sign In
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ================= MOBILE NAV ================= */}
-      <section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
-        <div className="container-fluid py-2">
-          <div className="d-flex justify-content-between align-items-center">
-            <a href="/">
-              <img src="/images/logo.png" alt="Logo" className="mobile-logo" />
-            </a>
-
-            <div className="d-flex align-items-center">
-              {user && (
-                <div ref={mobileDropdownRef} className="mobile-profile-container me-2">
-                  <div className="mobile-profile-trigger" onClick={toggleDropdown}>
-                    <i className="bi bi-person-circle"></i>
-                  </div>
-
-                  {dropdownOpen && (
-                    <div
-                      className="mobile-dropdown-menu"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button onClick={goToDashboard}>Dashboard</button>
-                      <button onClick={createEventClicked}>New Event</button>
-                      <button onClick={goToProfile}>Profile</button>
-                      <button onClick={logOut}>Logout</button>
+                                        {dropdownOpen && (
+                                            <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                                                <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
+                                                    <i className="bi bi-grid-fill me-2"></i> Dashboard
+                                                </button>
+                                                <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
+                                                    <i className="bi bi-plus-circle me-2"></i> New Event
+                                                </button>
+                                                <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
+                                                    <i className="bi bi-person me-2"></i> Profile
+                                                </button>
+                                                <div className="dropdown-divider"></div>
+                                                <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
+                                                    <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className='d-flex'>
+                                    <button className="btn signin-btn" onClick={onLoginClick}>
+                                        Sign In
+                                    </button>
+                                    <button className="btn signup-btn" onClick={onSignupClick}>
+                                        Sign Up
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                  )}
                 </div>
-              )}
+            </section>
 
-              <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
-                <span className={`hamburger-line ${isMobileMenuOpen ? "line-1-open" : ""}`} />
-                <span className={`hamburger-line ${isMobileMenuOpen ? "line-2-open" : ""}`} />
-                <span className={`hamburger-line ${isMobileMenuOpen ? "line-3-open" : ""}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
-  );
+            {/* ================= MOBILE NAV ================= */}
+            <section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
+                <div className="container-fluid py-2">
+                    <div className="d-flex justify-content-between align-items-center">
+                        <a href="/">
+                            <img src="/images/logo.png" alt="Logo" className="mobile-logo" />
+                        </a>
+
+                        <div className="d-flex align-items-center">
+                            {user && (
+                                <div ref={mobileDropdownRef} className="mobile-profile-container me-2">
+                                    <div className="mobile-profile-trigger" onClick={toggleDropdown}>
+                                        <i className="bi bi-person-circle"></i>
+                                    </div>
+
+                                    {dropdownOpen && (
+                                        <div
+                                            className="mobile-dropdown-menu"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <button onClick={goToDashboard}>Dashboard</button>
+                                            <button onClick={createEventClicked}>New Event</button>
+                                            <button onClick={goToProfile}>Profile</button>
+                                            <button onClick={logOut}>Logout</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
+                                <span className={`hamburger-line ${isMobileMenuOpen ? "line-1-open" : ""}`} />
+                                <span className={`hamburger-line ${isMobileMenuOpen ? "line-2-open" : ""}`} />
+                                <span className={`hamburger-line ${isMobileMenuOpen ? "line-3-open" : ""}`} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ADD THIS MOBILE MENU CONTENT */}
+                <div className={`mobile-menu ${isMobileMenuOpen ? "open" : ""}`}>
+                    <ul className="mobile-nav-list">
+                        {["/", "/feature", "/ticket_sales", "/pricing", "/sales", "/support"].map(
+                            (path, i) => (
+                                <li className="mobile-nav-item" key={i}>
+                                    <NavLink
+                                        to={path}
+                                        end={path === "/"}
+                                        className={({ isActive }) =>
+                                            `mobile-nav-link ${isActive ? "active" : ""}`
+                                        }
+                                        onClick={closeAllMenus}
+                                    >
+                                        {["Home", "Features", "Events", "Pricing", "Sales", "Support"][i]}
+                                    </NavLink>
+                                </li>
+                            )
+                        )}
+
+                        {/* Add mobile buttons for non-logged in users */}
+                        {!user && (
+                            <li className="mobile-nav-item">
+                                <div className="mobile-buttons">
+                                    <button className="btn mobile-signin-btn" onClick={() => {
+                                        onLoginClick();
+                                        closeAllMenus();
+                                    }}>
+                                        Sign In
+                                    </button>
+                                    <button className="btn mobile-signup-btn" onClick={() => {
+                                        onSignupClick();
+                                        closeAllMenus();
+                                    }}>
+                                        Sign Up
+                                    </button>
+                                </div>
+                            </li>
+                        )}
+                    </ul>
+                </div>
+            </section>
+        </>
+    );
 }
-
 
 export function Footer() {
     return (
@@ -494,8 +540,8 @@ export function Footer() {
                     <div className='col-lg-4'>
                         <img src="/images/White logo.png" alt="Eventa Logo" className="footer-logo img-fluid mb-3" />
                         <p className="about-description">
-                            Evenda is the smarter way to plan and manage your events. Whether it's a wedding, birthday, corporate gathering,
-                            or casual hangout, Evenda makes it simple to create invitations, track RSVPs, and keep guests engaged — all in one place.
+                            Evendi is the smarter way to plan and manage your events. Whether it's a wedding, birthday, corporate gathering,
+                            or casual hangout, Evendi makes it simple to create invitations, track RSVPs, and keep guests engaged — all in one place.
                         </p>
                     </div>
                     <div className="col-lg-2">
@@ -518,7 +564,7 @@ export function Footer() {
                         </div>
                         <div className="contact-item">
                             <a href="mailto:info@eventa.co.za">
-                                <i className="bi bi-envelope-fill"></i> info@evenda.co.za
+                                <i className="bi bi-envelope-fill"></i> info@evendi.co.za
                             </a>
                         </div>
                         <div className="contact-item">
@@ -542,7 +588,7 @@ export function Footer() {
             </div>
             <div className="row bottom-footer-row">
                 <div className="col text-center">
-                    <p className="mb-0">© 2025 Evenda. All rights reserved.</p>
+                    <p className="mb-0">© 2025 Evendi. All rights reserved.</p>
                 </div>
             </div>
         </footer>
@@ -649,10 +695,10 @@ export function LoginNav() {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setDropdownOpen(false);
             }
-            
+
             // Close mobile menu if clicked outside (except the hamburger button)
-            if (mobileMenuRef.current && 
-                !mobileMenuRef.current.contains(event.target) && 
+            if (mobileMenuRef.current &&
+                !mobileMenuRef.current.contains(event.target) &&
                 !event.target.closest('.mobile-menu-toggle')) {
                 setIsMobileMenuOpen(false);
             }
@@ -660,7 +706,7 @@ export function LoginNav() {
 
         document.addEventListener("mousedown", handleClickOutside);
         document.addEventListener("touchstart", handleClickOutside);
-        
+
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
             document.removeEventListener("touchstart", handleClickOutside);
@@ -686,7 +732,7 @@ export function LoginNav() {
         } else {
             document.body.style.overflow = 'auto';
         }
-        
+
         return () => {
             document.body.style.overflow = 'auto';
         };
@@ -703,12 +749,12 @@ export function LoginNav() {
                                 <img src="/images/logo.png" alt="Eventa Logo" className="logo img-fluid" />
                             </div>
                         </div>
-                        
+
                         <div className="col-md-3 btns-container">
                             <div className="logged-in-container">
                                 <button className="btn home-btn" onClick={goToHome} >
-                                        <i className="bi bi-house-fill me-1"></i> Home
-                                    </button>
+                                    <i className="bi bi-house-fill me-1"></i> Home
+                                </button>
                                 <button className="btn dashboard-btn me-2" onClick={goToDashboard}>
                                     <i className="bi bi-grid-fill me-1"></i> Dashboard
                                 </button>
@@ -749,98 +795,100 @@ export function LoginNav() {
             </nav>
 
             {/* Mobile Navigation - Just hamburger menu */}
-            <section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
-                <div className="container-fluid">
-                    <div className="row align-items-center py-2">
-                        <div className="col-6">
-                            <div onClick={goToHome} style={{ cursor: 'pointer' }}>
-                                <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
-                            </div>
-                        </div>
-                        <div className="col-6 text-end">
-                            <button
-                                className="mobile-menu-toggle"
-                                onClick={toggleMobileMenu}
-                                aria-label="Toggle navigation menu"
-                            >
-                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
-                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
-                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
-                            </button>
-                        </div>
-                    </div>
+<section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
+    <div className="container-fluid">
+        <div className="row align-items-center py-2">
+            <div className="col-6">
+                <div onClick={goToHome} style={{ cursor: 'pointer' }}>
+                    <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
                 </div>
+            </div>
+            <div className="col-6 text-end">
+                <button
+                    className="mobile-menu-toggle"
+                    onClick={toggleMobileMenu}
+                    aria-label="Toggle navigation menu"
+                >
+                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
+                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
+                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-                {/* Mobile Sidebar/Popup Menu - Overlay style */}
-                {isMobileMenuOpen && (
-                    <div className="mobile-menu-overlay" onClick={() => setIsMobileMenuOpen(false)}>
-                        <div 
-                            ref={mobileMenuRef}
-                            className="mobile-menu-sidebar"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="mobile-menu-header">
-                                <div className="mobile-user-info">
-                                    <i className="bi bi-person-circle"></i>
-                                    <div className="mobile-user-details">
-                                        <div className="mobile-user-name">{user ? user.name : "Guest"}</div>
-                                        {user && user.email && (
-                                            <div className="mobile-user-email">{user.email}</div>
-                                        )}
-                                    </div>
-                                    <button 
-                                        className="mobile-menu-close"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                    >
-                                        <i className="bi bi-x"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div className="mobile-menu-items">
-                                <button className="mobile-menu-item" onClick={goToHome}>
-                                    <i className="bi bi-house-door"></i>
-                                    <span>Home</span>
-                                </button>
-                                
-                                <button className="mobile-menu-item" onClick={goToDashboard}>
-                                    <i className="bi bi-grid-fill"></i>
-                                    <span>Dashboard</span>
-                                </button>
-                                
-                                <button className="mobile-menu-item" onClick={createEventClicked}>
-                                    <i className="bi bi-plus-circle"></i>
-                                    <span>New Event</span>
-                                </button>
-                                
-                                <button className="mobile-menu-item" onClick={goToProfile}>
-                                    <i className="bi bi-person"></i>
-                                    <span>Profile</span>
-                                </button>
-                                
-                                <div className="mobile-menu-divider"></div>
-                                
-                                <button className="mobile-menu-item logout-item" onClick={logOut}>
-                                    <i className="bi bi-box-arrow-right"></i>
-                                    <span>Logout</span>
-                                </button>
-                            </div>
-                        </div>
+    {/* Mobile Sidebar/Popup Menu - Slides in from left */}
+    <div className={`mobile-menu-overlay ${isMobileMenuOpen ? 'active' : ''}`}>
+        <div
+            ref={mobileMenuRef}
+            className="mobile-menu-sidebar"
+        >
+            <div className="mobile-menu-header">
+                <div className="mobile-user-info">
+                    <i className="bi bi-person-circle"></i>
+                    <div className="mobile-user-details">
+                        <div className="mobile-user-name">{user ? user.name : "Guest"}</div>
+                        {user && user.email && (
+                            <div className="mobile-user-email">{user.email}</div>
+                        )}
                     </div>
-                )}
-            </section>
+                    <button
+                        className="mobile-menu-close"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                        <i className="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div className="mobile-menu-items">
+                <button className="mobile-menu-item" onClick={goToHome}>
+                    <i className="bi bi-house-door"></i>
+                    <span>Home</span>
+                </button>
+
+                <button className="mobile-menu-item" onClick={goToDashboard}>
+                    <i className="bi bi-grid-fill"></i>
+                    <span>Dashboard</span>
+                </button>
+
+                <button className="mobile-menu-item" onClick={createEventClicked}>
+                    <i className="bi bi-plus-circle"></i>
+                    <span>New Event</span>
+                </button>
+
+                <button className="mobile-menu-item" onClick={goToProfile}>
+                    <i className="bi bi-person"></i>
+                    <span>Profile</span>
+                </button>
+
+                <div className="mobile-menu-divider"></div>
+
+                <button className="mobile-menu-item logout-item" onClick={logOut}>
+                    <i className="bi bi-box-arrow-right"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
         </>
     );
 }
 
 export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [isLogin, setIsLogin] = useState(defaultMode === "login");
+    const [accountType, setAccountType] = useState("personal"); // "personal" or "business"
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         lastname: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        businessName: '',
+        businessType: '',
+        phone: '',
+        address: ''
     });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -849,8 +897,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const [unverifiedEmail, setUnverifiedEmail] = useState('');
     const [showSecurityModal, setShowSecurityModal] = useState(false);
     const [securityAnswers, setSecurityAnswers] = useState(null);
-    // Removed: const [recaptchaToken, setRecaptchaToken] = useState(null);
-    // Removed: const recaptchaRef = useRef(null);
 
     const navigate = useNavigate();
 
@@ -858,18 +904,21 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     useEffect(() => {
         if (isOpen) {
             setIsLogin(defaultMode === "login");
+            setAccountType("personal");
             setFormData({
                 name: '',
                 email: '',
                 lastname: '',
                 password: '',
-                confirmPassword: ''
+                confirmPassword: '',
+                businessName: '',
+                businessType: '',
+                phone: '',
+                address: ''
             });
             setNeedsVerification(false);
             setUnverifiedEmail('');
             setSecurityAnswers(null);
-            // Removed: setRecaptchaToken(null);
-            // Removed: Reset reCAPTCHA code
         }
     }, [isOpen, defaultMode]);
 
@@ -883,8 +932,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         }, 5000);
     };
 
-    // Removed: All reCAPTCHA related functions: handleRecaptchaChange, handleRecaptchaExpired, verifyRecaptcha
-
     const sendVerificationEmail = async (email, name) => {
         try {
             let apiUrl = process.env.REACT_APP_API_URL;
@@ -893,7 +940,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             }
 
             if (apiUrl === "/api") {
-                apiUrl = "http://mfanafuthi-001-site1.rtempurl.com/api";
+                apiUrl = "https://evenditest.evendi.co.za/api";
             }
 
             const formDataToSend = new FormData();
@@ -987,15 +1034,23 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     setLoading(false);
                     return;
                 }
+                
                 formDataToSend.append("function", "register");
-                formDataToSend.append("name", formData.name);
-                formDataToSend.append("lastname", formData.lastname);
+                formDataToSend.append("account_type", accountType);
                 formDataToSend.append("email", formData.email);
                 formDataToSend.append("password", formData.password);
+                
+                // Add fields based on account type
+                if (accountType === "business") {
+                    formDataToSend.append("business_name", formData.businessName);
+                    formDataToSend.append("business_type", formData.businessType);
+                    formDataToSend.append("phone", formData.phone);
+                    formDataToSend.append("address", formData.address);
+                } else {
+                    formDataToSend.append("name", formData.name);
+                    formDataToSend.append("lastname", formData.lastname);
+                }
             }
-
-            // Removed: Add reCAPTCHA token to the request
-            // formDataToSend.append("recaptcha_token", recaptchaToken);
 
             console.log("Sending request to:", API_URL);
             const url = `${API_URL}/query.php`;
@@ -1067,9 +1122,10 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         printAlert("Account created but security questions failed to save", 'warning');
                     }
 
-                    printAlert("Account created successfully! Sending verification email...", 'success');
+                    printAlert(`${accountType === "business" ? "Business" : "Personal"} account created successfully! Sending verification email...`, 'success');
 
-                    const verificationResult = await sendVerificationEmail(formData.email, formData.name);
+                    const verificationResult = await sendVerificationEmail(formData.email, 
+                        accountType === "business" ? formData.businessName : formData.name);
 
                     if (verificationResult.success) {
                         printAlert("Verification email sent! Please check your inbox.", 'success');
@@ -1082,7 +1138,11 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         email: '',
                         lastname: '',
                         password: '',
-                        confirmPassword: ''
+                        confirmPassword: '',
+                        businessName: '',
+                        businessType: '',
+                        phone: '',
+                        address: ''
                     });
                     setIsLogin(true);
                 }
@@ -1122,8 +1182,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     const handleSubmit = async (e) => {
         setLoading(true);
         e.preventDefault();
-
-        // Removed: reCAPTCHA verification
 
         if (isLogin) {
             await completeRegistration();
@@ -1203,18 +1261,21 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
     const switchMode = () => {
         setIsLogin(!isLogin);
+        setAccountType("personal");
         setFormData({
             name: '',
             email: '',
             lastname: '',
             password: '',
-            confirmPassword: ''
+            confirmPassword: '',
+            businessName: '',
+            businessType: '',
+            phone: '',
+            address: ''
         });
         setNeedsVerification(false);
         setUnverifiedEmail('');
         setSecurityAnswers(null);
-        // Removed: setRecaptchaToken(null);
-        // Removed: Reset reCAPTCHA code
     };
 
     const closeAlert = () => {
@@ -1263,38 +1324,131 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                 <div className="login-header">
                     <img src="/images/logo.png" alt="Eventa Logo" className="login-logo" />
                     <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-                    <p>{isLogin ? 'Sign in to your Evenda account' : 'Join Evenda to start planning your events'}</p>
+                    <p>{isLogin ? 'Sign in to your Evendi account' : 'Join Evendi to start planning your events'}</p>
                 </div>
 
+                {!isLogin && (
+                    <div className="account-type-selector">
+                        <div className="account-type-options">
+                            <button
+                                type="button"
+                                className={`account-type-btn ${accountType === 'personal' ? 'active' : ''}`}
+                                onClick={() => setAccountType('personal')}
+                            >
+                                <i className="bi bi-person-fill"></i>
+                                Personal Account
+                            </button>
+                            <button
+                                type="button"
+                                className={`account-type-btn ${accountType === 'business' ? 'active' : ''}`}
+                                onClick={() => setAccountType('business')}
+                            >
+                                <i className="bi bi-building"></i>
+                                Business Account
+                            </button>
+                        </div>
+                        <p className="account-type-description">
+                            {accountType === 'personal' 
+                                ? 'For individuals planning events' 
+                                : 'For companies and organizations'}
+                        </p>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="login-form">
-                    {!isLogin && (
-                        <div className="form-group">
-                            <label htmlFor="name">Firstname</label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                required={!isLogin}
-                                placeholder="Enter your Firstname"
-                            />
-                        </div>
+                    {!isLogin && accountType === "personal" && (
+                        <>
+                            <div className="form-group">
+                                <label htmlFor="name">First Name</label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="Enter your first name"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="lastname">Last Name</label>
+                                <input
+                                    type="text"
+                                    id="lastname"
+                                    name="lastname"
+                                    value={formData.lastname}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="Enter your last name"
+                                />
+                            </div>
+                        </>
                     )}
-                    {!isLogin && (
-                        <div className="form-group">
-                            <label htmlFor="lastname">Lastname</label>
-                            <input
-                                type="text"
-                                id="lastname"
-                                name="lastname"
-                                value={formData.lastname}
-                                onChange={handleInputChange}
-                                required={!isLogin}
-                                placeholder="Enter your Lastname"
-                            />
-                        </div>
+
+                    {!isLogin && accountType === "business" && (
+                        <>
+                            <div className="form-group">
+                                <label htmlFor="businessName">Business Name</label>
+                                <input
+                                    type="text"
+                                    id="businessName"
+                                    name="businessName"
+                                    value={formData.businessName}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="Enter your business name"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="businessType">Business Type</label>
+                                <select
+                                    id="businessType"
+                                    name="businessType"
+                                    value={formData.businessType}
+                                    onChange={handleInputChange}
+                                    required
+                                    className="form-select"
+                                >
+                                    <option value="">Select business type</option>
+                                    <option value="sole_proprietor">Sole Proprietor</option>
+                                    <option value="partnership">Partnership</option>
+                                    <option value="llc">LLC</option>
+                                    <option value="corporation">Corporation</option>
+                                    <option value="non_profit">Non-Profit</option>
+                                    <option value="event_planning">Event Planning Company</option>
+                                    <option value="venue">Venue</option>
+                                    <option value="catering">Catering Service</option>
+                                    <option value="entertainment">Entertainment</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="phone">Phone Number</label>
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="Enter business phone number"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="address">Business Address</label>
+                                <textarea
+                                    id="address"
+                                    name="address"
+                                    value={formData.address}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="Enter business address"
+                                    rows="3"
+                                />
+                            </div>
+                        </>
                     )}
+
                     <div className="form-group">
                         <label htmlFor="email">Email Address</label>
                         <input
@@ -1304,7 +1458,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                             value={formData.email}
                             onChange={handleInputChange}
                             required
-                            placeholder="Enter your email"
+                            placeholder={accountType === "business" ? "Enter business email" : "Enter your email"}
                         />
                     </div>
 
@@ -1339,14 +1493,12 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleInputChange}
-                                required={!isLogin}
+                                required
                                 placeholder="Confirm your password"
                                 minLength="6"
                             />
                         </div>
                     )}
-
-                    {/* Removed: reCAPTCHA Component */}
 
                     {isLogin && (
                         <div className="login-options">
@@ -1465,17 +1617,20 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
         setDropdownOpen(false);
     };
 
-     const handleDropdownItemClick = (handler, e) => {
+    const handleDropdownItemClick = (handler, e) => {
         if (e) e.stopPropagation();
         handler(e);
     };
-        const goToDashboard = (e) => {
+    
+    const goToDashboard = (e) => {
         if (e) e.stopPropagation();
         navigate("/eventsDashboard");
-        };
-        const createEventClicked = () => {
-    navigate("/activeEventDetails");
-  };
+    };
+    
+    const createEventClicked = () => {
+        navigate("/activeEventDetails");
+    };
+    
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -1488,6 +1643,12 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    const goToHome = (e) => {
+        if (e) e.stopPropagation();
+        navigate("/");
+        setDropdownOpen(false);
+    };
 
     return (
         <div className="dashboard-header-with-menu">
@@ -1503,10 +1664,13 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
                 </button>
 
                 {/* Logo - Hidden on mobile, shown on desktop */}
-                <h1 className="d-none d-md-block">Evenda</h1>
+                <h1 className="d-none d-md-block">Evendi</h1>
             </div>
 
             <div className="header-tabs">
+                {/* <button className="btn home-btn" onClick={goToHome}>
+                    <i className="bi bi-house-fill me-1"></i> Home
+                </button> */}
                 <button className={`status-btn status-${eventStatus?.toLowerCase() || 'draft'}`}>
                     {eventStatus || 'Draft'}
                 </button>
@@ -1516,20 +1680,20 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
                     <i className="bi bi-chevron-bar-down"></i>
                     {dropdownOpen && (
                         <div className="dropdown-menu show">
-                                            <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
-                                                <i className="bi bi-grid-fill me-2"></i> Dashboard
-                                            </button>
-                                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
-                                                <i className="bi bi-plus-circle me-2"></i> New Event
-                                            </button>
-                                            <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
-                                                <i className="bi bi-person me-2"></i> Profile
-                                            </button>
-                                            <div className="dropdown-divider"></div>
-                                            <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
-                                                <i className="bi bi-box-arrow-right me-2"></i> Logout
-                                            </button>
-                                        </div>
+                            <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
+                                <i className="bi bi-grid-fill me-2"></i> Dashboard
+                            </button>
+                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
+                                <i className="bi bi-plus-circle me-2"></i> New Event
+                            </button>
+                            <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
+                                <i className="bi bi-person me-2"></i> Profile
+                            </button>
+                            <div className="dropdown-divider"></div>
+                            <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
+                                <i className="bi bi-box-arrow-right me-2"></i> Logout
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
