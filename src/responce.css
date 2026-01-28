@@ -39,6 +39,13 @@
         width: auto;
         padding: 10px 20px;
     }
+    .homepage-section, .features-page, .pricing-page{
+        margin-top: 0;
+    }
+
+    .sales-page, .about-page, .contact-page, .ticket-sale, .support-page {
+        margin-top: -70px;
+    }
 
     .homepage-section .popular-events .event-card {
         width: 85%;
@@ -98,6 +105,7 @@
 
     .homepage-section .homeHeader {
         height: auto;
+        margin: 0;
     }
 
     .homepage-section .ManagementsGuid .navBtn {
@@ -418,7 +426,7 @@
 /* Mobile menu adjustments for pricing page */
 @media (max-width: 767px) {
     .mobile-nav-section {
-        background: transparent !important;
+        background: #fff !important;
     }
 
     .mobile-nav-section.scrolled {

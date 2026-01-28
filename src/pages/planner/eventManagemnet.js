@@ -96,13 +96,13 @@ const RSVPResponses = () => {
                 const formData = new FormData();
                 formData.append("function", "getUserPackage");
                 formData.append("user_id", userData.user_id);
-                
-                const response = await fetch(`${API_URL}/query.php`, { 
-                    method: "POST", 
-                    body: formData 
+
+                const response = await fetch(`${API_URL}/query.php`, {
+                    method: "POST",
+                    body: formData
                 });
                 const data = await response.json();
-                
+
                 if (data.success && data.userPackage) {
                     setUserPackage(data.userPackage);
                     setPackageInfo(getPackageInfo(data.userPackage));
@@ -245,9 +245,9 @@ const RSVPResponses = () => {
         try {
             const eventId = localStorage.getItem("selectedEventId");
             const userId = user?.user_id;
-            
+
             console.log("Exporting data - Event ID:", eventId, "User ID:", userId, "Type:", exportType);
-            
+
             if (!eventId || !userId) {
                 printAlert("Missing required data for export", "error");
                 setExportLoading(false);
@@ -295,7 +295,7 @@ const RSVPResponses = () => {
 
                 const guestCount = exportType === 'selected' ? selectedGuests.size : data.total_guests;
                 printAlert(`Successfully exported ${guestCount} guest(s)`, "success");
-                
+
             } else {
                 printAlert(data.message || "Failed to export data", "error");
             }
@@ -555,168 +555,170 @@ const RSVPResponses = () => {
             />
 
             {/* MAIN CONTENT */}
-            <div className="dashboard-content">
-                <div className="content-header">
-                    <div className="header-actions">
-                        {/* UPDATED: Export Button with package restriction */}
-                        <button 
-                            className={`btn btn-success btn-sm ${!canExport ? 'feature-disabled' : ''}`}
-                            onClick={() => exportGuestData('all')}
-                            disabled={exportLoading || !filteredResponses.length || !canExport}
-                            title={!canExport ? "Upgrade to Premium or Enterprise to export data" : "Export all guest data"}
-                        >
-                            <i className="bi bi-download"></i> 
-                            {exportLoading ? "Exporting..." : "Export All"}
-                            {!canExport && <i className="bi bi-lock-fill lock-icon"></i>}
-                        </button>
-                        
-                        <div className="filter-dropdown">
-                            <select value={responseFilter} onChange={(e) => setResponseFilter(e.target.value)} className="filter-select">
-                                <option value="all">All Responses</option>
-                                <option value="yes">Attending</option>
-                                <option value="no">Not Attending</option>
-                                <option value="maybe">Maybe</option>
-                            </select>
-                        </div>
-                        <div className="search-box with">
-                            <i className="bi bi-search"></i>
-                            <input
-                                type="text"
-                                placeholder="Search guests..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="search-input"
-                            />
-                        </div>
-                        <button className="btn btn-sm btn-outline" onClick={() => handleSort("asc")}>
-                            <i className="bi bi-sort-alpha-down"></i> A-Z
-                        </button>
-                        <button className="btn btn-sm btn-outline" onClick={() => handleSort("desc")}>
-                            <i className="bi bi-sort-alpha-up"></i> Z-A
-                        </button>
-                    </div>
-                </div>
-
-                {/* UPDATED: Bulk Actions Bar with package restrictions */}
-                {selectedGuests.size > 0 && (
-                    <div className="bulk-actions-bar">
-                        <div className="bulk-info">
-                            <strong>{selectedGuests.size}</strong> guest(s) selected
-                        </div>
-                        <div ref={bulkActionRef} className="bulk-actions">
-                            {/* UPDATED: Export Selected Button */}
+            <div className="dashboard-content ">
+                <div className="event-management-content">
+                    <div className="content-header">
+                        <div className="header-actions">
+                            {/* UPDATED: Export Button with package restriction */}
                             <button
                                 className={`btn btn-success btn-sm ${!canExport ? 'feature-disabled' : ''}`}
-                                onClick={() => handleBulkAction("export")}
-                                disabled={exportLoading || !canExport}
-                                title={!canExport ? "Upgrade to Premium or Enterprise to export data" : "Export selected guests"}
+                                onClick={() => exportGuestData('all')}
+                                disabled={exportLoading || !filteredResponses.length || !canExport}
+                                title={!canExport ? "Upgrade to Premium or Enterprise to export data" : "Export all guest data"}
                             >
-                                <i className="bi bi-download"></i> Export Selected
+                                <i className="bi bi-download"></i>
+                                {exportLoading ? "Exporting..." : "Export All"}
                                 {!canExport && <i className="bi bi-lock-fill lock-icon"></i>}
                             </button>
-                            
-                            {/* UPDATED: Bulk Message Button */}
-                            <button
-                                className={`btn btn-primary btn-sm ${!canBulkMessage ? 'feature-disabled' : ''}`}
-                                onClick={() => handleBulkAction("message")}
-                                disabled={!canBulkMessage}
-                                title={!canBulkMessage ? "Upgrade to Premium or Enterprise for bulk messaging" : "Send message to selected guests"}
-                            >
-                                <i className="bi bi-envelope"></i> Send Message
-                                {!canBulkMessage && <i className="bi bi-lock-fill lock-icon"></i>}
-                            </button>
-                            
-                            {/* UPDATED: Remove Button */}
-                            <button
-                                className={`btn btn-danger btn-sm ${!canRemoveGuests ? 'feature-disabled' : ''}`}
-                                onClick={() => handleBulkAction("remove")}
-                                disabled={!canRemoveGuests}
-                                title={!canRemoveGuests ? "Upgrade to Premium or Enterprise to remove guests" : "Remove selected guests"}
-                            >
-                                <i className="bi bi-trash"></i> Remove
-                                {!canRemoveGuests && <i className="bi bi-lock-fill lock-icon"></i>}
-                            </button>
-                            
-                            <button
-                                className="btn btn-outline btn-sm"
-                                onClick={() => setSelectedGuests(new Set())}
-                            >
-                                <i className="bi bi-x"></i> Clear
-                            </button>
-                        </div>
-                    </div>
-                )}
 
-                {loading ? (
-                    <div className="loading-container">
-                        <div className="loading-overlay">
-                            <div className="loading-spinner"></div>
-                            <div className="loading-text">Loading...</div>
+                            <div className="filter-dropdown">
+                                <select value={responseFilter} onChange={(e) => setResponseFilter(e.target.value)} className="filter-select">
+                                    <option value="all">All Responses</option>
+                                    <option value="yes">Attending</option>
+                                    <option value="no">Not Attending</option>
+                                    <option value="maybe">Maybe</option>
+                                </select>
+                            </div>
+                            <div className="search-box with">
+                                <i className="bi bi-search"></i>
+                                <input
+                                    type="text"
+                                    placeholder="Search guests..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="search-input"
+                                />
+                            </div>
+                            <button className="btn btn-sm btn-outline" onClick={() => handleSort("asc")}>
+                                <i className="bi bi-sort-alpha-down"></i> A-Z
+                            </button>
+                            <button className="btn btn-sm btn-outline" onClick={() => handleSort("desc")}>
+                                <i className="bi bi-sort-alpha-up"></i> Z-A
+                            </button>
                         </div>
                     </div>
-                ) : (
-                    <div className="invitations-table-container">
-                        <table className="invitations-table">
-                            <thead>
-                                <tr>
-                                    <th width="50">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedGuests.size === filteredResponses.length && filteredResponses.length > 0}
-                                            onChange={selectAllGuests}
-                                        />
-                                    </th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Attending</th>
-                                    <th>Guests</th>
-                                    <th>Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredResponses.length > 0 ? filteredResponses.map((r) => {
-                                    return (
-                                        <tr key={r.guest_id} className={selectedGuests.has(r.guest_id) ? "selected" : ""}>
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedGuests.has(r.guest_id)}
-                                                    onChange={() => toggleGuestSelection(r.guest_id)}
-                                                />
-                                            </td>
-                                            <td className="guest-name">{r.name}</td>
-                                            <td className="guest-email">{r.email}</td>
-                                            <td>
-                                                <span className={`attending-badge ${r.attending ? r.attending.toLowerCase() : ""}`}>
-                                                    {r.attending}
-                                                </span>
-                                            </td>
-                                            <td className="guest-count">{r.guest_count}</td>
-                                            <td>{new Date(r.created_at).toLocaleDateString()}</td>
-                                            <td>
-                                                <button
-                                                    className="btn-icon message-btn"
-                                                    onClick={() => openIndividualMessage(r)}
-                                                    title="Send Message"
-                                                >
-                                                    <i className="bi bi-envelope"></i>
-                                                </button>
+
+                    {/* UPDATED: Bulk Actions Bar with package restrictions */}
+                    {selectedGuests.size > 0 && (
+                        <div className="bulk-actions-bar">
+                            <div className="bulk-info">
+                                <strong>{selectedGuests.size}</strong> guest(s) selected
+                            </div>
+                            <div ref={bulkActionRef} className="bulk-actions">
+                                {/* UPDATED: Export Selected Button */}
+                                <button
+                                    className={`btn btn-success btn-sm ${!canExport ? 'feature-disabled' : ''}`}
+                                    onClick={() => handleBulkAction("export")}
+                                    disabled={exportLoading || !canExport}
+                                    title={!canExport ? "Upgrade to Premium or Enterprise to export data" : "Export selected guests"}
+                                >
+                                    <i className="bi bi-download"></i> Export Selected
+                                    {!canExport && <i className="bi bi-lock-fill lock-icon"></i>}
+                                </button>
+
+                                {/* UPDATED: Bulk Message Button */}
+                                <button
+                                    className={`btn btn-primary btn-sm ${!canBulkMessage ? 'feature-disabled' : ''}`}
+                                    onClick={() => handleBulkAction("message")}
+                                    disabled={!canBulkMessage}
+                                    title={!canBulkMessage ? "Upgrade to Premium or Enterprise for bulk messaging" : "Send message to selected guests"}
+                                >
+                                    <i className="bi bi-envelope"></i> Send Message
+                                    {!canBulkMessage && <i className="bi bi-lock-fill lock-icon"></i>}
+                                </button>
+
+                                {/* UPDATED: Remove Button */}
+                                <button
+                                    className={`btn btn-danger btn-sm ${!canRemoveGuests ? 'feature-disabled' : ''}`}
+                                    onClick={() => handleBulkAction("remove")}
+                                    disabled={!canRemoveGuests}
+                                    title={!canRemoveGuests ? "Upgrade to Premium or Enterprise to remove guests" : "Remove selected guests"}
+                                >
+                                    <i className="bi bi-trash"></i> Remove
+                                    {!canRemoveGuests && <i className="bi bi-lock-fill lock-icon"></i>}
+                                </button>
+
+                                <button
+                                    className="btn btn-outline btn-sm"
+                                    onClick={() => setSelectedGuests(new Set())}
+                                >
+                                    <i className="bi bi-x"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {loading ? (
+                        <div className="loading-container">
+                            <div className="loading-overlay">
+                                <div className="loading-spinner"></div>
+                                <div className="loading-text">Loading...</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="invitations-table-container">
+                            <table className="invitations-table">
+                                <thead>
+                                    <tr>
+                                        <th width="50">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedGuests.size === filteredResponses.length && filteredResponses.length > 0}
+                                                onChange={selectAllGuests}
+                                            />
+                                        </th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Attending</th>
+                                        <th>Guests</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredResponses.length > 0 ? filteredResponses.map((r) => {
+                                        return (
+                                            <tr key={r.guest_id} className={selectedGuests.has(r.guest_id) ? "selected" : ""}>
+                                                <td>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedGuests.has(r.guest_id)}
+                                                        onChange={() => toggleGuestSelection(r.guest_id)}
+                                                    />
+                                                </td>
+                                                <td className="guest-name">{r.name}</td>
+                                                <td className="guest-email">{r.email}</td>
+                                                <td>
+                                                    <span className={`attending-badge ${r.attending ? r.attending.toLowerCase() : ""}`}>
+                                                        {r.attending}
+                                                    </span>
+                                                </td>
+                                                <td className="guest-count">{r.guest_count}</td>
+                                                <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                                                <td>
+                                                    <button
+                                                        className="btn-icon message-btn"
+                                                        onClick={() => openIndividualMessage(r)}
+                                                        title="Send Message"
+                                                    >
+                                                        <i className="bi bi-envelope"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    }) : (
+                                        <tr>
+                                            <td colSpan="7" className="no-results">
+                                                <i className="bi bi-inbox"></i>
+                                                No RSVP responses found
                                             </td>
                                         </tr>
-                                    );
-                                }) : (
-                                    <tr>
-                                        <td colSpan="7" className="no-results">
-                                            <i className="bi bi-inbox"></i>
-                                            No RSVP responses found
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Message Modal */}

@@ -795,83 +795,83 @@ export function LoginNav() {
             </nav>
 
             {/* Mobile Navigation - Just hamburger menu */}
-<section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
-    <div className="container-fluid">
-        <div className="row align-items-center py-2">
-            <div className="col-6">
-                <div onClick={goToHome} style={{ cursor: 'pointer' }}>
-                    <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
-                </div>
-            </div>
-            <div className="col-6 text-end">
-                <button
-                    className="mobile-menu-toggle"
-                    onClick={toggleMobileMenu}
-                    aria-label="Toggle navigation menu"
-                >
-                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
-                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
-                    <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    {/* Mobile Sidebar/Popup Menu - Slides in from left */}
-    <div className={`mobile-menu-overlay ${isMobileMenuOpen ? 'active' : ''}`}>
-        <div
-            ref={mobileMenuRef}
-            className="mobile-menu-sidebar"
-        >
-            <div className="mobile-menu-header">
-                <div className="mobile-user-info">
-                    <i className="bi bi-person-circle"></i>
-                    <div className="mobile-user-details">
-                        <div className="mobile-user-name">{user ? user.name : "Guest"}</div>
-                        {user && user.email && (
-                            <div className="mobile-user-email">{user.email}</div>
-                        )}
+            <section className={`mobile-nav-section d-md-none ${scrolled ? "scrolled" : ""}`}>
+                <div className="container-fluid">
+                    <div className="row align-items-center py-2">
+                        <div className="col-6">
+                            <div onClick={goToHome} style={{ cursor: 'pointer' }}>
+                                <img src="/images/logo.png" alt="Eventa Logo" className="mobile-logo img-fluid" />
+                            </div>
+                        </div>
+                        <div className="col-6 text-end">
+                            <button
+                                className="mobile-menu-toggle"
+                                onClick={toggleMobileMenu}
+                                aria-label="Toggle navigation menu"
+                            >
+                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-1-open' : ''}`}></span>
+                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-2-open' : ''}`}></span>
+                                <span className={`hamburger-line ${isMobileMenuOpen ? 'line-3-open' : ''}`}></span>
+                            </button>
+                        </div>
                     </div>
-                    <button
-                        className="mobile-menu-close"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                        <i className="bi bi-x"></i>
-                    </button>
                 </div>
-            </div>
 
-            <div className="mobile-menu-items">
-                <button className="mobile-menu-item" onClick={goToHome}>
-                    <i className="bi bi-house-door"></i>
-                    <span>Home</span>
-                </button>
+                {/* Mobile Sidebar/Popup Menu - Slides in from left */}
+                <div className={`mobile-menu-overlay ${isMobileMenuOpen ? 'active' : ''}`}>
+                    <div
+                        ref={mobileMenuRef}
+                        className="mobile-menu-sidebar"
+                    >
+                        <div className="mobile-menu-header">
+                            <div className="mobile-user-info">
+                                <i className="bi bi-person-circle"></i>
+                                <div className="mobile-user-details">
+                                    <div className="mobile-user-name">{user ? user.name : "Guest"}</div>
+                                    {user && user.email && (
+                                        <div className="mobile-user-email">{user.email}</div>
+                                    )}
+                                </div>
+                                <button
+                                    className="mobile-menu-close"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    <i className="bi bi-x"></i>
+                                </button>
+                            </div>
+                        </div>
 
-                <button className="mobile-menu-item" onClick={goToDashboard}>
-                    <i className="bi bi-grid-fill"></i>
-                    <span>Dashboard</span>
-                </button>
+                        <div className="mobile-menu-items">
+                            <button className="mobile-menu-item" onClick={goToHome}>
+                                <i className="bi bi-house-door"></i>
+                                <span>Home</span>
+                            </button>
 
-                <button className="mobile-menu-item" onClick={createEventClicked}>
-                    <i className="bi bi-plus-circle"></i>
-                    <span>New Event</span>
-                </button>
+                            <button className="mobile-menu-item" onClick={goToDashboard}>
+                                <i className="bi bi-grid-fill"></i>
+                                <span>Dashboard</span>
+                            </button>
 
-                <button className="mobile-menu-item" onClick={goToProfile}>
-                    <i className="bi bi-person"></i>
-                    <span>Profile</span>
-                </button>
+                            <button className="mobile-menu-item" onClick={createEventClicked}>
+                                <i className="bi bi-plus-circle"></i>
+                                <span>New Event</span>
+                            </button>
 
-                <div className="mobile-menu-divider"></div>
+                            <button className="mobile-menu-item" onClick={goToProfile}>
+                                <i className="bi bi-person"></i>
+                                <span>Profile</span>
+                            </button>
 
-                <button className="mobile-menu-item logout-item" onClick={logOut}>
-                    <i className="bi bi-box-arrow-right"></i>
-                    <span>Logout</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</section>
+                            <div className="mobile-menu-divider"></div>
+
+                            <button className="mobile-menu-item logout-item" onClick={logOut}>
+                                <i className="bi bi-box-arrow-right"></i>
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </>
     );
 }
@@ -1034,12 +1034,12 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     setLoading(false);
                     return;
                 }
-                
+
                 formDataToSend.append("function", "register");
                 formDataToSend.append("account_type", accountType);
                 formDataToSend.append("email", formData.email);
                 formDataToSend.append("password", formData.password);
-                
+
                 // Add fields based on account type
                 if (accountType === "business") {
                     formDataToSend.append("business_name", formData.businessName);
@@ -1124,7 +1124,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
                     printAlert(`${accountType === "business" ? "Business" : "Personal"} account created successfully! Sending verification email...`, 'success');
 
-                    const verificationResult = await sendVerificationEmail(formData.email, 
+                    const verificationResult = await sendVerificationEmail(formData.email,
                         accountType === "business" ? formData.businessName : formData.name);
 
                     if (verificationResult.success) {
@@ -1348,8 +1348,8 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                             </button>
                         </div>
                         <p className="account-type-description">
-                            {accountType === 'personal' 
-                                ? 'For individuals planning events' 
+                            {accountType === 'personal'
+                                ? 'For individuals planning events'
                                 : 'For companies and organizations'}
                         </p>
                     </div>
@@ -1621,16 +1621,16 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
         if (e) e.stopPropagation();
         handler(e);
     };
-    
+
     const goToDashboard = (e) => {
         if (e) e.stopPropagation();
         navigate("/eventsDashboard");
     };
-    
+
     const createEventClicked = () => {
         navigate("/activeEventDetails");
     };
-    
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {

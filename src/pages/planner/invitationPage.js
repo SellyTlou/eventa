@@ -266,6 +266,7 @@ const InvitationPage = () => {
     const handlePublishNow = () => navigate(`/manage_my_event`);
 
     return (
+        
         <div className="dashboard-container">
             {/* Custom alert box */}
             {alert.show && (

@@ -1,3 +1,6 @@
+body {
+  
+}
 .logged-in-container {
     display: flex;
     align-items: center;
@@ -755,7 +758,7 @@ Profile Dropdown Styles
 }
 
 .logout-item {
-  color: #dc3545;
+  color: #dc3545;     
 }
 
 .logout-item:hover {
@@ -1545,7 +1548,7 @@ Homepage styling
   padding: 0;
   position: relative;
   overflow: hidden;
-  margin-top: 70px;
+  
   /* Space for fixed navbar */
 }
 
@@ -2257,7 +2260,7 @@ Features Page Styling - PAGE SPECIFIC
   padding: 0;
   position: relative;
   overflow: hidden;
-  margin-top: 70px;
+  
 }
 
 /* Hero Section */
@@ -2515,7 +2518,7 @@ Pricing Page Styling - PAGE SPECIFIC
   padding: 0;
   position: relative;
   overflow: hidden;
-  margin-top: 70px;
+  
 }
 
 /* Hero Section */
@@ -3028,7 +3031,7 @@ About Page Styling
   height: 100vh;
   overflow: hidden;
   position: relative;
-  margin-top: 70px;
+  
 }
 
 .about-hero h1 {
