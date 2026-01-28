@@ -38,6 +38,7 @@ import SupportTicket from './SupportTicket';
 import Ticket_Sale from './ticket_sales';
 import TicketEvent_details from './ticketEvent_details';
 import Ticket_payment from './ticket_payment';
+import TicketEventManage from './planner/event_ticket_manage';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -213,6 +214,7 @@ export function SessionHandler() {
                 <Route path="/ticket_sales" element={<Ticket_Sale />} />
                 <Route path="/ticketEvent_details" element={<TicketEvent_details />} />
                 <Route path="/ticket_payment" element={<Ticket_payment />} />
+                <Route path="/event_ticket_manage" element={<TicketEventManage />} />
             </Routes>
 
             <SessionWarningModal
@@ -1702,6 +1704,98 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
 }
 
 export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const goToHome = () => {
+        navigate("/eventsDashboard");
+        onClose?.();
+    };
+    const goToManage = () => {
+        navigate("/manage_my_event");
+        onClose?.();
+    };
+    const goToInvitations = () => {
+        navigate("/invitationPage");
+        onClose?.();
+    };
+    const goToEventManagement = () => {
+        navigate("/eventManagement");
+        onClose?.();
+    };
+    const goToAttendanceStats = () => {
+        navigate("/attendance_stats");
+        onClose?.();
+    };
+    const goToGuest = () => {
+        navigate("/guest_insights");
+        onClose?.();
+    };
+
+    const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : true;
+
+    const navigationItems = [
+        {
+            section: 'Event Planning',
+            items: [
+                { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
+                { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
+                { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
+                { path: '/eventManagement', icon: 'bi-list-check', label: 'RSVP Responses', onClick: goToEventManagement }
+            ]
+        },
+        {
+            section: 'Event Analytics',
+            items: [
+                { path: '/attendance_stats', icon: 'bi-graph-up', label: 'Attendance Stats', onClick: goToAttendanceStats, disabled: !canViewAttendance },
+                { path: '/guest_insights', icon: 'bi-people', label: 'Guest Insights', onClick: goToGuest }
+            ]
+        }
+    ];
+
+    const isActive = (path) => location.pathname === path;
+
+    return (
+        <>
+            {/* Overlay — only on mobile */}
+            {isMobileOpen && (
+                <div className="sidebar-overlay" onClick={onClose} />
+            )}
+
+            {/* Sidebar — THIS LINE IS THE FIX */}
+            <div className={`dashboard-sidebar ${isMobileOpen ? "mobile-open" : ""}`}>
+                <div className="sidebar-header">
+                    <h3>Event Management</h3>
+                </div>
+
+                {navigationItems.map((section, index) => (
+                    <div key={index} className="sidebar-section">
+                        <h4>{section.section}</h4>
+                        <ul>
+                            {section.items.map((item, itemIndex) => (
+                                <li
+                                    key={itemIndex}
+                                    className={`${isActive(item.path) ? "active" : ""} ${item.disabled ? 'disabled-nav' : ''}`}
+                                    onClick={() => {
+                                        // Always allow navigation to the page (do not redirect to pricing)
+                                        // Page will handle feature gating / upgrade CTAs itself.
+                                        item.onClick && item.onClick();
+                                        onClose?.();
+                                    }}
+                                >
+                                    <i className={`bi ${item.icon}`}></i>
+                                    {item.label}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
+        </>
+    );
+}
+
+export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
     const navigate = useNavigate();
     const location = useLocation();
 

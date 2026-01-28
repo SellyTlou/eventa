@@ -5078,6 +5078,39 @@ if ($fun === "getTicketSalesStats") {
     exit;
 }
 
+if ($fun === "getBookingDetails") {
+    $event_id = $_POST['event_id'] ?? '';
 
+    if (empty($event_id)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing event ID",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM bookings WHERE event_id = :event_id ORDER BY created_at DESC");
+        $stmt->execute([":event_id" => $event_id]);
+        $bookingDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $eventStmt = $pdo->prepare("SELECT event_id, event_name, event_start_date, event_location, has_tickets FROM events WHERE event_id = :event_id");
+        $eventStmt->execute([":event_id" => $event_id]);
+        $eventData = $eventStmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "responses" => $bookingDetails,  // This matches what frontend expects
+            "event" => $eventData || null,    // Event details
+            "count" => count($bookingDetails)
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
 
 ?>

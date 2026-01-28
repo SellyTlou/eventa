@@ -200,7 +200,7 @@ const EventsDashboard = () => {
         return (
             event.is_published === true ||
             event.published === 1 ||
-            event.published === "1" ||
+            event.published === "1" || 
             event.status === "published" ||
             event.status === true ||
             event.status === 1 ||
@@ -852,15 +852,24 @@ const EventsDashboard = () => {
         }
     };
 
-    const handleEventClick = (eventId) => {
-        const event = events.find((e) => e.event_id === eventId);
-        if (isEventCancelled(event)) {
-            printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
-            return;
-        }
-        localStorage.setItem("selectedEventId", eventId);
+   // Replace the current handleEventClick function with this:
+const handleEventClick = (eventId) => {
+    const event = events.find((e) => e.event_id === eventId);
+    if (isEventCancelled(event)) {
+        printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
+        return;
+    }
+    
+    localStorage.setItem("selectedEventId", eventId);
+    
+    const isTicketEvent = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+    
+    if (isTicketEvent) {
+        navigate("/event_ticket_manage");
+    } else {
         navigate("/eventManagement");
-    };
+    }
+};
 
     const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
     const canLoadMore = filteredEvents.length > displayedEvents.length;
@@ -1191,7 +1200,7 @@ const EventsDashboard = () => {
                                                     >
                                                         {cancelled ? (
                                                             <>
-                                                                <i className="bi bi-eye"></i> View Details
+                                                                <i className="bi bi-eye"></i> View Event
                                                             </>
                                                         ) : published ? (
                                                             <>
@@ -1199,7 +1208,7 @@ const EventsDashboard = () => {
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <i className="bi bi-arrow-right"></i> COMPLETE SETUP
+                                                                <i className="bi bi-arrow-right"></i> SETUP
                                                             </>
                                                         )}
                                                     </button>
@@ -1212,7 +1221,7 @@ const EventsDashboard = () => {
                                                         }}
                                                         disabled={cancelled}
                                                     >
-                                                        <i className="bi bi-people"></i> {event.has_tickets ? 'TICKET SALES' : 'RESERVE'}
+                                                        <i className="bi bi-people"></i> {event.has_tickets ? 'TICKET' : 'RESERVE'}
                                                     </button>
                                                 </div>
                                         </div>

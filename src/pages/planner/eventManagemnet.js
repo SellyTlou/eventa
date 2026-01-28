@@ -24,7 +24,6 @@ const RSVPResponses = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [exportLoading, setExportLoading] = useState(false);
 
-    // NEW: Package states
     const [userPackage, setUserPackage] = useState(null);
     const [packageInfo, setPackageInfo] = useState(null);
 
@@ -107,17 +106,11 @@ const RSVPResponses = () => {
                     setUserPackage(data.userPackage);
                     setPackageInfo(getPackageInfo(data.userPackage));
                 } else {
-                    // Default to basic package
-                    const basicPackage = { package_type: "basic" };
-                    setUserPackage(basicPackage);
-                    setPackageInfo(getPackageInfo(basicPackage));
+                     printAlert("You dont have a Package", "warning");
                 }
             } catch (error) {
                 console.error("Error fetching user package:", error);
-                // Default to basic on error
-                const basicPackage = { package_type: "basic" };
-                setUserPackage(basicPackage);
-                setPackageInfo(getPackageInfo(basicPackage));
+              printAlert("System error fetching user package", "warning");
             }
         };
 
