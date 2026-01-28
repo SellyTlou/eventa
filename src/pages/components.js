@@ -550,7 +550,6 @@ export function Footer() {
                             <li><a href="/">Home</a></li>
                             <li><a href="/">Features</a></li>
                             <li><a href="/">Pricing</a></li>
-
                             <li><a href="/">Support</a></li>
                         </ul>
                     </div>
@@ -577,9 +576,19 @@ export function Footer() {
                         <h5>Stay Connected</h5>
                         <p>Follow us on our social media channels</p>
                         <div className="social-icons">
-                            <a href="/" className="me-3"><i className="bi bi-facebook"></i></a>
+                            <a href="https://web.facebook.com/profile.php?id=61586884803873" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="me-3">
+                                <i className="bi bi-facebook"></i>
+                            </a>
                             <a href="/" className="me-3"><i className="bi bi-twitter"></i></a>
-                            <a href="/" className="me-3"><i className="bi bi-instagram"></i></a>
+                            <a href="https://www.instagram.com/evendi_za?utm_source=qr&igsh=Z3kwdDIzamlxYXFj" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="me-3">
+                                <i className="bi bi-instagram"></i>
+                            </a>
                             <a href="/"><i className="bi bi-linkedin"></i></a>
                         </div>
                     </div>
