@@ -458,11 +458,11 @@ function Pricing() {
     const faqItems = [
         {
             question: "What does the Basic plan include?",
-            answer: "Our Basic plan at R50/month includes event creation, up to 250 guests per event, 5 events total, email invitations, RSVP tracking, and essential event management tools. It's perfect for small to medium personal events and gatherings."
+            answer: "Our Basic plan at R200/month includes event creation, up to 100 guests per event, 6 events total, email invitations, RSVP tracking, and essential event management tools. It's perfect for small to medium personal events and gatherings."
         },
         {
             question: "Do you offer a free trial?",
-            answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R50/month to test our features. All plans include a 30-day money-back guarantee if you're not satisfied."
+            answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R200/month to test our features. we don't offer refunds."
         },
         {
             question: "Do I get a discount if I pay yearly instead of monthly?",
@@ -470,7 +470,7 @@ function Pricing() {
         },
         {
             question: "Can I cancel or change my plan at any time?",
-            answer: "Yes, you can upgrade, downgrade, or cancel your plan at any time. Changes take effect immediately, and we'll prorate any differences in billing."
+            answer: "Yes, you can upgrade, downgrade, or cancel your plan at any time. Changes take effect immediately, as for billing we don't do refunds"
         },
         {
             question: "Can I get a custom plan?",

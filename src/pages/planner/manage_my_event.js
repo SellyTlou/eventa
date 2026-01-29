@@ -4,7 +4,6 @@ import '../../alert.css';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut, DashboardHeader, DashboardSidebar,LoginNav } from "../components";
 
-
 const Manage_my_event = () => {
     const [loading, setLoading] = useState(true);
     const dropdownRef = useRef(null);
@@ -25,7 +24,7 @@ const Manage_my_event = () => {
     const [availablePackages, setAvailablePackages] = useState([]);
     const [currentPlan, setCurrentPlan] = useState(null);
     const [showUpdateButton, setShowUpdateButton] = useState(false);
- const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
     const printAlert = (message, type = "info") => {
@@ -662,19 +661,18 @@ const Manage_my_event = () => {
                 </div>
             )}
 
-                    {/* HEADER */}
-                                              <DashboardHeader
-                                                  user={user}
-                                                  eventStatus={eventStatus}
-                                                  onToggleSidebar={toggleSidebar}
-                                              />
-                                  
-                                              {/* SIDEBAR */}
-                                              <DashboardSidebar
-                                                  isMobileOpen={sidebarOpen}
-                                                  onClose={closeSidebar}
-                                              />
-                      
+            {/* HEADER */}
+            <DashboardHeader
+                user={user}
+                eventStatus={eventStatus}
+                onToggleSidebar={toggleSidebar}
+            />
+
+            {/* SIDEBAR */}
+            <DashboardSidebar
+                isMobileOpen={sidebarOpen}
+                onClose={closeSidebar}
+            />
 
             {/* Content */}
             <div className="manage-my-event-content">
@@ -696,7 +694,7 @@ const Manage_my_event = () => {
                     <button className="slide-btn right" onClick={() => document.querySelector(".package-cards").scrollBy({ left: 200, behavior: "smooth" })}>▶</button>
                 </div>
 
-                {/* Event Details & Current Plan */}
+                {/* Event Details & Current Plan - REMOVED THE CONDITIONAL RENDERING */}
                 <div className="eventDetails-section">
                     <div className="container">
                         <h2 className="section-title">Event Details & Current Plan</h2>
