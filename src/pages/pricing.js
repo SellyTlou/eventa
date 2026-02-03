@@ -80,11 +80,11 @@ function Pricing() {
             {
                 id: 1,
                 name: "Basic",
-                price: "R50",
+                price: "R200",
                 duration: "per month",
-                max_guests: 250,
-                max_events: 5,
-                features: getDefaultFeatures('basic', 250, 5),
+                max_guests: 100,
+                max_events: 6,
+                features: getDefaultFeatures('basic', 100, 6),
                 isPopular: false
             },
             {
@@ -466,7 +466,7 @@ function Pricing() {
         },
         {
             question: "Do I get a discount if I pay yearly instead of monthly?",
-            answer: "Absolutely! When you choose yearly billing, you save 40% compared to monthly payments. This is our way of rewarding customers who commit to long-term use."
+            answer: "Absolutely! When you choose yearly billing, you save 15% compared to monthly payments. This is our way of rewarding customers who commit to long-term use."
         },
         {
             question: "Can I cancel or change my plan at any time?",
@@ -483,11 +483,11 @@ function Pricing() {
     };
 
     const calculateYearlySavings = (monthlyPrice) => {
-        if (monthlyPrice === "Free") return "Completely free forever";
-        const monthly = parseFloat(monthlyPrice.replace('R', ''));
-        const yearly = monthly * 12 * 0.6; // 40% discount
-        return `Save R${Math.round(monthly * 12 - yearly)} per year`;
-    };
+    if (monthlyPrice === "Free") return "Completely free forever";
+    const monthly = parseFloat(monthlyPrice.replace('R', ''));
+    const yearly = monthly * 12 * 0.85; // 15% discount
+    return `Save R${Math.round(monthly * 12 - yearly)} per year`;
+};
 
     // Show loading state
     if (loadingPricing) {

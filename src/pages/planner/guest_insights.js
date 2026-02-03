@@ -66,7 +66,10 @@ const GuestInsights = () => {
         const eventId = localStorage.getItem("selectedEventId");
         if (!eventId) {
             printAlert("No event selected", "warning");
-            navigate("/eventsDashboard");
+            const storedUser = localStorage.getItem('user');
+            const user = storedUser ? JSON.parse(storedUser) : null;
+            const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+            navigate(dashPath);
             return;
         }
         fetchEventData(eventId);
@@ -392,11 +395,13 @@ const GuestInsights = () => {
             
 
             {/* MAIN CONTENT */}
-            <div className="guest-insights-content">
+            <div className="invitation-content">
+                <div className="guest-insights-content">
                 <div className="content-header">
                     <h1>Guest Insights</h1>
                     <p>View guest questions, respond, and manage engagement</p>
                 </div>
+            </div>
 
                 <div className="insights-summary">
                     <div className="summary-card">

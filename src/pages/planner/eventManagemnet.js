@@ -134,7 +134,12 @@ const RSVPResponses = () => {
 
     useEffect(() => {
         const eventId = localStorage.getItem("selectedEventId");
-        if (!eventId) return navigate("/eventsDashboard");
+        if (!eventId) {
+            const storedUser = localStorage.getItem('user');
+            const user = storedUser ? JSON.parse(storedUser) : null;
+            const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+            return navigate(dashPath);
+        }
         fetchRSVPResponses(eventId);
         fetchEventStatusByID(eventId);
         // Poll for new RSVP responses (keeps admin view reasonably fresh)

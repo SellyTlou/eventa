@@ -26,6 +26,8 @@ import PackagePayment from '../pages/planner/packagePayment';
 import ForgotPassword from './forgot_password';
 import EmailVerify from './email_verify';
 import UpgradePackage from '../pages/planner/upgrade_package';
+import UpgradeBusinessPackage from '../pages/business_planner/upgrade_business_package';
+import BusinessPackagePayment from '../pages/business_planner/business-package-payment';
 import Support from '../pages/support';
 import AttendanceStats from './planner/attendance_stats';
 import SecurityQuestionsModal from './SecurityQuestionsModal';
@@ -38,6 +40,7 @@ import SupportTicket from './SupportTicket';
 import Ticket_Sale from './ticket_sales';
 import TicketEvent_details from './ticketEvent_details';
 import Ticket_payment from './ticket_payment';
+import BusinessDashboard from '../pages/business_planner/businessDashboard';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -201,6 +204,8 @@ export function SessionHandler() {
                 <Route path="/forgot_password" element={<ForgotPassword />} />
                 <Route path="/email_verify" element={<EmailVerify />} />
                 <Route path="/upgrade_package" element={<UpgradePackage />} />
+                <Route path="/upgrade_business_package" element={<UpgradeBusinessPackage />} />
+                <Route path="/business-package-payment" element={<BusinessPackagePayment />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/attendance_stats" element={<AttendanceStats />} />
                 <Route path="/guest_insights" element={<GuestInsights />} />
@@ -213,6 +218,7 @@ export function SessionHandler() {
                 <Route path="/ticket_sales" element={<Ticket_Sale />} />
                 <Route path="/ticketEvent_details" element={<TicketEvent_details />} />
                 <Route path="/ticket_payment" element={<Ticket_payment />} />
+                <Route path="/businessdashboard" element={<BusinessDashboard />} />
             </Routes>
 
             <SessionWarningModal
@@ -337,7 +343,10 @@ export function Navbar({ onLoginClick, onSignupClick }) {
     };
 
     const goToDashboard = () => {
-        navigate("/eventsDashboard");
+        const storedUser = localStorage.getItem('user');
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+        navigate(dashPath);
         closeAllMenus();
     };
 
@@ -548,9 +557,10 @@ export function Footer() {
                         <h5>Quick Links</h5>
                         <ul className="list-quick-links">
                             <li><a href="/">Home</a></li>
-                            <li><a href="/">Features</a></li>
-                            <li><a href="/">Pricing</a></li>
-                            <li><a href="/">Support</a></li>
+                            <li><a href="/feature">Features</a></li>
+                            <li><a href="/pricing">Pricing</a></li>
+                            <li><a href="/support">Support</a></li>
+                            <li><a href="/ticket_sales">Ticket Sales</a></li>
                         </ul>
                     </div>
 
@@ -650,7 +660,10 @@ export function LoginNav() {
 
     const goToDashboard = (e) => {
         if (e) e.stopPropagation();
-        navigate("/eventsDashboard");
+        const storedUser = localStorage.getItem('user');
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+        navigate(dashPath);
         setDropdownOpen(false);
         setIsMobileMenuOpen(false);
     };
@@ -1110,13 +1123,17 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     if (isAdmin) {
                         navigate("/adminDashboard");
                     } else {
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 800);
+                        // REDIRECT BASED ON ACCOUNT TYPE
+                        if (result.user.account_type === 'business') {
+                            navigate("/businessdashboard");
+                            printAlert("Welcome to your Business Dashboard!", 'success');
+                        } else {
+                            navigate("/eventsDashboard");
+                            printAlert("Welcome to your Events Dashboard!", 'success');
+                        }
                     }
 
                     onClose();
-                    printAlert("Login successful!", 'success');
                 } else {
                     // For registration, save security questions if answers were provided
                     if (answers && result.user && result.user.user_id) {
@@ -1140,6 +1157,11 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         printAlert("Verification email sent! Please check your inbox.", 'success');
                     } else {
                         printAlert("Account created but failed to send verification email. Please use the resend option.", 'error');
+                    }
+
+                    // For business registration, suggest upgrading to a business package
+                    if (accountType === "business") {
+                        printAlert("As a business user, you can upgrade to a business package to publish events.", 'info');
                     }
 
                     setFormData({
@@ -1291,6 +1313,21 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
         setAlert({ show: false, message: '', type: '' });
     };
 
+    // Handle business account type change
+    const handleAccountTypeChange = (type) => {
+        setAccountType(type);
+        // Clear form data when switching account types
+        setFormData(prev => ({
+            ...prev,
+            name: type === 'personal' ? prev.name : '',
+            lastname: type === 'personal' ? prev.lastname : '',
+            businessName: type === 'business' ? prev.businessName : '',
+            businessType: type === 'business' ? prev.businessType : '',
+            phone: type === 'business' ? prev.phone : '',
+            address: type === 'business' ? prev.address : ''
+        }));
+    };
+
     if (loading && !showSecurityModal) {
         return (
             <div className="loading-container">
@@ -1342,7 +1379,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                             <button
                                 type="button"
                                 className={`account-type-btn ${accountType === 'personal' ? 'active' : ''}`}
-                                onClick={() => setAccountType('personal')}
+                                onClick={() => handleAccountTypeChange('personal')}
                             >
                                 <i className="bi bi-person-fill"></i>
                                 Personal Account
@@ -1350,7 +1387,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                             <button
                                 type="button"
                                 className={`account-type-btn ${accountType === 'business' ? 'active' : ''}`}
-                                onClick={() => setAccountType('business')}
+                                onClick={() => handleAccountTypeChange('business')}
                             >
                                 <i className="bi bi-building"></i>
                                 Business Account
@@ -1358,9 +1395,15 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         </div>
                         <p className="account-type-description">
                             {accountType === 'personal'
-                                ? 'For individuals planning events'
-                                : 'For companies and organizations'}
+                                ? 'For individuals planning personal events'
+                                : 'For companies and organizations managing business events'}
                         </p>
+                        {accountType === 'business' && (
+                            <div className="business-features-notice">
+                                <i className="bi bi-info-circle"></i>
+                                Business accounts include business packages with higher guest limits and advanced features.
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -1397,7 +1440,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     {!isLogin && accountType === "business" && (
                         <>
                             <div className="form-group">
-                                <label htmlFor="businessName">Business Name</label>
+                                <label htmlFor="businessName">Business Name *</label>
                                 <input
                                     type="text"
                                     id="businessName"
@@ -1409,7 +1452,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 />
                             </div>
                             <div className="form-group">
-                                <label htmlFor="businessType">Business Type</label>
+                                <label htmlFor="businessType">Business Type *</label>
                                 <select
                                     id="businessType"
                                     name="businessType"
@@ -1432,7 +1475,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label htmlFor="phone">Phone Number</label>
+                                <label htmlFor="phone">Phone Number *</label>
                                 <input
                                     type="tel"
                                     id="phone"
@@ -1444,7 +1487,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 />
                             </div>
                             <div className="form-group">
-                                <label htmlFor="address">Business Address</label>
+                                <label htmlFor="address">Business Address *</label>
                                 <textarea
                                     id="address"
                                     name="address"
@@ -1459,7 +1502,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     )}
 
                     <div className="form-group">
-                        <label htmlFor="email">Email Address</label>
+                        <label htmlFor="email">Email Address *</label>
                         <input
                             type="email"
                             id="email"
@@ -1472,7 +1515,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="password">Password</label>
+                        <label htmlFor="password">Password *</label>
                         <div className="password-input-wrapper">
                             <input
                                 type={showPassword ? "text" : "password"}
@@ -1491,11 +1534,16 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                                 {showPassword ? "🙈" : "👁️"}
                             </span>
                         </div>
+                        {!isLogin && (
+                            <small className="form-text text-muted">
+                                Password must be at least 6 characters long
+                            </small>
+                        )}
                     </div>
 
                     {!isLogin && (
                         <div className="form-group">
-                            <label htmlFor="confirmPassword">Confirm Password</label>
+                            <label htmlFor="confirmPassword">Confirm Password *</label>
                             <input
                                 type="password"
                                 id="confirmPassword"
@@ -1540,8 +1588,26 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     )}
 
                     <button type="submit" className="login-submit-btn" disabled={loading}>
-                        {loading ? 'Please Wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+                        {loading ? (
+                            <>
+                                <div className="spinner-border spinner-border-sm me-2" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                </div>
+                                Please Wait...
+                            </>
+                        ) : (
+                            isLogin ? 'Sign In' : 'Create Account'
+                        )}
                     </button>
+
+                    {!isLogin && accountType === "business" && (
+                        <div className="business-registration-note">
+                            <i className="bi bi-info-circle"></i>
+                            <small>
+                                By creating a business account, you'll have access to business packages with higher guest limits and advanced event management features.
+                            </small>
+                        </div>
+                    )}
                 </form>
 
                 <div className="login-footer">
@@ -1633,7 +1699,10 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
 
     const goToDashboard = (e) => {
         if (e) e.stopPropagation();
-        navigate("/eventsDashboard");
+        const storedUser = localStorage.getItem('user');
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+        navigate(dashPath);
     };
 
     const createEventClicked = () => {
@@ -1713,9 +1782,13 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
 export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
     const navigate = useNavigate();
     const location = useLocation();
+    // Determine home path based on logged-in user type (personal vs business)
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    const currentUser = storedUser ? JSON.parse(storedUser) : null;
+    const homePath = currentUser?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
 
     const goToHome = () => {
-        navigate("/eventsDashboard");
+        navigate(homePath);
         onClose?.();
     };
     const goToManage = () => {
@@ -1745,7 +1818,7 @@ export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
         {
             section: 'Event Planning',
             items: [
-                { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
+                { path: homePath, icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
                 { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
                 { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
                 { path: '/eventManagement', icon: 'bi-list-check', label: 'RSVP Responses', onClick: goToEventManagement }
