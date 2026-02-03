@@ -56,3 +56,53 @@ export const packages = {
 };
 
 
+// packageFeatures.js
+export const canUseFeature = (packageName, feature) => {
+    if (!packageName) return false;
+    
+    const normalizedPackage = packageName.toLowerCase().trim();
+    
+    const packageFeatures = {
+        basic: {
+            exportRSVP: false,
+            bulkMessages: false,
+            guestRemoval: false
+        },
+        premium: {
+            exportRSVP: true,
+            bulkMessages: true,
+            guestRemoval: true
+        },
+        enterprise: {
+            exportRSVP: true,
+            bulkMessages: true,
+            guestRemoval: true
+        }
+    };
+
+    return packageFeatures[normalizedPackage]?.[feature] || false;
+};
+
+export const getPackageInfo = (packageName) => {
+    const normalizedPackage = packageName?.toLowerCase() || 'basic';
+    
+    const packages = {
+        basic: {
+            name: "Basic",
+            color: "#6c757d",
+            features: ["Basic event management", "RSVP tracking", "Basic analytics"]
+        },
+        premium: {
+            name: "Premium",
+            color: "#007bff",
+            features: ["All Basic features", "Export to PDF", "Bulk messaging", "Advanced analytics"]
+        },
+        enterprise: {
+            name: "Enterprise",
+            color: "#28a745",
+            features: ["All Premium features", "Priority support", "Custom integrations", "Advanced security"]
+        }
+    };
+
+    return packages[normalizedPackage] || packages.basic;
+};

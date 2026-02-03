@@ -4,9 +4,10 @@ import "../../alert.css";
 import { useNavigate } from "react-router-dom";
 import { logOut, DashboardHeader, DashboardTicketSidebar } from "../components";
 import RSVPBinaryTree from "../utils/RSVPTree";
-import { canUseFeature, getPackageInfo } from "../utils/packageFeatures";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+
+// Import autoTable function
+import autoTable from "jspdf-autotable";
 
 const TicketEventManage = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -33,9 +34,63 @@ const TicketEventManage = () => {
     const bulkActionRef = useRef(null);
     const navigate = useNavigate();
 
-    const canExport = userPackage ? canUseFeature(userPackage, "exportRSVP") : false;
-    const canBulkMessage = userPackage ? canUseFeature(userPackage, "bulkMessages") : false;
-    const canRemoveGuests = userPackage ? canUseFeature(userPackage, "guestRemoval") : false;
+    // Currency formatter
+    const formatCurrency = (amount) => {
+        if (amount === undefined || amount === null) return "R0.00";
+        const num = parseFloat(amount);
+        return `R${num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    };
+
+    // Check if package is basic or not
+    const isBasicPackage = () => {
+        if (!userPackage) return true; // Default to basic if no package
+
+        // Check package_type field
+        const packageType = userPackage.package_type?.toLowerCase();
+        return packageType === "basic" || packageType === "free" || !packageType;
+    };
+
+    // Check if package allows export (not basic)
+    const canExport = !isBasicPackage();
+
+    // Check if package allows bulk messaging (not basic)
+    const canBulkMessage = !isBasicPackage();
+
+    // Get package display name
+    const getPackageDisplayName = () => {
+        if (!userPackage) return "No Package";
+
+        // Use package_name if available, otherwise use package_type
+        if (userPackage.package_name) {
+            return userPackage.package_name;
+        }
+
+        // Format package_type for display
+        const packageType = userPackage.package_type;
+        if (!packageType) return "Basic";
+
+        return packageType.charAt(0).toUpperCase() + packageType.slice(1);
+    };
+
+    // Get package color
+    const getPackageColor = () => {
+        const packageType = userPackage?.package_type?.toLowerCase();
+
+        switch (packageType) {
+            case "basic":
+            case "free":
+                return "#6c757d"; // Gray
+            case "premium":
+                return "#007bff"; // Blue
+            case "advanced":
+            case "enterprise":
+                return "#28a745"; // Green
+            case "professional":
+                return "#6610f2"; // Purple
+            default:
+                return "#6c757d"; // Gray for unknown
+        }
+    };
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message: message, type: type });
@@ -103,11 +158,6 @@ const TicketEventManage = () => {
         }
         fetchEventStatusByID(eventId);
         getBookingDetails(eventId);
-        // const pollInterval = setInterval(() => {
-        //     getBookingDetails(eventId);
-        //  }, 10000);
-
-        // return () => clearInterval(pollInterval);
     }, []);
 
     useEffect(() => {
@@ -135,7 +185,6 @@ const TicketEventManage = () => {
             });
             if (!response.ok) throw new Error("Network response was not ok");
             const data = await response.json();
-            console.log("Event Status data:", data);
             if (data.success && data.status) {
                 setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
             } else {
@@ -161,23 +210,81 @@ const TicketEventManage = () => {
             });
             const data = await response.json();
 
+            console.log("Package API response:", data);
+
             if (data.success && data.userPackage) {
                 setUserPackage(data.userPackage);
-                setPackageInfo(getPackageInfo(data.userPackage));
+
+                // Create package info object
+                const packageInfo = {
+                    name: data.userPackage.package_name ||
+                        (data.userPackage.package_type ?
+                            data.userPackage.package_type.charAt(0).toUpperCase() +
+                            data.userPackage.package_type.slice(1) : "Basic"),
+                    type: data.userPackage.package_type || "basic",
+                    color: getPackageColor(),
+                    features: getPackageFeatures(data.userPackage.package_type)
+                };
+                setPackageInfo(packageInfo);
+
+                console.log("Package set to:", data.userPackage.package_type);
+                console.log("Can Export:", canExport);
             } else {
-                printAlert("You dont have a Package", "warning");
+                printAlert("You don't have an active package", "warning");
+                // Default to basic
+                setUserPackage({ package_type: "basic" });
+                setPackageInfo({
+                    name: "Basic",
+                    type: "basic",
+                    color: "#6c757d",
+                    features: ["Basic features only"]
+                });
             }
         } catch (error) {
             console.error("Error fetching user package:", error);
             printAlert("System error fetching user package", "error");
+            // Default to basic on error
+            setUserPackage({ package_type: "basic" });
+            setPackageInfo({
+                name: "Basic",
+                type: "basic",
+                color: "#6c757d",
+                features: ["Basic features only"]
+            });
+        }
+    };
+
+    // Helper to get package features based on type
+    const getPackageFeatures = (packageType) => {
+        const type = packageType?.toLowerCase();
+
+        switch (type) {
+            case "basic":
+            case "free":
+                return ["Basic event management", "RSVP tracking", "Basic analytics"];
+            case "premium":
+                return ["All Basic features", "Export to PDF", "Bulk messaging", "Advanced analytics"];
+            case "advanced":
+            case "enterprise":
+                return ["All Premium features", "Priority support", "Custom integrations", "Advanced security"];
+            case "professional":
+                return ["All Premium features", "Custom branding", "API access", "Dedicated support"];
+            default:
+                return ["Basic features only"];
         }
     };
 
     const sendMessage = async () => {
         if (messageType === 'bulk' && !canBulkMessage) {
+            const packageName = getPackageDisplayName();
             showConfirm(
                 'Bulk Messaging Locked',
-                'Bulk messaging (2+ recipients) is not available on your current plan. Upgrade to Premium or Enterprise to unlock sending messages to multiple guests.',
+                `Bulk messaging (2+ recipients) is not available on your ${packageName} plan. 
+                
+Upgrade to a premium package to unlock:
+• Bulk messaging to multiple guests
+• Export booking data to PDF
+• Advanced guest management`,
                 () => navigate('/pricing'),
                 () => setMessageModalOpen(false)
             );
@@ -208,14 +315,8 @@ const TicketEventManage = () => {
             formData.append("guest_ids", guestIds);
             formData.append("user_id", user?.user_id || '');
 
-            console.log("Sending message with guest IDs:", guestIds);
-            console.log("Message type:", messageType);
-            console.log("Event ID:", eventId);
-
             const response = await fetch(`${API_URL}/send_message_to_guest.php`, { method: "POST", body: formData });
             const data = await response.json();
-
-            console.log("messages response: ", data);
 
             if (data.success) {
                 const recipientCount = messageType === "bulk" ? selectedGuests.size : 1;
@@ -328,13 +429,25 @@ const TicketEventManage = () => {
     };
 
     const exportToPDF = () => {
-        if (!canExport) {
+        // Check if user can export (not basic package)
+        if (isBasicPackage()) {
+            const packageName = getPackageDisplayName();
             showConfirm(
-                'Export Locked',
-                'Exporting RSVP data is not available on your current plan. Upgrade to Premium or Enterprise to unlock this feature.',
+                'Export Feature Locked',
+                `Exporting booking data is not available on your ${packageName} plan. 
+                
+Upgrade to a premium package to unlock:
+• Export booking data to PDF
+• Bulk messaging to guests
+• Advanced guest management features`,
                 () => navigate('/pricing'),
                 null
             );
+            return;
+        }
+
+        if (filteredResponses.length === 0) {
+            printAlert("No booking data to export", "warning");
             return;
         }
 
@@ -343,6 +456,7 @@ const TicketEventManage = () => {
             const doc = new jsPDF();
             const eventName = eventData?.event_name || "Event";
             const date = new Date().toLocaleDateString();
+            const packageName = getPackageDisplayName();
 
             // Title
             doc.setFontSize(18);
@@ -350,6 +464,13 @@ const TicketEventManage = () => {
             doc.setFontSize(11);
             doc.text(`Exported on: ${date}`, 14, 30);
             doc.text(`Total Bookings: ${filteredResponses.length}`, 14, 38);
+            doc.text(`Exported by: ${user?.name || user?.email || 'User'}`, 14, 46);
+            doc.text(`Package: ${packageName}`, 14, 54);
+
+            // Calculate totals
+            const totalRevenue = filteredResponses.reduce((sum, guest) =>
+                sum + (parseFloat(guest.total_amount) || (parseFloat(guest.unit_price) * parseInt(guest.quantity))), 0);
+            doc.text(`Total Revenue: R${totalRevenue.toFixed(2)}`, 14, 62);
 
             // Table data
             const tableData = filteredResponses.map(guest => [
@@ -357,16 +478,16 @@ const TicketEventManage = () => {
                 guest.customer_email,
                 guest.ticket_type_label || guest.ticket_type,
                 guest.quantity,
-                `R${guest.total_amount || guest.unit_price * guest.quantity}`,
+                `R${(parseFloat(guest.total_amount) || (parseFloat(guest.unit_price) * parseInt(guest.quantity))).toFixed(2)}`,
                 guest.payment_status,
                 new Date(guest.created_at).toLocaleDateString()
             ]);
 
-            // AutoTable
-            doc.autoTable({
+            // Use autoTable function directly - FIXED
+            autoTable(doc, {
                 head: [['Name', 'Email', 'Ticket Type', 'Qty', 'Amount', 'Status', 'Date']],
                 body: tableData,
-                startY: 45,
+                startY: 72,
                 theme: 'grid',
                 headStyles: { fillColor: [41, 128, 185] },
                 styles: { fontSize: 9 },
@@ -378,15 +499,24 @@ const TicketEventManage = () => {
                     4: { cellWidth: 20 },
                     5: { cellWidth: 20 },
                     6: { cellWidth: 25 }
+                },
+                didDrawPage: function (data) {
+                    // Footer with package info
+                    doc.setFontSize(8);
+                    doc.text(`Exported with ${packageName} Package`,
+                        data.settings.margin.left,
+                        doc.internal.pageSize.height - 10);
                 }
             });
 
             // Save the PDF
-            doc.save(`${eventName.replace(/\s+/g, '_')}_bookings_${date}.pdf`);
-            printAlert(`Exported ${filteredResponses.length} bookings to PDF`, "success");
+            const fileName = `${eventName.replace(/\s+/g, '_')}_bookings_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+
+            printAlert(`Successfully exported ${filteredResponses.length} bookings to PDF`, "success");
         } catch (error) {
             console.error("PDF export error:", error);
-            printAlert("Error exporting to PDF", "error");
+            printAlert("Error exporting to PDF. Please try again.", "error");
         } finally {
             setExportLoading(false);
         }
@@ -397,12 +527,28 @@ const TicketEventManage = () => {
             printAlert("Please select at least one guest", "warning");
             return;
         }
+
         if (selectedGuests.size === 1) {
             const guestId = Array.from(selectedGuests)[0];
             const guest = filteredResponses.find(g => (g.bookingId || g.guest_id) === guestId);
             openIndividualMessage(guest);
             return;
         }
+
+        // Check bulk message permissions
+        if (!canBulkMessage) {
+            const packageName = getPackageDisplayName();
+            showConfirm(
+                'Bulk Messaging Locked',
+                `Bulk messaging (${selectedGuests.size} recipients) is not available on your ${packageName} plan. 
+                
+Upgrade to a premium package to unlock bulk messaging features.`,
+                () => navigate('/pricing'),
+                null
+            );
+            return;
+        }
+
         setMessageType("bulk");
         setMessageContent("");
         setMessageModalOpen(true);
@@ -475,6 +621,14 @@ const TicketEventManage = () => {
                     <div className="eventTickets-content__title">
                         <h2>{eventData?.event_name || "Event"} - Bookings</h2>
                         <span className="badge">{filteredResponses.length} bookings</span>
+                        {userPackage && (
+                            <span
+                                className="package-badge"
+                                style={{ backgroundColor: getPackageColor() }}
+                            >
+                                <i className="bi bi-shield-check"></i> {getPackageDisplayName()} Package
+                            </span>
+                        )}
                     </div>
                     <div className="eventTickets-content__actions">
                         {selectedGuests.size > 0 && (
@@ -491,8 +645,13 @@ const TicketEventManage = () => {
                                         <button
                                             className="dropdown-item"
                                             onClick={openBulkMessageModal}
+                                            title={selectedGuests.size > 1 && !canBulkMessage ?
+                                                `Bulk messaging requires premium package (Current: ${getPackageDisplayName()})` : ""}
                                         >
                                             <i className="bi bi-envelope"></i> Send Message
+                                            {selectedGuests.size > 1 && !canBulkMessage && (
+                                                <i className="bi bi-lock ms-2"></i>
+                                            )}
                                         </button>
                                     </div>
                                 )}
@@ -502,10 +661,17 @@ const TicketEventManage = () => {
                             className={`btn ${canExport ? "btn-success" : "btn-secondary"}`}
                             onClick={exportToPDF}
                             disabled={exportLoading || filteredResponses.length === 0}
+                            title={!canExport ?
+                                `Export PDF requires premium package (Current: ${getPackageDisplayName()})` :
+                                "Export all bookings to PDF"}
                         >
                             {exportLoading ? (
                                 <>
                                     <i className="bi bi-arrow-clockwise spin"></i> Exporting...
+                                </>
+                            ) : !canExport ? (
+                                <>
+                                    <i className="bi bi-lock"></i> Export PDF
                                 </>
                             ) : (
                                 <>
@@ -515,6 +681,24 @@ const TicketEventManage = () => {
                         </button>
                     </div>
                 </div>
+
+                {/* Package Info Banner - Only show for basic package */}
+                {isBasicPackage() && (
+                    <div className="package-upgrade-banner">
+                        <div className="banner-content">
+                            <i className="bi bi-star-fill"></i>
+                            <div className="banner-text">
+                                <strong>Upgrade to a premium package</strong> to unlock export features, bulk messaging, and more!
+                            </div>
+                            <button
+                                className="btn btn-sm btn-outline-light"
+                                onClick={() => navigate('/pricing')}
+                            >
+                                Upgrade Now
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Filter Section */}
                 <div className="eventTickets-content__filters">
@@ -574,11 +758,12 @@ const TicketEventManage = () => {
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            {/* In the table body section */}
                             <tbody>
                                 {filteredResponses.map((guest) => {
                                     const guestId = guest.bookingId || guest.guest_id;
                                     const isSelected = selectedGuests.has(guestId);
+                                    const totalAmount = guest.total_amount || (guest.unit_price * guest.quantity);
+
                                     return (
                                         <tr key={guestId} className={isSelected ? "selected-row" : ""}>
                                             <td>
@@ -599,7 +784,7 @@ const TicketEventManage = () => {
                                             </td>
                                             <td>{guest.quantity}</td>
                                             <td className="price-cell">
-                                                R{guest.total_amount || (guest.unit_price * guest.quantity).toFixed(2)} {/* Changed $ to R */}
+                                                {formatCurrency(totalAmount)}
                                             </td>
                                             <td>
                                                 <span className={`status-badge status-${guest.payment_status}`}>
@@ -628,90 +813,6 @@ const TicketEventManage = () => {
                                     );
                                 })}
                             </tbody>
-
-                            {/* In the View Details Modal */}
-                            {viewModalOpen && selectedGuestDetails && (
-                                <div className="modal-overlay">
-                                    <div className="modal-content modal-lg">
-                                        <div className="modal-header">
-                                            <h3>Booking Details</h3>
-                                            <button
-                                                className="btn-close"
-                                                onClick={() => setViewModalOpen(false)}
-                                            >
-                                                <i className="bi bi-x"></i>
-                                            </button>
-                                        </div>
-                                        <div className="modal-body">
-                                            <div className="guest-details-grid">
-                                                <div className="detail-item">
-                                                    <label>Booking ID</label>
-                                                    <p>{selectedGuestDetails.bookingId}</p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Full Name</label>
-                                                    <p>{selectedGuestDetails.customer_first_name} {selectedGuestDetails.customer_last_name}</p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Email</label>
-                                                    <p>{selectedGuestDetails.customer_email}</p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Phone</label>
-                                                    <p>{selectedGuestDetails.customer_phone || "Not provided"}</p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Ticket Type</label>
-                                                    <p>{selectedGuestDetails.ticket_type_label || selectedGuestDetails.ticket_type}</p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Quantity</label>
-                                                    <p>{selectedGuestDetails.quantity}</p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Unit Price</label>
-                                                    <p>R{selectedGuestDetails.unit_price}</p> {/* Changed $ to R */}
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Total Amount</label>
-                                                    <p className="total-amount">R{selectedGuestDetails.total_amount || (selectedGuestDetails.unit_price * selectedGuestDetails.quantity).toFixed(2)}</p> {/* Changed $ to R */}
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Payment Method</label>
-                                                    <p>{selectedGuestDetails.payment_method}</p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Payment Status</label>
-                                                    <p className={`status-text status-${selectedGuestDetails.payment_status}`}>
-                                                        {selectedGuestDetails.payment_status}
-                                                    </p>
-                                                </div>
-                                                <div className="detail-item">
-                                                    <label>Booking Date</label>
-                                                    <p>{new Date(selectedGuestDetails.created_at).toLocaleString()}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="modal-footer">
-                                            <button
-                                                className="btn btn-outline"
-                                                onClick={() => setViewModalOpen(false)}
-                                            >
-                                                Close
-                                            </button>
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={() => {
-                                                    setViewModalOpen(false);
-                                                    openIndividualMessage(selectedGuestDetails);
-                                                }}
-                                            >
-                                                <i className="bi bi-envelope"></i> Send Message
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </table>
                     )}
                 </div>
@@ -757,11 +858,13 @@ const TicketEventManage = () => {
                                     </div>
                                     <div className="detail-item">
                                         <label>Unit Price</label>
-                                        <p>R{selectedGuestDetails.unit_price}</p>
+                                        <p>{formatCurrency(selectedGuestDetails.unit_price)}</p>
                                     </div>
                                     <div className="detail-item">
                                         <label>Total Amount</label>
-                                        <p className="total-amount">R{selectedGuestDetails.total_amount || (selectedGuestDetails.unit_price * selectedGuestDetails.quantity).toFixed(2)}</p>
+                                        <p className="total-amount">
+                                            {formatCurrency(selectedGuestDetails.total_amount || (selectedGuestDetails.unit_price * selectedGuestDetails.quantity))}
+                                        </p>
                                     </div>
                                     <div className="detail-item">
                                         <label>Payment Method</label>
@@ -811,6 +914,11 @@ const TicketEventManage = () => {
                                         : `Message ${selectedGuestForMessage ? selectedGuestForMessage.customer_first_name : ""}`
                                     }
                                 </h3>
+                                {messageType === "bulk" && selectedGuests.size > 1 && !canBulkMessage && (
+                                    <div className="feature-lock-notice">
+                                        <i className="bi bi-lock"></i> Bulk messaging requires premium package
+                                    </div>
+                                )}
                                 <button
                                     className="btn-close"
                                     onClick={() => setMessageModalOpen(false)}
@@ -837,6 +945,7 @@ const TicketEventManage = () => {
                                 <button
                                     className="btn btn-primary"
                                     onClick={sendMessage}
+                                    disabled={messageType === "bulk" && selectedGuests.size > 1 && !canBulkMessage}
                                 >
                                     <i className="bi bi-send"></i> Send Message
                                 </button>

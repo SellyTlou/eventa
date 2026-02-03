@@ -68,10 +68,10 @@ const EventsDashboard = () => {
         if (!imageData) {
             return "/images/default-event.jpg";
         }
-        
+
         // Convert to string if needed
         let imageSrc = typeof imageData === 'string' ? imageData : String(imageData);
-        
+
         // If it's a URL (absolute or relative), return it directly
         if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://') || imageSrc.startsWith('/')) {
             return imageSrc;
@@ -86,14 +86,14 @@ const EventsDashboard = () => {
                 return "/images/default-event.jpg";
             }
         }
-        
+
         // If it's a raw base64 string (doesn't start with data:image), convert it
         // This handles cases where only the base64 part is stored without the MIME type prefix
         if (imageSrc.length > 50 && !imageSrc.includes(' ') && !imageSrc.includes('/')) {
             // Looks like a raw base64 string, wrap it
             return `data:image/png;base64,${imageSrc}`;
         }
-        
+
         // Fallback to default
         return "/images/default-event.jpg";
     };
@@ -101,7 +101,7 @@ const EventsDashboard = () => {
     // Reserve modal functions
     const showReserveStats = async (event, rsvpStats) => {
         setReserveEvent(event);
-        
+
         if (event.has_tickets) {
             // Fetch ticket sales stats
             try {
@@ -109,12 +109,12 @@ const EventsDashboard = () => {
                 const formData = new FormData();
                 formData.append("function", "getTicketSalesStats");
                 formData.append("event_id", event.event_id);
-                
+
                 const res = await fetch(`${API_URL}/query.php`, {
                     method: "POST",
                     body: formData,
                 });
-                
+
                 const ticketData = await res.json();
                 if (ticketData.success) {
                     // Combine ticket stats with RSVP stats
@@ -148,7 +148,7 @@ const EventsDashboard = () => {
                 hasBoth: false
             });
         }
-        
+
         setShowReserveModal(true);
     };
 
@@ -200,7 +200,7 @@ const EventsDashboard = () => {
         return (
             event.is_published === true ||
             event.published === 1 ||
-            event.published === "1" || 
+            event.published === "1" ||
             event.status === "published" ||
             event.status === true ||
             event.status === 1 ||
@@ -852,24 +852,24 @@ const EventsDashboard = () => {
         }
     };
 
-   // Replace the current handleEventClick function with this:
-const handleEventClick = (eventId) => {
-    const event = events.find((e) => e.event_id === eventId);
-    if (isEventCancelled(event)) {
-        printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
-        return;
-    }
-    
-    localStorage.setItem("selectedEventId", eventId);
-    
-    const isTicketEvent = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
-    
-    if (isTicketEvent) {
-        navigate("/event_ticket_manage");
-    } else {
-        navigate("/eventManagement");
-    }
-};
+    // Replace the current handleEventClick function with this:
+    const handleEventClick = (eventId) => {
+        const event = events.find((e) => e.event_id === eventId);
+        if (isEventCancelled(event)) {
+            printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
+            return;
+        }
+
+        localStorage.setItem("selectedEventId", eventId);
+
+        const isTicketEvent = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+
+        if (isTicketEvent) {
+            navigate("/event_ticket_manage");
+        } else {
+            navigate("/eventManagement");
+        }
+    };
 
     const displayedEvents = filteredEvents.slice(0, currentPage * itemsPerPage);
     const canLoadMore = filteredEvents.length > displayedEvents.length;
@@ -1172,7 +1172,7 @@ const handleEventClick = (eventId) => {
                                                         <div className="detail-content">
                                                             <div className="detail-label">TIME</div>
                                                             <div className="detail-value">
-                                                                {event.event_start_time && event.event_end_time 
+                                                                {event.event_start_time && event.event_end_time
                                                                     ? `${event.event_start_time} - ${event.event_end_time}`
                                                                     : event.event_start_time || 'TBD'
                                                                 }
@@ -1180,50 +1180,71 @@ const handleEventClick = (eventId) => {
                                                         </div>
                                                     </div>
 
-                                                  
+
                                                 </div>
-                                                  {/* Location */}
-                                                    <div className="detail-horizontal">
-                                                        
-                                                        <div className="detail-content">
-                                                            <div className="detail-value">
-                                                                {event.event_location || 'Location TBD'}
-                                                            </div>
+                                                {/* Location */}
+                                                <div className="detail-horizontal">
+
+                                                    <div className="detail-content">
+                                                        <div className="detail-value">
+                                                            {event.event_location || 'Location TBD'}
                                                         </div>
                                                     </div>
+                                                </div>
                                             </div>
 
                                             {/* Buttons - Bottom Section */}
-                                                <div className="event-actions-section">
-                                                    <button
-                                                        className={`action-btn ${cancelled ? "disabled" : published ? "view-event-btn" : "complete-setup-btn"}`}
-                                                    >
-                                                        {cancelled ? (
-                                                            <>
-                                                                <i className="bi bi-eye"></i> View Event
-                                                            </>
-                                                        ) : published ? (
-                                                            <>
-                                                                <i className="bi bi-eye"></i> VIEW EVENT
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <i className="bi bi-arrow-right"></i> SETUP
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                    
-                                                    <button
-                                                        className="action-btn reserve-btn"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            showReserveStats(event, stats);
-                                                        }}
-                                                        disabled={cancelled}
-                                                    >
-                                                        <i className="bi bi-people"></i> {event.has_tickets ? 'TICKET' : 'RESERVE'}
-                                                    </button>
-                                                </div>
+                                            <div className="event-actions-section">
+                                                <button
+                                                    className={`action-btn ${cancelled ? "disabled" : published ? "view-event-btn" : "complete-setup-btn"}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        if (cancelled) {
+                                                            printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
+                                                            return;
+                                                        }
+
+                                                        localStorage.setItem("selectedEventId", event.event_id);
+
+                                                        // Check if it's a ticket event or RSVP event
+                                                        const isTicketEvent = event.has_tickets === 1 ||
+                                                            event.has_tickets === true ||
+                                                            event.has_tickets === "1";
+
+                                                        if (isTicketEvent) {
+                                                            navigate("/event_ticket_manage");
+                                                        } else {
+                                                            navigate("/eventManagement");
+                                                        }
+                                                    }}
+                                                >
+                                                    {cancelled ? (
+                                                        <>
+                                                            <i className="bi bi-eye"></i> View Event
+                                                        </>
+                                                    ) : published ? (
+                                                        <>
+                                                            <i className="bi bi-eye"></i> VIEW EVENT
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <i className="bi bi-arrow-right"></i> SETUP
+                                                        </>
+                                                    )}
+                                                </button>
+
+                                                <button
+                                                    className="action-btn reserve-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        showReserveStats(event, stats);
+                                                    }}
+                                                    disabled={cancelled}
+                                                >
+                                                    <i className="bi bi-people"></i> {event.has_tickets ? 'TICKET' : 'RESERVE'}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -1267,7 +1288,7 @@ const handleEventClick = (eventId) => {
                             <div className="modal-body">
                                 <div className="reserve-modal-content">
                                     <h3 className="reserve-event-title">{reserveEvent.event_name}</h3>
-                                    
+
                                     {reserveEvent.has_tickets ? (
                                         // Ticket Sales Stats
                                         <div className="reserve-stats-grid">
@@ -1284,7 +1305,7 @@ const handleEventClick = (eventId) => {
                                             )) : (
                                                 <div className="no-stats">No tickets sold yet</div>
                                             )}
-                                            
+
                                             <div className="reserve-stat-card total">
                                                 <div className="stat-icon">
                                                     <i className="bi bi-graph-up"></i>
@@ -1309,7 +1330,7 @@ const handleEventClick = (eventId) => {
                                                     <div className="stat-label">Confirmed</div>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="reserve-stat-card pending">
                                                 <div className="stat-icon">
                                                     <i className="bi bi-clock"></i>
@@ -1319,7 +1340,7 @@ const handleEventClick = (eventId) => {
                                                     <div className="stat-label">Maybe</div>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="reserve-stat-card declined">
                                                 <div className="stat-icon">
                                                     <i className="bi bi-x-circle"></i>
@@ -1329,7 +1350,7 @@ const handleEventClick = (eventId) => {
                                                     <div className="stat-label">Declined</div>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="reserve-stat-card total">
                                                 <div className="stat-icon">
                                                     <i className="bi bi-people"></i>

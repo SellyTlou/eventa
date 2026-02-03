@@ -4342,9 +4342,8 @@ eventsDashboard {
 .dashboard-container .invitation-content .email-chips::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
-
 /********************
-Manage my Event page
+Manage my Event page - Updated Colors (Black, Blue, Purple)
 ********************/
 .manage-my-event-content {
     overflow-x: hidden;
@@ -4352,6 +4351,51 @@ Manage my Event page
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     position: relative;
     min-height: 100vh;
+}
+
+/* Event Type Badge - Updated Colors */
+.manage-my-event-content .event-type-badge {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    z-index: 10;
+}
+
+.manage-my-event-content .badge {
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-left: -200px;
+}
+
+/* Ticket Event - Black/Gray Theme */
+.manage-my-event-content .ticket-badge {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    border: 2px solid rgba(44, 62, 80, 0.3);
+}
+
+/* RSVP Event - Blue/Purple Theme */
+.manage-my-event-content .rsvp-badge {
+    background: linear-gradient(135deg, #3498db 0%, #9b59b6 100%);
+    color: white;
+    border: 2px solid rgba(52, 152, 219, 0.3);
+}
+
+/* Different backgrounds based on event type */
+.manage-my-event-content.ticket-event {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.manage-my-event-content.rsvp-event {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 /* Section Title */
@@ -4372,7 +4416,7 @@ Manage my Event page
     margin-bottom: 30px;
 }
 
-/* Details Cards */
+/* Details Cards - Border Colors */
 .manage-my-event-content .details-card {
     background: white;
     border-radius: 20px;
@@ -4383,20 +4427,44 @@ Manage my Event page
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Ticket Event - Black/Dark Gray Border */
+.manage-my-event-content.ticket-event .details-card {
+    border-left: 5px solid #2c3e50;
+}
+
+/* RSVP Event - Blue Border */
+.manage-my-event-content.rsvp-event .details-card {
+    border-left: 5px solid #3498db;
+}
+
 .manage-my-event-content .details-card:hover {
     transform: translateY(-8px);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
 }
 
-/* Card Header */
+/* Card Header Backgrounds */
 .manage-my-event-content .card-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 25px 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: relative;
+}
+
+/* Ticket Event Header - Black/Blue Gradient */
+.manage-my-event-content.ticket-event .event-details-card .card-header {
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+}
+
+/* RSVP Event Header - Blue/Purple Gradient */
+.manage-my-event-content.rsvp-event .event-details-card .card-header {
+    background: linear-gradient(135deg, #3498db 0%, #9b59b6 100%);
+}
+
+/* Current Plan Card Header - Green Gradient */
+.manage-my-event-content .current-plan-card .card-header {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
 }
 
 .manage-my-event-content .card-header h3 {
@@ -4468,6 +4536,79 @@ Manage my Event page
     font-weight: 500;
 }
 
+/* Event Type in Details */
+.manage-my-event-content .event-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Ticket Event Type - Black/Dark Gray */
+.manage-my-event-content .ticket-type {
+    background: #ecf0f1;
+    color: #2c3e50;
+    border: 1px solid #bdc3c7;
+}
+
+/* RSVP Event Type - Blue */
+.manage-my-event-content .rsvp-type {
+    background: #e8f4fc;
+    color: #3498db;
+    border: 1px solid #aed6f1;
+}
+
+/* Ticket Event Info */
+.manage-my-event-content .ticket-event-info {
+    margin-top: 25px;
+    padding: 25px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+    border-radius: 15px;
+    border: 1px solid #bdc3c7;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.manage-my-event-content .ticket-icon {
+    font-size: 2.5rem;
+    color: #2c3e50;
+    margin-top: 5px;
+}
+
+.manage-my-event-content .ticket-content h4 {
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.manage-my-event-content .ticket-content p {
+    color: #666;
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.manage-my-event-content .ticket-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #34495e !important;
+    font-weight: 600;
+    margin-top: 15px !important;
+    padding-top: 15px;
+    border-top: 1px dashed #bdc3c7;
+}
+
+.manage-my-event-content .ticket-note i {
+    font-size: 1.1rem;
+    color: #3498db;
+}
+
 /* Current Plan Card */
 .manage-my-event-content .current-plan-card {
     border: 3px solid transparent;
@@ -4475,7 +4616,7 @@ Manage my Event page
 }
 
 .manage-my-event-content .current-plan-card.unavailable {
-    border-color: #dc3545;
+    border-color: #e74c3c;
 }
 
 .manage-my-event-content .plan-badge {
@@ -4488,15 +4629,15 @@ Manage my Event page
 }
 
 .manage-my-event-content .plan-badge.available {
-    background: linear-gradient(135deg, #28a745, #20c997);
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
     color: white;
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
 }
 
 .manage-my-event-content .plan-badge.unavailable {
-    background: linear-gradient(135deg, #dc3545, #e83e8c);
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
     color: white;
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
 }
 
 .manage-my-event-content .plan-main-info {
@@ -4511,7 +4652,7 @@ Manage my Event page
     color: #2c3e50;
     margin: 0 0 10px 0;
     font-weight: 800;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #3498db, #9b59b6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -4519,7 +4660,7 @@ Manage my Event page
 
 .manage-my-event-content .plan-price {
     font-size: 1.6rem;
-    color: #667eea;
+    color: #3498db;
     margin: 0;
     font-weight: 700;
 }
@@ -4550,7 +4691,6 @@ Manage my Event page
     margin-right: 20px;
     width: 50px;
     text-align: center;
-    filter: grayscale(0.3);
 }
 
 .manage-my-event-content .feature-details {
@@ -4573,29 +4713,30 @@ Manage my Event page
 }
 
 .manage-my-event-content .feature-value.zero-events {
-    color: #dc3545;
+    color: #e74c3c;
 }
 
 /* Upgrade Alert */
 .manage-my-event-content .upgrade-alert {
     background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    border: 1px solid #ffd43b;
+    border: 1px solid #f1c40f;
     border-radius: 15px;
     padding: 20px;
     margin-bottom: 20px;
     display: flex;
     align-items: flex-start;
-    box-shadow: 0 4px 15px rgba(255, 212, 59, 0.2);
+    box-shadow: 0 4px 15px rgba(241, 196, 15, 0.2);
 }
 
 .manage-my-event-content .alert-icon {
     margin-right: 15px;
     font-size: 1.4rem;
+    color: #f39c12;
 }
 
 .manage-my-event-content .upgrade-alert p {
     margin: 0;
-    color: #856404;
+    color: #8e6c0a;
     font-size: 0.95rem;
     line-height: 1.5;
     font-weight: 500;
@@ -4614,7 +4755,7 @@ Manage my Event page
 }
 
 .manage-my-event-content .upgrade-btn {
-    background: linear-gradient(135deg, #28a745, #20c997);
+    background: linear-gradient(135deg, #3498db, #2980b9);
     color: white;
     border: none;
     padding: 15px 30px;
@@ -4624,12 +4765,12 @@ Manage my Event page
     transition: all 0.3s ease;
     width: 100%;
     font-size: 1rem;
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
 .manage-my-event-content .upgrade-btn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
 }
 
 /* Publish Button */
@@ -4637,7 +4778,6 @@ Manage my Event page
     position: relative;
     display: block;
     margin: 0 auto;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
     padding: 18px 50px;
@@ -4646,21 +4786,40 @@ Manage my Event page
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
     letter-spacing: 0.5px;
+}
+
+/* Ticket Event Publish Button - Black/Blue */
+.manage-my-event-content.ticket-event .publish-event-btn:not(.disabled) {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    box-shadow: 0 8px 25px rgba(44, 62, 80, 0.4);
+}
+
+/* RSVP Event Publish Button - Blue/Purple */
+.manage-my-event-content.rsvp-event .publish-event-btn:not(.disabled) {
+    background: linear-gradient(135deg, #3498db 0%, #9b59b6 100%);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
 }
 
 .manage-my-event-content .publish-event-btn:hover:not(.disabled) {
     transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+}
+
+.manage-my-event-content.ticket-event .publish-event-btn:hover:not(.disabled) {
+    box-shadow: 0 12px 35px rgba(44, 62, 80, 0.5);
+}
+
+.manage-my-event-content.rsvp-event .publish-event-btn:hover:not(.disabled) {
+    box-shadow: 0 12px 35px rgba(52, 152, 219, 0.5);
 }
 
 .manage-my-event-content .publish-event-btn.disabled {
-    background: linear-gradient(135deg, #6c757d, #495057);
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
     cursor: not-allowed;
     opacity: 0.7;
     transform: none;
-    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+    box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
 }
 
 .manage-my-event-content .publish-event-btn.disabled:hover .tooltip {
@@ -4674,7 +4833,7 @@ Manage my Event page
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(-5px);
-    background: #333;
+    background: #2c3e50;
     color: white;
     padding: 10px 15px;
     border-radius: 8px;
@@ -4694,18 +4853,31 @@ Manage my Event page
     left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
-    border-top-color: #333;
+    border-top-color: #2c3e50;
 }
 
 /* Package Slider */
 .manage-my-event-content .package-slider {
     position: relative;
-    background: white;
     padding: 40px 30px;
     border-radius: 20px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     margin-bottom: 40px;
     border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.manage-my-event-content.ticket-event .package-slider {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+    border: 1px solid #bdc3c7;
+}
+
+.manage-my-event-content.rsvp-event .package-slider {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8f4fc 100%);
+    border: 1px solid #aed6f1;
+}
+
+.manage-my-event-content .slider-controls {
+    position: relative;
 }
 
 .manage-my-event-content .package-cards {
@@ -4724,14 +4896,23 @@ Manage my Event page
 
 .manage-my-event-content .package-card {
     min-width: 300px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 30px;
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 3px solid transparent;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Ticket Event Package Card - Black/Blue/Purple */
+.manage-my-event-content.ticket-event .package-card {
+    background: linear-gradient(135deg, #2c3e50, #3498db, #9b59b6);
+}
+
+/* RSVP Event Package Card - Blue/Purple */
+.manage-my-event-content.rsvp-event .package-card {
+    background: linear-gradient(135deg, #3498db 0%, #9b59b6 100%);
 }
 
 .manage-my-event-content .package-card:hover {
@@ -4740,9 +4921,8 @@ Manage my Event page
 }
 
 .manage-my-event-content .package-card.active {
-    border-color: #ffd700;
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    box-shadow: 0 12px 35px rgba(255, 215, 0, 0.4);
+    border-color: #f1c40f;
+    box-shadow: 0 12px 35px rgba(241, 196, 15, 0.4);
 }
 
 .manage-my-event-content .package-card h3 {
@@ -4774,15 +4954,23 @@ Manage my Event page
 
 .manage-my-event-content .view-details-btn:hover {
     background: white;
-    color: #667eea;
+    color: inherit;
     transform: translateY(-2px);
 }
 
+.manage-my-event-content.ticket-event .view-details-btn:hover {
+    color: #2c3e50;
+}
+
+.manage-my-event-content.rsvp-event .view-details-btn:hover {
+    color: #3498db;
+}
+
+/* Slide Buttons */
 .manage-my-event-content .slide-btn {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: linear-gradient(135deg, #007bff, #0056b3);
     color: white;
     border: none;
     width: 50px;
@@ -4792,11 +4980,21 @@ Manage my Event page
     font-size: 20px;
     z-index: 10;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+/* Ticket Event Slide Button - Black/Blue */
+.manage-my-event-content.ticket-event .slide-btn {
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+    box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
+}
+
+/* RSVP Event Slide Button - Blue */
+.manage-my-event-content.rsvp-event .slide-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
 .manage-my-event-content .slide-btn:hover {
-    background: linear-gradient(135deg, #0056b3, #004085);
     transform: translateY(-50%) scale(1.1);
 }
 
@@ -4850,8 +5048,8 @@ Manage my Event page
 .manage-my-event-content .guest-count {
     font-size: 2rem;
     font-weight: 800;
-    color: #667eea;
-    text-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    color: #3498db;
+    text-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
 }
 
 .manage-my-event-content .guest-max {
@@ -4874,20 +5072,20 @@ Manage my Event page
 .manage-my-event-content .guest-limit-progress {
     position: absolute;
     height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: linear-gradient(90deg, #3498db, #9b59b6);
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     transition: width 0.1s ease;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
 }
 
 .manage-my-event-content .guest-limit-handle {
     width: 24px;
     height: 24px;
     background: white;
-    border: 4px solid #667eea;
+    border: 4px solid #3498db;
     border-radius: 50%;
     margin-right: -12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -4927,8 +5125,8 @@ Manage my Event page
 
 .manage-my-event-content .guest-limit-input input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
     transform: scale(1.05);
 }
 
@@ -5032,14 +5230,14 @@ Manage my Event page
 
 .manage-my-event-content .features-list li:before {
     content: "✓";
-    color: #28a745;
+    color: #27ae60;
     margin-right: 12px;
     font-weight: bold;
 }
 
 .manage-my-event-content .choose-package-btn {
     width: 100%;
-    background: linear-gradient(135deg, #28a745, #20c997);
+    background: linear-gradient(135deg, #3498db, #2980b9);
     color: white;
     border: none;
     padding: 18px;
@@ -5049,17 +5247,17 @@ Manage my Event page
     cursor: pointer;
     margin-top: 25px;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
 .manage-my-event-content .choose-package-btn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
 }
 
 /* Update Event Button */
 .manage-my-event-content .update-event-btn {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    background: linear-gradient(135deg, #2c3e50, #3498db);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -5067,15 +5265,15 @@ Manage my Event page
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
     font-size: 0.9rem;
     letter-spacing: 0.5px;
 }
 
 .manage-my-event-content .update-event-btn:hover {
-    background: linear-gradient(135deg, #ee5a24, #ff6b6b);
+    background: linear-gradient(135deg, #3498db, #2c3e50);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+    box-shadow: 0 6px 20px rgba(44, 62, 80, 0.4);
 }
 
 /* Action Buttons Container */
@@ -5090,7 +5288,7 @@ Manage my Event page
 
 /* Update Event Button (Large version) */
 .manage-my-event-content .update-event-btn-large {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    background: linear-gradient(135deg, #2c3e50, #3498db);
     color: white;
     border: none;
     padding: 18px 50px;
@@ -5099,15 +5297,15 @@ Manage my Event page
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+    box-shadow: 0 8px 25px rgba(44, 62, 80, 0.4);
     letter-spacing: 0.5px;
     position: relative;
 }
 
 .manage-my-event-content .update-event-btn-large:hover {
-    background: linear-gradient(135deg, #ee5a24, #ff6b6b);
+    background: linear-gradient(135deg, #3498db, #2c3e50);
     transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(255, 107, 107, 0.5);
+    box-shadow: 0 12px 35px rgba(44, 62, 80, 0.5);
 }
 
 /* Publish Instruction */
@@ -5116,10 +5314,7 @@ Manage my Event page
     align-items: center;
     gap: 10px;
     padding: 20px;
-    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-    border: 2px solid #2196f3;
     border-radius: 15px;
-    color: #1565c0;
     font-size: 1.1rem;
     font-weight: 600;
     text-align: center;
@@ -5127,9 +5322,30 @@ Manage my Event page
     margin: 0 auto;
 }
 
+/* RSVP Event Instruction - Blue */
+.manage-my-event-content.rsvp-event .publish-instruction {
+    background: linear-gradient(135deg, #e8f4fc, #aed6f1);
+    border: 2px solid #3498db;
+    color: #2980b9;
+}
+
+/* Ticket Event Instruction - Black/Gray */
+.manage-my-event-content.ticket-event .ticket-instruction {
+    background: linear-gradient(135deg, #f8f9fa, #ecf0f1);
+    border: 2px solid #2c3e50;
+    color: #34495e;
+}
+
 .manage-my-event-content .publish-instruction i {
-    color: #2196f3;
     font-size: 1.3rem;
+}
+
+.manage-my-event-content.rsvp-event .publish-instruction i {
+    color: #3498db;
+}
+
+.manage-my-event-content.ticket-event .ticket-instruction i {
+    color: #2c3e50;
 }
 
 /* Responsive Design */
@@ -5143,7 +5359,14 @@ Manage my Event page
 @media (max-width: 768px) {
     .manage-my-event-content {
         padding: 20px;
+    }
 
+    .manage-my-event-content .event-type-badge {
+        position: relative;
+        top: 0;
+        right: 0;
+        margin-bottom: 20px;
+        text-align: center;
     }
 
     .manage-my-event-content .section-title {
@@ -5200,12 +5423,16 @@ Manage my Event page
     .manage-my-event-content .guest-limit-input input {
         width: 100%;
     }
+
+    .manage-my-event-content .ticket-event-info {
+        flex-direction: column;
+        text-align: center;
+    }
 }
 
 @media (max-width: 480px) {
     .manage-my-event-content {
         padding: 15px;
-
     }
 
     .manage-my-event-content .section-title {
@@ -5236,7 +5463,6 @@ Manage my Event page
         padding: 25px 20px;
     }
 }
-
 /*****************************
 Package Payment Page
 ******************************/

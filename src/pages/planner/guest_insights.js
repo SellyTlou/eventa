@@ -1,7 +1,7 @@
-// GuestInsights.js (FINAL – UNREAD + AUTO-SCROLL)
+// GuestInsights.js (CORRECTED VERSION)
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
-import { logOut, DashboardHeader, DashboardSidebar } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar, DashboardTicketSidebar } from "../components";
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import './main.css';    
@@ -23,7 +23,7 @@ const GuestInsights = () => {
     const [eventStatus, setEventStatus] = useState("Unknown");
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, guest: null });
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
+    const [isTicketEvent, setIsTicketEvent] = useState(false);
     // Modal
     const [modalOpen, setModalOpen] = useState(false);
     const [modalGuest, setModalGuest] = useState(null);
@@ -113,8 +113,18 @@ const GuestInsights = () => {
             formData.append("event_id", eventId);
             const res = await fetch(`${API_URL}/query.php`, { method: "POST", body: formData });
             const data = await res.json();
-            if (data.success) setEventData(data.event);
-        } catch (err) { console.error(err); }
+            if (data.success) {
+                // Check the correct data structure - it might be data.events[0] or data.event
+                const event = data.events?.[0] || data.event;
+                if (event) {
+                    const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+                    setIsTicketEvent(hasTickets);
+                    setEventData(event);
+                }
+            } 
+        } catch (err) { 
+            console.error("Error fetching event data:", err); 
+        }
     };
 
 
@@ -377,22 +387,28 @@ const GuestInsights = () => {
                 </div>
             )}
 
-             {/* HEADER */}
-                                    <DashboardHeader
-                                        user={user}
-                                        eventStatus={eventStatus}
-                                        onToggleSidebar={toggleSidebar}
-                                    />
-                        
-                                    {/* SIDEBAR */}
-                                    <DashboardSidebar
-                                        isMobileOpen={sidebarOpen}
-                                        onClose={closeSidebar}
-                                    />
-            
+            {/* HEADER */}
+            <DashboardHeader
+                user={user}
+                eventStatus={eventStatus}
+                onToggleSidebar={toggleSidebar}
+            />
 
-            {/* MAIN CONTENT */}
-            <div className="guest-insights-content">
+            {/* CONDITIONAL SIDEBAR */}
+            {isTicketEvent ? (
+                <DashboardTicketSidebar
+                    isOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            ) : (
+                <DashboardSidebar
+                    isOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            )}
+
+            {/* MAIN CONTENT - Added event-type class */}
+            <div className={`guest-insights-content ${isTicketEvent ? 'ticket-event' : 'rsvp-event'}`}>
                 <div className="content-header">
                     <h1>Guest Insights</h1>
                     <p>View guest questions, respond, and manage engagement</p>
@@ -571,7 +587,7 @@ const GuestInsights = () => {
                         </div>
 
                         {/* REPLY INPUT – ONLY WHEN GUEST SENT LAST */}
-                        {(
+                        {modalGuest.lastSender === 'guest' && (
                             <div className="reply-input-area">
                                 <textarea
                                     value={replyText}

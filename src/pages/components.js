@@ -1811,10 +1811,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/invitationPage");
         onClose?.();
     };
-    const goToEventManagement = () => {
-        navigate("/eventManagement");
-        onClose?.();
-    };
+  
     const goToAttendanceStats = () => {
         navigate("/attendance_stats");
         onClose?.();
@@ -1833,7 +1830,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
                 { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
                 { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
                 { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
-                { path: '/eventManagement', icon: 'bi-list-check', label: 'RSVP Responses', onClick: goToEventManagement }
+               
             ]
         },
         {

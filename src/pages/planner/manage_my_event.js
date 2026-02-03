@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import '../../alert.css';
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut, DashboardHeader, DashboardSidebar,LoginNav } from "../components";
-
+import { logOut, DashboardHeader, DashboardSidebar, LoginNav, DashboardTicketSidebar } from "../components";
 
 const Manage_my_event = () => {
     const [loading, setLoading] = useState(true);
@@ -16,6 +15,7 @@ const Manage_my_event = () => {
     const [eventStatus, setEventStatus] = useState("");
     const [eventDetails, setEventDetails] = useState(null);
     const [userPackage, setUserPackage] = useState(null);
+    const [isTicketEvent, setIsTicketEvent] = useState(false);
 
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [showPackagePopup, setShowPackagePopup] = useState(false);
@@ -25,7 +25,7 @@ const Manage_my_event = () => {
     const [availablePackages, setAvailablePackages] = useState([]);
     const [currentPlan, setCurrentPlan] = useState(null);
     const [showUpdateButton, setShowUpdateButton] = useState(false);
- const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
     const printAlert = (message, type = "info") => {
@@ -141,6 +141,7 @@ const Manage_my_event = () => {
         }
     };
 
+
     const fetchPackageDetails = async (packageId, userPackageData) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -213,28 +214,25 @@ const Manage_my_event = () => {
     };
 
     const goToUpgradePlan = () => navigate("/upgrade_package");
-    // Fallback function in case features column is empty
+
     const getDefaultFeatures = (packageType) => {
         const defaultFeaturesMap = {
             'basic': [
-                "Up to 100 guests per event",
-                "Basic event templates",
-                "RSVP management",
+                "Basic event management",
+                "RSVP & Ticket management",
                 "Guest list tracking",
                 "Email invitations",
                 "Basic analytics"
             ],
             'premium': [
-                "Up to 500 guests per event",
                 "Premium event templates",
                 "Custom branding options",
-                "Advanced RSVP analytics",
+                "Advanced analytics",
                 "Priority customer support",
                 "Bulk guest imports",
                 "Reminder emails"
             ],
             'enterprise': [
-                "Unlimited guests",
                 "Custom event templates",
                 "Dedicated account manager",
                 "API access for integrations",
@@ -244,13 +242,13 @@ const Manage_my_event = () => {
                 "Custom workflows"
             ],
             'free': [
-                "Up to 50 guests per event",
                 "Basic templates",
-                "RSVP tracking",
+                "RSVP & Ticket tracking",
                 "Email notifications",
                 "Mobile-friendly invites"
             ]
         };
+
         return defaultFeaturesMap[packageType] || ["Event management features"];
     };
 
@@ -300,6 +298,10 @@ const Manage_my_event = () => {
             if (data.success && data.events && data.events.length > 0) {
                 const event = data.events[0];
 
+                // Check if it's a ticket event
+                const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+                setIsTicketEvent(hasTickets);
+
                 const formatDate = (dateString) => {
                     if (!dateString) return "Not set";
                     try {
@@ -333,7 +335,9 @@ const Manage_my_event = () => {
                     event_start_time: formatTime(event.event_start_time),
                     event_end_time: formatTime(event.event_end_time),
                     venue: event.event_location || "Venue not specified",
-                    guest_limit: event.guest_limit || 0
+                    guest_limit: event.guest_limit || 0,
+                    has_tickets: hasTickets,
+                    event_type: hasTickets ? "Ticket Event" : "RSVP Event"
                 };
 
                 setEventDetails(formattedEventDetails);
@@ -349,7 +353,9 @@ const Manage_my_event = () => {
                     event_start_time: "---",
                     event_end_time: "---",
                     venue: "----",
-                    guest_limit: 0
+                    guest_limit: 0,
+                    has_tickets: false,
+                    event_type: "RSVP Event"
                 });
                 setGuestLimit(0);
                 setOriginalGuestLimit(0);
@@ -364,16 +370,16 @@ const Manage_my_event = () => {
                 event_start_time: "---",
                 event_end_time: "---",
                 venue: "----",
-                guest_limit: 0
+                guest_limit: 0,
+                has_tickets: false,
+                event_type: "RSVP Event"
             });
             setGuestLimit(0);
-            setOriginalGuestLimit(0);
         } finally {
             setLoading(false);
         }
     };
 
-   
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
     };
@@ -461,7 +467,7 @@ const Manage_my_event = () => {
             formData.append("function", "updateEventStatus");
             formData.append("event_id", event_id);
             formData.append("published", 1);
-            formData.append("guest_limit", guestLimit);
+            formData.append("guest_limit", guestLimit); // Always send guest limit
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -469,14 +475,15 @@ const Manage_my_event = () => {
             });
 
             const data = await response.json();
+            console.log("Update event status response:", data);
 
             if (data.success) {
                 setEventStatus("Published");
                 setOriginalGuestLimit(guestLimit);
                 setShowUpdateButton(false);
-                printAlert("Event published successfully!", "success");
+                printAlert(`Event published successfully!`, "success");
             } else {
-                printAlert("Failed to publish event. Please try again.", "error");
+                printAlert(`Failed to publish event: ${data.message}`, "error");
             }
         } catch (err) {
             console.error("Error updating event status:", err);
@@ -543,6 +550,19 @@ const Manage_my_event = () => {
         const value = parseInt(e.target.value) || 0;
         const newGuestLimit = Math.max(0, Math.min(maxGuests, value));
         setGuestLimit(newGuestLimit);
+    };
+
+    // Render different package cards for ticket vs RSVP events
+    const renderPackageCard = (pkg) => {
+        return (
+            <div key={pkg.id} className={`package-card ${userPackage?.package_id === pkg.id ? "active" : ""}`} onClick={() => handlePackageClick(pkg)}>
+                <h3>{pkg.name}</h3>
+                <p>Max Guests: {pkg.maxGuest === Infinity ? "Unlimited" : pkg.maxGuest}</p>
+                <p>Max Events: {pkg.maxEvents === Infinity ? "Unlimited" : pkg.maxEvents}</p>
+                <p>Price: {pkg.price === 0 ? "Free" : `R${pkg.price}`}</p>
+                <button className="view-details-btn">View Details</button>
+            </div>
+        );
     };
 
     const renderCurrentPlanCard = () => {
@@ -662,38 +682,46 @@ const Manage_my_event = () => {
                 </div>
             )}
 
-                    {/* HEADER */}
-                                              <DashboardHeader
-                                                  user={user}
-                                                  eventStatus={eventStatus}
-                                                  onToggleSidebar={toggleSidebar}
-                                              />
-                                  
-                                              {/* SIDEBAR */}
-                                              <DashboardSidebar
-                                                  isMobileOpen={sidebarOpen}
-                                                  onClose={closeSidebar}
-                                              />
-                      
+            {/* HEADER */}
+            <DashboardHeader
+                user={user}
+                eventStatus={eventStatus}
+                onToggleSidebar={toggleSidebar}
+            />
+
+            {/* SIDEBAR */}
+            {isTicketEvent ? (
+                <DashboardTicketSidebar
+                    isMobileOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            ) : (
+                <DashboardSidebar
+                    isMobileOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            )}
 
             {/* Content */}
-            <div className="manage-my-event-content">
+            <div className={`manage-my-event-content ${isTicketEvent ? 'ticket-event' : 'rsvp-event'}`}>
+                {/* Event Type Badge */}
+                <div className="event-type-badge">
+                    <span className={`badge ${isTicketEvent ? 'ticket-badge' : 'rsvp-badge'}`}>
+                        <i className={`bi ${isTicketEvent ? 'bi-ticket-perforated' : 'bi-calendar-check'}`}></i>
+                        {isTicketEvent ? "Ticket Event" : "RSVP Event"}
+                    </span>
+                </div>
+
                 {/* Package Slider */}
                 <div className="package-slider">
                     <h2>Available Plans</h2>
-                    <button className="slide-btn left" onClick={() => document.querySelector(".package-cards").scrollBy({ left: -200, behavior: "smooth" })}>◀</button>
-                    <div className="package-cards">
-                        {availablePackages.map((pkg) => (
-                            <div key={pkg.id} className={`package-card ${userPackage?.package_id === pkg.id ? "active" : ""}`} onClick={() => handlePackageClick(pkg)}>
-                                <h3>{pkg.name}</h3>
-                                <p>Max Guests: {pkg.maxGuest === Infinity ? "Unlimited" : pkg.maxGuest}</p>
-                                <p>Max Events: {pkg.maxEvents === Infinity ? "Unlimited" : pkg.maxEvents}</p>
-                                <p>Price: {pkg.price === 0 ? "Free" : `R${pkg.price}`}</p>
-                                <button className="view-details-btn">View Details</button>
-                            </div>
-                        ))}
+                    <div className="slider-controls">
+                        <button className="slide-btn left" onClick={() => document.querySelector(".package-cards").scrollBy({ left: -200, behavior: "smooth" })}>◀</button>
+                        <div className="package-cards">
+                            {availablePackages.map(renderPackageCard)}
+                        </div>
+                        <button className="slide-btn right" onClick={() => document.querySelector(".package-cards").scrollBy({ left: 200, behavior: "smooth" })}>▶</button>
                     </div>
-                    <button className="slide-btn right" onClick={() => document.querySelector(".package-cards").scrollBy({ left: 200, behavior: "smooth" })}>▶</button>
                 </div>
 
                 {/* Event Details & Current Plan */}
@@ -718,6 +746,13 @@ const Manage_my_event = () => {
                                         <span className="detail-value">{eventDetails?.event_name || "Loading..."}</span>
                                     </div>
                                     <div className="detail-item">
+                                        <span className="detail-label">Event Type:</span>
+                                        <span className={`detail-value event-type ${isTicketEvent ? 'ticket-type' : 'rsvp-type'}`}>
+                                            <i className={`bi ${isTicketEvent ? 'bi-ticket-perforated' : 'bi-calendar-check'}`}></i>
+                                            {isTicketEvent ? "Ticket Event" : "RSVP Event"}
+                                        </span>
+                                    </div>
+                                    <div className="detail-item">
                                         <span className="detail-label">Start Date:</span>
                                         <span className="detail-value">{eventDetails?.event_start_date || "Not set"}</span>
                                     </div>
@@ -738,10 +773,12 @@ const Manage_my_event = () => {
                                         <span className="detail-value">{eventDetails?.venue || "Not specified"}</span>
                                     </div>
 
-                                    {/* Guest Limit Section */}
+                                    {/* Guest Limit Section - FOR BOTH TICKET AND RSVP EVENTS */}
                                     <div className="guest-limit-section">
                                         <div className="guest-limit-header">
-                                            <span className="guest-limit-label">Guest Limit</span>
+                                            <span className="guest-limit-label">
+                                                {isTicketEvent ? "Total Capacity" : "Guest Limit"}
+                                            </span>
                                             <div className="guest-limit-display">
                                                 <span className="guest-count">{guestLimit}</span>
                                                 <span className="guest-max">/ {maxGuests}</span>
@@ -763,7 +800,9 @@ const Manage_my_event = () => {
                                         </div>
 
                                         <div className="guest-limit-input">
-                                            <label htmlFor="guest-limit-input">Or set exact number:</label>
+                                            <label htmlFor="guest-limit-input">
+                                                {isTicketEvent ? "Or set total capacity:" : "Or set guest limit:"}
+                                            </label>
                                             <input
                                                 id="guest-limit-input"
                                                 type="number"
@@ -777,13 +816,35 @@ const Manage_my_event = () => {
                                         <div className="guest-limit-info">
                                             <small>
                                                 {eventStatus === "Published"
-                                                    ? "Drag the slider or enter a number to update your guest limit"
-                                                    : "Drag the slider or enter a number to set your guest limit before publishing"
+                                                    ? `Drag the slider or enter a number to update your ${isTicketEvent ? 'total capacity' : 'guest limit'}`
+                                                    : `Drag the slider or enter a number to set your ${isTicketEvent ? 'total capacity' : 'guest limit'} before publishing`
                                                 }
                                                 (Max: {maxGuests})
+                                                {isTicketEvent && (
+                                                    <span className="ticket-capacity-note">
+                                                        <br />This sets the maximum number of attendees for your ticket event.
+                                                    </span>
+                                                )}
                                             </small>
                                         </div>
                                     </div>
+
+                                    {/* Ticket Event Info */}
+                                    {isTicketEvent && (
+                                        <div className="ticket-event-info">
+                                            <div className="ticket-icon">
+                                                <i className="bi bi-ticket-perforated"></i>
+                                            </div>
+                                            <div className="ticket-content">
+                                                <h4>Ticket Event Information</h4>
+                                                <p>This event uses tickets. The total capacity sets the maximum number of attendees.</p>
+                                                <p className="ticket-note">
+                                                    <i className="bi bi-info-circle"></i>
+                                                    Individual ticket type quantities should not exceed this total capacity.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -794,13 +855,13 @@ const Manage_my_event = () => {
                         {/* Show different buttons based on event status and guest limit changes */}
                         <div className="action-buttons-container">
                             {/* Show Publish button when event is not published AND guest limit has been changed */}
-                            {eventStatus !== "Published" && showUpdateButton && (
+                            {eventStatus !== "Published" && (showUpdateButton || guestLimit > 0) && (
                                 <button
                                     className={`publish-event-btn ${!currentPlan?.hasPackage || currentPlan?.available_events === 0 ? 'disabled' : ''}`}
                                     onClick={handlePublishEvent}
                                     disabled={!currentPlan?.hasPackage || currentPlan?.available_events === 0}
                                 >
-                                    Publish Event
+                                    {isTicketEvent ? "Publish Ticket Event" : "Publish Event"}
                                     {(!currentPlan?.hasPackage || currentPlan?.available_events === 0) && (
                                         <span className="tooltip">
                                             {!currentPlan?.hasPackage ? "No active package" : "No available events left"}
@@ -815,7 +876,7 @@ const Manage_my_event = () => {
                                     className="update-event-btn-large"
                                     onClick={handleUpdateEvent}
                                 >
-                                    Update Guest Limit
+                                    Update {isTicketEvent ? "Capacity" : "Guest Limit"}
                                 </button>
                             )}
 
@@ -823,7 +884,15 @@ const Manage_my_event = () => {
                             {eventStatus !== "Published" && !showUpdateButton && guestLimit === 0 && (
                                 <div className="publish-instruction">
                                     <i className="bi bi-info-circle"></i>
-                                    Set a guest limit above 0 to publish your event
+                                    Set a {isTicketEvent ? "total capacity" : "guest limit"} above 0 to publish your event
+                                </div>
+                            )}
+
+                            {/* Show instruction for ticket events */}
+                            {eventStatus !== "Published" && isTicketEvent && guestLimit > 0 && !showUpdateButton && (
+                                <div className="publish-instruction ticket-instruction">
+                                    <i className="bi bi-ticket-perforated"></i>
+                                    Ready to publish your ticket event with {guestLimit} total capacity
                                 </div>
                             )}
                         </div>
@@ -837,7 +906,7 @@ const Manage_my_event = () => {
                             <button className="close-popup" onClick={closePopup}>×</button>
                             <h2>{selectedPackage.name} Package</h2>
                             <div className="package-details">
-                                <p><strong>Max Guests:</strong> {selectedPackage.maxGuest === Infinity ? "Unlimited" : selectedPackage.maxGuest}</p>
+                                <p><strong>Max Guests/Capacity:</strong> {selectedPackage.maxGuest === Infinity ? "Unlimited" : selectedPackage.maxGuest}</p>
                                 <p><strong>Max Events:</strong> {selectedPackage.maxEvents === Infinity ? "Unlimited" : selectedPackage.maxEvents}</p>
                                 <p><strong>Price:</strong> R{selectedPackage.price}</p>
                                 <div className="features-list">

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./main.css";
 import "../../alert.css";
 import { useNavigate } from "react-router-dom";
-import { logOut, DashboardHeader, DashboardSidebar } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar, DashboardTicketSidebar } from "../components";
 import RSVPBinaryTree from "../utils/RSVPTree";
 import { canUseFeature, getPackageInfo } from "../utils/packageFeatures";
 
@@ -23,7 +23,7 @@ const RSVPResponses = () => {
     const [selectedGuestForMessage, setSelectedGuestForMessage] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [exportLoading, setExportLoading] = useState(false);
-
+    const [isTicketEvent, setIsTicketEvent] = useState(false);
     const [userPackage, setUserPackage] = useState(null);
     const [packageInfo, setPackageInfo] = useState(null);
 
@@ -106,11 +106,11 @@ const RSVPResponses = () => {
                     setUserPackage(data.userPackage);
                     setPackageInfo(getPackageInfo(data.userPackage));
                 } else {
-                     printAlert("You dont have a Package", "warning");
+                    printAlert("You dont have a Package", "warning");
                 }
             } catch (error) {
                 console.error("Error fetching user package:", error);
-              printAlert("System error fetching user package", "warning");
+                printAlert("System error fetching user package", "warning");
             }
         };
 
@@ -130,6 +130,7 @@ const RSVPResponses = () => {
         if (!eventId) return navigate("/eventsDashboard");
         fetchRSVPResponses(eventId);
         fetchEventStatusByID(eventId);
+        fetchEventDetails(eventId);
         // Poll for new RSVP responses (keeps admin view reasonably fresh)
         const pollInterval = setInterval(() => {
             fetchRSVPResponses(eventId);
@@ -169,6 +170,42 @@ const RSVPResponses = () => {
         }
     };
 
+   const fetchEventDetails = async (eventId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+
+            const formData = new FormData();
+            formData.append("function", "getEventById");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+            console.log("Event details response:", data);
+
+            if (data.success && data.events && data.events.length > 0) {
+                const event = data.events[0];
+
+                const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+                setIsTicketEvent(hasTickets);
+
+            } else {
+                console.error("No event found:", data.message);
+                
+            }
+
+        } catch (err) {
+            console.error("Error fetching event details:", err);
+           
+        } finally {
+            setLoading(false);
+        }
+    };
     const fetchEventStatusByID = async (eventId) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -541,11 +578,17 @@ const RSVPResponses = () => {
             />
 
             {/* SIDEBAR */}
-            <DashboardSidebar
-                isMobileOpen={sidebarOpen}
-                onClose={closeSidebar}
-                userPackage={userPackage}
-            />
+            {isTicketEvent ? (
+                <DashboardTicketSidebar
+                    isMobileOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            ) : (
+                <DashboardSidebar
+                    isMobileOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            )}
 
             {/* MAIN CONTENT */}
             <div className="dashboard-content ">
