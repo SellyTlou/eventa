@@ -180,23 +180,127 @@ function Pricing() {
             if (data.success && data.packages) {
                 const formattedBusinessPlans = data.packages.map(pkg => ({
                     id: pkg.id,
-                    name: pkg.name,
+                    name: pkg.name === 'Advanced' ? 'CUSTOM PLAN' : pkg.name,
                     monthlyPrice: pkg.price > 0 ? `R${pkg.price}` : 'Contact Sales',
-                    yearlyPrice: pkg.price > 0 ? `R${Math.round(pkg.price * 12 * 0.8)}` : 'Contact Sales', // 20% discount
-                    description: `Perfect for ${pkg.name.toLowerCase()}`,
+                    yearlyPrice: pkg.price > 0 ? `R${Math.round(pkg.price * 12 * 0.8)}` : 'Contact Sales',
+                    description: pkg.name === 'Advanced' ? 'For large-scale business events' : `Perfect for ${pkg.name.toLowerCase()}`,
                     isPopular: pkg.package_type === 'advance',
                     features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : [],
-                    ctaText: pkg.package_type === 'advance_plus' ? "GET IN TOUCH" : (pkg.price > 0 ? "Get started" : "Contact Sales"),
+                    ctaText: pkg.package_type === 'advance_plus' ? "GET IN TOUCH" : (pkg.name === 'Advanced' ? "" : (pkg.price > 0 ? "Get started" : "Contact Sales")),
                     ctaVariant: pkg.package_type === 'advance' ? "btn-create" : "btn-demo",
-                    isContactSales: pkg.price === 0 || pkg.price === '0.00'
+                    isContactSales: pkg.price === 0 || pkg.price === '0.00' || pkg.name === 'Advanced'
                 }));
-                console.log('Setting business plans:', formattedBusinessPlans);
-                setBusinessPlans(formattedBusinessPlans);
+
+                // Sort business plans to ensure CUSTOM PLAN is last
+                const sortedBusinessPlans = formattedBusinessPlans.sort((a, b) => {
+                    if (a.name === "CUSTOM PLAN") return 1;
+                    if (b.name === "CUSTOM PLAN") return -1;
+                    return 0;
+                });
+                
+                console.log('Setting business plans:', sortedBusinessPlans);
+                setBusinessPlans(sortedBusinessPlans);
             } else {
                 console.error('Failed to fetch business plans from pricing.js:', data.message);
+                // Use fallback with CUSTOM PLAN last
+                const fallbackPlans = [
+                    {
+                        name: "STARTER PLAN",
+                        monthlyPrice: "R649.00",
+                        yearlyPrice: "R7788.00",
+                        description: "Perfect for starter business events",
+                        isPopular: true,
+                        features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
+                        ctaText: "Get started",
+                        ctaVariant: "btn-create",
+                        isContactSales: false
+                    },
+                    {
+                        name: "INTERMEDIATE PLAN",
+                        monthlyPrice: "R2149.00",
+                        yearlyPrice: "R25788.00",
+                        description: "Perfect for intermediate business events",
+                        isPopular: false,
+                        features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
+                        ctaText: "Get started",
+                        ctaVariant: "btn-demo",
+                        isContactSales: false
+                    },
+                    {
+                        name: "ADVANCE PLUS PLAN",
+                        monthlyPrice: "Contact Sales",
+                        yearlyPrice: "Contact Sales",
+                        description: "Perfect for advanced business events",
+                        isPopular: false,
+                        features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
+                        ctaText: "GET IN TOUCH",
+                        ctaVariant: "btn-demo",
+                        isContactSales: true
+                    },
+                    {
+                        name: "CUSTOM PLAN",
+                        monthlyPrice: "Custom Pricing",
+                        yearlyPrice: "Custom Pricing",
+                        description: "For large-scale business events",
+                        isPopular: false,
+                        features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
+                        ctaText: "",
+                        ctaVariant: "btn-demo",
+                        isContactSales: true
+                    }
+                ];
+                setBusinessPlans(fallbackPlans);
             }
         } catch (err) {
             console.error("Error fetching business plans from pricing.js:", err);
+            // Use fallback on error too with CUSTOM PLAN last
+            const fallbackPlans = [
+                {
+                    name: "STARTER PLAN",
+                    monthlyPrice: "R649.00",
+                    yearlyPrice: "R7788.00",
+                    description: "Perfect for starter business events",
+                    isPopular: true,
+                    features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
+                    ctaText: "Get started",
+                    ctaVariant: "btn-create",
+                    isContactSales: false
+                },
+                {
+                    name: "INTERMEDIATE PLAN",
+                    monthlyPrice: "R2149.00",
+                    yearlyPrice: "R25788.00",
+                    description: "Perfect for intermediate business events",
+                    isPopular: false,
+                    features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
+                    ctaText: "Get started",
+                    ctaVariant: "btn-demo",
+                    isContactSales: false
+                },
+                {
+                    name: "ADVANCE PLUS PLAN",
+                    monthlyPrice: "Contact Sales",
+                    yearlyPrice: "Contact Sales",
+                    description: "Perfect for advanced business events",
+                    isPopular: false,
+                    features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
+                    ctaText: "GET IN TOUCH",
+                    ctaVariant: "btn-demo",
+                    isContactSales: true
+                },
+                {
+                    name: "CUSTOM PLAN",
+                    monthlyPrice: "Custom Pricing",
+                    yearlyPrice: "Custom Pricing",
+                    description: "For large-scale business events",
+                    isPopular: false,
+                    features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
+                    ctaText: "Contact Sales",
+                    ctaVariant: "btn-demo",
+                    isContactSales: true
+                }
+            ];
+            setBusinessPlans(fallbackPlans);
         }
     };
 
@@ -228,7 +332,7 @@ function Pricing() {
         "Personal Events": pricingPlans.map(plan => ({
             name: plan.name,
             monthlyPrice: plan.price,
-            yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`, // 40% discount
+            yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
             description: `Perfect for ${plan.name.toLowerCase()} events`,
             isPopular: plan.isPopular,
             features: plan.features,
@@ -272,20 +376,20 @@ function Pricing() {
                 isContactSales: false
             },
             {
-                name: "ADVANCE PLAN",
-                monthlyPrice: "R6999.00",
-                yearlyPrice: "R83988.00",
-                description: "Perfect for advance business events",
-                isPopular: false,
-                features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In"],
-                ctaText: "Get started",
-                ctaVariant: "btn-demo",
-                isContactSales: false
-            },
-            {
                 name: "ADVANCE PLUS PLAN",
                 monthlyPrice: "Contact Sales",
                 yearlyPrice: "Contact Sales",
+                description: "Perfect for advanced business events",
+                isPopular: false,
+                features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
+                ctaText: "GET IN TOUCH",
+                ctaVariant: "btn-demo",
+                isContactSales: true
+            },
+            {
+                name: "CUSTOM PLAN",
+                monthlyPrice: "Custom Pricing",
+                yearlyPrice: "Custom Pricing",
                 description: "For large-scale business events",
                 isPopular: false,
                 features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
@@ -354,11 +458,11 @@ function Pricing() {
     const faqItems = [
         {
             question: "What does the Basic plan include?",
-            answer: "Our Basic plan at R50/month includes event creation, up to 250 guests per event, 5 events total, email invitations, RSVP tracking, and essential event management tools. It's perfect for small to medium personal events and gatherings."
+            answer: "Our Basic plan at R200/month includes event creation, up to 100 guests per event, 6 events total, email invitations, RSVP tracking, and essential event management tools. It's perfect for small to medium personal events and gatherings."
         },
         {
             question: "Do you offer a free trial?",
-            answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R50/month to test our features. All plans include a 30-day money-back guarantee if you're not satisfied."
+            answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R200/month to test our features. we don't offer refunds."
         },
         {
             question: "Do I get a discount if I pay yearly instead of monthly?",
@@ -366,7 +470,7 @@ function Pricing() {
         },
         {
             question: "Can I cancel or change my plan at any time?",
-            answer: "Yes, you can upgrade, downgrade, or cancel your plan at any time. Changes take effect immediately, and we'll prorate any differences in billing."
+            answer: "Yes, you can upgrade, downgrade, or cancel your plan at any time. Changes take effect immediately, as for billing we don't do refunds"
         },
         {
             question: "Can I get a custom plan?",
@@ -485,74 +589,104 @@ function Pricing() {
                             {console.log('Active category:', activeCategory, 'Plans:', pricingCategories[activeCategory])}
                             <div className="row justify-content-center">
                                 {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
-                                    pricingCategories[activeCategory].map((plan, index) => {
-                                    const colClass = activeCategory === 'Selling Tickets' ? 'col-lg-4' : 'col-lg-3'; // 4 cards per row for Personal and Business
-                                    return (
-                                        <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
-                                            <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
-                                                {plan.isContactSales ? (
-                                                    <>
-                                                        <div className="enterprise-label large-green">Advanced</div>
-                                                        <div className="basic-label get-in-touch-label">Get in touch</div>
+                                    // Ensure CUSTOM PLAN is always last when rendering
+                                    [...pricingCategories[activeCategory]]
+                                        .sort((a, b) => {
+                                            if (a.name === "CUSTOM PLAN") return 1;
+                                            if (b.name === "CUSTOM PLAN") return -1;
+                                            return 0;
+                                        })
+                                        .map((plan, index) => {
+                                        const colClass = activeCategory === 'Selling Tickets' ? 'col-lg-4' : 'col-lg-3';
+                                        return (
+                                            <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
+                                                <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
+                                                    {plan.isContactSales ? (
+                                                        <>
+                                                            {/* Show different labels for ADVANCE PLUS PLAN vs CUSTOM PLAN */}
+                                                            {plan.name === "ADVANCE PLUS PLAN" ? (
+                                                                <>
+                                                                    <div className="enterprise-label large-green">Advanced</div>
+                                                                    <div className="basic-label get-in-touch-label">Get in touch</div>
+                                                                </>
+                                                            ) : plan.name === "CUSTOM PLAN" ? (
+                                                                <>
+                                                                    <div className="enterprise-label large-green">CUSTOM PLAN</div>
+                                                                    {/* No second label for CUSTOM PLAN */}
+                                                                </>
+                                                            ) : (
+                                                                <div className="enterprise-label large-green">Enterprise</div>
+                                                            )}
 
-                                                        <ul className="features-list contact-features">
-                                                            {plan.features.map((feature, featureIndex) => (
-                                                                <li key={featureIndex}>
-                                                                    <i className="bi bi-check2-circle text-success me-2"></i>
-                                                                    {feature}
-                                                                </li>
-                                                            ))}
-                                                        </ul>
+                                                            <ul className="features-list contact-features">
+                                                                {plan.features.map((feature, featureIndex) => (
+                                                                    <li key={featureIndex}>
+                                                                        <i className="bi bi-check2-circle text-success me-2"></i>
+                                                                        {feature}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
 
-                                                        <div className="contact-cta-wrapper">
-                                                            <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
-                                                                Coming soon
+                                                            <div className="contact-cta-wrapper">
+                                                                {/* For CUSTOM PLAN, show button instead of "Coming soon" */}
+                                                                {plan.name === "CUSTOM PLAN" ? (
+                                                                    <button
+                                                                        className="btn btn-create w-100"
+                                                                        onClick={() => setShowContactSalesModal(true)}
+                                                                    >
+                                                                        Get in touch
+                                                                    </button>
+                                                                ) : plan.name === "ADVANCE PLUS PLAN" ? (
+                                                                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
+                                                                        Coming soon
+                                                                    </div>
+                                                                ) : null}
                                                             </div>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        {plan.isPopular && (
-                                                            <div className="popular-badge">MOST POPULAR</div>
-                                                        )}
-                                                        <h3>{plan.name}</h3>
-                                                        <p className="plan-description">{plan.description}</p>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {plan.isPopular && (
+                                                                <div className="popular-badge">MOST POPULAR</div>
+                                                            )}
+                                                            <h3>{plan.name}</h3>
+                                                            <p className="plan-description">{plan.description}</p>
 
-                                                        <div className="price-tag">
-                                                            <span className="price">
-                                                                {billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
-                                                            </span>
-                                                            <span className="duration">
-                                                                {billingCycle === "monthly" ? "/month" : "/year"}
-                                                            </span>
-                                                        </div>
-
-                                                        {billingCycle === "yearly" && plan.monthlyPrice !== "Free" && (
-                                                            <div className="savings-text">
-                                                                {calculateYearlySavings(plan.monthlyPrice)}
+                                                            <div className="price-tag">
+                                                                <span className="price">
+                                                                    {billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                                                                </span>
+                                                                <span className="duration">
+                                                                    {billingCycle === "monthly" ? "/month" : "/year"}
+                                                                </span>
                                                             </div>
-                                                        )}
 
-                                                        <ul className="features-list">
-                                                            {plan.features.map((feature, featureIndex) => (
-                                                                <li key={featureIndex}>
-                                                                    <i className="bi bi-check2-circle"></i> {feature}
-                                                                </li>
-                                                            ))}
-                                                        </ul>
+                                                            {billingCycle === "yearly" && plan.monthlyPrice !== "Free" && (
+                                                                <div className="savings-text">
+                                                                    {calculateYearlySavings(plan.monthlyPrice)}
+                                                                </div>
+                                                            )}
 
-                                                        <button
-                                                            className={`btn ${plan.ctaVariant} w-100`}
-                                                            onClick={handleCreateEvent}
-                                                        >
-                                                            {plan.ctaText}
-                                                        </button>
-                                                    </>
-                                                )}
+                                                            <ul className="features-list">
+                                                                {plan.features.map((feature, featureIndex) => (
+                                                                    <li key={featureIndex}>
+                                                                        <i className="bi bi-check2-circle"></i> {feature}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+
+                                                            <button
+                                                                className={`btn ${plan.ctaVariant} w-100`}
+                                                                onClick={handleCreateEvent}
+                                                            >
+                                                                {plan.ctaText}
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })) : (
+                                        );
+                                    })
+                                ) : (
                                     <div className="col-12 text-center">
                                         <p>Loading business packages...</p>
                                     </div>
