@@ -3093,6 +3093,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [packageFilter, setPackageFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('all');
+    const [userTypeFilter, setUserTypeFilter] = useState('all'); // 'all', 'personal', 'business'
     const [sortBy, setSortBy] = useState('payment_date');
     const [sortOrder, setSortOrder] = useState('desc');
     const [selectedPayment, setSelectedPayment] = useState(null);
@@ -3288,6 +3289,29 @@ useEffect(() => {
         }
     };
 
+    // Calculate personal revenue
+    const getPersonalRevenue = () => {
+        if (!paymentHistory || !Array.isArray(paymentHistory)) return 0;
+        return paymentHistory
+            .filter(p => p.account_type === 'personal' && p.payment_status === 'completed')
+            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    };
+
+    // Calculate business revenue
+    const getBusinessRevenue = () => {
+        if (!paymentHistory || !Array.isArray(paymentHistory)) return 0;
+        return paymentHistory
+            .filter(p => p.account_type === 'business' && p.payment_status === 'completed')
+            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    };
+
+    // Calculate filtered revenue (based on current filters)
+    const getFilteredRevenue = () => {
+        return filteredPayments
+            .filter(p => p.payment_status === 'completed')
+            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    };
+
     const filteredPayments = useMemo(() => {
         if (!paymentHistory || !Array.isArray(paymentHistory)) return [];
 
@@ -3309,6 +3333,10 @@ useEffect(() => {
 
         if (packageFilter !== 'all') {
             filtered = filtered.filter(payment => payment.package_type === packageFilter);
+        }
+
+        if (userTypeFilter !== 'all') {
+            filtered = filtered.filter(payment => payment.account_type === userTypeFilter);
         }
 
         if (dateFilter !== 'all') {
@@ -3357,7 +3385,7 @@ useEffect(() => {
         });
 
         return filtered;
-    }, [paymentHistory, searchQuery, statusFilter, packageFilter, dateFilter, sortBy, sortOrder]);
+    }, [paymentHistory, searchQuery, statusFilter, packageFilter, dateFilter, userTypeFilter, sortBy, sortOrder]);
 
     const handleSort = (column) => {
         if (sortBy === column) {
@@ -3692,17 +3720,7 @@ const parseFeatures = (features) => {
                             <div className="stat-content">
                                 <label>Total Active Users</label>
                                 <p className="stat-number">{getTotalActiveUsers()}</p>
-                                <small>Including FREE tier</small>
-                            </div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-icon">
-                                <i className="bi bi-credit-card"></i>
-                            </div>
-                            <div className="stat-content">
-                                <label>Paid Subscriptions</label>
-                                <p className="stat-number">{getPaidSubscriptions()}</p>
-                                <small>Premium plans only</small>
+                                <small>All active subscriptions</small>
                             </div>
                         </div>
                     </div>
@@ -3832,6 +3850,65 @@ const parseFeatures = (features) => {
                 </>
             ) : (
                 <div className="payment-history-section">
+                    {/* User Type Filter Buttons */}
+                    <div className="user-type-filter-buttons" style={{
+                        display: 'flex',
+                        gap: '10px',
+                        marginBottom: '20px',
+                        padding: '15px',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '8px'
+                    }}>
+                        <button
+                            className={`filter-btn ${userTypeFilter === 'all' ? 'active' : ''}`}
+                            onClick={() => setUserTypeFilter('all')}
+                            style={{
+                                padding: '10px 20px',
+                                border: 'none',
+                                borderRadius: '6px',
+                                backgroundColor: userTypeFilter === 'all' ? '#667eea' : '#e0e0e0',
+                                color: userTypeFilter === 'all' ? 'white' : '#333',
+                                cursor: 'pointer',
+                                fontWeight: userTypeFilter === 'all' ? 'bold' : 'normal',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            <i className="bi bi-globe"></i> All Users
+                        </button>
+                        <button
+                            className={`filter-btn ${userTypeFilter === 'personal' ? 'active' : ''}`}
+                            onClick={() => setUserTypeFilter('personal')}
+                            style={{
+                                padding: '10px 20px',
+                                border: 'none',
+                                borderRadius: '6px',
+                                backgroundColor: userTypeFilter === 'personal' ? '#667eea' : '#e0e0e0',
+                                color: userTypeFilter === 'personal' ? 'white' : '#333',
+                                cursor: 'pointer',
+                                fontWeight: userTypeFilter === 'personal' ? 'bold' : 'normal',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            <i className="bi bi-person"></i> Personal
+                        </button>
+                        <button
+                            className={`filter-btn ${userTypeFilter === 'business' ? 'active' : ''}`}
+                            onClick={() => setUserTypeFilter('business')}
+                            style={{
+                                padding: '10px 20px',
+                                border: 'none',
+                                borderRadius: '6px',
+                                backgroundColor: userTypeFilter === 'business' ? '#667eea' : '#e0e0e0',
+                                color: userTypeFilter === 'business' ? 'white' : '#333',
+                                cursor: 'pointer',
+                                fontWeight: userTypeFilter === 'business' ? 'bold' : 'normal',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            <i className="bi bi-building"></i> Business
+                        </button>
+                    </div>
+
                     <div className="revenue-stats-grid">
                         <div className="revenue-card total">
                             <div className="revenue-icon">
@@ -3840,51 +3917,38 @@ const parseFeatures = (features) => {
                             <div className="revenue-content">
                                 <h3>Total Revenue</h3>
                                 <p className="revenue-amount">
-                                    {revenueData ? formatCurrency(revenueData.total_revenue) : 'Loading...'}
+                                    {userTypeFilter === 'all' 
+                                        ? (revenueData ? formatCurrency(revenueData.total_revenue) : 'Loading...')
+                                        : formatCurrency(getFilteredRevenue())
+                                    }
                                 </p>
-                                <span className="revenue-trend">All time</span>
+                                <span className="revenue-trend">{userTypeFilter === 'all' ? 'All time' : `${userTypeFilter} users`}</span>
                             </div>
                         </div>
 
                         <div className="revenue-card monthly">
                             <div className="revenue-icon">
-                                <i className="bi bi-graph-up"></i>
+                                <i className="bi bi-person"></i>
                             </div>
                             <div className="revenue-content">
-                                <h3>This Month</h3>
+                                <h3>Personal Subscriptions</h3>
                                 <p className="revenue-amount">
-                                    {revenueData ? formatCurrency(revenueData.current_month_revenue) : 'Loading...'}
+                                    {paymentHistory.filter(p => p.account_type === 'personal' && p.payment_status === 'completed').length}
                                 </p>
-                                <span className="revenue-trend">Current month</span>
+                                <span className="revenue-trend">Active personal users</span>
                             </div>
                         </div>
 
                         <div className="revenue-card pending">
                             <div className="revenue-icon">
-                                <i className="bi bi-clock"></i>
+                                <i className="bi bi-building"></i>
                             </div>
                             <div className="revenue-content">
-                                <h3>Pending Payments</h3>
+                                <h3>Business Subscriptions</h3>
                                 <p className="revenue-amount">
-                                    {revenueData ?
-                                        revenueData.payment_status_counts.find(s => s.payment_status === 'pending')?.count || 0
-                                        : 'Loading...'
-                                    }
+                                    {paymentHistory.filter(p => p.account_type === 'business' && p.payment_status === 'completed').length}
                                 </p>
-                                <span className="revenue-trend">Awaiting processing</span>
-                            </div>
-                        </div>
-
-                        <div className="revenue-card users">
-                            <div className="revenue-icon">
-                                <i className="bi bi-people"></i>
-                            </div>
-                            <div className="revenue-content">
-                                <h3>Active Subscriptions</h3>
-                                <p className="revenue-amount">
-                                    {Object.values(activeSubscriptions).reduce((sum, count) => sum + count, 0)}
-                                </p>
-                                <span className="revenue-trend">Total active users</span>
+                                <span className="revenue-trend">Active business users</span>
                             </div>
                         </div>
                     </div>
@@ -3922,11 +3986,20 @@ const parseFeatures = (features) => {
                                     onChange={(e) => setPackageFilter(e.target.value)}
                                 >
                                     <option value="all">All Packages</option>
-                                    {allPlans.map(plan => (
-                                        <option key={plan.package_id} value={plan.package_type}>
-                                            {formatPlanName(plan.package_type)}
-                                        </option>
-                                    ))}
+                                    <optgroup label="Personal Packages">
+                                        {allPlans.map(plan => (
+                                            <option key={plan.package_id} value={plan.package_type}>
+                                                {formatPlanName(plan.package_type)}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Business Packages">
+                                        {businessPlans.map(plan => (
+                                            <option key={plan.id} value={plan.name}>
+                                                {plan.name.replace(' Business', '').replace(' business', '')}
+                                            </option>
+                                        ))}
+                                    </optgroup>
                                 </select>
 
                                 <select
@@ -3968,6 +4041,9 @@ const parseFeatures = (features) => {
                                     <span className="sortable" onClick={() => handleSort('user_name')}>
                                         User {sortBy === 'user_name' && (sortOrder === 'asc' ? '↑' : '↓')}
                                     </span>
+                                    <span className="sortable" onClick={() => handleSort('account_type')}>
+                                        User Type {sortBy === 'account_type' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                    </span>
                                     <span className="sortable" onClick={() => handleSort('package_type')}>
                                         Package {sortBy === 'package_type' && (sortOrder === 'asc' ? '↑' : '↓')}
                                     </span>
@@ -3983,6 +4059,18 @@ const parseFeatures = (features) => {
                                         <span className="user-info">
                                             <div className="user-name">{payment.user_name || 'N/A'}</div>
                                             <div className="user-email">{payment.user_email}</div>
+                                        </span>
+                                        <span>
+                                            <span className={`user-type-badge ${payment.account_type}`} style={{
+                                                padding: '4px 12px',
+                                                borderRadius: '20px',
+                                                fontSize: '12px',
+                                                fontWeight: 'bold',
+                                                backgroundColor: payment.account_type === 'business' ? '#e7f3ff' : '#f0e7ff',
+                                                color: payment.account_type === 'business' ? '#0066cc' : '#7c3aed'
+                                            }}>
+                                                {payment.account_type === 'business' ? '🏢 Business' : '👤 Personal'}
+                                            </span>
                                         </span>
                                         <span>
                                             <span className="package-badge">
