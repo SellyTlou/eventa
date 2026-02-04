@@ -449,6 +449,61 @@ function verifyRecaptcha($secretKey, $responseToken)
 if (!isset($_POST['function'])) {
     echo json_encode(["error" => "No function specified"]);
     exit;
+
+if ($fun === "updateUserBusinessPackage") {
+    $user_id = $_POST['user_id'] ?? '';
+    $business_package_id = $_POST['business_package_id'] ?? '';
+    
+    if (empty($user_id) || empty($business_package_id)) {
+        echo json_encode(["success" => false, "message" => "User ID and Package ID required"]);
+        exit;
+    }
+    
+    try {
+        error_log("updateUserBusinessPackage called: user_id={$user_id}, business_package_id={$business_package_id}");
+        $pdo->beginTransaction();
+        
+        // First, expire any existing active package
+        $stmt = $pdo->prepare("UPDATE user_business_packages SET status = 'expired' 
+                               WHERE user_id = :user_id AND status = 'active'");
+        $stmt->execute([':user_id' => $user_id]);
+        
+        // Get package details to set event_limit
+        $stmt = $pdo->prepare("SELECT max_events FROM business_packages WHERE id = :package_id");
+        $stmt->execute([':package_id' => $business_package_id]);
+        $package = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("updateUserBusinessPackage package details: " . json_encode($package));
+        
+        // Insert new package (custom plan might have unlimited events)
+        $event_limit = ($package && $package['max_events'] == 0) ? 999999 : ($package['max_events'] ?? 0);
+        $expiry_date = date('Y-m-d H:i:s', strtotime('+1 month'));
+        
+        $stmt = $pdo->prepare("INSERT INTO user_business_packages 
+                               (user_id, business_package_id, event_limit, expiry_date, status) 
+                               VALUES (:user_id, :business_package_id, :event_limit, :expiry_date, 'active')");
+        
+        $success = $stmt->execute([
+            ':user_id' => $user_id,
+            ':business_package_id' => $business_package_id,
+            ':event_limit' => $event_limit,
+            ':expiry_date' => $expiry_date
+        ]);
+        
+        if ($success) {
+            error_log("updateUserBusinessPackage success for user_id={$user_id}, business_package_id={$business_package_id}");
+            $pdo->commit();
+            echo json_encode(["success" => true, "message" => "Business package updated successfully"]);
+        } else {
+            error_log("updateUserBusinessPackage failed to insert new row");
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Failed to update business package"]);
+        }
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
 }
 
 $fun = $_POST['function'];
@@ -5050,6 +5105,7 @@ if ($fun === "updateTicketStatus") {
     exit;
 }
 
+/*
 // Business Packages Functions
 if ($fun === "getBusinessPackages") {
     try {
@@ -5067,7 +5123,7 @@ if ($fun === "getBusinessPackages") {
         echo json_encode(["success" => false, "message" => "Error fetching business packages: " . $e->getMessage()]);
     }
     exit;
-}
+}*/
 
 if ($fun === "updateBusinessPackage") {
     $id = $_POST['id'] ?? '';
@@ -5115,6 +5171,275 @@ if ($fun === "updateBusinessPackage") {
     }
     exit;
 }
+
+if ($fun === "getUserBusinessPackage") {
+    $user_id = $_POST['user_id'] ?? '';
+    
+    if (empty($user_id)) {
+        echo json_encode(["success" => false, "message" => "User ID required"]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("SELECT ubp.*, bp.package_type, bp.name, bp.max_guests, bp.max_events, bp.price 
+                               FROM user_business_packages ubp 
+                               JOIN business_packages bp ON ubp.business_package_id = bp.id 
+                               WHERE ubp.user_id = :user_id AND ubp.status = 'active' 
+                               ORDER BY ubp.created_at DESC LIMIT 1");
+        $stmt->execute([':user_id' => $user_id]);
+        
+        if ($stmt->rowCount() > 0) {
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+            echo json_encode(["success" => true, "userBusinessPackage" => $package]);
+        } else {
+            echo json_encode(["success" => false, "message" => "No active business package found"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+// BUSINESS PACKAGES FUNCTIONS - ADD AFTER THE EXISTING PERSONAL PACKAGE FUNCTIONS
+
+if ($fun === "getUserBusinessPackage") {
+    $user_id = $_POST['user_id'] ?? '';
+    
+    if (empty($user_id)) {
+        echo json_encode(["success" => false, "message" => "User ID required"]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("SELECT ubp.*, bp.package_type, bp.name, bp.max_guests, bp.max_events, bp.price 
+                               FROM user_business_packages ubp 
+                               JOIN business_packages bp ON ubp.business_package_id = bp.id 
+                               WHERE ubp.user_id = :user_id AND ubp.status = 'active' 
+                               ORDER BY ubp.created_at DESC LIMIT 1");
+        $stmt->execute([':user_id' => $user_id]);
+        
+        if ($stmt->rowCount() > 0) {
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+            echo json_encode(["success" => true, "userBusinessPackage" => $package]);
+        } else {
+            echo json_encode(["success" => false, "message" => "No active business package found"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "getBusinessPackages") {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM business_packages ORDER BY price ASC");
+        $stmt->execute();
+        $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode(["success" => true, "packages" => $packages]);
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "getBusinessPackageById") {
+    $package_id = $_POST['package_id'] ?? '';
+    
+    if (!$package_id) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing package ID",
+        ]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM business_packages WHERE id = :package_id LIMIT 1");
+        $stmt->execute([":package_id" => $package_id]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("getBusinessPackageById called: package_id={$package_id}");
+        error_log("getBusinessPackageById result: " . json_encode($data));
+        
+        echo json_encode([
+            "success" => true,
+            "package" => $data,
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "assignBusinessPackage") {
+    $user_id = $_POST['user_id'] ?? '';
+    $business_package_id = $_POST['business_package_id'] ?? '';
+    
+    if (empty($user_id) || empty($business_package_id)) {
+        echo json_encode(["success" => false, "message" => "User ID and Package ID required"]);
+        exit;
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // First, expire any existing active package
+        $stmt = $pdo->prepare("UPDATE user_business_packages SET status = 'expired' 
+                               WHERE user_id = :user_id AND status = 'active'");
+        $stmt->execute([':user_id' => $user_id]);
+        
+        // Get package details to set event_limit
+        $stmt = $pdo->prepare("SELECT max_events FROM business_packages WHERE id = :package_id");
+        $stmt->execute([':package_id' => $business_package_id]);
+        $package = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Insert new package (custom plan might have unlimited events)
+        $event_limit = ($package && $package['max_events'] == 0) ? 999999 : ($package['max_events'] ?? 0);
+        $expiry_date = date('Y-m-d H:i:s', strtotime('+1 month'));
+        
+        $stmt = $pdo->prepare("INSERT INTO user_business_packages 
+                               (user_id, business_package_id, event_limit, expiry_date, status) 
+                               VALUES (:user_id, :business_package_id, :event_limit, :expiry_date, 'active')");
+        
+        $success = $stmt->execute([
+            ':user_id' => $user_id,
+            ':business_package_id' => $business_package_id,
+            ':event_limit' => $event_limit,
+            ':expiry_date' => $expiry_date
+        ]);
+        
+        if ($success) {
+            $pdo->commit();
+            echo json_encode(["success" => true, "message" => "Business package assigned successfully"]);
+        } else {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Failed to assign business package"]);
+        }
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "recordBusinessPayment") {
+    $user_id = $_POST['user_id'] ?? '';
+    $business_package_id = $_POST['business_package_id'] ?? '';
+    $amount = $_POST['amount'] ?? 0;
+    $payment_method = $_POST['payment_method'] ?? '';
+    $transaction_id = $_POST['transaction_id'] ?? uniqid('BP', true);
+    
+    error_log("recordBusinessPayment called: user_id={$user_id}, business_package_id={$business_package_id}, amount={$amount}, payment_method={$payment_method}, transaction_id={$transaction_id}");
+
+    if (empty($user_id) || empty($business_package_id) || empty($amount)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("INSERT INTO business_package_transactions 
+                               (user_id, business_package_id, amount, payment_method, transaction_id, status) 
+                               VALUES (:user_id, :business_package_id, :amount, :payment_method, :transaction_id, 'success')");
+        
+        $success = $stmt->execute([
+            ':user_id' => $user_id,
+            ':business_package_id' => $business_package_id,
+            ':amount' => $amount,
+            ':payment_method' => $payment_method,
+            ':transaction_id' => $transaction_id
+        ]);
+        error_log("recordBusinessPayment execute returned: " . var_export($success, true));
+        
+        if ($success) {
+            error_log("recordBusinessPayment success for transaction_id={$transaction_id}");
+            echo json_encode(["success" => true, "message" => "Payment recorded successfully"]);
+        } else {
+            $err = $stmt->errorInfo();
+            error_log("recordBusinessPayment failed: " . json_encode($err));
+            echo json_encode(["success" => false, "message" => "Failed to record payment"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "updateBusinessEventCount") {
+    $user_id = $_POST['user_id'] ?? '';
+    $event_id = $_POST['event_id'] ?? '';
+    $business_package_id = $_POST['business_package_id'] ?? '';
+    
+    if (!$user_id || !$event_id || !$business_package_id) {
+        echo json_encode(["success" => false, "message" => "Missing required data"]);
+        exit;
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // 1. Lock user business package row
+        $checkStmt = $pdo->prepare("SELECT event_used, event_limit FROM user_business_packages WHERE user_id = :user_id FOR UPDATE");
+        $checkStmt->execute([':user_id' => $user_id]);
+        $package = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$package) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "User business package not found"]);
+            exit;
+        }
+        
+        // 2. Check if event is already published
+        $eventStmt = $pdo->prepare("SELECT published FROM events WHERE event_id = :event_id FOR UPDATE");
+        $eventStmt->execute([':event_id' => $event_id]);
+        $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$event) {
+            $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "Event not found"]);
+            exit;
+        }
+        
+        $isPublished = !empty($event['published']) && $event['published'] != '0';
+        
+        // 3. Only increment if NOT published
+        if (!$isPublished) {
+            if ($package['event_used'] >= $package['event_limit']) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Event limit reached"]);
+                exit;
+            }
+            
+            $updateStmt = $pdo->prepare("UPDATE user_business_packages SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = :user_id");
+            $updateStmt->execute([':user_id' => $user_id]);
+        }
+        
+        // 4. Always assign package_id to the event
+        $assignStmt = $pdo->prepare("UPDATE events SET package_id = :package_id WHERE event_id = :event_id");
+        $assignStmt->execute([
+            ":package_id" => $business_package_id,
+            ":event_id" => $event_id,
+        ]);
+        
+        $pdo->commit();
+        
+        $action = $isPublished ? "Business package assigned (already published)" : "Business event count incremented and package assigned";
+        echo json_encode([
+            "success" => true,
+            "message" => $action,
+            "incremented" => !$isPublished,
+        ]);
+        
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+// ticket functions
 
 if ($fun === "getTicketEvents") {
 

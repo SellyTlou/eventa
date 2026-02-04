@@ -326,16 +326,16 @@ function CreateEvent() {
   };
 
   const handleBack = () => {
-    if (currentStep === 2 && step2SubStep > 1) {
-      setStep2SubStep(step2SubStep - 1);
-    } else if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    } else {
-      window.history.back();
-    }
-    setError("");
-    setFieldErrors({});
-  };
+  if (currentStep === 2 && step2SubStep > 1) {
+    setStep2SubStep(step2SubStep - 1);
+  } else if (currentStep > 1) {
+    setCurrentStep(currentStep - 1);
+  } else {
+    navigate(-1); 
+  }
+  setError("");
+  setFieldErrors({});
+};
 
   const shouldShowError = (fieldName) => {
     return touched[fieldName] && fieldErrors[fieldName];

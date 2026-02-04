@@ -66,7 +66,10 @@ const GuestInsights = () => {
         const eventId = localStorage.getItem("selectedEventId");
         if (!eventId) {
             printAlert("No event selected", "warning");
-            navigate("/eventsDashboard");
+            const storedUser = localStorage.getItem('user');
+            const user = storedUser ? JSON.parse(storedUser) : null;
+            const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+            navigate(dashPath);
             return;
         }
         fetchEventData(eventId);
