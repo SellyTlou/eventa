@@ -856,24 +856,31 @@ if ($fun === "saveEvent") {
     $eventUrlImage = $_POST['eventUrlImage'] ?? '';
     $eventDesignData = $_POST['eventDesignData'] ?? '';
 
-    // Ticket data
+    // Ticket data - Updated for new structure with quantities
     $hasTickets = isset($_POST['hasTickets']) ? intval($_POST['hasTickets']) : 0;
     $eventInfo = $_POST['eventInfo'] ?? '';
+    
+    // Individual ticket fields for backward compatibility
     $earlyBirdPrice = isset($_POST['earlyBirdPrice']) ? floatval($_POST['earlyBirdPrice']) : 0.00;
     $earlyBirdQuantity = isset($_POST['earlyBirdQuantity']) ? intval($_POST['earlyBirdQuantity']) : 0;
     $generalPrice = isset($_POST['generalPrice']) ? floatval($_POST['generalPrice']) : 0.00;
+    $generalQuantity = isset($_POST['generalQuantity']) ? intval($_POST['generalQuantity']) : 0;
     $vipPrice = isset($_POST['vipPrice']) ? floatval($_POST['vipPrice']) : 0.00;
+    $vipQuantity = isset($_POST['vipQuantity']) ? intval($_POST['vipQuantity']) : 0;
     $vvipPrice = isset($_POST['vvipPrice']) ? floatval($_POST['vvipPrice']) : 0.00;
+    $vvipQuantity = isset($_POST['vvipQuantity']) ? intval($_POST['vvipQuantity']) : 0;
+    
     $ticketConfig = $_POST['ticketConfig'] ?? '{}';
 
-    // Log image data for debugging
-    error_log("saveEvent - Image data type: " . gettype($eventUrlImage));
-    error_log("saveEvent - Image data length: " . strlen($eventUrlImage));
-    if (!empty($eventUrlImage)) {
-        error_log("saveEvent - Image data starts with: " . substr($eventUrlImage, 0, 50));
-    }
+    // Log ticket data for debugging
     error_log("saveEvent - Has Tickets: " . $hasTickets);
-    error_log("saveEvent - Ticket Config: " . substr($ticketConfig, 0, 100));
+    error_log("saveEvent - Ticket Config (first 200 chars): " . substr($ticketConfig, 0, 200));
+    
+    // Log individual ticket quantities
+    error_log("saveEvent - Early Bird Qty: " . $earlyBirdQuantity);
+    error_log("saveEvent - General Qty: " . $generalQuantity);
+    error_log("saveEvent - VIP Qty: " . $vipQuantity);
+    error_log("saveEvent - VVIP Qty: " . $vvipQuantity);
 
     $createdAt = date('Y-m-d H:i:s');
 
@@ -911,7 +918,7 @@ if ($fun === "saveEvent") {
         ]);
 
         if ($checkStmt->fetch()) {
-            // Update existing event with ticket data
+            // Update existing event with updated ticket data
             $stmt = $pdo->prepare("UPDATE events SET
                 event_name = :event_name,
                 event_start_date = :event_start_date,
@@ -926,8 +933,11 @@ if ($fun === "saveEvent") {
                 early_bird_price = :early_bird_price,
                 early_bird_quantity = :early_bird_quantity,
                 general_price = :general_price,
+                general_quantity = :general_quantity,
                 vip_price = :vip_price,
+                vip_quantity = :vip_quantity,
                 vvip_price = :vvip_price,
+                vvip_quantity = :vvip_quantity,
                 ticket_config = :ticket_config,
                 updated_at = :updated_at
                 WHERE event_id = :event_id AND user_id = :user_id
@@ -988,32 +998,30 @@ if ($fun === "saveEvent") {
                 ':early_bird_price' => $earlyBirdPrice,
                 ':early_bird_quantity' => $earlyBirdQuantity,
                 ':general_price' => $generalPrice,
+                ':general_quantity' => $generalQuantity,
                 ':vip_price' => $vipPrice,
+                ':vip_quantity' => $vipQuantity,
                 ':vvip_price' => $vvipPrice,
+                ':vvip_quantity' => $vvipQuantity,
                 ':ticket_config' => $ticketConfig,
                 ':updated_at' => $createdAt,
                 ':event_id' => $eventID,
                 ':user_id' => $userID,
             ]);
 
-            // LOG THE ACTIVITY - Event updated
-            // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-            // $logStmt->execute([
-            //     ':user_id'     => $userID,
-            //     ':action'      => 'Event Updated',
-            //     ':description' => "Event '{$eventName}' was updated",
-            // ]);
         } else {
-            // Insert new event with ticket data
+            // Insert new event with updated ticket data
             $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
                    event_end_date, event_end_time, event_location, event_image, design_data,
                    has_tickets, event_info, early_bird_price, early_bird_quantity,
-                   general_price, vip_price, vvip_price, ticket_config, created_at, updated_at";
+                   general_price, general_quantity, vip_price, vip_quantity,
+                   vvip_price, vvip_quantity, ticket_config, created_at, updated_at";
 
             $values = ":user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
                   :event_end_date, :event_end_time, :event_location, :event_image, :design_data,
                   :has_tickets, :event_info, :early_bird_price, :early_bird_quantity,
-                  :general_price, :vip_price, :vvip_price, :ticket_config, :created_at, :updated_at";
+                  :general_price, :general_quantity, :vip_price, :vip_quantity,
+                  :vvip_price, :vvip_quantity, :ticket_config, :created_at, :updated_at";
 
             $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
 
@@ -1076,20 +1084,15 @@ if ($fun === "saveEvent") {
                 ':early_bird_price' => $earlyBirdPrice,
                 ':early_bird_quantity' => $earlyBirdQuantity,
                 ':general_price' => $generalPrice,
+                ':general_quantity' => $generalQuantity,
                 ':vip_price' => $vipPrice,
+                ':vip_quantity' => $vipQuantity,
                 ':vvip_price' => $vvipPrice,
+                ':vvip_quantity' => $vvipQuantity,
                 ':ticket_config' => $ticketConfig,
                 ':created_at' => $createdAt,
                 ':updated_at' => $createdAt,
             ]);
-
-            // LOG THE ACTIVITY - Event created
-            // $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-            // $logStmt->execute([
-            //     ':user_id'     => $userID,
-            //     ':action'      => 'Event Created',
-            //     ':description' => "New event '{$eventName}' created by {$userName}",
-            // ]);
         }
 
         echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
@@ -1131,6 +1134,224 @@ if ($fun === "getusercount") {
         ]);
     }
 
+    exit;
+}
+if ($fun === "getEventTickets") {
+    $event_id = $_POST['event_id'] ?? '';
+    
+    if (empty($event_id)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Event ID is required"
+        ]);
+        exit;
+    }
+    
+    try {
+        // Query the events table to get ticket data
+        $stmt = $pdo->prepare("
+            SELECT 
+                event_id,
+                has_tickets,
+                event_info,
+                early_bird_price,
+                early_bird_quantity,
+                general_price,
+                general_quantity,
+                vip_price,
+                vip_quantity,
+                vvip_price,
+                vvip_quantity,
+                ticket_config,
+                guest_limit
+            FROM events 
+            WHERE event_id = :event_id
+        ");
+        
+        $stmt->execute([':event_id' => $event_id]);
+        $event = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$event) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Event not found"
+            ]);
+            exit;
+        }
+        
+        // Check if it's a ticket event
+        if ($event['has_tickets'] != 1) {
+            echo json_encode([
+                "success" => false,
+                "message" => "This is not a ticket event"
+            ]);
+            exit;
+        }
+        
+        // Prepare tickets array based on your save structure
+        $tickets = [];
+        
+        // Early Bird Ticket
+        if (!empty($event['early_bird_price']) && $event['early_bird_quantity'] > 0) {
+            $tickets[] = [
+                'ticket_type' => 'Early Bird',
+                'price' => floatval($event['early_bird_price']),
+                'quantity_available' => intval($event['early_bird_quantity']),
+                'description' => 'Limited early bird tickets',
+                'type_key' => 'earlyBird'
+            ];
+        }
+        
+        // General Admission Ticket
+        if (!empty($event['general_price']) && $event['general_quantity'] > 0) {
+            $tickets[] = [
+                'ticket_type' => 'General Admission',
+                'price' => floatval($event['general_price']),
+                'quantity_available' => intval($event['general_quantity']),
+                'description' => 'Standard admission ticket',
+                'type_key' => 'general'
+            ];
+        }
+        
+        // VIP Ticket
+        if (!empty($event['vip_price']) && $event['vip_quantity'] > 0) {
+            $tickets[] = [
+                'ticket_type' => 'VIP',
+                'price' => floatval($event['vip_price']),
+                'quantity_available' => intval($event['vip_quantity']),
+                'description' => 'VIP experience with perks',
+                'type_key' => 'vip'
+            ];
+        }
+        
+        // VVIP Ticket
+        if (!empty($event['vvip_price']) && $event['vvip_quantity'] > 0) {
+            $tickets[] = [
+                'ticket_type' => 'VVIP',
+                'price' => floatval($event['vvip_price']),
+                'quantity_available' => intval($event['vvip_quantity']),
+                'description' => 'Exclusive VVIP experience',
+                'type_key' => 'vvip'
+            ];
+        }
+        
+        // Also check for ticket_config JSON if available
+        $ticketConfig = [];
+        if (!empty($event['ticket_config']) && $event['ticket_config'] != '{}') {
+            try {
+                $config = json_decode($event['ticket_config'], true);
+                if (is_array($config)) {
+                    $ticketConfig = $config;
+                }
+            } catch (Exception $e) {
+                error_log("Error parsing ticket_config JSON: " . $e->getMessage());
+            }
+        }
+        
+        // If no individual ticket columns but we have ticket_config JSON
+        if (empty($tickets) && !empty($ticketConfig)) {
+            foreach ($ticketConfig as $typeKey => $config) {
+                if (!empty($config['price']) && !empty($config['quantity'])) {
+                    $tickets[] = [
+                        'ticket_type' => $config['name'] ?? ucfirst($typeKey),
+                        'price' => floatval($config['price']),
+                        'quantity_available' => intval($config['quantity']),
+                        'description' => $config['description'] ?? '',
+                        'type_key' => $typeKey
+                    ];
+                }
+            }
+        }
+        
+        echo json_encode([
+            "success" => true,
+            "tickets" => $tickets,
+            "event_info" => $event['event_info'] ?? '',
+            "guest_limit" => $event['guest_limit'] ?? 0,
+            "has_tickets" => $event['has_tickets']
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("getEventTickets PDO Exception: " . $e->getMessage());
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "saveTicketConfiguration") {
+    $event_id = $_POST['event_id'] ?? '';
+    $has_tickets = isset($_POST['has_tickets']) ? intval($_POST['has_tickets']) : 0;
+    $event_info = $_POST['event_info'] ?? '';
+    
+    // Individual ticket fields
+    $early_bird_price = isset($_POST['early_bird_price']) ? floatval($_POST['early_bird_price']) : 0.00;
+    $early_bird_quantity = isset($_POST['early_bird_quantity']) ? intval($_POST['early_bird_quantity']) : 0;
+    $general_price = isset($_POST['general_price']) ? floatval($_POST['general_price']) : 0.00;
+    $general_quantity = isset($_POST['general_quantity']) ? intval($_POST['general_quantity']) : 0;
+    $vip_price = isset($_POST['vip_price']) ? floatval($_POST['vip_price']) : 0.00;
+    $vip_quantity = isset($_POST['vip_quantity']) ? intval($_POST['vip_quantity']) : 0;
+    $vvip_price = isset($_POST['vvip_price']) ? floatval($_POST['vvip_price']) : 0.00;
+    $vvip_quantity = isset($_POST['vvip_quantity']) ? intval($_POST['vvip_quantity']) : 0;
+    
+    $ticket_config = $_POST['ticket_config'] ?? '{}';
+    
+    if (empty($event_id)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Event ID is required"
+        ]);
+        exit;
+    }
+    
+    try {
+        // Update event with ticket configuration
+        $stmt = $pdo->prepare("
+            UPDATE events SET
+                has_tickets = :has_tickets,
+                event_info = :event_info,
+                early_bird_price = :early_bird_price,
+                early_bird_quantity = :early_bird_quantity,
+                general_price = :general_price,
+                general_quantity = :general_quantity,
+                vip_price = :vip_price,
+                vip_quantity = :vip_quantity,
+                vvip_price = :vvip_price,
+                vvip_quantity = :vvip_quantity,
+                ticket_config = :ticket_config,
+                updated_at = NOW()
+            WHERE event_id = :event_id
+        ");
+        
+        $stmt->execute([
+            ':has_tickets' => $has_tickets,
+            ':event_info' => $event_info,
+            ':early_bird_price' => $early_bird_price,
+            ':early_bird_quantity' => $early_bird_quantity,
+            ':general_price' => $general_price,
+            ':general_quantity' => $general_quantity,
+            ':vip_price' => $vip_price,
+            ':vip_quantity' => $vip_quantity,
+            ':vvip_price' => $vvip_price,
+            ':vvip_quantity' => $vvip_quantity,
+            ':ticket_config' => $ticket_config,
+            ':event_id' => $event_id
+        ]);
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "Ticket configuration saved successfully"
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("saveTicketConfiguration PDO Exception: " . $e->getMessage());
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
     exit;
 }
 
@@ -1561,6 +1782,65 @@ if ($fun === "deleteEvent") {
     exit;
 }
 
+if ($fun === "publishTicketEvent") {
+    $event_id = $_POST['event_id'] ?? '';
+    $guest_limit = isset($_POST['guest_limit']) ? intval($_POST['guest_limit']) : 0;
+    $published = isset($_POST['published']) ? intval($_POST['published']) : 1;
+    
+    if (empty($event_id)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Event ID is required"
+        ]);
+        exit;
+    }
+    
+    try {
+        // First, get the event to check if it exists
+        $checkStmt = $pdo->prepare("SELECT has_tickets FROM events WHERE event_id = :event_id");
+        $checkStmt->execute([':event_id' => $event_id]);
+        $event = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$event) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Event not found"
+            ]);
+            exit;
+        }
+        
+        // Update the event with published status and guest limit
+        // Based on your saveEvent function, you have a 'published' column in events table
+        $stmt = $pdo->prepare("
+            UPDATE events SET
+                published = :published,
+                guest_limit = :guest_limit,
+                updated_at = NOW()
+            WHERE event_id = :event_id
+        ");
+        
+        $stmt->execute([
+            ':published' => $published,
+            ':guest_limit' => $guest_limit,
+            ':event_id' => $event_id
+        ]);
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "Event published successfully",
+            "guest_limit" => $guest_limit
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("publishTicketEvent PDO Exception: " . $e->getMessage());
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
 if ($fun === "getEventStatusByID") {
     $event_id = $_POST['event_id'] ?? '';
 
@@ -1732,7 +2012,7 @@ if ($fun === "getAllPackages") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
     try {
-        // Add ORDER BY to ensure BASIC comes first, then PREMIUM, ENTERPRISE
+       
         $stmt = $pdo->prepare("SELECT * FROM packagetb 
                                     ORDER BY 
                                     CASE 

@@ -2005,7 +2005,7 @@ export default function PostcardEditor() {
         }
     };
 
-    const saveEventToDatabase = async (imageData) => {
+const saveEventToDatabase = async (imageData) => {
     try {
         setLoading(true);
         const user = JSON.parse(localStorage.getItem("user"));
@@ -2058,24 +2058,39 @@ export default function PostcardEditor() {
                 const ticketConfig = parsedTicketData.config;
                 
                 // Early Bird
-                if (ticketConfig.earlyBird && ticketConfig.earlyBird.price) {
+                if (ticketConfig.earlyBird && ticketConfig.earlyBird.price && ticketConfig.earlyBird.quantity) {
                     formData.append("earlyBirdPrice", ticketConfig.earlyBird.price);
-                    formData.append("earlyBirdQuantity", ticketConfig.earlyBird.quantity || "");
+                    formData.append("earlyBirdQuantity", ticketConfig.earlyBird.quantity);
+                } else {
+                    formData.append("earlyBirdPrice", "0");
+                    formData.append("earlyBirdQuantity", "0");
                 }
                 
                 // General Admission
-                if (ticketConfig.general && ticketConfig.general.price) {
+                if (ticketConfig.general && ticketConfig.general.price && ticketConfig.general.quantity) {
                     formData.append("generalPrice", ticketConfig.general.price);
+                    formData.append("generalQuantity", ticketConfig.general.quantity);
+                } else {
+                    formData.append("generalPrice", "0");
+                    formData.append("generalQuantity", "0");
                 }
                 
                 // VIP
-                if (ticketConfig.vip && ticketConfig.vip.price) {
+                if (ticketConfig.vip && ticketConfig.vip.price && ticketConfig.vip.quantity) {
                     formData.append("vipPrice", ticketConfig.vip.price);
+                    formData.append("vipQuantity", ticketConfig.vip.quantity);
+                } else {
+                    formData.append("vipPrice", "0");
+                    formData.append("vipQuantity", "0");
                 }
                 
                 // VVIP
-                if (ticketConfig.vvip && ticketConfig.vvip.price) {
+                if (ticketConfig.vvip && ticketConfig.vvip.price && ticketConfig.vvip.quantity) {
                     formData.append("vvipPrice", ticketConfig.vvip.price);
+                    formData.append("vvipQuantity", ticketConfig.vvip.quantity);
+                } else {
+                    formData.append("vvipPrice", "0");
+                    formData.append("vvipQuantity", "0");
                 }
                 
                 // Event Info
@@ -2083,14 +2098,40 @@ export default function PostcardEditor() {
                     formData.append("eventInfo", parsedTicketData.eventInfo);
                 }
                 
-                // Add ticket config as JSON
+                // Add full ticket config as JSON for flexibility
                 formData.append("ticketConfig", JSON.stringify(parsedTicketData));
+            } else {
+                // No ticket config, set all to zero
+                formData.append("earlyBirdPrice", "0");
+                formData.append("earlyBirdQuantity", "0");
+                formData.append("generalPrice", "0");
+                formData.append("generalQuantity", "0");
+                formData.append("vipPrice", "0");
+                formData.append("vipQuantity", "0");
+                formData.append("vvipPrice", "0");
+                formData.append("vvipQuantity", "0");
             }
+        } else {
+            // No ticket data at all
+            formData.append("hasTickets", "0");
+            formData.append("earlyBirdPrice", "0");
+            formData.append("earlyBirdQuantity", "0");
+            formData.append("generalPrice", "0");
+            formData.append("generalQuantity", "0");
+            formData.append("vipPrice", "0");
+            formData.append("vipQuantity", "0");
+            formData.append("vvipPrice", "0");
+            formData.append("vvipQuantity", "0");
+            formData.append("ticketConfig", "{}");
         }
 
         const API_URL = process.env.REACT_APP_API_URL;
 
         console.log("Saving event with ticket data:", parsedTicketData);
+        console.log("FormData entries:");
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + (pair[0] === 'eventUrlImage' ? '[IMAGE DATA]' : pair[1]));
+        }
 
         const response = await fetch(`${API_URL}/query.php`, {
             method: "POST",
@@ -2102,6 +2143,9 @@ export default function PostcardEditor() {
 
         if (result.success) {
             printAlert("Event saved successfully!", "success");
+            
+            // Store the event ID for later use
+            localStorage.setItem("selectedEventId", result.event_id || eventData.eventID);
             
             // Clear ticket data from localStorage after successful save
             if (deviceId) {
