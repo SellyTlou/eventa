@@ -416,7 +416,6 @@ const GuestInsights = () => {
                     <h1>Guest Insights</h1>
                     <p>View guest questions, respond, and manage engagement</p>
                 </div>
-            </div>
 
                 <div className="insights-summary">
                     <div className="summary-card">
