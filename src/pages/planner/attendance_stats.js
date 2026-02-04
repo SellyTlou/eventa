@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
-import { logOut, DashboardHeader, DashboardSidebar } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar, DashboardTicketSidebar } from "../components";
 import { Pie, Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -14,7 +14,6 @@ import {
 } from 'chart.js';
 import './attendance_stats.css';
 import './main.css';
-import { canUseFeature, getPackageInfo } from "../utils/packageFeatures";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -33,18 +32,21 @@ const AttendanceStats = () => {
         monthlyTrend: []
     });
 
-    // NEW: Package states
     const [userPackage, setUserPackage] = useState(null);
     const [packageInfo, setPackageInfo] = useState(null);
-
+    const [isTicketEvent, setIsTicketEvent] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
-    // NEW: Package feature checks
-    // Block entire attendance stats UI for Basic users with the dedicated flag
-    const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : false;
-    const canViewAdvancedStats = userPackage ? canUseFeature(userPackage, "guestInsights") : false;
-    const canViewHistoricalData = userPackage ? canUseFeature(userPackage, "advancedAnalytics") : false;
+    // Package-based feature checks
+    const isBasicOrFree = () => {
+        const packageType = userPackage?.package_type?.toLowerCase();
+        return packageType === 'basic' || packageType === 'free';
+    };
+
+    const canViewAttendance = !isBasicOrFree(); // Only lock for Basic/Free
+    const canViewAdvancedStats = !isBasicOrFree(); // Same logic for advanced stats
+    const canViewHistoricalData = !isBasicOrFree(); // Same logic for historical data
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
@@ -52,6 +54,102 @@ const AttendanceStats = () => {
     };
 
     const toggleDropdown = () => setDropdownOpen(prev => !prev);
+
+    const getPackageColor = () => {
+        const packageType = userPackage?.package_type?.toLowerCase();
+
+        switch (packageType) {
+            case "basic":
+            case "free":
+                return "#6c757d"; // Gray
+            case "premium":
+                return "#007bff"; // Blue
+            case "advanced":
+            case "enterprise":
+                return "#28a745"; // Green
+            case "professional":
+                return "#6610f2"; // Purple
+            default:
+                return "#6c757d"; // Gray for unknown
+        }
+    };
+
+    const getPackageFeatures = (packageType) => {
+        const type = packageType?.toLowerCase() || 'basic';
+        
+        switch (type) {
+            case "free":
+                return ["Basic event management", "Limited RSVP tracking", "Basic analytics"];
+            case "basic":
+                return ["Basic event management", "RSVP tracking", "Email notifications", "Basic analytics"];
+            case "premium":
+                return ["Advanced analytics", "Guest insights", "Historical data", "Custom branding", "Priority support"];
+            case "professional":
+                return ["All Premium features", "Advanced reporting", "Team collaboration", "API access"];
+            case "enterprise":
+            case "advanced":
+                return ["All Professional features", "Custom solutions", "Dedicated support", "White labeling"];
+            default:
+                return ["Basic event management", "RSVP tracking"];
+        }
+    };
+
+    const fetchUserPackage = async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const userData = JSON.parse(localStorage.getItem("user"));
+            const formData = new FormData();
+            formData.append("function", "getUserPackage");
+            formData.append("user_id", userData.user_id);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+
+            console.log("Package API response:", data);
+
+            if (data.success && data.userPackage) {
+                setUserPackage(data.userPackage);
+
+                // Create package info object
+                const packageInfo = {
+                    name: data.userPackage.package_name ||
+                        (data.userPackage.package_type ?
+                            data.userPackage.package_type.charAt(0).toUpperCase() +
+                            data.userPackage.package_type.slice(1) : "Basic"),
+                    type: data.userPackage.package_type || "basic",
+                    color: getPackageColor(),
+                    features: getPackageFeatures(data.userPackage.package_type)
+                };
+                setPackageInfo(packageInfo);
+
+                console.log("Package set to:", data.userPackage.package_type);
+            } else {
+                printAlert("You don't have an active package", "warning");
+                // Default to basic
+                setUserPackage({ package_type: "basic" });
+                setPackageInfo({
+                    name: "Basic",
+                    type: "basic",
+                    color: "#6c757d",
+                    features: ["Basic features only"]
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching user package:", error);
+            printAlert("System error fetching user package", "error");
+            // Default to basic on error
+            setUserPackage({ package_type: "basic" });
+            setPackageInfo({
+                name: "Basic",
+                type: "basic",
+                color: "#6c757d",
+                features: ["Basic features only"]
+            });
+        }
+    };
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -64,40 +162,7 @@ const AttendanceStats = () => {
         const userData = JSON.parse(storedUser);
         setUser(userData);
 
-        // NEW: Fetch user package
-        const fetchUserPackage = async () => {
-            try {
-                const API_URL = process.env.REACT_APP_API_URL;
-                const formData = new FormData();
-                formData.append("function", "getUserPackage");
-                formData.append("user_id", userData.user_id);
-                
-                const response = await fetch(`${API_URL}/query.php`, { 
-                    method: "POST", 
-                    body: formData 
-                });
-                const data = await response.json();
-                
-                if (data.success && data.userPackage) {
-                    setUserPackage(data.userPackage);
-                    setPackageInfo(getPackageInfo(data.userPackage));
-                    console.log("✅ Package loaded:", data.userPackage.package_type);
-                } else {
-                    // Default to basic package
-                    const basicPackage = { package_type: "Basic" };
-                    setUserPackage(basicPackage);
-                    setPackageInfo(getPackageInfo(basicPackage));
-                    console.log("⚠️ Defaulting to Basic package");
-                }
-            } catch (error) {
-                console.error("Error fetching user package:", error);
-                // Default to basic on error
-                const basicPackage = { package_type: "Basic" };
-                setUserPackage(basicPackage);
-                setPackageInfo(getPackageInfo(basicPackage));
-            }
-        };
-
+        // Fetch user package
         fetchUserPackage();
 
         const handleClickOutside = (event) => {
@@ -117,7 +182,7 @@ const AttendanceStats = () => {
             return;
         }
         if (!canViewAttendance) {
-            // Basic users: skip fetching large stats data and show upgrade prompt
+            // Basic/Free users: skip fetching large stats data
             setLoading(false);
             return;
         }
@@ -128,7 +193,7 @@ const AttendanceStats = () => {
         if (canViewHistoricalData) {
             fetchAttendanceStats();
         }
-    }, [navigate, canViewHistoricalData]);
+    }, [navigate, canViewHistoricalData, canViewAttendance]);
 
     const fetchEventData = async (eventId) => {
         try {
@@ -144,7 +209,13 @@ const AttendanceStats = () => {
             const data = await response.json();
 
             if (data.success && data.events) {
-                setEventData(data.events);
+                // Fixed: Check if data.events is an array or single object
+                const event = Array.isArray(data.events) ? data.events[0] : data.events;
+                if (event) {
+                    const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+                    setIsTicketEvent(hasTickets);
+                    setEventData(event);
+                }
             } else {
                 printAlert("Failed to load event data", "error");
             }
@@ -208,7 +279,7 @@ const AttendanceStats = () => {
 
     const fetchAttendanceStats = async () => {
         if (!canViewHistoricalData) return;
-        
+
         try {
             const mockStats = {
                 overall: {
@@ -264,7 +335,7 @@ const AttendanceStats = () => {
         const capacityUsage = Math.round((attending / (eventData?.guest_limit || 100)) * 100);
         const averageGuests = totalResponses > 0 ? (totalGuests / totalResponses).toFixed(1) : 0;
 
-        // DAILY Timeline (last 30 days) - Available for all packages
+        // DAILY Timeline (last 30 days) - Available for all packages that can view attendance
         const last30Days = Array.from({ length: 30 }, (_, i) => {
             const date = new Date();
             date.setDate(date.getDate() - (29 - i));
@@ -286,7 +357,7 @@ const AttendanceStats = () => {
         const responseTimeline = Object.entries(dailyTimelineMap)
             .map(([date, count]) => ({ date, count }));
 
-        // WEEKLY Timeline (last 12 weeks) - Only for Premium/Enterprise
+        // WEEKLY Timeline (last 12 weeks) - Only for non-basic packages
         const weeklyTimelineMap = {};
         if (canViewAdvancedStats) {
             const last12Weeks = Array.from({ length: 12 }, (_, i) => {
@@ -316,7 +387,7 @@ const AttendanceStats = () => {
         const weeklyTimeline = Object.entries(weeklyTimelineMap)
             .map(([week, count]) => ({ week, count }));
 
-        // MONTHLY Timeline (last 6 months) - Only for Premium/Enterprise
+        // MONTHLY Timeline (last 6 months) - Only for non-basic packages
         const monthlyTimelineMap = {};
         if (canViewAdvancedStats) {
             const last6Months = Array.from({ length: 6 }, (_, i) => {
@@ -395,55 +466,69 @@ const AttendanceStats = () => {
 
     // === PACKAGE-BASED STATS CARDS ===
     const getAdditionalStats = () => {
-        if (!canViewAdvancedStats) {
-            // BASIC PACKAGE - Limited stats (no upgrade card shown)
+        if (isBasicOrFree()) {
+            // BASIC/FREE PACKAGE - Limited stats with upgrade prompts
             return [
                 {
                     title: "Response Rate",
                     value: `${stats.responseRate}%`,
                     description: "Based on invitations sent",
-                    type: "basic",
-                    icon: "bi bi-percent"
+                    type: "locked",
+                    icon: "bi bi-percent",
+                    locked: true
                 },
                 {
                     title: "Total Guests",
                     value: stats.totalGuests,
                     description: "Including additional guests",
-                    type: "basic", 
-                    icon: "bi bi-people"
+                    type: "locked",
+                    icon: "bi bi-people",
+                    locked: true
+                },
+                {
+                    title: "Upgrade Required",
+                    value: "🔒",
+                    description: "Upgrade to Premium+ for full analytics",
+                    type: "upgrade",
+                    icon: "bi bi-star-fill",
+                    locked: true
                 }
             ];
         }
 
-        // PREMIUM/ENTERPRISE PACKAGE - Full stats
+        // PREMIUM/ENTERPRISE/PROFESSIONAL/ADVANCED PACKAGE - Full stats
         return [
             {
                 title: "Response Rate",
                 value: `${stats.responseRate}%`,
                 description: "Based on invitations sent",
-                type: "advanced",
-                icon: "bi bi-percent"
+                type: "unlocked",
+                icon: "bi bi-percent",
+                locked: false
             },
             {
-                title: "Total Guests", 
+                title: "Total Guests",
                 value: stats.totalGuests,
                 description: "Including additional guests",
-                type: "advanced",
-                icon: "bi bi-people"
+                type: "unlocked",
+                icon: "bi bi-people",
+                locked: false
             },
             {
                 title: "Capacity Usage",
                 value: `${stats.capacityUsage}%`,
                 description: "Current vs maximum capacity",
-                type: "advanced",
-                icon: "bi bi-bar-chart"
+                type: "unlocked",
+                icon: "bi bi-bar-chart",
+                locked: false
             },
             {
                 title: "Average Guests",
                 value: stats.averageGuests,
                 description: "Guests per RSVP",
-                type: "advanced", 
-                icon: "bi bi-calculator"
+                type: "unlocked",
+                icon: "bi bi-calculator",
+                locked: false
             }
         ];
     };
@@ -484,7 +569,7 @@ const AttendanceStats = () => {
         }],
     };
 
-    // Weekly Timeline (Last 12 weeks) - Only for Premium/Enterprise
+    // Weekly Timeline (Last 12 weeks) - Only for non-basic packages
     const weeklyTimelineData = {
         labels: stats.weeklyTimeline.map(w => {
             const [year, week] = w.week.split('-W');
@@ -498,7 +583,7 @@ const AttendanceStats = () => {
         }],
     };
 
-    // Monthly Timeline (Last 6 months) - Only for Premium/Enterprise
+    // Monthly Timeline (Last 6 months) - Only for non-basic packages
     const monthlyTimelineData = {
         labels: stats.monthlyTimeline.map(m => {
             const [year, month] = m.month.split('-');
@@ -588,64 +673,81 @@ const AttendanceStats = () => {
                 onToggleSidebar={toggleSidebar}
                 userPackage={userPackage}
             />
-            
-            {/* SIDEBAR */}
-            <DashboardSidebar
-                isMobileOpen={sidebarOpen}
-                onClose={closeSidebar}
-                userPackage={userPackage}
-            />
+
+            {/* CONDITIONAL SIDEBAR */}
+            {isTicketEvent ? (
+                <DashboardTicketSidebar
+                    isOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            ) : (
+                <DashboardSidebar
+                    isOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            )}
 
             {/* MAIN CONTENT */}
-            <div className="attendance-content">
+            <div className={`attendance-content ${isTicketEvent ? 'ticket-event' : 'rsvp-event'}`}>
                 <div className="content-header">
                     <h1>Attendance Statistics</h1>
                     <p>Comprehensive overview of your event attendance and RSVP data</p>
-                    {/* package-specific messaging removed - feature lock will show on each item */}
+                    {isBasicOrFree() && (
+                        <div className="package-notice">
+                            <i className="bi bi-info-circle"></i>
+                            <span>Upgrade to <strong>Premium</strong> or higher for full analytics</span>
+                            <button 
+                                className="btn-upgrade-notice"
+                                onClick={() => navigate('/upgrade_package')}
+                            >
+                                Upgrade Now
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Stats Cards */}
-                    <div className="stats-overview">
+                <div className="stats-overview">
                     <div className="stat-card primary">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="stat-icon"><i className="bi bi-people-fill"></i></div>
                         <div className="stat-content"><h3>{canViewAttendance ? stats.totalResponses : '—'}</h3><p>Total RSVPs</p></div>
                     </div>
                     <div className="stat-card success">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="stat-icon"><i className="bi bi-check-circle-fill"></i></div>
                         <div className="stat-content"><h3>{canViewAttendance ? stats.attending : '—'}</h3><p>Confirmed Attendance</p></div>
                     </div>
                     <div className="stat-card warning">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="stat-icon"><i className="bi bi-question-circle-fill"></i></div>
                         <div className="stat-content"><h3>{canViewAttendance ? stats.maybe : '—'}</h3><p>Maybe Attending</p></div>
                     </div>
                     <div className="stat-card danger">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="stat-icon"><i className="bi bi-x-circle-fill"></i></div>
                         <div className="stat-content"><h3>{canViewAttendance ? stats.notAttending : '—'}</h3><p>Not Attending</p></div>
                     </div>
                     <div className="stat-card info">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="stat-icon"><i className="bi bi-graph-up-arrow"></i></div>
@@ -653,71 +755,96 @@ const AttendanceStats = () => {
                     </div>
                 </div>
 
-                
-
                 {/* Charts */}
                 <div className="charts-grid">
                     <div className="chart-card">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon chart" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon chart" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="chart-header">
                             <h3>Response Breakdown</h3>
                             <span className="chart-subtitle">Distribution of RSVP responses</span>
+                            {isBasicOrFree() && <span className="chart-lock-badge">🔒 Basic</span>}
                         </div>
                         <div className="chart-wrapper">
-                            <Pie data={pieData} options={pieOptions} />
-                            {!canViewAttendance && (
-                                <div className="overlay-locked" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                    <i className="bi bi-key-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                            {canViewAttendance ? (
+                                <Pie data={pieData} options={pieOptions} />
+                            ) : (
+                                <div className="chart-placeholder">
+                                    <i className="bi bi-pie-chart-fill"></i>
+                                    <p>Upgrade to view chart</p>
+                                </div>
+                            )}
+                            {isBasicOrFree() && (
+                                <div className="overlay-locked" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-lock-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                                    <span className="upgrade-text">Upgrade to unlock</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
                     <div className="chart-card">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon chart" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon chart" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="chart-header">
                             <h3>Guests per RSVP</h3>
                             <span className="chart-subtitle">Number of guests per confirmed RSVP</span>
+                            {isBasicOrFree() && <span className="chart-lock-badge">🔒 Basic</span>}
                         </div>
                         <div className="chart-wrapper">
-                            <Bar data={barGuestData} options={chartOptions} />
-                            {!canViewAttendance && (
-                                <div className="overlay-locked" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                    <i className="bi bi-key-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                            {canViewAttendance ? (
+                                <Bar data={barGuestData} options={chartOptions} />
+                            ) : (
+                                <div className="chart-placeholder">
+                                    <i className="bi bi-bar-chart-fill"></i>
+                                    <p>Upgrade to view chart</p>
+                                </div>
+                            )}
+                            {isBasicOrFree() && (
+                                <div className="overlay-locked" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-lock-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                                    <span className="upgrade-text">Upgrade to unlock</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
                     <div className="chart-card full-width">
-                        {!canViewAttendance && (
-                            <button className="feature-key-icon chart" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                <i className="bi bi-key-fill" />
+                        {isBasicOrFree() && (
+                            <button className="feature-key-icon chart" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                <i className="bi bi-lock-fill" />
                             </button>
                         )}
                         <div className="chart-header">
                             <h3>Daily Response Timeline</h3>
                             <span className="chart-subtitle">RSVP responses over the last 30 days</span>
+                            {isBasicOrFree() && <span className="chart-lock-badge">🔒 Basic</span>}
                         </div>
                         <div className="chart-wrapper">
-                            <Bar data={barTimelineData} options={chartOptions} />
-                            {!canViewAttendance && (
-                                <div className="overlay-locked" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                    <i className="bi bi-key-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                            {canViewAttendance ? (
+                                <Bar data={barTimelineData} options={chartOptions} />
+                            ) : (
+                                <div className="chart-placeholder">
+                                    <i className="bi bi-graph-up"></i>
+                                    <p>Upgrade to view timeline</p>
+                                </div>
+                            )}
+                            {isBasicOrFree() && (
+                                <div className="overlay-locked" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-lock-fill" style={{ fontSize: 28, color: '#2b6cb0' }} />
+                                    <span className="upgrade-text">Upgrade to unlock</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Premium/Enterprise Only Charts */}
+                    {/* Advanced Charts - Only for non-basic packages */}
                     {canViewAdvancedStats && stats.weeklyTimeline.length > 0 && (
                         <div className="chart-card full-width">
                             <div className="chart-header">
@@ -745,38 +872,38 @@ const AttendanceStats = () => {
                     )}
                 </div>
 
-                {/* PACKAGE-BASED ADDITIONAL STATS */}
+                {/* ADDITIONAL STATS */}
                 <div className="additional-stats">
                     {additionalStats.map((stat, index) => (
-                        <div 
-                            key={index} 
-                            className={`stats-card ${stat.type === 'upgrade' ? 'upgrade-card' : ''}`}
+                        <div
+                            key={index}
+                            className={`stats-card ${stat.type === 'upgrade' ? 'upgrade-card' : ''} ${stat.locked ? 'locked' : ''}`}
                         >
-                            {!canViewAttendance && (
-                                <button className="feature-key-icon small" title="update plan to have access" onClick={() => navigate('/upgrade_package')}>
-                                    <i className="bi bi-key-fill" />
+                            {stat.locked && (
+                                <button className="feature-key-icon small" title="Upgrade to Premium+ for access" onClick={() => navigate('/upgrade_package')}>
+                                    <i className="bi bi-lock-fill" />
                                 </button>
                             )}
                             <div className="stats-card-header">
                                 <i className={stat.icon}></i>
                                 <h4>{stat.title}</h4>
-                                {stat.type === 'upgrade' && <i className="bi bi-lock-fill lock-icon"></i>}
+                                {stat.locked && <i className="bi bi-lock-fill lock-icon"></i>}
                             </div>
-                            
+
                             {stat.type === 'upgrade' ? (
                                 <div className="upgrade-content">
-                                    <p>{stat.content}</p>
-                                    <button 
+                                    <p>{stat.description}</p>
+                                    <button
                                         className="btn-upgrade-sm"
-                                        onClick={() => navigate("/pricing")}
+                                        onClick={() => navigate("/upgrade_package")}
                                     >
-                                        Upgrade to {stat.package}
+                                        Upgrade Now
                                     </button>
                                 </div>
                             ) : (
                                 <>
-                                    <div className={`big-number ${stat.type}`}>
-                                        {stat.value}
+                                    <div className={`big-number ${stat.locked ? 'locked' : ''}`}>
+                                        {stat.locked ? '🔒' : stat.value}
                                     </div>
                                     <p>{stat.description}</p>
                                 </>
