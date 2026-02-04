@@ -26,7 +26,6 @@ const Manage_my_event = () => {
     const [currentPlan, setCurrentPlan] = useState(null);
     const [showUpdateButton, setShowUpdateButton] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
     const printAlert = (message, type = "info") => {

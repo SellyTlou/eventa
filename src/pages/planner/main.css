@@ -7587,3 +7587,115 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Business Dashboard Specific Styles */
+
+.business-package-status {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    color: white;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
+}
+
+.business-package-status.no-package {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.business-package-status.active {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.status-icon {
+    font-size: 40px;
+    margin-right: 20px;
+    opacity: 0.9;
+}
+
+.status-content {
+    flex: 1;
+}
+
+.status-content h4 {
+    margin: 0 0 10px 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.status-content p {
+    margin: 0 0 15px 0;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.usage-info {
+    margin: 15px 0;
+}
+
+.usage-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.usage-progress {
+    height: 100%;
+    background: white;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.usage-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.usage-text .remaining {
+    color: #4cff88;
+    font-weight: 600;
+}
+
+.btn-upgrade-small,
+.btn-manage-package {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.btn-upgrade-small:hover,
+.btn-manage-package:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.business-package-status.no-package .btn-upgrade-small {
+    color: #f5576c;
+}
+
+.business-package-status.active .btn-manage-package {
+    color: #4facfe;
+}
+
+/* Update dashboard header for business */
+.dashboard-title {
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.dashboard-subtitle {
+    color: #666;
+    font-size: 14px;
+}

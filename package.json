@@ -15,7 +15,7 @@
     "chart.js": "^4.5.1",
     "framer-motion": "^12.23.12",
     "js-priority-queue": "^0.1.5",
-    "jspdf": "^4.0.0",
+    "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "konva": "^9.3.22",
     "queue": "^7.0.0",
