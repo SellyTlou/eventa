@@ -219,6 +219,8 @@ export function SessionHandler() {
                 <Route path="/ticket_sales" element={<Ticket_Sale />} />
                 <Route path="/ticketEvent_details" element={<TicketEvent_details />} />
                 <Route path="/ticket_payment" element={<Ticket_payment />} />
+                <Route path="/businessdashboard" element={<BusinessDashboard />} />
+                <Route path="/event_ticket_manage" element={<TicketEventManage />} />
             </Routes>
 
             <SessionWarningModal

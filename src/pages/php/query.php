@@ -2012,7 +2012,7 @@ if ($fun === "getAllPackages") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
     try {
-        // Add ORDER BY to ensure BASIC comes first, then PREMIUM, ENTERPRISE
+       
         $stmt = $pdo->prepare("SELECT * FROM packagetb 
                                     ORDER BY 
                                     CASE 

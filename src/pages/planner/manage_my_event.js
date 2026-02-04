@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./main.css";
 import '../../alert.css';
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut, DashboardHeader, DashboardSidebar,  LoginNav, DashboardTicketSidebar } from "../components";
+import { logOut, DashboardHeader, DashboardSidebar, LoginNav, DashboardTicketSidebar } from "../components";
 
 const Manage_my_event = () => {
     const [loading, setLoading] = useState(true);
@@ -47,6 +47,106 @@ const Manage_my_event = () => {
         }, 5000);
     };
 
+    const calculateTotalCapacity = () => {
+        if (!isTicketEvent) return guestLimit;
+        
+        let total = 0;
+        Object.values(ticketConfig).forEach(ticket => {
+            const quantity = parseInt(ticket.quantity) || 0;
+            total += quantity;
+        });
+        return total;
+    };
+
+    // Helper to get package features based on type
+    const getPackageFeatures = (packageType) => {
+        const type = packageType?.toLowerCase();
+
+        switch (type) {
+            case "basic":
+            case "free":
+                return ["Basic event management", "RSVP tracking", "Basic analytics"];
+            case "premium":
+                return ["All Basic features", "Export to PDF", "Bulk messaging", "Advanced analytics"];
+            case "advanced":
+            case "enterprise":
+                return ["All Premium features", "Priority support", "Custom integrations", "Advanced security"];
+            case "professional":
+                return ["All Premium features", "Custom branding", "API access", "Dedicated support"];
+            default:
+                return ["Basic features only"];
+        }
+    };
+
+    // Move fetchAvailablePackages to useCallback to avoid dependency issues
+    const fetchAvailablePackages = useCallback(async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getAllPackages");
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+            console.log("Personal packages:", data);
+
+            if (data.success && data.packages) {
+                const formattedPackages = data.packages.map(pkg => ({
+                    id: pkg.package_id,
+                    name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
+                    maxGuest: pkg.max_guests,
+                    maxEvents: pkg.max_events,
+                    price: parseFloat(pkg.price),
+                    features: getPackageFeatures(pkg.package_type), // Use local helper
+                    account_type: "personal",
+                    package_type: pkg.package_type
+                }));
+                setAvailablePackages(formattedPackages);
+            }
+        } catch (err) {
+            console.error("Error fetching personal packages:", err);
+            // Fallback to default personal packages
+            const defaultPackages = [
+                {
+                    id: 1,
+                    name: "Free",
+                    maxGuest: 50,
+                    maxEvents: 1,
+                    price: 0,
+                    features: getPackageFeatures('free'),
+                    account_type: "personal",
+                    package_type: "free"
+                },
+                {
+                    id: 2,
+                    name: "Basic",
+                    maxGuest: 100,
+                    maxEvents: 5,
+                    price: 49.99,
+                    features: getPackageFeatures('basic'),
+                    account_type: "personal",
+                    package_type: "basic"
+                },
+                {
+                    id: 3,
+                    name: "Premium",
+                    maxGuest: 500,
+                    maxEvents: 20,
+                    price: 149.99,
+                    features: getPackageFeatures('premium'),
+                    account_type: "personal",
+                    package_type: "premium"
+                }
+            ];
+            setAvailablePackages(defaultPackages);
+        }
+    }, []);
+
     useEffect(() => {
         const id = localStorage.getItem("selectedEventId")
         const storedUser = localStorage.getItem("user");
@@ -56,17 +156,23 @@ const Manage_my_event = () => {
             setEventId(id);
             fetchEventStatusByID(id);
             fetchEventDetails(id);
-            
+
+            const isTicket = localStorage.getItem("isTicketEvent") === "true";
+            if (!isTicket) {
+                fetchUserPackage(userData.user_id);
+                fetchAvailablePackages(); // Now this is defined
+            }
+
             // In the useEffect, replace the if statement:
-if (userData.account_type === 'business') {
-    console.log("Detected BUSINESS user (account_type='business'), fetching business packages...");
-    fetchUserBusinessPackage(userData.user_id);
-    fetchBusinessPackages();
-} else {
-    console.log("Detected PERSONAL user (account_type='personal'), fetching personal packages...");
-    fetchUserPackage(userData.user_id);
-    fetchPersonalPackages();
-}
+            if (userData.account_type === 'business') {
+                console.log("Detected BUSINESS user (account_type='business'), fetching business packages...");
+                fetchUserBusinessPackage(userData.user_id);
+                fetchBusinessPackages();
+            } else {
+                console.log("Detected PERSONAL user (account_type='personal'), fetching personal packages...");
+                fetchUserPackage(userData.user_id);
+                fetchAvailablePackages(); // Changed from fetchPersonalPackages to fetchAvailablePackages
+            }
         }
         if (!storedUser) {
             printAlert("Session expired. Please log in again.", "error");
@@ -91,7 +197,7 @@ if (userData.account_type === 'business') {
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, []);
+    }, [navigate, fetchAvailablePackages]); // Added fetchAvailablePackages to dependencies
 
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
@@ -183,11 +289,11 @@ if (userData.account_type === 'business') {
 
             if (data.success && data.userBusinessPackage) {
                 const userPkg = data.userBusinessPackage;
-                
-                const availableEvents = userPkg.event_limit === 0 ? 
+
+                const availableEvents = userPkg.event_limit === 0 ?
                     "Unlimited" : // For custom plan
                     (userPkg.event_limit - userPkg.event_used);
-                
+
                 setCurrentPlan({
                     hasPackage: true,
                     plan_name: userPkg.name,
@@ -199,9 +305,10 @@ if (userData.account_type === 'business') {
                     event_limit: userPkg.event_limit,
                     event_used: userPkg.event_used,
                     package_type: userPkg.package_type,
-                    is_business: true
+                    is_business: true,
+                    features: getPackageFeatures(userPkg.package_type)
                 });
-                
+
                 setUserPackage({
                     package_id: userPkg.business_package_id,
                     account_type: "business"
@@ -223,7 +330,6 @@ if (userData.account_type === 'business') {
         }
     };
 
-
     const fetchPackageDetails = async (packageId, userPackageData) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -231,19 +337,19 @@ if (userData.account_type === 'business') {
             formData.append("function", "getPackageById");
             formData.append("package_id", packageId);
 
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData,
-        });
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
 
-        if (!response.ok) throw new Error("Network response was not ok");
+            if (!response.ok) throw new Error("Network response was not ok");
 
-        const data = await response.json();
-        console.log("Package details:", data);
+            const data = await response.json();
+            console.log("Package details:", data);
 
-        if (data.success && data.package) {
-            const packageData = data.package;
-            const availableEvents = userPackageData.event_limit - userPackageData.event_used;
+            if (data.success && data.package) {
+                const packageData = data.package;
+                const availableEvents = userPackageData.event_limit - userPackageData.event_used;
 
                 setCurrentPlan({
                     hasPackage: true,
@@ -256,7 +362,8 @@ if (userData.account_type === 'business') {
                     event_limit: userPackageData.event_limit,
                     event_used: userPackageData.event_used,
                     package_type: packageData.package_type,
-                    is_business: false
+                    is_business: false,
+                    features: getPackageFeatures(packageData.package_type)
                 });
             }
         } catch (err) {
@@ -373,108 +480,7 @@ if (userData.account_type === 'business') {
         }
     };
 
-    const fetchPersonalPackages = async () => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "getAllPackages");
-
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData,
-        });
-
-        if (!response.ok) throw new Error("Network response was not ok");
-
-            const data = await response.json();
-            console.log("Personal packages:", data);
-
-            if (data.success && data.packages) {
-                const formattedPackages = data.packages.map(pkg => ({
-                    id: pkg.package_id,
-                    name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
-                    maxGuest: pkg.max_guests,
-                    maxEvents: pkg.max_events,
-                    price: parseFloat(pkg.price),
-                    features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type),
-                    account_type: "personal"
-                }));
-                setAvailablePackages(formattedPackages);
-            } 
-        } catch (err) {
-            console.error("Error fetching personal packages:", err);
-            // Fallback to default personal packages
-            const defaultPackages = [
-                {
-                    id: 1,
-                    name: "Free",
-                    maxGuest: 50,
-                    maxEvents: 1,
-                    price: 0,
-                    features: getDefaultFeatures('free'),
-                    account_type: "personal"
-                },
-                {
-                    id: 2,
-                    name: "Basic",
-                    maxGuest: 100,
-                    maxEvents: 5,
-                    price: 49.99,
-                    features: getDefaultFeatures('basic'),
-                    account_type: "personal"
-                },
-                {
-                    id: 3,
-                    name: "Premium",
-                    maxGuest: 500,
-                    maxEvents: 20,
-                    price: 149.99,
-                    features: getDefaultFeatures('premium'),
-                    account_type: "personal"
-                }
-            ];
-            setAvailablePackages(defaultPackages);
-        }
-    };
-
     const goToUpgradePlan = () => navigate("/upgrade_package");
-    // Fallback function in case features column is empty
-    const getDefaultFeatures = (packageType) => {
-        const defaultFeaturesMap = {
-            'basic': [
-                "Basic event management",
-                "RSVP & Ticket management",
-                "Guest list tracking",
-                "Email invitations",
-                "Basic analytics"
-            ],
-            'premium': [
-                "Premium event templates",
-                "Custom branding options",
-                "Advanced analytics",
-                "Priority customer support",
-                "Bulk guest imports",
-                "Reminder emails"
-            ],
-            'enterprise': [
-                "Custom event templates",
-                "Dedicated account manager",
-                "API access for integrations",
-                "Advanced reporting dashboard",
-                "White-label solutions",
-                "Team collaboration tools",
-                "Custom workflows"
-            ],
-            'free': [
-                "Basic templates",
-                "RSVP & Ticket tracking",
-                "Email notifications",
-                "Mobile-friendly invites"
-            ]
-        };
-
-        return defaultFeaturesMap[packageType] || ["Event management features"];
-    };
 
     const fetchEventStatusByID = async (eventId) => {
         try {
@@ -708,7 +714,7 @@ if (userData.account_type === 'business') {
         if (selectedPackage && user) {
             localStorage.setItem("selectedPackageId", selectedPackage.id);
             localStorage.setItem("selectedPackageType", selectedPackage.account_type);
-            
+
             if (selectedPackage.account_type === 'business') {
                 navigate(`/business-package-payment`);
             } else {
@@ -728,38 +734,6 @@ if (userData.account_type === 'business') {
             return;
         }
         updateEventGuestLimit();
-    };
-
-    const handlePublishEvent = async () => {
-        if (isTicketEvent) {
-            // For ticket events, validate tickets
-            const validTickets = validateTicketConfiguration();
-            if (!validTickets) {
-                printAlert("Please configure at least one valid ticket type with price and quantity.", "warning");
-                return;
-            }
-
-        if (currentPlan && currentPlan.hasPackage && 
-            (currentPlan.available_events > 0 || currentPlan.available_events === "Unlimited")) {
-            
-            if (user?.account_type === 'business') {
-                const updated = await updateBusinessEventCount();
-                if (updated) {
-                    await updateEventStatus();
-                } else {
-                    printAlert("Failed to record event usage. Publish aborted.", "error");
-                }
-            } else {
-                const updated = await updateEventUsedCount();
-                if (updated) {
-                    await updateEventStatus();
-                } else {
-                    printAlert("Failed to record event usage. Publish aborted.", "error");
-                }
-            }
-        } else {
-            printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
-        }
     };
 
     const updateEventGuestLimit = async () => {
@@ -899,7 +873,7 @@ if (userData.account_type === 'business') {
 
             const data = await response.json();
             console.log("Business event count update:", data);
-            
+
             if (data.success) {
                 console.log("Business event used count updated");
                 if (user?.account_type === 'business') {
@@ -917,8 +891,64 @@ if (userData.account_type === 'business') {
         }
     };
 
-    const maxGuests = currentPlan?.hasPackage ? currentPlan.max_guest : 
-                     (user?.account_type === 'business' ? 200 : 50);
+    const handlePublishEvent = async () => {
+        if (isTicketEvent) {
+            // For ticket events, validate tickets
+            const validTickets = validateTicketConfiguration();
+            if (!validTickets) {
+                printAlert("Please configure at least one valid ticket type with price and quantity.", "warning");
+                return;
+            }
+
+            if (currentPlan && currentPlan.hasPackage &&
+                (currentPlan.available_events > 0 || currentPlan.available_events === "Unlimited")) {
+
+                if (user?.account_type === 'business') {
+                    const updated = await updateBusinessEventCount();
+                    if (updated) {
+                        await publishTicketEvent();
+                    } else {
+                        printAlert("Failed to record event usage. Publish aborted.", "error");
+                    }
+                } else {
+                    const updated = await updateEventUsedCount();
+                    if (updated) {
+                        await publishTicketEvent();
+                    } else {
+                        printAlert("Failed to record event usage. Publish aborted.", "error");
+                    }
+                }
+            } else {
+                printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
+            }
+        } else {
+            // For RSVP events
+            if (currentPlan && currentPlan.hasPackage &&
+                (currentPlan.available_events > 0 || currentPlan.available_events === "Unlimited")) {
+
+                if (user?.account_type === 'business') {
+                    const updated = await updateBusinessEventCount();
+                    if (updated) {
+                        await updateEventStatus();
+                    } else {
+                        printAlert("Failed to record event usage. Publish aborted.", "error");
+                    }
+                } else {
+                    const updated = await updateEventUsedCount();
+                    if (updated) {
+                        await updateEventStatus();
+                    } else {
+                        printAlert("Failed to record event usage. Publish aborted.", "error");
+                    }
+                }
+            } else {
+                printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
+            }
+        }
+    };
+
+    const maxGuests = currentPlan?.hasPackage ? currentPlan.max_guest :
+        (user?.account_type === 'business' ? 200 : 50);
 
     const handleMouseDown = (e) => {
         e.preventDefault();
@@ -1158,11 +1188,6 @@ if (userData.account_type === 'business') {
         setIsEditing(false);
     };
 
-    const hasTicketChanges = () => {
-        return JSON.stringify(ticketConfig) !== JSON.stringify(originalTicketConfig) ||
-            eventInfo !== originalEventInfo;
-    };
-
     // Render package card for RSVP events
     const renderPackageCard = (pkg) => {
         if (isTicketEvent) return null;
@@ -1170,32 +1195,216 @@ if (userData.account_type === 'business') {
         return (
             <div key={pkg.id} className={`package-card ${userPackage?.package_id === pkg.id ? "active" : ""}`} onClick={() => handlePackageClick(pkg)}>
                 <h3>{pkg.name}</h3>
-                <p>Max Guests: {pkg.maxGuest === Infinity ? "Unlimited" : pkg.maxGuest}</p>
-                <p>Max Events: {pkg.maxEvents === Infinity ? "Unlimited" : pkg.maxEvents}</p>
-                <p>Price: {pkg.price === 0 ? "Free" : `R${pkg.price}`}</p>
+                <p>Max Guests: {pkg.maxGuest === Infinity || pkg.maxGuest === 0 ? "Unlimited" : pkg.maxGuest}</p>
+                <p>Max Events: {pkg.maxEvents === Infinity || pkg.maxEvents === 0 ? "Unlimited" : pkg.maxEvents}</p>
+                <p>Price: {pkg.price === 0 ? "Custom Pricing" : `R${pkg.price}`}</p>
                 <button className="view-details-btn">View Details</button>
             </div>
         );
     };
 
-   const renderCurrentPlanCard = () => {
-    if (isTicketEvent) return null;
-    
-    if (!currentPlan) {
+    // Render ticket configuration grid
+    const renderTicketConfiguration = () => {
+        if (!isTicketEvent) return null;
+
+        // Calculate current total capacity
+        const currentTotalCapacity = calculateTotalCapacity();
+
         return (
-            <div className="details-card current-plan-card">
+            <div className="details-card ticket-config-card">
                 <div className="card-header">
-                    <h3>Current Plan</h3>
-                    <div className="plan-badge unavailable">Loading...</div>
+                    <h3>Ticket Configuration</h3>
+                    {eventStatus === "Published" && !isEditing && (
+                        <button className="edit-tickets-btn" onClick={handleEditTickets}>
+                            Edit Tickets
+                        </button>
+                    )}
+                    {isEditing && (
+                        <div className="ticket-edit-buttons">
+                            <button className="save-tickets-btn" onClick={handleSaveTickets}>
+                                Save Changes
+                            </button>
+                            <button className="cancel-edit-btn" onClick={handleCancelEdit}>
+                                Cancel
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <div className="card-content">
-                    <div className="plan-main-info">
-                        <p>Loading package information...</p>
+                    <div className="total-capacity-display">
+                        <div className="total-capacity-label">Total Event Capacity:</div>
+                        <div className="total-capacity-value">{currentTotalCapacity} attendees</div>
+                        <div className="total-capacity-note">
+                            <i className="bi bi-info-circle"></i>
+                            Capacity is automatically calculated from the sum of all ticket quantities.
+                        </div>
+                    </div>
+                    
+                    <div className="ticket-types-grid">
+                        {/* Early Bird Ticket */}
+                        <div className="ticket-type-card">
+                            <h4>Early Bird</h4>
+                            <p className="ticket-description">Limited early bird tickets</p>
+                            <div className="ticket-fields">
+                                <div className="form-group">
+                                    <label>Price (R)</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.earlyBird.price}
+                                        onChange={(e) => handleTicketInputChange('earlyBird', 'price', e.target.value)}
+                                        placeholder="e.g., 100"
+                                        min="0"
+                                        step="0.01"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Quantity</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.earlyBird.quantity}
+                                        onChange={(e) => handleTicketInputChange('earlyBird', 'quantity', e.target.value)}
+                                        placeholder="e.g., 50"
+                                        min="1"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* General Admission */}
+                        <div className="ticket-type-card">
+                            <h4>General Admission</h4>
+                            <p className="ticket-description">Standard admission ticket</p>
+                            <div className="ticket-fields">
+                                <div className="form-group">
+                                    <label>Price (R)</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.general.price}
+                                        onChange={(e) => handleTicketInputChange('general', 'price', e.target.value)}
+                                        placeholder="e.g., 150"
+                                        min="0"
+                                        step="0.01"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Quantity</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.general.quantity}
+                                        onChange={(e) => handleTicketInputChange('general', 'quantity', e.target.value)}
+                                        placeholder="e.g., 200"
+                                        min="1"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* VIP Ticket */}
+                        <div className="ticket-type-card">
+                            <h4>VIP</h4>
+                            <p className="ticket-description">VIP experience with perks</p>
+                            <div className="ticket-fields">
+                                <div className="form-group">
+                                    <label>Price (R)</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.vip.price}
+                                        onChange={(e) => handleTicketInputChange('vip', 'price', e.target.value)}
+                                        placeholder="e.g., 300"
+                                        min="0"
+                                        step="0.01"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Quantity</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.vip.quantity}
+                                        onChange={(e) => handleTicketInputChange('vip', 'quantity', e.target.value)}
+                                        placeholder="e.g., 50"
+                                        min="1"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* VVIP Ticket */}
+                        <div className="ticket-type-card">
+                            <h4>VVIP</h4>
+                            <p className="ticket-description">Exclusive VVIP experience</p>
+                            <div className="ticket-fields">
+                                <div className="form-group">
+                                    <label>Price (R)</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.vvip.price}
+                                        onChange={(e) => handleTicketInputChange('vvip', 'price', e.target.value)}
+                                        placeholder="e.g., 500"
+                                        min="0"
+                                        step="0.01"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Quantity</label>
+                                    <input
+                                        type="number"
+                                        value={ticketConfig.vvip.quantity}
+                                        onChange={(e) => handleTicketInputChange('vvip', 'quantity', e.target.value)}
+                                        placeholder="e.g., 20"
+                                        min="1"
+                                        disabled={!isEditing && eventStatus === "Published"}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="ticket-notes">
+                        <p><strong>Note:</strong> Only ticket types with both price and quantity filled will be created.</p>
+                        <p>Leave fields empty for ticket types you don't want to offer.</p>
+                    </div>
+                    
+                    {/* Event Info Textarea */}
+                    <div className="event-info-section">
+                        <h4>Event Information</h4>
+                        <textarea
+                            value={eventInfo}
+                            onChange={(e) => setEventInfo(e.target.value)}
+                            placeholder="Add any important information about your event, ticket terms, or special instructions..."
+                            rows="4"
+                            disabled={!isEditing && eventStatus === "Published"}
+                        />
                     </div>
                 </div>
             </div>
         );
-    }
+    };
+
+    const renderCurrentPlanCard = () => {
+        if (isTicketEvent) return null;
+
+        if (!currentPlan) {
+            return (
+                <div className="details-card current-plan-card">
+                    <div className="card-header">
+                        <h3>Current Plan</h3>
+                        <div className="plan-badge unavailable">Loading...</div>
+                    </div>
+                    <div className="card-content">
+                        <div className="plan-main-info">
+                            <p>Loading package information...</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
         if (!currentPlan.hasPackage) {
             return (
@@ -1228,8 +1437,8 @@ if (userData.account_type === 'business') {
                 <div className="card-header">
                     <h3>{currentPlan.is_business ? 'Business Plan' : 'Current Plan'}</h3>
                     <div className={`plan-badge ${currentPlan.available_events === 0 ? 'unavailable' : 'available'}`}>
-                        {currentPlan.available_events === 0 ? 'No Events Left' : 
-                         currentPlan.available_events === "Unlimited" ? 'Unlimited' : 'Active'}
+                        {currentPlan.available_events === 0 ? 'No Events Left' :
+                            currentPlan.available_events === "Unlimited" ? 'Unlimited' : 'Active'}
                     </div>
                 </div>
                 <div className="card-content">
@@ -1258,7 +1467,7 @@ if (userData.account_type === 'business') {
                             <div className="feature-details">
                                 <span className="feature-label">Max Events</span>
                                 <span className="feature-value">
-                                    {currentPlan.max_events === 0 || currentPlan.max_events === "Unlimited" ? 
+                                    {currentPlan.max_events === 0 || currentPlan.max_events === "Unlimited" ?
                                         "Unlimited" : currentPlan.max_events}
                                 </span>
                             </div>
@@ -1273,6 +1482,21 @@ if (userData.account_type === 'business') {
                             </div>
                         </div>
                     </div>
+
+                    {/* Plan Features List */}
+                    {currentPlan.features && currentPlan.features.length > 0 && (
+                        <div className="plan-included-features">
+                            <h4>Features Included:</h4>
+                            <ul className="features-list">
+                                {currentPlan.features.map((feature, index) => (
+                                    <li key={index}>
+                                        <i className="bi bi-check-circle"></i>
+                                        {feature}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
                     {currentPlan.available_events === 0 && currentPlan.available_events !== "Unlimited" && (
                         <div className="upgrade-alert">
@@ -1297,218 +1521,338 @@ if (userData.account_type === 'business') {
         );
     };
 
-  return (
-    <div className="dashboard-container">
+    return (
+        <div className="dashboard-container">
 
-{showPackagePopup && selectedPackage && !isTicketEvent && (
-    <div className="package-popup-overlay">
-        <div className="package-popup">
-            <button className="close-popup" onClick={closePopup}>×</button>
-            <h2>{selectedPackage.name} Package</h2>
-            <div className="package-details">
-                <p><strong>Max Guests/Capacity:</strong> {selectedPackage.maxGuest === Infinity ? "Unlimited" : selectedPackage.maxGuest}</p>
-                <p><strong>Max Events:</strong> {selectedPackage.maxEvents === Infinity ? "Unlimited" : selectedPackage.maxEvents}</p>
-                <p><strong>Price:</strong> {selectedPackage.price === 0 ? "Free" : `R${selectedPackage.price}/month`}</p>
-                {selectedPackage.features && selectedPackage.features.length > 0 && (
-                    <div className="features-list">
-                        <h4>Features:</h4>
-                        <ul>
-                            {selectedPackage.features.map((feature, index) => (
-                                <li key={index}>
-                                    <i className="bi bi-check-circle"></i>
-                                    {feature}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-            </div>
-            <button className="choose-package-btn" onClick={handleChoosePackage}>
-                Choose {selectedPackage.name} Package
-            </button>
-        </div>
-    </div>
-)}
+            {/* Custom alert box */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i
+                        className={`fas ${alert.type === "error"
+                            ? "fa-times-circle"
+                            : alert.type === "success"
+                                ? "fa-check-circle"
+                                : alert.type === "warning"
+                                    ? "fa-exclamation-triangle"
+                                    : "fa-info-circle"
+                            }`}
+                    ></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
 
-        {/* Custom alert box */}
-        {alert.show && (
-            <div className={`custom-alert ${alert.type}`}>
-                <i
-                    className={`fas ${alert.type === "error"
-                        ? "fa-times-circle"
-                        : alert.type === "success"
-                            ? "fa-check-circle"
-                            : alert.type === "warning"
-                                ? "fa-exclamation-triangle"
-                                : "fa-info-circle"
-                        }`}
-                ></i>
-                <span>{alert.message}</span>
-            </div>
-        )}
-
-        {/* HEADER */}
-        <DashboardHeader
-            user={user}
-            eventStatus={eventStatus}
-            onToggleSidebar={toggleSidebar}
-        />
-
-        {/* SIDEBAR */}
-        {isTicketEvent ? (
-            <DashboardTicketSidebar
-                isMobileOpen={sidebarOpen}
-                onClose={closeSidebar}
+            {/* HEADER */}
+            <DashboardHeader
+                user={user}
+                eventStatus={eventStatus}
+                onToggleSidebar={toggleSidebar}
             />
-        ) : (
-            <DashboardSidebar
-                isMobileOpen={sidebarOpen}
-                onClose={closeSidebar}
-            />
-        )}
 
-        {/* Content */}
-        <div className={`manage-my-event-content ${isTicketEvent ? 'ticket-event' : 'rsvp-event'}`}>
-            {/* Event Type Badge */}
-            <div className="event-type-badge">
-                <span className={`badge ${isTicketEvent ? 'ticket-badge' : 'rsvp-badge'}`}>
-                    <i className={`bi ${isTicketEvent ? 'bi-ticket-perforated' : 'bi-calendar-check'}`}></i>
-                    {isTicketEvent ? "Ticket Event" : "RSVP Event"}
-                </span>
-            </div>
+            {/* SIDEBAR */}
+            {isTicketEvent ? (
+                <DashboardTicketSidebar
+                    isMobileOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            ) : (
+                <DashboardSidebar
+                    isMobileOpen={sidebarOpen}
+                    onClose={closeSidebar}
+                />
+            )}
 
-            {/* Package Slider - Only for RSVP events */}
-            {!isTicketEvent && availablePackages.length > 0 && (
-                <div className="package-slider">
-                    <h2>Available Plans</h2>
-                    <button className="slide-btn left" onClick={() => document.querySelector(".package-cards").scrollBy({ left: -200, behavior: "smooth" })}>◀</button>
-                    <div className="package-cards">
-                        {availablePackages.map((pkg) => (
-                            <div key={pkg.id} className={`package-card ${userPackage?.package_id === pkg.id ? "active" : ""}`} onClick={() => handlePackageClick(pkg)}>
-                                <h3>{pkg.name}</h3>
-                                <p>Max Guests: {pkg.maxGuest === Infinity ? "Unlimited" : pkg.maxGuest}</p>
-                                <p>Max Events: {pkg.maxEvents === Infinity ? "Unlimited" : pkg.maxEvents}</p>
-                                <p>Price: {pkg.price === 0 ? "Free" : `R${pkg.price}`}</p>
-                                <button className="view-details-btn">View Details</button>
-                            </div>
-                        ))}
-                    </div>
-                    <button className="slide-btn right" onClick={() => document.querySelector(".package-cards").scrollBy({ left: 200, behavior: "smooth" })}>▶</button>
+            {/* Content */}
+            <div className={`manage-my-event-content ${isTicketEvent ? 'ticket-event' : 'rsvp-event'}`}>
+                {/* Event Type Badge */}
+                <div className="event-type-badge">
+                    <span className={`badge ${isTicketEvent ? 'ticket-badge' : 'rsvp-badge'}`}>
+                        <i className={`bi ${isTicketEvent ? 'bi-ticket-perforated' : 'bi-calendar-check'}`}></i>
+                        {isTicketEvent ? "Ticket Event" : "RSVP Event"}
+                    </span>
                 </div>
 
-                {/* Event Details & Current Plan */}
+                {/* Package Slider - Only for RSVP events */}
+                {!isTicketEvent && availablePackages.length > 0 && (
+                    <div className="package-slider">
+                        <h2>Available Plans</h2>
+                        <div className="slider-controls">
+                            <button className="slide-btn left" onClick={() => document.querySelector(".package-cards").scrollBy({ left: -200, behavior: "smooth" })}>◀</button>
+                            <div className="package-cards">
+                                {availablePackages.map(renderPackageCard)}
+                            </div>
+                            <button className="slide-btn right" onClick={() => document.querySelector(".package-cards").scrollBy({ left: 200, behavior: "smooth" })}>▶</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Event Details & Current Plan/Ticket Configuration */}
                 <div className="eventDetails-section">
                     <div className="container">
-                        <h2 className="section-title">Event Details & Current Plan</h2>
-                        <div className="details-grid">
-                            {/* Event Details Card */}
-                            <div className="details-card event-details-card">
-                                <div className="card-header">
-                                    <h3>Event Details</h3>
-                                    {eventStatus === "Published" && showUpdateButton && (
-                                        <button className="update-event-btn" onClick={handleUpdateEvent}>
-                                            Update Guest Limit
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="card-content">
-                                    <div className="detail-item">
-                                        <span className="detail-label">Event Name:</span>
-                                        <span className="detail-value">{eventDetails?.event_name || "Loading..."}</span>
+                        <h2 className="section-title">
+                            {isTicketEvent ? "Ticket Event Management" : "Event Details & Current Plan"}
+                        </h2>
+                        
+                        {isTicketEvent ? (
+                            // Ticket Event Layout - Event Details and Ticket Configuration
+                            <div className="details-grid">
+                                {/* Event Details Card */}
+                                <div className="details-card event-details-card">
+                                    <div className="card-header">
+                                        <h3>Event Details</h3>
+                                        {eventStatus === "Published" && (
+                                            <div className="total-capacity-badge">
+                                                Total Capacity: {calculateTotalCapacity()}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="detail-item">
-                                        <span className="detail-label">Event Type:</span>
-                                        <span className={`detail-value event-type rsvp-type`}>
-                                            <i className="bi bi-calendar-check"></i>
-                                            RSVP Event
-                                        </span>
-                                    </div>
-                                    <div className="detail-item">
-                                        <span className="detail-label">Start Date:</span>
-                                        <span className="detail-value">{eventDetails?.event_start_date || "Not set"}</span>
-                                    </div>
-                                    <div className="detail-item">
-                                        <span className="detail-label">End Date:</span>
-                                        <span className="detail-value">{eventDetails?.event_end_date || "Not set"}</span>
-                                    </div>
-                                    <div className="detail-item">
-                                        <span className="detail-label">Start Time:</span>
-                                        <span className="detail-value">{eventDetails?.event_start_time || "Not set"}</span>
-                                    </div>
-                                    <div className="detail-item">
-                                        <span className="detail-label">End Time:</span>
-                                        <span className="detail-value">{eventDetails?.event_end_time || "Not set"}</span>
-                                    </div>
-                                    <div className="detail-item">
-                                        <span className="detail-label">Venue:</span>
-                                        <span className="detail-value">{eventDetails?.venue || "Not specified"}</span>
-                                    </div>
+                                    <div className="card-content">
+                                        <div className="detail-item">
+                                            <span className="detail-label">Event Name:</span>
+                                            <span className="detail-value">{eventDetails?.event_name || "Loading..."}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Event Type:</span>
+                                            <span className={`detail-value event-type ticket-type`}>
+                                                <i className="bi bi-ticket-perforated"></i>
+                                                Ticket Event
+                                            </span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Start Date:</span>
+                                            <span className="detail-value">{eventDetails?.event_start_date || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">End Date:</span>
+                                            <span className="detail-value">{eventDetails?.event_end_date || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Start Time:</span>
+                                            <span className="detail-value">{eventDetails?.event_start_time || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">End Time:</span>
+                                            <span className="detail-value">{eventDetails?.event_end_time || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Venue:</span>
+                                            <span className="detail-value">{eventDetails?.venue || "Not specified"}</span>
+                                        </div>
 
-                                    {/* Guest Limit Section for RSVP Events */}
-                                    <div className="guest-limit-section">
-                                        <div className="guest-limit-header">
-                                            <span className="guest-limit-label">Guest Limit</span>
-                                            <div className="guest-limit-display">
-                                                <span className="guest-count">{guestLimit}</span>
-                                                <span className="guest-max">/ {maxGuests}</span>
+                                        {/* Total Capacity Progress Bar for Ticket Events */}
+                                        <div className="capacity-progress-section">
+                                            <div className="capacity-progress-header">
+                                                <span className="capacity-progress-label">Total Capacity</span>
+                                                <div className="capacity-progress-display">
+                                                    <span className="capacity-current">{calculateTotalCapacity()}</span>
+                                                    <span className="capacity-calculated">attendees (calculated from tickets)</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Progress Bar showing capacity breakdown */}
+                                            <div className="ticket-capacity-breakdown">
+                                                {Object.entries(ticketConfig).map(([type, config]) => {
+                                                    const quantity = parseInt(config.quantity) || 0;
+                                                    const totalCapacity = calculateTotalCapacity();
+                                                    const percentage = totalCapacity > 0 ? (quantity / totalCapacity) * 100 : 0;
+                                                    
+                                                    if (quantity > 0) {
+                                                        return (
+                                                            <div key={type} className="ticket-capacity-item">
+                                                                <div className="ticket-capacity-label">
+                                                                    <span className="ticket-type-name">{config.name}:</span>
+                                                                    <span className="ticket-type-quantity">{quantity} tickets</span>
+                                                                </div>
+                                                                <div className="ticket-capacity-bar">
+                                                                    <div 
+                                                                        className="ticket-capacity-fill"
+                                                                        style={{ width: `${percentage}%` }}
+                                                                        data-ticket-type={type}
+                                                                    ></div>
+                                                                </div>
+                                                                <div className="ticket-capacity-percentage">
+                                                                    {percentage.toFixed(1)}%
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })}
+                                            </div>
+
+                                            <div className="capacity-summary">
+                                                <div className="capacity-summary-item">
+                                                    <span className="summary-label">Total Capacity:</span>
+                                                    <span className="summary-value">{calculateTotalCapacity()} attendees</span>
+                                                </div>
+                                                <div className="capacity-summary-item">
+                                                    <span className="summary-label">Ticket Types:</span>
+                                                    <span className="summary-value">
+                                                        {Object.values(ticketConfig).filter(config => parseInt(config.quantity) > 0).length} active
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="capacity-info">
+                                                <small>
+                                                    <i className="bi bi-info-circle"></i>
+                                                    Total capacity is automatically calculated from the sum of all ticket quantities.
+                                                    {eventStatus !== "Published" && " Update ticket quantities below to change capacity."}
+                                                </small>
                                             </div>
                                         </div>
 
-                                        <div
-                                            ref={sliderRef}
-                                            className="guest-limit-slider"
-                                            onMouseDown={handleMouseDown}
-                                            onTouchStart={handleTouchStart}
-                                        >
-                                            <div
-                                                className="guest-limit-progress"
-                                                style={{ width: `${(guestLimit / maxGuests) * 100}%` }}
-                                            >
-                                                <div className="guest-limit-handle"></div>
+                                        {/* Ticket Event Info */}
+                                        <div className="ticket-event-info">
+                                            <div className="ticket-icon">
+                                                <i className="bi bi-ticket-perforated"></i>
                                             </div>
-                                        </div>
-
-                                        <div className="guest-limit-input">
-                                            <label htmlFor="guest-limit-input">Or set guest limit:</label>
-                                            <input
-                                                id="guest-limit-input"
-                                                type="number"
-                                                min="0"
-                                                max={maxGuests}
-                                                value={guestLimit}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-
-                                        <div className="guest-limit-info">
-                                            <small>
-                                                {eventStatus === "Published"
-                                                    ? "Drag the slider or enter a number to update your guest limit"
-                                                    : "Drag the slider or enter a number to set your guest limit before publishing"
-                                                }
-                                                (Max: {maxGuests})
-                                            </small>
+                                            <div className="ticket-content">
+                                                <h4>Ticket Event Information</h4>
+                                                <p>This event uses tickets. Total capacity is automatically calculated from ticket quantities.</p>
+                                                <p className="ticket-note">
+                                                    <i className="bi bi-info-circle"></i>
+                                                    Update ticket quantities in the Ticket Configuration section to change total capacity.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Ticket Configuration Card */}
+                                {renderTicketConfiguration()}
                             </div>
+                        ) : (
+                            // RSVP Event Layout - Event Details and Current Plan
+                            <div className="details-grid">
+                                {/* Event Details Card */}
+                                <div className="details-card event-details-card">
+                                    <div className="card-header">
+                                        <h3>Event Details</h3>
+                                        {eventStatus === "Published" && showUpdateButton && (
+                                            <button className="update-event-btn" onClick={handleUpdateEvent}>
+                                                Update Guest Limit
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="card-content">
+                                        <div className="detail-item">
+                                            <span className="detail-label">Event Name:</span>
+                                            <span className="detail-value">{eventDetails?.event_name || "Loading..."}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Event Type:</span>
+                                            <span className={`detail-value event-type rsvp-type`}>
+                                                <i className="bi bi-calendar-check"></i>
+                                                RSVP Event
+                                            </span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Start Date:</span>
+                                            <span className="detail-value">{eventDetails?.event_start_date || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">End Date:</span>
+                                            <span className="detail-value">{eventDetails?.event_end_date || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Start Time:</span>
+                                            <span className="detail-value">{eventDetails?.event_start_time || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">End Time:</span>
+                                            <span className="detail-value">{eventDetails?.event_end_time || "Not set"}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Venue:</span>
+                                            <span className="detail-value">{eventDetails?.venue || "Not specified"}</span>
+                                        </div>
 
-                            {/* Current Plan Card */}
-                            {renderCurrentPlanCard()}
-                        </div>
-                    )}
+                                        {/* Guest Limit Section for RSVP Events */}
+                                        <div className="guest-limit-section">
+                                            <div className="guest-limit-header">
+                                                <span className="guest-limit-label">Guest Limit</span>
+                                                <div className="guest-limit-display">
+                                                    <span className="guest-count">{guestLimit}</span>
+                                                    <span className="guest-max">/ {maxGuests}</span>
+                                                </div>
+                                            </div>
 
-                        {/* Show different buttons based on event status and guest limit changes */}
+                                            <div
+                                                ref={sliderRef}
+                                                className="guest-limit-slider"
+                                                onMouseDown={handleMouseDown}
+                                                onTouchStart={handleTouchStart}
+                                            >
+                                                <div
+                                                    className="guest-limit-progress"
+                                                    style={{ width: `${(guestLimit / maxGuests) * 100}%` }}
+                                                >
+                                                    <div className="guest-limit-handle"></div>
+                                                </div>
+                                            </div>
+
+                                            <div className="guest-limit-input">
+                                                <label htmlFor="guest-limit-input">Or set guest limit:</label>
+                                                <input
+                                                    id="guest-limit-input"
+                                                    type="number"
+                                                    min="0"
+                                                    max={maxGuests}
+                                                    value={guestLimit}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+
+                                            <div className="guest-limit-info">
+                                                <small>
+                                                    {eventStatus === "Published"
+                                                        ? "Drag the slider or enter a number to update your guest limit"
+                                                        : "Drag the slider or enter a number to set your guest limit before publishing"
+                                                    }
+                                                    (Max: {maxGuests})
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Current Plan Card */}
+                                {renderCurrentPlanCard()}
+                            </div>
+                        )}
+
+                        {/* Show different buttons based on event status and type */}
                         <div className="action-buttons-container">
-                            {/* Show Publish button when event is not published AND guest limit has been changed */}
-                            {eventStatus !== "Published" && showUpdateButton && (
+                            {/* For Ticket Events */}
+                            {isTicketEvent && eventStatus !== "Published" && (
+                                <button
+                                    className="publish-event-btn"
+                                    onClick={handlePublishEvent}
+                                    disabled={calculateTotalCapacity() === 0 || !currentPlan?.hasPackage}
+                                >
+                                    Publish Ticket Event
+                                    {calculateTotalCapacity() === 0 && (
+                                        <span className="tooltip">
+                                            Add at least one ticket with quantity to publish
+                                        </span>
+                                    )}
+                                    {!currentPlan?.hasPackage && (
+                                        <span className="tooltip">
+                                            No active package
+                                        </span>
+                                    )}
+                                </button>
+                            )}
+
+                            {/* For RSVP Events */}
+                            {!isTicketEvent && eventStatus !== "Published" && (showUpdateButton || guestLimit > 0) && (
                                 <button
                                     className={`publish-event-btn ${!currentPlan?.hasPackage || (currentPlan?.available_events === 0 && currentPlan?.available_events !== "Unlimited") ? 'disabled' : ''}`}
                                     onClick={handlePublishEvent}
                                     disabled={!currentPlan?.hasPackage || (currentPlan?.available_events === 0 && currentPlan?.available_events !== "Unlimited")}
                                 >
                                     Publish Event
-                                    {(!currentPlan?.hasPackage || currentPlan?.available_events === 0) && (
+                                    {(!currentPlan?.hasPackage || (currentPlan?.available_events === 0 && currentPlan?.available_events !== "Unlimited")) && (
                                         <span className="tooltip">
                                             {!currentPlan?.hasPackage ? "No active package" : "No available events left"}
                                         </span>
@@ -1516,6 +1860,7 @@ if (userData.account_type === 'business') {
                                 </button>
                             )}
 
+                            {/* Show Update button when event is published AND guest limit has been changed */}
                             {eventStatus === "Published" && showUpdateButton && (
                                 <button
                                     className="update-event-btn-large"
@@ -1525,33 +1870,34 @@ if (userData.account_type === 'business') {
                                 </button>
                             )}
 
-                            {eventStatus !== "Published" && !showUpdateButton && guestLimit === 0 && (
+                            {/* Show instruction when event is not published and no changes made */}
+                            {eventStatus !== "Published" && !isTicketEvent && !showUpdateButton && guestLimit === 0 && (
                                 <div className="publish-instruction">
                                     <i className="bi bi-info-circle"></i>
-                                    Set a {isTicketEvent ? "total capacity" : "guest limit"} above 0 to publish your event
+                                    Set a guest limit above 0 to publish your event
                                 </div>
                             )}
 
-                        {/* Show instruction for ticket events when ready */}
-                        {eventStatus !== "Published" && isTicketEvent && calculateTotalCapacity() === 0 && (
-                            <div className="publish-instruction ticket-instruction">
-                                <i className="bi bi-ticket-perforated"></i>
-                                Configure at least one ticket type with quantity to publish your event
-                            </div>
-                        )}
-                        
-                        {eventStatus !== "Published" && isTicketEvent && calculateTotalCapacity() > 0 && (
-                            <div className="publish-instruction ticket-instruction">
-                                <i className="bi bi-check-circle"></i>
-                                Ready to publish your ticket event with {calculateTotalCapacity()} total capacity
-                            </div>
-                        )}
+                            {/* Show instruction for ticket events when ready */}
+                            {eventStatus !== "Published" && isTicketEvent && calculateTotalCapacity() === 0 && (
+                                <div className="publish-instruction ticket-instruction">
+                                    <i className="bi bi-ticket-perforated"></i>
+                                    Configure at least one ticket type with quantity to publish your event
+                                </div>
+                            )}
+                            
+                            {eventStatus !== "Published" && isTicketEvent && calculateTotalCapacity() > 0 && (
+                                <div className="publish-instruction ticket-instruction">
+                                    <i className="bi bi-check-circle"></i>
+                                    Ready to publish your ticket event with {calculateTotalCapacity()} total capacity
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-                {/* Package Popup */}
-                {showPackagePopup && selectedPackage && (
+                {/* Package Popup - Only for RSVP events */}
+                {showPackagePopup && selectedPackage && !isTicketEvent && (
                     <div className="package-popup-overlay">
                         <div className="package-popup">
                             <button className="close-popup" onClick={closePopup}>×</button>
@@ -1562,17 +1908,22 @@ if (userData.account_type === 'business') {
                                 </span>
                             </div>
                             <div className="package-details">
-                                <p><strong>Max Guests:</strong> {selectedPackage.maxGuest === Infinity ? "Unlimited" : selectedPackage.maxGuest}</p>
-                                <p><strong>Max Events:</strong> {selectedPackage.maxEvents === Infinity ? "Unlimited" : selectedPackage.maxEvents}</p>
-                                <p><strong>Price:</strong> R{selectedPackage.price}</p>
-                                <div className="features-list">
-                                    <h4>Features:</h4>
-                                    <ul>
-                                        {selectedPackage.features.map((feature, index) => (
-                                            <li key={index}>{feature}</li>
-                                        ))}
-                                    </ul>
-                                </div>
+                                <p><strong>Max Guests:</strong> {selectedPackage.maxGuest === Infinity || selectedPackage.maxGuest === 0 ? "Unlimited" : selectedPackage.maxGuest}</p>
+                                <p><strong>Max Events:</strong> {selectedPackage.maxEvents === Infinity || selectedPackage.maxEvents === 0 ? "Unlimited" : selectedPackage.maxEvents}</p>
+                                <p><strong>Price:</strong> {selectedPackage.price === 0 ? "Custom Pricing" : `R${selectedPackage.price}`}</p>
+                                {selectedPackage.features && selectedPackage.features.length > 0 && (
+                                    <div className="features-list">
+                                        <h4>Features:</h4>
+                                        <ul>
+                                            {selectedPackage.features.map((feature, index) => (
+                                                <li key={index}>
+                                                    <i className="bi bi-check-circle"></i>
+                                                    {feature}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                             <button className="choose-package-btn" onClick={handleChoosePackage}>
                                 Choose {selectedPackage.name} Package

@@ -739,81 +739,84 @@ Upgrade to a premium package to unlock bulk messaging features.`,
                             <p>No booking data found</p>
                         </div>
                     ) : (
-                        <table className="eventTickets-content__table">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <input
-                                            type="checkbox"
-                                            checked={filteredResponses.length > 0 && selectedGuests.size === filteredResponses.length}
-                                            onChange={selectAllGuests}
-                                        />
-                                    </th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Ticket Type</th>
-                                    <th>Quantity</th>
-                                    <th>Total Price</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredResponses.map((guest) => {
-                                    const guestId = guest.bookingId || guest.guest_id;
-                                    const isSelected = selectedGuests.has(guestId);
-                                    const totalAmount = guest.total_amount || (guest.unit_price * guest.quantity);
+                        <div className="eventTickets-content__table-wrapper">
+                            <table className="eventTickets-content__table">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <input
+                                                type="checkbox"
+                                                checked={filteredResponses.length > 0 && selectedGuests.size === filteredResponses.length}
+                                                onChange={selectAllGuests}
+                                            />
+                                        </th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Ticket Type</th>
+                                        <th>Quantity</th>
+                                        <th>Total Price</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredResponses.map((guest) => {
+                                        const guestId = guest.bookingId || guest.guest_id;
+                                        const isSelected = selectedGuests.has(guestId);
+                                        const totalAmount = guest.total_amount || (guest.unit_price * guest.quantity);
 
-                                    return (
-                                        <tr key={guestId} className={isSelected ? "selected-row" : ""}>
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isSelected}
-                                                    onChange={() => toggleSelectGuest(guestId)}
-                                                />
-                                            </td>
-                                            <td>
-                                                {guest.customer_first_name} {guest.customer_last_name}
-                                            </td>
-                                            <td>{guest.customer_email}</td>
-                                            <td>
-                                                <span className="ticket-badge">
-                                                    {guest.ticket_type_label || guest.ticket_type}
-                                                </span>
-                                            </td>
-                                            <td>{guest.quantity}</td>
-                                            <td className="price-cell">
-                                                {formatCurrency(totalAmount)}
-                                            </td>
-                                            <td>
-                                                <span className={`status-badge status-${guest.payment_status}`}>
-                                                    {guest.payment_status}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="action-buttons">
-                                                    <button
-                                                        className="btn-action btn-view"
-                                                        onClick={() => openViewDetails(guest)}
-                                                        title="View Details"
-                                                    >
-                                                        <i className="bi bi-eye"></i>
-                                                    </button>
-                                                    <button
-                                                        className="btn-action btn-message"
-                                                        onClick={() => openIndividualMessage(guest)}
-                                                        title="Send Message"
-                                                    >
-                                                        <i className="bi bi-envelope"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                        return (
+                                            <tr key={guestId} className={isSelected ? "selected-row" : ""}>
+                                                <td>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleSelectGuest(guestId)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    {guest.customer_first_name} {guest.customer_last_name}
+                                                </td>
+                                                <td>{guest.customer_email}</td>
+                                                <td>
+                                                    <span className="ticket-badge">
+                                                        {guest.ticket_type_label || guest.ticket_type}
+                                                    </span>
+                                                </td>
+                                                <td>{guest.quantity}</td>
+                                                <td className="price-cell">
+                                                    {formatCurrency(totalAmount)}
+                                                </td>
+                                                <td>
+                                                    <span className={`status-badge status-${guest.payment_status}`}>
+                                                        {guest.payment_status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div className="action-buttons">
+                                                        <button
+                                                            className="btn-action btn-view"
+                                                            onClick={() => openViewDetails(guest)}
+                                                            title="View Details"
+                                                        >
+                                                            <i className="bi bi-eye"></i>
+                                                        </button>
+                                                        <button
+                                                            className="btn-action btn-message"
+                                                            onClick={() => openIndividualMessage(guest)}
+                                                            title="Send Message"
+                                                        >
+                                                            <i className="bi bi-envelope"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+
+                        </div>
                     )}
                 </div>
 
