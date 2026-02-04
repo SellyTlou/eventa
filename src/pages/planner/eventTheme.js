@@ -81,10 +81,10 @@ export default function EventTheme() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [hasTickets, setHasTickets] = useState(null);
   const [ticketConfig, setTicketConfig] = useState({
-    earlyBird: { price: "", quantity: "" },
-    general: { price: "" },
-    vip: { price: "" },
-    vvip: { price: "" }
+    earlyBird: { name: "Early Bird", price: "", quantity: "", description: "Limited early bird tickets" },
+    general: { name: "General Admission", price: "", quantity: "", description: "Standard admission ticket" },
+    vip: { name: "VIP", price: "", quantity: "", description: "VIP experience with perks" },
+    vvip: { name: "VVIP", price: "", quantity: "", description: "Exclusive VVIP experience" }
   });
   const [eventInfo, setEventInfo] = useState("");
   const [eventData, setEventData] = useState(null);
@@ -171,9 +171,29 @@ export default function EventTheme() {
   };
 
   const saveTicketConfiguration = () => {
+    // Filter out empty ticket types
+    const activeTickets = {};
+    
+    Object.entries(ticketConfig).forEach(([type, config]) => {
+      if (config.price && config.quantity) {
+        // Parse to numbers for validation
+        const price = parseFloat(config.price);
+        const quantity = parseInt(config.quantity);
+        
+        if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
+          activeTickets[type] = {
+            name: config.name,
+            price: price,
+            quantity: quantity,
+            description: config.description
+          };
+        }
+      }
+    });
+    
     const ticketData = {
       hasTickets: true,
-      config: ticketConfig,
+      config: activeTickets,
       eventInfo: eventInfo.trim()
     };
     
@@ -225,10 +245,10 @@ export default function EventTheme() {
     setShowTicketModal(false);
     setHasTickets(null);
     setTicketConfig({
-      earlyBird: { price: "", quantity: "" },
-      general: { price: "" },
-      vip: { price: "" },
-      vvip: { price: "" }
+      earlyBird: { name: "Early Bird", price: "", quantity: "", description: "Limited early bird tickets" },
+      general: { name: "General Admission", price: "", quantity: "", description: "Standard admission ticket" },
+      vip: { name: "VIP", price: "", quantity: "", description: "VIP experience with perks" },
+      vvip: { name: "VVIP", price: "", quantity: "", description: "Exclusive VVIP experience" }
     });
     setEventInfo("");
   };
@@ -236,27 +256,16 @@ export default function EventTheme() {
   const handleSubmitTickets = () => {
     // Validate ticket configuration
     if (hasTickets) {
-      // Check Early Bird has both price and quantity if filled
-      if (ticketConfig.earlyBird.price && !ticketConfig.earlyBird.quantity) {
-        alert("Please enter quantity for Early Bird tickets");
-        return;
-      }
-      if (ticketConfig.earlyBird.quantity && !ticketConfig.earlyBird.price) {
-        alert("Please enter price for Early Bird tickets");
-        return;
-      }
-      
-      // Check if at least one ticket type has price
+      // Check if at least one ticket type has both price and quantity
       const hasValidTicket = Object.entries(ticketConfig).some(([type, config]) => {
-        if (type === 'earlyBird') {
-          return config.price && config.quantity && !isNaN(config.price) && !isNaN(config.quantity);
-        } else {
-          return config.price && !isNaN(config.price);
-        }
+        const price = parseFloat(config.price);
+        const quantity = parseInt(config.quantity);
+        
+        return !isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1;
       });
       
       if (!hasValidTicket) {
-        alert("Please enter price for at least one ticket type");
+        alert("Please enter valid price and quantity for at least one ticket type");
         return;
       }
     }
@@ -400,15 +409,16 @@ export default function EventTheme() {
                   </div>
                 </div>
               ) : (
-                // Step 2: Ticket configuration form
+                // Step 2: Ticket configuration form with quantity for all types
                 <div className="ticket-config-step">
                   <h3>Configure Your Tickets</h3>
-                  <p>Set prices for different ticket types</p>
+                  <p>Set prices and quantities for different ticket types</p>
                   
                   <div className="ticket-types-grid">
-                    {/* Early Bird Ticket - With Quantity */}
+                    {/* Early Bird Ticket */}
                     <div className="ticket-type-card">
-                      <h4>Early Bird <span className="quantity-note">(Limited quantity)</span></h4>
+                      <h4>Early Bird</h4>
+                      <p className="ticket-description">Limited early bird tickets</p>
                       <div className="ticket-fields">
                         <div className="form-group">
                           <label>Price (R)</label>
@@ -418,6 +428,7 @@ export default function EventTheme() {
                             onChange={(e) => handleInputChange('earlyBird', 'price', e.target.value)}
                             placeholder="e.g., 100"
                             min="0"
+                            step="0.01"
                           />
                         </div>
                         <div className="form-group">
@@ -433,53 +444,97 @@ export default function EventTheme() {
                       </div>
                     </div>
                     
-                    {/* General Admission - Only Price */}
+                    {/* General Admission */}
                     <div className="ticket-type-card">
                       <h4>General Admission</h4>
-                      <div className="form-group">
-                        <label>Price (R)</label>
-                        <input
-                          type="number"
-                          value={ticketConfig.general.price}
-                          onChange={(e) => handleInputChange('general', 'price', e.target.value)}
-                          placeholder="e.g., 150"
-                          min="0"
-                          style={{ width: "100%" }}
-                        />
+                      <p className="ticket-description">Standard admission ticket</p>
+                      <div className="ticket-fields">
+                        <div className="form-group">
+                          <label>Price (R)</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.general.price}
+                            onChange={(e) => handleInputChange('general', 'price', e.target.value)}
+                            placeholder="e.g., 150"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Quantity</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.general.quantity}
+                            onChange={(e) => handleInputChange('general', 'quantity', e.target.value)}
+                            placeholder="e.g., 200"
+                            min="1"
+                          />
+                        </div>
                       </div>
                     </div>
                     
-                    {/* VIP Ticket - Only Price */}
+                    {/* VIP Ticket */}
                     <div className="ticket-type-card">
                       <h4>VIP</h4>
-                      <div className="form-group">
-                        <label>Price (R)</label>
-                        <input
-                          type="number"
-                          value={ticketConfig.vip.price}
-                          onChange={(e) => handleInputChange('vip', 'price', e.target.value)}
-                          placeholder="e.g., 300"
-                          min="0"
-                          style={{ width: "100%" }}
-                        />
+                      <p className="ticket-description">VIP experience with perks</p>
+                      <div className="ticket-fields">
+                        <div className="form-group">
+                          <label>Price (R)</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.vip.price}
+                            onChange={(e) => handleInputChange('vip', 'price', e.target.value)}
+                            placeholder="e.g., 300"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Quantity</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.vip.quantity}
+                            onChange={(e) => handleInputChange('vip', 'quantity', e.target.value)}
+                            placeholder="e.g., 50"
+                            min="1"
+                          />
+                        </div>
                       </div>
                     </div>
                     
-                    {/* VVIP Ticket - Only Price */}
+                    {/* VVIP Ticket */}
                     <div className="ticket-type-card">
                       <h4>VVIP</h4>
-                      <div className="form-group">
-                        <label>Price (R)</label>
-                        <input
-                          type="number"
-                          value={ticketConfig.vvip.price}
-                          onChange={(e) => handleInputChange('vvip', 'price', e.target.value)}
-                          placeholder="e.g., 500"
-                          min="0"
-                          style={{ width: "100%" }}
-                        />
+                      <p className="ticket-description">Exclusive VVIP experience</p>
+                      <div className="ticket-fields">
+                        <div className="form-group">
+                          <label>Price (R)</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.vvip.price}
+                            onChange={(e) => handleInputChange('vvip', 'price', e.target.value)}
+                            placeholder="e.g., 500"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Quantity</label>
+                          <input
+                            type="number"
+                            value={ticketConfig.vvip.quantity}
+                            onChange={(e) => handleInputChange('vvip', 'quantity', e.target.value)}
+                            placeholder="e.g., 20"
+                            min="1"
+                          />
+                        </div>
                       </div>
                     </div>
+                  </div>
+                  
+                  <div className="ticket-notes">
+                    <p><strong>Note:</strong> Only ticket types with both price and quantity filled will be created.</p>
+                    <p>Leave fields empty for ticket types you don't want to offer.</p>
                   </div>
                   
                   {/* Event Info Textarea */}
