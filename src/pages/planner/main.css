@@ -2458,7 +2458,8 @@ eventsDashboard {
 /* Ticket Event Card Styling */
 .event-card.modern-design.ticket-event-card {
     border-left: 5px solid #28a745;
-    background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%);
+    background-color: #28a74552;
+   /* background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%); */
     position: relative;
 }
 
@@ -6844,20 +6845,13 @@ body {
 
 /* Ticket card details - Clean grid layout */
 .ticket-event-card .event-details-horizontal {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+      display: flex;
+    gap: 20px;
+    justify-content: space-between;
+    margin-top: 16px;
 }
 
-.ticket-event-card .detail-horizontal {
-    text-align: center;
-    padding: 0.75rem 0.5rem;
-    background: #f9fafb;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    transition: all 0.2s ease;
-}
+
 
 .ticket-event-card .detail-horizontal:hover {
     background: #f3f4f6;
@@ -6970,11 +6964,11 @@ body {
     border: 1px solid #f3f4f6;
 }
 
-.rsvp-event-card:hover {
+/* .rsvp-event-card:hover {
     transform: translateY(-6px);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
     border-color: #d1d5db;
-}
+} */
 
 /* RSVP card image section */
 .rsvp-event-card .event-image-section {
@@ -6999,7 +6993,7 @@ body {
 /* RSVP card details section */
 .rsvp-event-card .event-details-section {
     padding: 1.5rem;
-    background: white;
+    background: #007bff61;
     position: relative;
 }
 
@@ -7084,7 +7078,7 @@ body {
 /* RSVP card actions section */
 .rsvp-event-card .event-actions-section {
     padding: 0 1.5rem 1.5rem;
-    background: white;
+    background: #007bff61;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -7248,12 +7242,7 @@ body {
 /* =============================================
    RESPONSIVE DESIGN
    ============================================= */
-@media (max-width: 1200px) {
-    .ticket-event-card .event-details-horizontal {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-    }
-}
+
 
 @media (max-width: 992px) {
     .ticket-event-card,
@@ -7436,7 +7425,7 @@ body {
 /* Ticket card details section */
 .ticket-event-card .event-details-section {
     padding: 1.5rem;
-    background: white;
+    background: #28a74552;
 }
 
 .ticket-event-card .event-title {
@@ -7453,14 +7442,9 @@ body {
 
 /* Ticket card details - Compact inline layout */
 .ticket-event-card .event-details-horizontal {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-    padding: 0.75rem;
-    background: #f8fafc;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
+       display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
 }
 
 .ticket-event-card .detail-horizontal {
@@ -7535,8 +7519,8 @@ body {
 
 /* Ticket card actions section */
 .ticket-event-card .event-actions-section {
-    padding: 0 1.5rem 1.5rem;
-    background: white;
+    
+    background: #28a74552;
     display: flex;
     gap: 0.75rem;
 }
@@ -7650,16 +7634,7 @@ body {
 /* =============================================
    RESPONSIVE DESIGN
    ============================================= */
-@media (max-width: 1200px) {
-    .ticket-event-card .event-details-horizontal {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    
-    .ticket-event-card .detail-horizontal {
-        min-width: calc(50% - 0.5rem);
-    }
-}
+
 
 @media (max-width: 992px) {
     .ticket-event-card {
@@ -7726,13 +7701,15 @@ body {
     100% { background-position: 0% 50%; }
 }
 
-.ticket-event-card::before {
+.ticket-event-card::before, .rsvp-event-card::before {
     background-size: 200% 200%;
     animation: gradientFlow 3s ease infinite;
+    z-index: 10;
 }
 
-.ticket-event-card:hover {
+.ticket-event-card:hover, .rsvp-event-card:hover {
     animation: salesPulse 2s infinite;
+    z-index: 10;
 }
 
 /* =============================================
@@ -7752,7 +7729,14 @@ body {
 }
 
 .ticket-event-card .detail-horizontal {
-    position: relative;
+   display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #f3f4f6;
+    transition: all 0.2s ease;
 }
 
 /* Sales counter (animated number) */
@@ -7780,7 +7764,7 @@ body {
 }
 
 /* Gradient border on hover */
-.ticket-event-card:hover::after {
+.ticket-event-card:hover::after, .rsvp-event-card::after {
     content: '';
     position: absolute;
     top: -2px;
