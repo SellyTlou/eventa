@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 function Pricing() {
     // eslint-disable-next-line no-unused-vars
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    const [billingCycle, setBillingCycle] = useState("monthly");
+    // Monthly pricing only
     const [activeCategory, setActiveCategory] = useState("Personal Events");
     const [activeFaq, setActiveFaq] = useState(null);
     const navigate = useNavigate();
@@ -182,7 +182,6 @@ function Pricing() {
                     id: pkg.id,
                     name: pkg.name === 'Advanced' ? 'CUSTOM PLAN' : pkg.name,
                     monthlyPrice: pkg.price > 0 ? `R${pkg.price}` : 'Contact Sales',
-                    yearlyPrice: pkg.price > 0 ? `R${Math.round(pkg.price * 12 * 0.8)}` : 'Contact Sales',
                     description: pkg.name === 'Advanced' ? 'For large-scale business events' : `Perfect for ${pkg.name.toLowerCase()}`,
                     isPopular: pkg.package_type === 'advance',
                     features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : [],
@@ -207,7 +206,6 @@ function Pricing() {
                     {
                         name: "STARTER PLAN",
                         monthlyPrice: "R649.00",
-                        yearlyPrice: "R7788.00",
                         description: "Perfect for starter business events",
                         isPopular: true,
                         features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
@@ -218,7 +216,6 @@ function Pricing() {
                     {
                         name: "INTERMEDIATE PLAN",
                         monthlyPrice: "R2149.00",
-                        yearlyPrice: "R25788.00",
                         description: "Perfect for intermediate business events",
                         isPopular: false,
                         features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
@@ -229,7 +226,6 @@ function Pricing() {
                     {
                         name: "ADVANCE PLUS PLAN",
                         monthlyPrice: "Contact Sales",
-                        yearlyPrice: "Contact Sales",
                         description: "Perfect for advanced business events",
                         isPopular: false,
                         features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
@@ -240,7 +236,6 @@ function Pricing() {
                     {
                         name: "CUSTOM PLAN",
                         monthlyPrice: "Custom Pricing",
-                        yearlyPrice: "Custom Pricing",
                         description: "For large-scale business events",
                         isPopular: false,
                         features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
@@ -258,7 +253,6 @@ function Pricing() {
                 {
                     name: "STARTER PLAN",
                     monthlyPrice: "R649.00",
-                    yearlyPrice: "R7788.00",
                     description: "Perfect for starter business events",
                     isPopular: true,
                     features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
@@ -269,7 +263,6 @@ function Pricing() {
                 {
                     name: "INTERMEDIATE PLAN",
                     monthlyPrice: "R2149.00",
-                    yearlyPrice: "R25788.00",
                     description: "Perfect for intermediate business events",
                     isPopular: false,
                     features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
@@ -280,7 +273,6 @@ function Pricing() {
                 {
                     name: "ADVANCE PLUS PLAN",
                     monthlyPrice: "Contact Sales",
-                    yearlyPrice: "Contact Sales",
                     description: "Perfect for advanced business events",
                     isPopular: false,
                     features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
@@ -291,7 +283,6 @@ function Pricing() {
                 {
                     name: "CUSTOM PLAN",
                     monthlyPrice: "Custom Pricing",
-                    yearlyPrice: "Custom Pricing",
                     description: "For large-scale business events",
                     isPopular: false,
                     features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
@@ -332,7 +323,6 @@ function Pricing() {
         "Personal Events": pricingPlans.map(plan => ({
             name: plan.name,
             monthlyPrice: plan.price,
-            yearlyPrice: plan.price === "Free" ? "Free" : `R${Math.round(parseFloat(plan.price.replace('R', '')) * 12 * 0.6)}`,
             description: `Perfect for ${plan.name.toLowerCase()} events`,
             isPopular: plan.isPopular,
             features: plan.features,
@@ -344,7 +334,6 @@ function Pricing() {
             return {
                 name: plan.name,
                 monthlyPrice: plan.monthlyPrice,
-                yearlyPrice: plan.yearlyPrice,
                 description: plan.description,
                 isPopular: plan.isPopular,
                 features: plan.features,
@@ -356,7 +345,6 @@ function Pricing() {
             {
                 name: "STARTER PLAN",
                 monthlyPrice: "R649.00",
-                yearlyPrice: "R7788.00",
                 description: "Perfect for starter business events",
                 isPopular: true,
                 features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
@@ -367,7 +355,6 @@ function Pricing() {
             {
                 name: "INTERMEDIATE PLAN",
                 monthlyPrice: "R2149.00",
-                yearlyPrice: "R25788.00",
                 description: "Perfect for intermediate business events",
                 isPopular: false,
                 features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
@@ -378,7 +365,6 @@ function Pricing() {
             {
                 name: "ADVANCE PLUS PLAN",
                 monthlyPrice: "Contact Sales",
-                yearlyPrice: "Contact Sales",
                 description: "Perfect for advanced business events",
                 isPopular: false,
                 features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
@@ -389,7 +375,6 @@ function Pricing() {
             {
                 name: "CUSTOM PLAN",
                 monthlyPrice: "Custom Pricing",
-                yearlyPrice: "Custom Pricing",
                 description: "For large-scale business events",
                 isPopular: false,
                 features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
@@ -402,7 +387,6 @@ function Pricing() {
             {
                 name: "Basic",
                 monthlyPrice: "R0",
-                yearlyPrice: "R0",
                 description: "For basic ticketing",
                 isPopular: false,
                 features: [
@@ -419,7 +403,6 @@ function Pricing() {
             {
                 name: "Premium",
                 monthlyPrice: "R49.99",
-                yearlyPrice: "R299.94",
                 description: "For advanced ticketing",
                 isPopular: false,
                 features: [
@@ -437,7 +420,6 @@ function Pricing() {
             {
                 name: "Advanced",
                 monthlyPrice: "R99.99",
-                yearlyPrice: "R599.94",
                 description: "For professional ticketing",
                 isPopular: true,
                 features: [
@@ -465,8 +447,8 @@ function Pricing() {
             answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R200/month to test our features. we don't offer refunds."
         },
         {
-            question: "Do I get a discount if I pay yearly instead of monthly?",
-            answer: "Absolutely! When you choose yearly billing, you save 15% compared to monthly payments. This is our way of rewarding customers who commit to long-term use."
+            question: "How flexible are the plans?",
+            answer: "Our plans are flexible and scalable. You can upgrade, downgrade, or cancel anytime with no long-term contracts. Adjust your plan as your event needs change."
         },
         {
             question: "Can I cancel or change my plan at any time?",
@@ -481,13 +463,6 @@ function Pricing() {
     const toggleFaq = (index) => {
         setActiveFaq(activeFaq === index ? null : index);
     };
-
-    const calculateYearlySavings = (monthlyPrice) => {
-    if (monthlyPrice === "Free") return "Completely free forever";
-    const monthly = parseFloat(monthlyPrice.replace('R', ''));
-    const yearly = monthly * 12 * 0.85; // 15% discount
-    return `Save R${Math.round(monthly * 12 - yearly)} per year`;
-};
 
     // Show loading state
     if (loadingPricing) {
@@ -539,31 +514,6 @@ function Pricing() {
                     </div>
                 </section>
 
-                {/* Billing Toggle */}
-                <section className="billing-section">
-                    <div className="container">
-                        <div className="row justify-content-center">
-                            <div className="col-lg-6 text-center">
-                                <div className="billing-toggle">
-                                    <span className={billingCycle === "monthly" ? "active" : ""}>
-                                        Monthly
-                                    </span>
-                                    <label className="switch">
-                                        <input
-                                            type="checkbox"
-                                            checked={billingCycle === "yearly"}
-                                            onChange={(e) => setBillingCycle(e.target.checked ? "yearly" : "monthly")}
-                                        />
-                                        <span className="slider round"></span>
-                                    </label>
-                                    <span className={billingCycle === "yearly" ? "active" : ""}>
-                                        Yearly <span className="save-badge"></span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
 
                 {/* Category Tabs */}
                 <section className="category-section">
@@ -653,18 +603,12 @@ function Pricing() {
 
                                                             <div className="price-tag">
                                                                 <span className="price">
-                                                                    {billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                                                                    {plan.monthlyPrice}
                                                                 </span>
                                                                 <span className="duration">
-                                                                    {billingCycle === "monthly" ? "/month" : "/year"}
+                                                                    /month
                                                                 </span>
                                                             </div>
-
-                                                            {billingCycle === "yearly" && plan.monthlyPrice !== "Free" && (
-                                                                <div className="savings-text">
-                                                                    {calculateYearlySavings(plan.monthlyPrice)}
-                                                                </div>
-                                                            )}
 
                                                             <ul className="features-list">
                                                                 {plan.features.map((feature, featureIndex) => (

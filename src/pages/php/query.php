@@ -449,6 +449,9 @@ function verifyRecaptcha($secretKey, $responseToken)
 if (!isset($_POST['function'])) {
     echo json_encode(["error" => "No function specified"]);
     exit;
+}
+
+$fun = $_POST['function'];
 
 if ($fun === "updateUserBusinessPackage") {
     $user_id = $_POST['user_id'] ?? '';
@@ -504,9 +507,6 @@ if ($fun === "updateUserBusinessPackage") {
     }
     exit;
 }
-}
-
-$fun = $_POST['function'];
 
 if ($fun === "register") {
 
@@ -639,7 +639,6 @@ if ($fun === "saveSecurityQuestions") {
         ]);
         exit;
     }
-
     try {
         // Hash answers (same as passwords)
         $answer1_hash = password_hash($answer1, PASSWORD_DEFAULT);
@@ -3998,49 +3997,77 @@ if ($fun === "getPaymentHistory") {
         $package = $_POST['package'] ?? 'all';
         $dateFilter = $_POST['date_filter'] ?? 'all';
 
-        // Direct query replacing the revenue_analytics view
+        // UNION query to get both personal and business payments
         $query = "
             SELECT
                 ph.payment_id,
                 ph.user_id,
                 ph.user_name,
                 ph.package_id,
-                ph.package_name,
+                ph.package_name AS package_type,
                 ph.amount,
                 ph.payment_status,
                 ph.payment_date,
                 ph.payment_method,
                 u.email AS user_email,
+                u.account_type,
                 p.max_events,
                 p.max_guests,
-                p.package_type
+                'personal' AS payment_type
             FROM payment_history AS ph
             LEFT JOIN users AS u ON ph.user_id = u.user_id
             LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
-            WHERE 1=1
+            
+            UNION ALL
+            
+            SELECT
+                bpt.transaction_id AS payment_id,
+                bpt.user_id,
+                u.name AS user_name,
+                bp.id AS package_id,
+                bp.name AS package_type,
+                bpt.amount,
+                CASE WHEN bpt.status = 'success' THEN 'completed' ELSE bpt.status END AS payment_status,
+                bpt.created_at AS payment_date,
+                bpt.payment_method,
+                u.email AS user_email,
+                u.account_type,
+                bp.max_events,
+                bp.max_guests,
+                'business' AS payment_type
+            FROM business_package_transactions AS bpt
+            LEFT JOIN users AS u ON bpt.user_id = u.user_id
+            LEFT JOIN business_packages AS bp ON bpt.business_package_id = bp.id
         ";
 
         $params = [];
+        $where_conditions = [];
 
         // Search filter
         if (!empty($search)) {
-            $query .= " AND (ph.user_name LIKE ? OR ph.user_id LIKE ? OR ph.payment_id LIKE ? OR u.email LIKE ?)";
             $searchTerm = "%$search%";
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
+            $where_conditions[] = "(ph.user_name LIKE ? OR ph.user_id LIKE ? OR ph.payment_id LIKE ? OR u.email LIKE ?)";
+            for ($i = 0; $i < 4; $i++) {
+                $params[] = $searchTerm;
+            }
+        }
+
+        // Build WHERE clause if needed
+        if (!empty($where_conditions)) {
+            $query = "SELECT * FROM ($query) AS combined WHERE " . implode(" AND ", $where_conditions);
+        } else {
+            $query = "SELECT * FROM ($query) AS combined WHERE 1=1";
         }
 
         // Payment status filter
         if ($status !== 'all') {
-            $query .= " AND ph.payment_status = ?";
+            $query .= " AND payment_status = ?";
             $params[] = $status;
         }
 
         // Package type filter
         if ($package !== 'all') {
-            $query .= " AND p.package_type = ?";
+            $query .= " AND package_type = ?";
             $params[] = $package;
         }
 
@@ -4048,21 +4075,21 @@ if ($fun === "getPaymentHistory") {
         if ($dateFilter !== 'all') {
             switch ($dateFilter) {
                 case 'today':
-                    $query .= " AND DATE(ph.payment_date) = CURDATE()";
+                    $query .= " AND DATE(payment_date) = CURDATE()";
                     break;
                 case 'week':
-                    $query .= " AND ph.payment_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                    $query .= " AND payment_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
                     break;
                 case 'month':
-                    $query .= " AND ph.payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+                    $query .= " AND payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
                     break;
                 case 'year':
-                    $query .= " AND ph.payment_date >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)";
+                    $query .= " AND payment_date >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)";
                     break;
             }
         }
 
-        $query .= " ORDER BY ph.payment_date DESC";
+        $query .= " ORDER BY payment_date DESC";
 
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
@@ -5184,7 +5211,7 @@ if ($fun === "getUserBusinessPackage") {
         $stmt = $pdo->prepare("SELECT ubp.*, bp.package_type, bp.name, bp.max_guests, bp.max_events, bp.price 
                                FROM user_business_packages ubp 
                                JOIN business_packages bp ON ubp.business_package_id = bp.id 
-                               WHERE ubp.user_id = :user_id AND ubp.status = 'active' 
+                               WHERE ubp.user_id = :user_id AND ubp.status = 'active' AND ubp.expiry_date > NOW()
                                ORDER BY ubp.created_at DESC LIMIT 1");
         $stmt->execute([':user_id' => $user_id]);
         
@@ -5201,34 +5228,6 @@ if ($fun === "getUserBusinessPackage") {
 }
 
 // BUSINESS PACKAGES FUNCTIONS - ADD AFTER THE EXISTING PERSONAL PACKAGE FUNCTIONS
-
-if ($fun === "getUserBusinessPackage") {
-    $user_id = $_POST['user_id'] ?? '';
-    
-    if (empty($user_id)) {
-        echo json_encode(["success" => false, "message" => "User ID required"]);
-        exit;
-    }
-    
-    try {
-        $stmt = $pdo->prepare("SELECT ubp.*, bp.package_type, bp.name, bp.max_guests, bp.max_events, bp.price 
-                               FROM user_business_packages ubp 
-                               JOIN business_packages bp ON ubp.business_package_id = bp.id 
-                               WHERE ubp.user_id = :user_id AND ubp.status = 'active' 
-                               ORDER BY ubp.created_at DESC LIMIT 1");
-        $stmt->execute([':user_id' => $user_id]);
-        
-        if ($stmt->rowCount() > 0) {
-            $package = $stmt->fetch(PDO::FETCH_ASSOC);
-            echo json_encode(["success" => true, "userBusinessPackage" => $package]);
-        } else {
-            echo json_encode(["success" => false, "message" => "No active business package found"]);
-        }
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
 
 if ($fun === "getBusinessPackages") {
     try {

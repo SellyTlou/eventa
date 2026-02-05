@@ -220,7 +220,7 @@ export function SessionHandler() {
                 <Route path="/ticketEvent_details" element={<TicketEvent_details />} />
                 <Route path="/ticket_payment" element={<Ticket_payment />} />
                 <Route path="/businessdashboard" element={<BusinessDashboard />} />
-                <Route path="/event_ticket_manage" element={<TicketEventManage />} />
+                <Route path="/ticket-event-manage" element={<TicketEventManage />} />
             </Routes>
 
             <SessionWarningModal
@@ -588,17 +588,17 @@ export function Footer() {
                         <h5>Stay Connected</h5>
                         <p>Follow us on our social media channels</p>
                         <div className="social-icons">
-                            <a href="https://web.facebook.com/profile.php?id=61586884803873"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="me-3">
+                            <a href="https://web.facebook.com/profile.php?id=61586884803873" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="me-3">
                                 <i className="bi bi-facebook"></i>
                             </a>
                             <a href="/" className="me-3"><i className="bi bi-twitter"></i></a>
-                            <a href="https://www.instagram.com/evendi_za?utm_source=qr&igsh=Z3kwdDIzamlxYXFj"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="me-3">
+                            <a href="https://www.instagram.com/evendi_za?utm_source=qr&igsh=Z3kwdDIzamlxYXFj" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="me-3">
                                 <i className="bi bi-instagram"></i>
                             </a>
                             <a href="/"><i className="bi bi-linkedin"></i></a>
@@ -1893,7 +1893,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/invitationPage");
         onClose?.();
     };
-
+  
     const goToAttendanceStats = () => {
         navigate("/attendance_stats");
         onClose?.();
@@ -1902,10 +1902,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/guest_insights");
         onClose?.();
     };
-    const goToBookings = () => {
-        navigate("/event_ticket_manage");
-        onClose?.();
-    }
+
     const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : true;
 
     const navigationItems = [
@@ -1915,7 +1912,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
                 { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
                 { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
                 { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
-                { path: '/event_ticket_manage', icon: 'bi-ticket-perforated', label: 'Bookings', onClick: goToBookings }
+               
             ]
         },
         {
