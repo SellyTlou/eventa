@@ -779,8 +779,8 @@ Upgrade to a premium package to unlock bulk messaging features.`,
                                                 </td>
                                                 <td>{guest.customer_email}</td>
                                                 <td>
-                                                    <span className="ticket-badge">
-                                                        {guest.ticket_type_label || guest.ticket_type}
+                                                    <span className="ticketType">
+                                                        { guest.ticket_type}
                                                     </span>
                                                 </td>
                                                 <td>{guest.quantity}</td>

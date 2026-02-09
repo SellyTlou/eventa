@@ -3445,6 +3445,87 @@ if ($fun === 'recordPayment') {
     exit;
 }
 
+if ($fun === 'sendPaymentReceipt') {
+    $email = $_POST['email'] ?? '';
+    $name = $_POST['name'] ?? '';
+    $transaction_id = $_POST['transaction_id'] ?? '';
+    $amount = $_POST['amount'] ?? 0;
+    $package_name = $_POST['package_name'] ?? '';
+    $payment_date = $_POST['payment_date'] ?? date('Y-m-d H:i:s');
+    
+    if (empty($email) || empty($name)) {
+        echo json_encode(["success" => false, "message" => "Missing email or name"]);
+        exit;
+    }
+    
+    try {
+        // Send email using your existing email system
+        $subject = "Payment Receipt - Evenda";
+        
+        $message = "
+        <html>
+        <head>
+            <title>Payment Receipt</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #0056b3; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { padding: 30px; background: #f9f9f9; }
+                .receipt-details { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border: 1px solid #ddd; }
+                .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
+                .amount { font-size: 24px; font-weight: bold; color: #0056b3; margin: 10px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h2>Payment Receipt</h2>
+                </div>
+                <div class='content'>
+                    <p>Dear $name,</p>
+                    <p>Thank you for your payment. Here are your payment details:</p>
+                    
+                    <div class='receipt-details'>
+                        <p><strong>Transaction ID:</strong> $transaction_id</p>
+                        <p><strong>Date:</strong> " . date('F j, Y, g:i a', strtotime($payment_date)) . "</p>
+                        <p><strong>Package:</strong> $package_name</p>
+                        <div class='amount'>Amount: R $amount</div>
+                        <p><strong>Status:</strong> <span style='color: green;'>Completed</span></p>
+                    </div>
+                    
+                    <p>Your package has been activated and is ready to use.</p>
+                    <p>If you have any questions, please contact our support team.</p>
+                </div>
+                <div class='footer'>
+                    <p>Thank you for choosing Evenda!</p>
+                    <p>This is an automated email, please do not reply.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
+        
+        // Headers
+        $headers = "MIME-Version: 1.0" . "\r\n";
+        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+        $headers .= "From: Evenda <noreply@evenda.com>" . "\r\n";
+        $headers .= "Reply-To: support@evenda.com" . "\r\n";
+        
+        // Send email
+        $mailSent = mail($email, $subject, $message, $headers);
+        
+        if ($mailSent) {
+            echo json_encode(["success" => true, "message" => "Receipt email sent successfully"]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Failed to send email"]);
+        }
+        
+    } catch (Exception $e) {
+        echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($fun === "updateEventGuestLimit") {
     $event_id = $_POST['event_id'] ?? '';
     $guest_limit = $_POST['guest_limit'] ?? 0;

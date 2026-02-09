@@ -92,8 +92,9 @@ Nav styling
 ******************************/
 /* index.css or App.css */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600;700&display=swap');
+
 .nav-section {
-  background: transparent !important;
+  background-color: transparent !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin: 0;
   padding: 0;
@@ -104,7 +105,7 @@ Nav styling
   width: 100%;
   z-index: 1000;
   transition: background-color 0.3s ease;
-  background-color: #fff !important;
+   background: #ffffff !important
 }
 
 .nav-section .container {
@@ -449,6 +450,14 @@ Profile Dropdown Styles
 .profile-container {
   position: relative;
   display: inline-block;
+}
+
+.profile-container .dropdown-menu .dropdown-user-info {
+   flex-direction: column;
+    display: flex;
+}
+.profile-container .dropdown-menu{
+  width: 200px !important;
 }
 
 .profile-trigger {

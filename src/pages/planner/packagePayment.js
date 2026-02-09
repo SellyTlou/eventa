@@ -3,6 +3,7 @@ import "./main.css"; // Verify this path is correct
 import "../../alert.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut } from "../components"; 
+import crypto from "crypto-js";
 
 const PackagePayment = () => {
     const dropdownRef = useRef(null);
@@ -18,9 +19,37 @@ const PackagePayment = () => {
     const [error, setError] = useState("");
     const [processingPayment, setProcessingPayment] = useState(false);
     const [paymentStarted, setPaymentStarted] = useState(false);
+    const [paymentProof, setPaymentProof] = useState(null);
+    const [showProofOptions, setShowProofOptions] = useState(false);
+    const [transactionId, setTransactionId] = useState("");
 
     const vatRate = 0.15;
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
+
+    // ============ PAYFAST CONFIGURATION ============
+    const PAYFAST_CONFIG = {
+        // TEST CREDENTIALS (Replace with your own)
+        MERCHANT_ID: "10000100", // Your PayFast Merchant ID
+        MERCHANT_KEY: "46f0cd694581a", // Your PayFast Merchant Key
+        PASS_PHRASE: "", // Leave empty if not using passphrase
+        ITN_URL: "https://yourdomain.com/api/payfast/itn", // Your ITN endpoint
+        
+        // URLs
+        PAYFAST_URL: process.env.NODE_ENV === 'production' 
+            ? "https://www.payfast.co.za/eng/process"
+            : "https://sandbox.payfast.co.za/eng/process",
+        
+        RETURN_URL: `${window.location.origin}/payment-success`,
+        CANCEL_URL: `${window.location.origin}/payment-cancel`,
+        
+        // Email configuration
+        EMAIL_CONFIRMATION: true,
+        CONFIRMATION_EMAIL: user?.email || "",
+        
+        // Payment settings
+        PAYMENT_METHOD: "cc", // cc = credit card, eft = EFT, ddc = debit card
+        SUBSCRIPTION_TYPE: 0, // 0 = once off, 1 = subscription
+    };
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
@@ -28,7 +57,6 @@ const PackagePayment = () => {
             setAlert({ show: false, message: "", type: "" });
         }, 5000);
     };
-
 
     // Memoized calculation function
     const calculatePaymentDetails = useCallback(() => {
@@ -43,12 +71,177 @@ const PackagePayment = () => {
             basePrice,
             vatAmount,
             serviceFee,
-            totalAmount
+            totalAmount: totalAmount.toFixed(2)
         };
     }, [selectedPackage]);
 
     const paymentDetails = calculatePaymentDetails();
 
+    // ============ HELPER FUNCTIONS ============
+    const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
+    };
+
+    // ============ PAYFAST FUNCTIONS ============
+    const generateTransactionId = () => {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substr(2, 9);
+        return `PF-${timestamp}-${random}`;
+    };
+
+    const generatePayFastSignature = (data) => {
+        const sortedParams = Object.keys(data).sort();
+        let parameterString = "";
+        
+        sortedParams.forEach(key => {
+            if (data[key] !== "" && key !== 'signature') {
+                parameterString += `${key}=${encodeURIComponent(data[key]).replace(/%20/g, '+')}&`;
+            }
+        });
+        
+        parameterString = parameterString.slice(0, -1);
+        
+        if (PAYFAST_CONFIG.PASS_PHRASE) {
+            parameterString += `&passphrase=${encodeURIComponent(PAYFAST_CONFIG.PASS_PHRASE)}`;
+        }
+        
+        const signature = crypto.MD5(parameterString).toString();
+        return signature;
+    };
+
+    const preparePayFastData = () => {
+        const mPaymentId = generateTransactionId();
+        setTransactionId(mPaymentId);
+        
+        const paymentData = {
+            merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
+            merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
+            return_url: PAYFAST_CONFIG.RETURN_URL,
+            cancel_url: PAYFAST_CONFIG.CANCEL_URL,
+            notify_url: PAYFAST_CONFIG.ITN_URL,
+            
+            name_first: user?.name?.split(' ')[0] || '',
+            name_last: user?.name?.split(' ').slice(1).join(' ') || '',
+            email_address: user?.email || PAYFAST_CONFIG.CONFIRMATION_EMAIL,
+            cell_number: user?.phone || '',
+            
+            m_payment_id: mPaymentId,
+            amount: paymentDetails?.totalAmount || "0.00",
+            item_name: `${selectedPackage?.package_type} Package - Evenda`,
+            item_description: `Max Events: ${selectedPackage?.max_events}, Max Guests: ${selectedPackage?.max_guests}`,
+            
+            custom_str1: user?.user_id || '',
+            custom_str2: selectedPackage?.package_id || '',
+            custom_str3: selectedPackage?.package_type || '',
+            custom_str4: 'PayFast',
+            custom_int1: selectedPackage?.max_events || 0,
+            custom_int2: selectedPackage?.max_guests || 0,
+            custom_int3: Math.round(parseFloat(paymentDetails?.totalAmount || 0) * 100),
+            
+            payment_method: PAYFAST_CONFIG.PAYMENT_METHOD,
+            subscription_type: PAYFAST_CONFIG.SUBSCRIPTION_TYPE,
+            email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? 1 : 0,
+            confirmation_address: PAYFAST_CONFIG.CONFIRMATION_EMAIL,
+        };
+
+        paymentData.signature = generatePayFastSignature(paymentData);
+        return paymentData;
+    };
+
+    const initiatePayFastPayment = async () => {
+        setProcessingPayment(true);
+        setPaymentStarted(true);
+        
+        try {
+            const paymentData = preparePayFastData();
+            
+            const paymentRecorded = await recordPayment({
+                payment_method: 'payfast',
+                payment_status: 'pending',
+                transaction_id: paymentData.m_payment_id
+            });
+
+            if (!paymentRecorded) {
+                throw new Error("Failed to record payment");
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = PAYFAST_CONFIG.PAYFAST_URL;
+            form.style.display = 'none';
+            
+            Object.keys(paymentData).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = paymentData[key];
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+            
+        } catch (error) {
+            console.error("PayFast payment error:", error);
+            setError("Failed to initiate payment. Please try again.");
+            printAlert("Payment initiation failed. Please try again.", "error");
+            setProcessingPayment(false);
+            setPaymentStarted(false);
+        }
+    };
+
+    // ============ EMAIL FUNCTION (Pattern from your code) ============
+    const sendPaymentReceiptEmail = async (email, name, transactionId, amount, packageName) => {
+        try {
+            let apiUrl = process.env.REACT_APP_API_URL;
+            if (!apiUrl) {
+                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
+            }
+
+            if (apiUrl === "/api") {
+                apiUrl = "https://evenditest.evendi.co.za/api";
+            }
+
+            const formDataToSend = new FormData();
+            formDataToSend.append("function", "sendPaymentReceipt");
+            formDataToSend.append("email", email);
+            formDataToSend.append("name", name);
+            formDataToSend.append("transaction_id", transactionId);
+            formDataToSend.append("amount", amount);
+            formDataToSend.append("package_name", packageName);
+            formDataToSend.append("payment_date", new Date().toISOString());
+            formDataToSend.append("API_URL", apiUrl);
+
+            const url = `${apiUrl}/query.php`;
+            console.log("Sending payment receipt request to:", url);
+
+            const response = await fetchWithTimeout(url, {
+                method: "POST",
+                body: formDataToSend
+            }, 15000);
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error("Error sending payment receipt email:", error);
+            return { success: false, message: "Failed to send payment receipt email" };
+        }
+    };
+
+    // ============ PAYMENT FUNCTIONS ============
     const getPackageById = async (packageId) => {
         try {
             const formData = new FormData();
@@ -79,104 +272,39 @@ const PackagePayment = () => {
         }
     };
 
-    useEffect(() => {
-        const initializePage = async () => {
-            setLoading(true);
-            setError("");
-
-            try {
-                const packageId = localStorage.getItem("selectedPackageId");
-                const storedUser = localStorage.getItem("user");
-
-                if (!storedUser) {
-                    printAlert("Session expired. Please log in again.", "error");
-                    logOut();
-                    navigate("/");
-                    return;
-                }
-
-                const userData = JSON.parse(storedUser);
-                setUser(userData);
-
-                if (!packageId) {
-                    navigate("/upgrade-package");
-                    return;
-                }
-
-                await getPackageById(packageId);
-            } catch (error) {
-                console.error("Initialization error:", error);
-                setError("Failed to initialize page");
-                navigate("/upgrade-package");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        initializePage();
-    }, [searchParams, navigate]);
-
-    useEffect(() => {
-        const id = localStorage.getItem("selectedEventId")
-        fetchEventStatusByID(id);
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setDropdownOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-
-    const navigationHandlers = {
-        home: () => navigate("/eventsDashboard"),
-        eventManagement: () => navigate("/eventManagement"),
-        invitations: () => navigate("/invitationPage"),
-        manage: () => navigate("/manage_my_event")
-    };
-
-    const handleBack = () => {
-        navigate(-1);
-    };
-
-    const handlePaymentMethodSelect = (method) => {
-        setSelectedPaymentMethod(method);
-        setShowPaymentPopup(true);
-    };
-
-    const recordPayment = async (paymentData) => {
+    const recordPayment = async (paymentInfo = {}) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
 
             formData.append("function", "recordPayment");
             formData.append("user_id", user?.user_id);
-            formData.append("user_name", user?.name);
+            formData.append("user_name", user?.name || "");
             formData.append("package_id", selectedPackage?.package_id);
-            formData.append("package_name", selectedPackage?.package_type);
-            formData.append("amount", paymentDetails?.totalAmount);
-            formData.append("payment_method", selectedPaymentMethod);
-            formData.append("payment_status", "completed");
+            formData.append("package_name", selectedPackage?.package_type || "");
+            formData.append("amount", paymentDetails?.totalAmount || "0.00");
+            formData.append("payment_method", paymentInfo.payment_method || selectedPaymentMethod);
+            formData.append("payment_status", paymentInfo.payment_status || "pending");
+            
+            if (transactionId) {
+                formData.append("transaction_id", transactionId);
+            }
 
             console.log("Recording payment with data:", {
                 user_id: user?.user_id,
-                user_name: user?.name,
                 package_id: selectedPackage?.package_id,
-                package_name: selectedPackage?.package_type,
                 amount: paymentDetails?.totalAmount,
-                payment_method: selectedPaymentMethod,
-                payment_status: "completed"
+                payment_method: paymentInfo.payment_method || selectedPaymentMethod,
+                payment_status: paymentInfo.payment_status || "pending"
             });
+
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });
 
-            // Check if the response is empty or invalid JSON
             const text = await response.text();
             if (!text.trim()) {
-                console.error("Empty response from server (recordPayment)");
                 throw new Error("Empty response from server");
             }
 
@@ -189,46 +317,128 @@ const PackagePayment = () => {
             }
 
             if (!response.ok || !result.success) {
-                console.error("Server error:", result.message || "Unknown error");
                 throw new Error(result.message || "Payment not recorded");
             }
 
             console.log("✅ Payment recorded successfully:", result);
+            
+            if (paymentInfo.payment_status === 'completed' || result.payment_id) {
+                generatePaymentProof(result.payment_id || transactionId);
+                setShowProofOptions(true);
+            }
+            
             return true;
 
         } catch (error) {
             console.error("Error recording payment:", error);
+            printAlert("Failed to record payment: " + error.message, "error");
             return false;
         }
     };
 
-    const updateUserPackage = async () => {
+    const generatePaymentProof = (paymentId) => {
+        const proof = {
+            transactionId: paymentId || transactionId || `EVENDA-${Date.now()}`,
+            date: new Date().toISOString(),
+            merchant: "Evenda Events",
+            customer: user?.name || "",
+            email: user?.email || "",
+            package: selectedPackage?.package_type || "",
+            amount: paymentDetails?.totalAmount || "0.00",
+            vat: paymentDetails?.vatAmount?.toFixed(2) || "0.00",
+            serviceFee: paymentDetails?.serviceFee?.toFixed(2) || "0.00",
+            total: paymentDetails?.totalAmount || "0.00",
+            status: "Completed",
+            reference: `EVENDA-${Date.now()}`,
+            terms: "Thank you for your payment. This is your proof of payment."
+        };
+        
+        setPaymentProof(proof);
+        return proof;
+    };
+
+    const downloadPaymentProof = () => {
+        if (!paymentProof) return;
+        
+        const proofText = `
+        =====================================
+                  PAYMENT RECEIPT
+        =====================================
+        Transaction ID: ${paymentProof.transactionId}
+        Date: ${new Date(paymentProof.date).toLocaleString()}
+        
+        Merchant: ${paymentProof.merchant}
+        
+        Customer Details:
+        Name: ${paymentProof.customer}
+        Email: ${paymentProof.email}
+        
+        Package Details:
+        Package: ${paymentProof.package}
+        
+        Payment Breakdown:
+        Package Cost: R ${(parseFloat(paymentProof.amount) - parseFloat(paymentProof.vat) - parseFloat(paymentProof.serviceFee)).toFixed(2)}
+        VAT (15%): R ${paymentProof.vat}
+        Service Fee: R ${paymentProof.serviceFee}
+        -------------------------------------
+        TOTAL: R ${paymentProof.total}
+        
+        Payment Status: ${paymentProof.status}
+        Reference: ${paymentProof.reference}
+        
+        ${paymentProof.terms}
+        =====================================
+        Generated by Evenda Event Management
+        =====================================
+        `;
+        
+        const blob = new Blob([proofText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Evenda-Payment-${paymentProof.transactionId}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        printAlert("Payment proof downloaded successfully!", "success");
+    };
+
+    const handleSendEmailReceipt = async () => {
+        if (!paymentProof || !user?.email) {
+            printAlert("Unable to send email. Missing payment proof or email address.", "error");
+            return;
+        }
+        
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "updateUserPackage");
-            formData.append("user_id", user?.user_id);
-            formData.append("package_id", selectedPackage?.package_id);
-            formData.append("events_limit", selectedPackage?.max_events);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error("Network response was not ok");
-
-            const result = await response.json();
-            return result.success;
+            setProcessingPayment(true);
+            
+            const result = await sendPaymentReceiptEmail(
+                user.email,
+                user.name,
+                paymentProof.transactionId,
+                paymentProof.total,
+                selectedPackage.package_type
+            );
+            
+            if (result.success) {
+                printAlert("Payment receipt sent to your email!", "success");
+            } else {
+                throw new Error(result.message || "Failed to send email");
+            }
+            
         } catch (error) {
-            console.error("Error updating package:", error);
-            return false;
+            console.error("Email sending error:", error);
+            printAlert("Failed to send email receipt. You can download the proof instead.", "error");
+        } finally {
+            setProcessingPayment(false);
         }
     };
 
     const processPayment = async (paymentData) => {
         if (processingPayment || paymentStarted) {
-            console.log("Payment already in progress, ignoring duplicate click");
+            console.log("Payment already in progress");
             return;
         }
 
@@ -237,21 +447,26 @@ const PackagePayment = () => {
         setError("");
 
         try {
+            if (selectedPaymentMethod === 'payfast') {
+                await initiatePayFastPayment();
+                return;
+            }
+            
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            const paymentSuccess = await recordPayment(paymentData);
+            const paymentSuccess = await recordPayment({
+                ...paymentData,
+                payment_status: "completed"
+            });
 
-            console.log("Payment success status:", paymentSuccess);
             if (paymentSuccess) {
-                const updateSuccess = await updateUserPackage();
-
-                if (updateSuccess) {
-                    localStorage.removeItem("selectedPackageId");
-                    //alert("Payment successful! Your package has been upgraded.");
-                    printAlert("Payment successful! Your package has been upgraded.", "success");
-                    handleBack();
-                } else {
-                    throw new Error("Failed to update user package");
+                printAlert("Payment successful! Your package has been upgraded.", "success");
+                
+                if (selectedPaymentMethod !== 'payfast') {
+                    setTimeout(() => {
+                        localStorage.removeItem("selectedPackageId");
+                        handleBack();
+                    }, 2000);
                 }
             } else {
                 throw new Error("Payment recording failed");
@@ -259,22 +474,78 @@ const PackagePayment = () => {
         } catch (error) {
             console.error("Payment processing error:", error);
             setError("An error occurred during payment processing. Please try again.");
-            //alert("Payment failed. Please try again.");
             printAlert("Payment failed. Please try again.", "error");
         } finally {
-            setProcessingPayment(false);
-            setPaymentStarted(false);
-            setShowPaymentPopup(false);
+            if (selectedPaymentMethod !== 'payfast') {
+                setProcessingPayment(false);
+                setPaymentStarted(false);
+                setShowPaymentPopup(false);
+            }
         }
     };
 
-    const closePopup = () => {
-        setShowPaymentPopup(false);
-        setSelectedPaymentMethod("");
-        setError("");
+    // ============ PAYMENT FORM COMPONENTS ============
+    const PayFastForm = ({ onSubmit }) => {
+        const [loading, setLoading] = useState(false);
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            setLoading(true);
+            onSubmit({
+                paymentMethod: "payfast",
+                provider: "PayFast",
+                status: "redirecting"
+            });
+        };
+
+        return (
+            <div className="payfast-container">
+                <div className="payfast-header">
+                    <i className="bi bi-shield-lock"></i>
+                    <h4>Pay with PayFast</h4>
+                </div>
+                <div className="payfast-features">
+                    <div className="feature-item">
+                        <i className="bi bi-credit-card"></i>
+                        <span>Credit/Debit Cards</span>
+                    </div>
+                    <div className="feature-item">
+                        <i className="bi bi-bank"></i>
+                        <span>EFT & Instant EFT</span>
+                    </div>
+                    <div className="feature-item">
+                        <i className="bi bi-phone"></i>
+                        <span>Mobile Wallets</span>
+                    </div>
+                </div>
+                <p className="payment-info">
+                    You will be securely redirected to PayFast to complete your payment.
+                </p>
+                <div className="payfast-amount">
+                    <strong>Amount: R{paymentDetails?.totalAmount || "0.00"}</strong>
+                </div>
+                <button
+                    onClick={handleSubmit}
+                    className="submit-payment-btn payfast-btn"
+                    disabled={loading || processingPayment}
+                >
+                    {loading || processingPayment ? (
+                        <>
+                            <div className="spinner-border spinner-border-sm" role="status"></div>
+                            &nbsp;Redirecting to PayFast...
+                        </>
+                    ) : (
+                        "Proceed to PayFast"
+                    )}
+                </button>
+                <div className="payfast-security">
+                    <i className="bi bi-shield-check"></i>
+                    <small>Secured by PayFast | PCI DSS Level 1 Compliant</small>
+                </div>
+            </div>
+        );
     };
 
-    // Payment Form Components (CreditCardForm, PayPalForm, StripeForm remain the same)
     const CreditCardForm = ({ onSubmit }) => {
         const [cardData, setCardData] = useState({
             cardNumber: "",
@@ -288,7 +559,6 @@ const PackagePayment = () => {
             e.preventDefault();
             setLoading(true);
 
-            // Simulate secure card validation
             setTimeout(() => {
                 setLoading(false);
                 onSubmit({
@@ -357,7 +627,7 @@ const PackagePayment = () => {
                             &nbsp;Processing Secure Payment...
                         </>
                     ) : (
-                        `Pay Securely R${paymentDetails?.totalAmount?.toFixed(2) || "0.00"}`
+                        `Pay Securely R${paymentDetails?.totalAmount || "0.00"}`
                     )}
                 </button>
             </form>
@@ -391,7 +661,7 @@ const PackagePayment = () => {
                     This is a demo simulation — no real payment will be processed.
                 </p>
                 <div className="paypal-amount">
-                    <strong>Amount: R{paymentDetails?.totalAmount?.toFixed(2) || "0.00"}</strong>
+                    <strong>Amount: R{paymentDetails?.totalAmount || "0.00"}</strong>
                 </div>
                 <button
                     onClick={handleSubmit}
@@ -450,7 +720,7 @@ const PackagePayment = () => {
                             Processing with Stripe...
                         </>
                     ) : (
-                        `Pay R${paymentDetails?.totalAmount?.toFixed(2) || '0.00'} with Stripe`
+                        `Pay R${paymentDetails?.totalAmount || '0.00'} with Stripe`
                     )}
                 </button>
             </div>
@@ -465,10 +735,62 @@ const PackagePayment = () => {
                 return <PayPalForm onSubmit={processPayment} />;
             case 'stripe':
                 return <StripeForm onSubmit={processPayment} />;
+            case 'payfast':
+                return <PayFastForm onSubmit={processPayment} />;
             default:
                 return null;
         }
     };
+
+    // ============ NAVIGATION & INITIALIZATION ============
+    useEffect(() => {
+        const initializePage = async () => {
+            setLoading(true);
+            setError("");
+
+            try {
+                const packageId = localStorage.getItem("selectedPackageId");
+                const storedUser = localStorage.getItem("user");
+
+                if (!storedUser) {
+                    printAlert("Session expired. Please log in again.", "error");
+                    logOut();
+                    navigate("/");
+                    return;
+                }
+
+                const userData = JSON.parse(storedUser);
+                setUser(userData);
+
+                if (!packageId) {
+                    navigate("/upgrade-package");
+                    return;
+                }
+
+                await getPackageById(packageId);
+            } catch (error) {
+                console.error("Initialization error:", error);
+                setError("Failed to initialize page");
+                navigate("/upgrade-package");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initializePage();
+    }, [searchParams, navigate]);
+
+    useEffect(() => {
+        const id = localStorage.getItem("selectedEventId")
+        fetchEventStatusByID(id);
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const fetchEventStatusByID = async (eventId) => {
         try {
@@ -496,6 +818,7 @@ const PackagePayment = () => {
     }
 
     const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
+    const handleBack = () => navigate(-1);
     const goToHome = () => navigate("/eventsDashboard");
     const goToEventManagement = () => navigate(`/eventManagement`);
     const goToInvitations = () => navigate(`/invitationPage`);
@@ -503,6 +826,60 @@ const PackagePayment = () => {
     const goToGuestInsights = () => navigate("/guest_insights");
     const goToAttendanceStats = () => navigate("/attendance_stats");
     const goToProfile = () => navigate("/Profile");
+    const handlePaymentMethodSelect = (method) => {
+        setSelectedPaymentMethod(method);
+        setShowPaymentPopup(true);
+    };
+    const closePopup = () => {
+        setShowPaymentPopup(false);
+        setSelectedPaymentMethod("");
+        setError("");
+    };
+
+    const PaymentProofModal = () => (
+        <div className="proof-modal-overlay">
+            <div className="proof-modal">
+                <button className="close-modal" onClick={() => setShowProofOptions(false)}>×</button>
+                <h3>Payment Successful! 🎉</h3>
+                <p>Your payment of <strong>R{paymentDetails?.totalAmount}</strong> has been processed successfully.</p>
+                
+                {paymentProof && (
+                    <div className="proof-details">
+                        <p><strong>Transaction ID:</strong> {paymentProof.transactionId}</p>
+                        <p><strong>Reference:</strong> {paymentProof.reference}</p>
+                        <p><strong>Date:</strong> {new Date(paymentProof.date).toLocaleString()}</p>
+                    </div>
+                )}
+                
+                <div className="proof-actions">
+                    <button 
+                        className="btn-event" 
+                        onClick={downloadPaymentProof}
+                        disabled={processingPayment}
+                    >
+                        <i className="bi bi-download"></i> Download Proof
+                    </button>
+                    <button 
+                        className="btn-event btn-event-success" 
+                        onClick={handleSendEmailReceipt}
+                        disabled={processingPayment}
+                    >
+                        <i className="bi bi-envelope"></i> Email Receipt
+                    </button>
+                    <button 
+                        className="btn-event btn-event-secondary" 
+                        onClick={() => {
+                            setShowProofOptions(false);
+                            localStorage.removeItem("selectedPackageId");
+                            handleBack();
+                        }}
+                    >
+                        <i className="bi bi-check-circle"></i> Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 
     if (loading) {
         return (
@@ -532,27 +909,18 @@ const PackagePayment = () => {
     }
 
     return (
-
         <div className="dashboard-container">
-            {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
-                    <i
-                        className={`fas ${alert.type === "error"
-                            ? "fa-times-circle"
-                            : alert.type === "success"
-                                ? "fa-check-circle"
-                                : alert.type === "warning"
-                                    ? "fa-exclamation-triangle"
-                                    : "fa-info-circle"
-                            }`}
-                    ></i>
+                    <i className={`fas ${
+                        alert.type === "error" ? "fa-times-circle" :
+                        alert.type === "success" ? "fa-check-circle" :
+                        alert.type === "warning" ? "fa-exclamation-triangle" : "fa-info-circle"
+                    }`}></i>
                     <span>{alert.message}</span>
                 </div>
             )}
 
-
-            {/* HEADER */}
             <div className="dashboard-header">
                 <h1>Evenda</h1>
                 <div className="header-tabs">
@@ -571,7 +939,6 @@ const PackagePayment = () => {
                 </div>
             </div>
 
-            {/* SIDEBAR */}
             <div className="dashboard-sidebar">
                 <div className="sidebar-header"><h3>Event Management</h3></div>
                 <div className="sidebar-section">
@@ -639,7 +1006,7 @@ const PackagePayment = () => {
 
                             <div className="totalAmount">
                                 <h3 className="totalTitle">Total</h3>
-                                <h3 className="totalPrice">R{paymentDetails?.totalAmount.toFixed(2)}</h3>
+                                <h3 className="totalPrice">R{paymentDetails?.totalAmount}</h3>
                             </div>
                         </div>
                     </div>
@@ -671,10 +1038,17 @@ const PackagePayment = () => {
                             <span>Stripe</span>
                             <small>Secure payments</small>
                         </button>
+                        <button
+                            className={`paymentOption ${selectedPaymentMethod === 'payfast' ? 'active' : ''}`}
+                            onClick={() => handlePaymentMethodSelect('payfast')}
+                        >
+                            <i className="bi bi-bank"></i>
+                            <span>PayFast</span>
+                            <small>Secure SA Payments</small>
+                        </button>
                     </div>
                 </div>
 
-                {/* Payment Method Popup */}
                 {showPaymentPopup && (
                     <div className="payment-popup-overlay">
                         <div className="payment-popup">
@@ -682,11 +1056,15 @@ const PackagePayment = () => {
                             <h3>Complete Payment</h3>
                             <div className="payment-summary">
                                 <p><strong>Package:</strong> {selectedPackage.package_type}</p>
-                                <p><strong>Amount:</strong> R{paymentDetails?.totalAmount.toFixed(2)}</p>
+                                <p><strong>Amount:</strong> R{paymentDetails?.totalAmount}</p>
                             </div>
                             {renderPaymentForm()}
                         </div>
                     </div>
+                )}
+
+                {showProofOptions && paymentProof && (
+                    <PaymentProofModal />
                 )}
             </div>
         </div>

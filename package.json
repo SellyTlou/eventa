@@ -13,6 +13,7 @@
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.5.1",
+    "crypto-js": "^4.2.0",
     "framer-motion": "^12.23.12",
     "js-priority-queue": "^0.1.5",
     "jspdf": "^4.1.0",

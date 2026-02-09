@@ -1,6 +1,6 @@
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ticket_Sales.css";
-import React, { useState, useEffect } from "react";
 import "../App.css";
 import "../responce.css";
 import "../alert.css";
@@ -22,6 +22,23 @@ function Ticket_Sale() {
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [debugInfo, setDebugInfo] = useState("");
+  
+  // Filter states
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedDate, setSelectedDate] = useState("all");
+  const [showFeatured, setShowFeatured] = useState(false);
+  const [showFree, setShowFree] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const eventsPerPage = 6;
+
+  // Extract unique event types
+  const [eventCategories, setEventCategories] = useState(["all"]);
 
   useEffect(() => {
     fetchEvents();
@@ -33,9 +50,17 @@ function Ticket_Sale() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Get unique event types for filter
+    const eventTypes = ["all", ...new Set(events
+      .filter(e => e.event_type)
+      .map(e => e.event_type)
+      .sort())];
+    
+    // Update filter options state if needed
+    setEventCategories(eventTypes);
 
     const filtered = events.filter((event) => {
-
+      // Base filters
       const isPublished = event.published === 1 || event.published === "1";
       const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
       const isCancelled = isEventCancelled(event);
@@ -47,17 +72,105 @@ function Ticket_Sale() {
       return isPublished && hasTickets && !isCancelled;
     });
 
-    const sorted = sortEventsByDate(filtered);
-    setFilteredEvents(sorted);
+    // Apply additional filters
+    const filteredAndSorted = applyFilters(filtered);
+    setFilteredEvents(filteredAndSorted);
+    setCurrentPage(1); // Reset to first page when filters change
 
-    setDebugInfo(
-      `Raw events: ${events.length}  |  After filters: ${filtered.length}  |  Shown: ${sorted.length}\n` +
-      `Status filter: published only\n` +
-      `Ticket filter: has_tickets=1 or true\n` +
-      `Date filter: disabled for debugging\n` +
-      `Today: ${today.toDateString()}`
-    );
-  }, [events]);
+  }, [events, selectedCategory, selectedDate, showFeatured, showFree, searchTerm]);
+
+  const applyFilters = (eventsArray) => {
+    if (!eventsArray?.length) return [];
+
+    let filtered = [...eventsArray];
+
+    // Search filter (by name or category)
+    if (searchTerm.trim() !== "") {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(event => {
+        const name = (event.event_name || event.title || "").toLowerCase();
+        const category = (event.event_type || "").toLowerCase();
+        const location = (event.event_location || event.location || "").toLowerCase();
+        
+        return name.includes(searchLower) || 
+               category.includes(searchLower) || 
+               location.includes(searchLower);
+      });
+    }
+
+    // Category filter
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(event => 
+        event.event_type === selectedCategory
+      );
+    }
+
+    // Date filter
+    if (selectedDate !== "all") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      filtered = filtered.filter(event => {
+        if (!event.event_start_date) return false;
+        
+        const eventDate = new Date(event.event_start_date);
+        eventDate.setHours(0, 0, 0, 0);
+
+        switch (selectedDate) {
+          case "today":
+            return eventDate.getTime() === today.getTime();
+          
+          case "this-week":
+            const endOfWeek = new Date(today);
+            endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+            return eventDate >= today && eventDate <= endOfWeek;
+          
+          case "next-30-days":
+            const in30Days = new Date(today);
+            in30Days.setDate(today.getDate() + 30);
+            return eventDate >= today && eventDate <= in30Days;
+          
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Featured events filter (has_tickets = 1)
+    if (showFeatured) {
+      filtered = filtered.filter(event => 
+        event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1"
+      );
+    }
+
+    // Free events filter (has_tickets = 0)
+    if (showFree) {
+      filtered = filtered.filter(event => 
+        event.has_tickets === 0 || event.has_tickets === false || event.has_tickets === "0"
+      );
+    }
+
+    return sortEventsByDate(filtered);
+  };
+
+  const handleFilterReset = () => {
+    setSelectedCategory("all");
+    setSelectedDate("all");
+    setShowFeatured(false);
+    setShowFree(false);
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
+
+  const getFilterCount = () => {
+    let count = 0;
+    if (selectedCategory !== "all") count++;
+    if (selectedDate !== "all") count++;
+    if (showFeatured) count++;
+    if (showFree) count++;
+    if (searchTerm.trim() !== "") count++;
+    return count;
+  };
 
   const handleClick = (event) => {
     const id = event.event_id || event.id;
@@ -76,8 +189,25 @@ function Ticket_Sale() {
     setIsLoginOpen(true);
   };
 
-  const loadMoreEvents = () => {
-    setEventsToShow((prev) => prev + 6);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    // Search is already handled by the useEffect
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
+  const indexOfLastEvent = currentPage * eventsPerPage;
+  const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
+  const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const isEventCancelled = (event) => {
@@ -160,7 +290,7 @@ function Ticket_Sale() {
           printAlert("No ticket events found", "info");
         }
       } else {
-        console.log("API error response:", data); // DEBUG
+        console.log("API error response:", data);
         printAlert(data.message || "No events returned from server", "error");
         setEvents([]);
       }
@@ -189,7 +319,7 @@ function Ticket_Sale() {
     );
   }
 
-  const hasMore = eventsToShow < filteredEvents.length;
+  const filterCount = getFilterCount();
 
   return (
     <div className="ticket-sale">
@@ -232,142 +362,337 @@ function Ticket_Sale() {
       </section>
 
       <div className="events-section">
-        <h2>Upcoming Ticket Events</h2>
-        <span className="sub-text">Events with tickets on sale</span>
-
-        {/* <div className="debug-panel" style={{
-          background: "#f0f0f0",
-          padding: "15px",
-          borderRadius: "8px",
-          margin: "1rem 0",
-          fontSize: "14px",
-          borderLeft: "4px solid #667eea"
-        }}>
-          <h4 style={{ marginTop: 0, color: "#333" }}>Debug Information:</h4>
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
-            {debugInfo}
-          </pre>
-          <div style={{ marginTop: "10px", padding: "10px", background: "#fff", borderRadius: "4px" }}>
-            <strong>Raw Events Data:</strong>
-            <pre style={{ margin: "5px 0 0 0", fontSize: "12px", maxHeight: "150px", overflow: "auto" }}>
-              {JSON.stringify(events, null, 2)}
-            </pre>
-          </div>
-        </div>  */}
-
-        {filteredEvents.length === 0 ? (
-          <div className="no-events">
-            <i className="fas fa-ticket-alt no-events-icon"></i>
-            <p className="no-events-message">No upcoming ticket events right now</p>
-            <p className="no-events-subtext">
-              Check the debug panel above to see why events are being filtered out.
-            </p>
-            <div style={{ marginTop: "20px" }}>
-              <button onClick={fetchEvents} className="refresh-btn" style={{ marginRight: "10px" }}>
-                <i className="fas fa-sync-alt"></i> Refresh Events
-              </button>
-              <button onClick={() => {
-                // Temporary bypass filter for debugging
-                setFilteredEvents(events);
-                printAlert("Showing ALL events (bypassing filters)", "warning");
-              }} className="refresh-btn" style={{ background: "#f59e0b" }}>
-                <i className="fas fa-eye"></i> Show All Events (Debug)
+        <div className="events-container">
+          {/* Filter Sidebar - Hidden on mobile by default */}
+          <div className={`filter-sidebar ${isFilterOpen ? 'open' : ''}`}>
+            <div className="filter-header">
+              <h3>Filters</h3>
+              <button 
+                className="close-filter-btn" 
+                onClick={() => setIsFilterOpen(false)}
+                aria-label="Close filters"
+              >
+                <i className="fas fa-times"></i>
               </button>
             </div>
-          </div>
-        ) : (
-          <>
-            <div className="events-grid">
-              {filteredEvents.slice(0, eventsToShow).map((event, index) => {
-                return (
-                  <div
-                    key={event.event_id || event.id || index}
-                    className="event-card"
-                    onClick={() => handleClick(event)}
+
+           
+
+            <div className="filter-group">
+              <h4>Categories</h4>
+              <div className="category-list">
+                <button
+                  className={`category-btn ${selectedCategory === "all" ? "active" : ""}`}
+                  onClick={() => setSelectedCategory("all")}
+                >
+                  All Categories
+                </button>
+                {eventCategories.filter(cat => cat !== "all").map((category, index) => (
+                  <button
+                    key={index}
+                    className={`category-btn ${selectedCategory === category ? "active" : ""}`}
+                    onClick={() => setSelectedCategory(category)}
                   >
-                    <div className="event-image-container">
-                      <img
-                        src={event.event_image || event.image || "/images/default-event.jpg"}
-                        alt={event.event_name || event.title || "Event"}
-                        onError={(e) => {
-                          e.target.src = "/images/default-event.jpg";
-                        }}
-                      />
-                      {(event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1") && (
-                        <div className="ticket-badge">🎫 TICKETS</div>
-                      )}
-                      {isEventCancelled(event) && (
-                        <div className="cancelled-badge">CANCELLED</div>
-                      )}
-                    </div>
-
-                    <div className="event-info">
-                      <span className="event-date">
-                        {event.event_start_date
-                          ? new Date(event.event_start_date).toLocaleDateString("en-GB", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
-                          : "Date TBA"}
-                      </span>
-
-                      <h3>{event.event_name || event.title || "Untitled Event"}</h3>
-                      <p>{event.event_location || event.location || "Location TBA"}</p>
-
-                      <div className="ticket-prices">
-                        {parseFloat(String(event.early_bird_price)) > 0 && (
-                          <span className={`price-tag early-bird ${event.early_bird_quantity <= 0 ? "sold-out" : ""}`}>
-                            Early Bird: R{formatPrice(event.early_bird_price)}
-
-                            {event.early_bird_quantity > 0 ? (
-                              <span> ({event.early_bird_quantity} tickets left)</span>
-                            ) : (
-                              <span className="sold-out-text"> — Sold Out</span>
-                            )}
-                          </span>
-                        )}
-
-                        {parseFloat(String(event.general_price)) > 0 && (
-                          <span className="price-tag general">
-                            General: R{formatPrice(event.general_price)}
-                          </span>
-                        )}
-                        {parseFloat(String(event.vip_price)) > 0 && (
-                          <span className="price-tag vip">
-                            VIP: R{formatPrice(event.vip_price)}
-                          </span>
-                        )}
-                        {parseFloat(String(event.vvip_price)) > 0 && (
-                          <span className="price-tag vvip">
-                            VVIP: R{formatPrice(event.vvip_price)}
-                          </span>
-                        )}
-                        {!hasAnyPrice(event) && (
-                          <strong className="price">Price TBA</strong>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    {category}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {hasMore && (
-              <div className="load-more-container">
-                <button className="load-more-btn" onClick={loadMoreEvents}>
-                  Load More Events
+            <div className="filter-group">
+              <h4>Date</h4>
+              <div className="date-options">
+                {[
+                  { value: "all", label: "All Time" },
+                  { value: "today", label: "Today" },
+                  { value: "this-week", label: "This Week" },
+                  { value: "next-30-days", label: "Next 30 Days" }
+                ].map((option) => (
+                  <label key={option.value} className="radio-label">
+                    <input
+                      type="radio"
+                      name="dateFilter"
+                      value={option.value}
+                      checked={selectedDate === option.value}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                    />
+                    <span className="radio-custom"></span>
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <h4>Event Type</h4>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={showFeatured}
+                    onChange={(e) => setShowFeatured(e.target.checked)}
+                  />
+                  <span className="checkbox-custom"></span>
+                  <span className="checkbox-text">
+                    <i className="fas fa-star featured-icon"></i> Featured Events
+                  </span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={showFree}
+                    onChange={(e) => setShowFree(e.target.checked)}
+                  />
+                  <span className="checkbox-custom"></span>
+                  <span className="checkbox-text">
+                    <i className="fas fa-ticket-alt free-icon"></i> Free Events
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="filter-actions">
+              <button 
+                className="reset-filters-btn"
+                onClick={handleFilterReset}
+                disabled={filterCount === 0}
+              >
+                <i className="fas fa-redo"></i> Reset Filters
+              </button>
+            </div>
+          </div>
+
+          {/* Events Grid */}
+          <div className="events-content">
+          
+
+            {/* Active Filters Bar */}
+            {filterCount > 0 && (
+              <div className="active-filters">
+                <div className="active-filters-list">
+                  {searchTerm && (
+                    <span className="active-filter-tag">
+                      Search: "{searchTerm}"
+                      <button onClick={() => setSearchTerm("")}>×</button>
+                    </span>
+                  )}
+                  {selectedCategory !== "all" && (
+                    <span className="active-filter-tag">
+                      Category: {selectedCategory}
+                      <button onClick={() => setSelectedCategory("all")}>×</button>
+                    </span>
+                  )}
+                  {selectedDate !== "all" && (
+                    <span className="active-filter-tag">
+                      Date: {
+                        selectedDate === "today" ? "Today" :
+                        selectedDate === "this-week" ? "This Week" :
+                        selectedDate === "next-30-days" ? "Next 30 Days" : ""
+                      }
+                      <button onClick={() => setSelectedDate("all")}>×</button>
+                    </span>
+                  )}
+                  {showFeatured && (
+                    <span className="active-filter-tag">
+                      Featured Events
+                      <button onClick={() => setShowFeatured(false)}>×</button>
+                    </span>
+                  )}
+                  {showFree && (
+                    <span className="active-filter-tag">
+                      Free Events
+                      <button onClick={() => setShowFree(false)}>×</button>
+                    </span>
+                  )}
+                </div>
+                <button 
+                  className="clear-all-filters"
+                  onClick={handleFilterReset}
+                >
+                  Clear All
                 </button>
               </div>
             )}
 
-            {!hasMore && filteredEvents.length > 6 && (
-              <div className="all-events-loaded">
-                <p>All available events loaded!</p>
+            {/* Results Count */}
+            <div className="results-count">
+               {/* Search Bar in Sidebar */}
+            <div className="filter-group">
+              <form onSubmit={handleSearchSubmit} className="search-form">
+                <div className="search-input-wrapper">
+                  <i className="fas fa-search search-icon"></i>
+                  <input
+                    type="text"
+                    placeholder="Search events, artists, venues..."
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    className="search-input"
+                  />
+                  {searchTerm && (
+                    <button 
+                      type="button" 
+                      className="clear-search-btn"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+            </div>
+
+            {/* Events Grid */}
+            {filteredEvents.length === 0 ? (
+              <div className="no-events">
+                <i className="fas fa-calendar-times no-events-icon"></i>
+                <p className="no-events-message">No events found</p>
+                <p className="no-events-subtext">
+                  {filterCount > 0 
+                    ? "Try adjusting your filters or clearing them to see more events."
+                    : "Check back soon for new events!"}
+                </p>
+                {filterCount > 0 && (
+                  <button onClick={handleFilterReset} className="refresh-btn">
+                    <i className="fas fa-redo"></i> Clear Filters
+                  </button>
+                )}
               </div>
+            ) : (
+              <>
+                <div className="events-grid">
+                  {currentEvents.map((event, index) => {
+                    // Calculate the lowest available price
+                    const getLowestPrice = () => {
+                      const prices = [];
+                      if (parseFloat(String(event.early_bird_price)) > 0) prices.push(parseFloat(String(event.early_bird_price)));
+                      if (parseFloat(String(event.general_price)) > 0) prices.push(parseFloat(String(event.general_price)));
+                      if (parseFloat(String(event.vip_price)) > 0) prices.push(parseFloat(String(event.vip_price)));
+                      if (parseFloat(String(event.vvip_price)) > 0) prices.push(parseFloat(String(event.vvip_price)));
+                      
+                      if (prices.length === 0) return null;
+                      return Math.min(...prices);
+                    };
+
+                    const lowestPrice = getLowestPrice();
+                    const isFreeEvent = event.has_tickets === 0 || event.has_tickets === false || event.has_tickets === "0";
+                    const isFeatured = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+                    
+                    return (
+                      <div
+                        key={event.event_id || event.id || index}
+                        className="event-card"
+                        onClick={() => handleClick(event)}
+                      >
+                        <div className="event-image-container">
+                          <img
+                            src={event.event_image || event.image || "/images/default-event.jpg"}
+                            alt={event.event_name || event.title || "Event"}
+                            onError={(e) => {
+                              e.target.src = "/images/default-event.jpg";
+                            }}
+                          />
+                          {isFeatured && (
+                            <div className="ticket-badge">🎫 TICKETS</div>
+                          )}
+                          {isFreeEvent && (
+                            <div className="free-badge">FREE</div>
+                          )}
+                          {isEventCancelled(event) && (
+                            <div className="cancelled-badge">CANCELLED</div>
+                          )}
+                        </div>
+
+                        <div className="event-info">
+                          <div className="event-meta">
+                            <span className="event-date">
+                              {event.event_start_date
+                                ? new Date(event.event_start_date).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                                : "Date TBA"}
+                            </span>
+                            {event.event_type && (
+                              <span className="event-category">
+                                {event.event_type}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3>{event.event_name || event.title || "Untitled Event"}</h3>
+                          <p className="event-location">
+                            <i className="fas fa-map-marker-alt"></i> 
+                            {event.event_location || event.location || "Location TBA"}
+                          </p>
+
+                          <div className="event-footer">
+                            {isFreeEvent ? (
+                              <span className="event-price free">
+                                FREE
+                              </span>
+                            ) : lowestPrice ? (
+                              <span className="event-price">
+                                From R{lowestPrice.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="event-price tba">
+                                Price TBA
+                              </span>
+                            )}
+                            
+                            {event.event_time && (
+                              <span className="event-time">
+                                <i className="far fa-clock"></i> {event.event_time}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="pagination">
+                    <button 
+                      className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
+                      onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      <i className="bi bi-skip-backward-btn-fill"></i>
+                    </button>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                        onClick={() => handlePageChange(page)}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    
+                    <button 
+                      className={`pagination-btn ${currentPage === totalPages ? 'disabled' : ''}`}
+                      onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      <i className="bi bi-skip-forward-btn-fill"></i>
+                    </button>
+                  </div>
+                )}
+
+                {/* Page Info */}
+                <div className="page-info">
+                  <p>Showing {indexOfFirstEvent + 1}-{Math.min(indexOfLastEvent, filteredEvents.length)} of {filteredEvents.length} events</p>
+                </div>
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
 
       <Footer />

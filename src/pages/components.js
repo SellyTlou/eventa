@@ -1126,14 +1126,15 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     if (isAdmin) {
                         navigate("/adminDashboard");
                     } else {
-                        // REDIRECT BASED ON ACCOUNT TYPE
-                        if (result.user.account_type === 'business') {
-                            navigate("/businessdashboard");
-                            printAlert("Welcome to your Business Dashboard!", 'success');
-                        } else {
-                            navigate("/eventsDashboard");
-                            printAlert("Welcome to your Events Dashboard!", 'success');
-                        }
+                        // // REDIRECT BASED ON ACCOUNT TYPE
+                        // if (result.user.account_type === 'business') {
+                        //     navigate("/businessdashboard");
+                        //     printAlert("Welcome to your Business Dashboard!", 'success');
+                        // } else {
+                        //     navigate("/eventsDashboard");
+                        //     printAlert("Welcome to your Events Dashboard!", 'success');
+                        // }
+                        window.location.reload();
                     }
 
                     onClose();
@@ -1903,6 +1904,10 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/guest_insights");
         onClose?.();
     };
+      const goToBookings = () => {
+        navigate("/event_ticket_manage");
+        onClose?.();
+    };
 
     const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : true;
 
@@ -1913,6 +1918,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
                 { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
                 { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
                 { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
+                {path: '/event_ticket_manage', icon: 'bi-book', label: 'Bookings', onClick: goToBookings}
                
             ]
         },

@@ -4505,8 +4505,7 @@ Manage my Event page - Updated Colors (Black, Blue, Purple)
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
+    margin-bottom: 10px;
     border-bottom: 1px solid #f0f0f0;
     transition: all 0.3s ease;
 }
