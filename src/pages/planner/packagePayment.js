@@ -28,13 +28,11 @@ const PackagePayment = () => {
 
     // ============ PAYFAST CONFIGURATION ============
     const PAYFAST_CONFIG = {
-        // TEST CREDENTIALS (Replace with your own)
-        MERCHANT_ID: "10000100", // Your PayFast Merchant ID
-        MERCHANT_KEY: "46f0cd694581a", // Your PayFast Merchant Key
-        PASS_PHRASE: "", // Leave empty if not using passphrase
-        ITN_URL: "https://yourdomain.com/api/payfast/itn", // Your ITN endpoint
+        MERCHANT_ID: "33426571",
+        MERCHANT_KEY: "lkqoiy0ftb9yc",
+        PASS_PHRASE: "",
+        ITN_URL: "https://evenditest.evendi.co.za/api/payfast/itn",
         
-        // URLs
         PAYFAST_URL: process.env.NODE_ENV === 'production' 
             ? "https://www.payfast.co.za/eng/process"
             : "https://sandbox.payfast.co.za/eng/process",
@@ -42,13 +40,10 @@ const PackagePayment = () => {
         RETURN_URL: `${window.location.origin}/payment-success`,
         CANCEL_URL: `${window.location.origin}/payment-cancel`,
         
-        // Email configuration
         EMAIL_CONFIRMATION: true,
         CONFIRMATION_EMAIL: user?.email || "",
-        
-        // Payment settings
-        PAYMENT_METHOD: "cc", // cc = credit card, eft = EFT, ddc = debit card
-        SUBSCRIPTION_TYPE: 0, // 0 = once off, 1 = subscription
+        PAYMENT_METHOD: "cc",
+        SUBSCRIPTION_TYPE: undefined,
     };
 
     const printAlert = (message, type = "info") => {
@@ -58,7 +53,7 @@ const PackagePayment = () => {
         }, 5000);
     };
 
-    // Memoized calculation function
+    // Calculate payment details
     const calculatePaymentDetails = useCallback(() => {
         if (!selectedPackage?.price) return null;
 
@@ -95,6 +90,45 @@ const PackagePayment = () => {
         }
     };
 
+    // ============ EMAIL FUNCTIONS ============
+    const sendPaymentReceiptEmail = async (email, name, transactionId, amount, packageName) => {
+        try {
+            let apiUrl = process.env.REACT_APP_API_URL;
+            if (!apiUrl) {
+                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
+            }
+
+            if (apiUrl === "/api") {
+                apiUrl = "https://evenditest.evendi.co.za/api";
+            }
+
+            const formDataToSend = new FormData();
+            formDataToSend.append("function", "sendPaymentReceipt");
+            formDataToSend.append("email", email);
+            formDataToSend.append("name", name);
+            formDataToSend.append("transaction_id", transactionId);
+            formDataToSend.append("amount", amount);
+            formDataToSend.append("package_name", packageName);
+            formDataToSend.append("payment_date", new Date().toISOString());
+            formDataToSend.append("API_URL", apiUrl);
+            formDataToSend.append("user_email", email);
+
+            const url = `${apiUrl}/query.php`;
+            console.log("Sending payment receipt request to:", url);
+
+            const response = await fetchWithTimeout(url, {
+                method: "POST",
+                body: formDataToSend
+            }, 15000);
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error("Error sending payment receipt email:", error);
+            return { success: false, message: "Failed to send payment receipt email" };
+        }
+    };
+
     // ============ PAYFAST FUNCTIONS ============
     const generateTransactionId = () => {
         const timestamp = Date.now();
@@ -122,124 +156,48 @@ const PackagePayment = () => {
         return signature;
     };
 
-    const preparePayFastData = () => {
-        const mPaymentId = generateTransactionId();
-        setTransactionId(mPaymentId);
+const preparePayFastData = () => {
+    const mPaymentId = generateTransactionId();
+    setTransactionId(mPaymentId);
+    
+    const paymentData = {
+        merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
+        merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
+        return_url: PAYFAST_CONFIG.RETURN_URL,
+        cancel_url: PAYFAST_CONFIG.CANCEL_URL,
+        notify_url: PAYFAST_CONFIG.ITN_URL,
         
-        const paymentData = {
-            merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
-            merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
-            return_url: PAYFAST_CONFIG.RETURN_URL,
-            cancel_url: PAYFAST_CONFIG.CANCEL_URL,
-            notify_url: PAYFAST_CONFIG.ITN_URL,
-            
-            name_first: user?.name?.split(' ')[0] || '',
-            name_last: user?.name?.split(' ').slice(1).join(' ') || '',
-            email_address: user?.email || PAYFAST_CONFIG.CONFIRMATION_EMAIL,
-            cell_number: user?.phone || '',
-            
-            m_payment_id: mPaymentId,
-            amount: paymentDetails?.totalAmount || "0.00",
-            item_name: `${selectedPackage?.package_type} Package - Evenda`,
-            item_description: `Max Events: ${selectedPackage?.max_events}, Max Guests: ${selectedPackage?.max_guests}`,
-            
-            custom_str1: user?.user_id || '',
-            custom_str2: selectedPackage?.package_id || '',
-            custom_str3: selectedPackage?.package_type || '',
-            custom_str4: 'PayFast',
-            custom_int1: selectedPackage?.max_events || 0,
-            custom_int2: selectedPackage?.max_guests || 0,
-            custom_int3: Math.round(parseFloat(paymentDetails?.totalAmount || 0) * 100),
-            
-            payment_method: PAYFAST_CONFIG.PAYMENT_METHOD,
-            subscription_type: PAYFAST_CONFIG.SUBSCRIPTION_TYPE,
-            email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? 1 : 0,
-            confirmation_address: PAYFAST_CONFIG.CONFIRMATION_EMAIL,
-        };
-
-        paymentData.signature = generatePayFastSignature(paymentData);
-        return paymentData;
-    };
-
-    const initiatePayFastPayment = async () => {
-        setProcessingPayment(true);
-        setPaymentStarted(true);
+        name_first: user?.name?.split(' ')[0] || '',
+        name_last: user?.name?.split(' ').slice(1).join(' ') || '',
+        email_address: user?.email || PAYFAST_CONFIG.CONFIRMATION_EMAIL,
+        cell_number: user?.phone || '',
         
-        try {
-            const paymentData = preparePayFastData();
-            
-            const paymentRecorded = await recordPayment({
-                payment_method: 'payfast',
-                payment_status: 'pending',
-                transaction_id: paymentData.m_payment_id
-            });
-
-            if (!paymentRecorded) {
-                throw new Error("Failed to record payment");
-            }
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = PAYFAST_CONFIG.PAYFAST_URL;
-            form.style.display = 'none';
-            
-            Object.keys(paymentData).forEach(key => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = paymentData[key];
-                form.appendChild(input);
-            });
-            
-            document.body.appendChild(form);
-            form.submit();
-            
-        } catch (error) {
-            console.error("PayFast payment error:", error);
-            setError("Failed to initiate payment. Please try again.");
-            printAlert("Payment initiation failed. Please try again.", "error");
-            setProcessingPayment(false);
-            setPaymentStarted(false);
-        }
+        m_payment_id: mPaymentId,
+        amount: paymentDetails?.totalAmount || "0.00",
+        item_name: `${selectedPackage?.package_type} Package - Evenda`,
+        item_description: `Max Events: ${selectedPackage?.max_events}, Max Guests: ${selectedPackage?.max_guests}`,
+        
+        custom_str1: user?.user_id || '',
+        custom_str2: selectedPackage?.package_id || '',
+        custom_str3: selectedPackage?.package_type || '',
+        custom_str4: 'PayFast',
+        custom_int1: selectedPackage?.max_events || 0,
+        custom_int2: selectedPackage?.max_guests || 0,
+        custom_int3: Math.round(parseFloat(paymentDetails?.totalAmount || 0) * 100),
+        
+        payment_method: PAYFAST_CONFIG.PAYMENT_METHOD,
+        email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? 1 : 0,
+        confirmation_address: PAYFAST_CONFIG.CONFIRMATION_EMAIL,
     };
 
-    // ============ EMAIL FUNCTION (Pattern from your code) ============
-    const sendPaymentReceiptEmail = async (email, name, transactionId, amount, packageName) => {
-        try {
-            let apiUrl = process.env.REACT_APP_API_URL;
-            if (!apiUrl) {
-                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
-            }
+    // Only add subscription_type if it's defined and not empty
+    if (PAYFAST_CONFIG.SUBSCRIPTION_TYPE !== undefined && PAYFAST_CONFIG.SUBSCRIPTION_TYPE !== '') {
+        paymentData.subscription_type = PAYFAST_CONFIG.SUBSCRIPTION_TYPE;
+    }
 
-            if (apiUrl === "/api") {
-                apiUrl = "https://evenditest.evendi.co.za/api";
-            }
-
-            const formDataToSend = new FormData();
-            formDataToSend.append("function", "sendPaymentReceipt");
-            formDataToSend.append("email", email);
-            formDataToSend.append("name", name);
-            formDataToSend.append("transaction_id", transactionId);
-            formDataToSend.append("amount", amount);
-            formDataToSend.append("package_name", packageName);
-            formDataToSend.append("payment_date", new Date().toISOString());
-            formDataToSend.append("API_URL", apiUrl);
-
-            const url = `${apiUrl}/query.php`;
-            console.log("Sending payment receipt request to:", url);
-
-            const response = await fetchWithTimeout(url, {
-                method: "POST",
-                body: formDataToSend
-            }, 15000);
-
-            const result = await response.json();
-            return result;
-        } catch (error) {
-            console.error("Error sending payment receipt email:", error);
-            return { success: false, message: "Failed to send payment receipt email" };
-        }
-    };
+    paymentData.signature = generatePayFastSignature(paymentData);
+    return paymentData;
+};
 
     // ============ PAYMENT FUNCTIONS ============
     const getPackageById = async (packageId) => {
@@ -333,6 +291,48 @@ const PackagePayment = () => {
             console.error("Error recording payment:", error);
             printAlert("Failed to record payment: " + error.message, "error");
             return false;
+        }
+    };
+
+    const initiatePayFastPayment = async () => {
+        setProcessingPayment(true);
+        setPaymentStarted(true);
+        
+        try {
+            const paymentData = preparePayFastData();
+            
+            const paymentRecorded = await recordPayment({
+                payment_method: 'payfast',
+                payment_status: 'pending',
+                transaction_id: paymentData.m_payment_id
+            });
+
+            if (!paymentRecorded) {
+                throw new Error("Failed to record payment");
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = PAYFAST_CONFIG.PAYFAST_URL;
+            form.style.display = 'none';
+            
+            Object.keys(paymentData).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = paymentData[key];
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+            
+        } catch (error) {
+            console.error("PayFast payment error:", error);
+            setError("Failed to initiate payment. Please try again.");
+            printAlert("Payment initiation failed. Please try again.", "error");
+            setProcessingPayment(false);
+            setPaymentStarted(false);
         }
     };
 
@@ -742,6 +742,51 @@ const PackagePayment = () => {
         }
     };
 
+    const PaymentProofModal = () => (
+        <div className="proof-modal-overlay">
+            <div className="proof-modal">
+                <button className="close-modal" onClick={() => setShowProofOptions(false)}>×</button>
+                <h3>Payment Successful! 🎉</h3>
+                <p>Your payment of <strong>R{paymentDetails?.totalAmount}</strong> has been processed successfully.</p>
+                
+                {paymentProof && (
+                    <div className="proof-details">
+                        <p><strong>Transaction ID:</strong> {paymentProof.transactionId}</p>
+                        <p><strong>Reference:</strong> {paymentProof.reference}</p>
+                        <p><strong>Date:</strong> {new Date(paymentProof.date).toLocaleString()}</p>
+                    </div>
+                )}
+                
+                <div className="proof-actions">
+                    <button 
+                        className="btn-event" 
+                        onClick={downloadPaymentProof}
+                        disabled={processingPayment}
+                    >
+                        <i className="bi bi-download"></i> Download Proof
+                    </button>
+                    <button 
+                        className="btn-event btn-event-success" 
+                        onClick={handleSendEmailReceipt}
+                        disabled={processingPayment}
+                    >
+                        <i className="bi bi-envelope"></i> Email Receipt
+                    </button>
+                    <button 
+                        className="btn-event btn-event-secondary" 
+                        onClick={() => {
+                            setShowProofOptions(false);
+                            localStorage.removeItem("selectedPackageId");
+                            handleBack();
+                        }}
+                    >
+                        <i className="bi bi-check-circle"></i> Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     // ============ NAVIGATION & INITIALIZATION ============
     useEffect(() => {
         const initializePage = async () => {
@@ -835,51 +880,6 @@ const PackagePayment = () => {
         setSelectedPaymentMethod("");
         setError("");
     };
-
-    const PaymentProofModal = () => (
-        <div className="proof-modal-overlay">
-            <div className="proof-modal">
-                <button className="close-modal" onClick={() => setShowProofOptions(false)}>×</button>
-                <h3>Payment Successful! 🎉</h3>
-                <p>Your payment of <strong>R{paymentDetails?.totalAmount}</strong> has been processed successfully.</p>
-                
-                {paymentProof && (
-                    <div className="proof-details">
-                        <p><strong>Transaction ID:</strong> {paymentProof.transactionId}</p>
-                        <p><strong>Reference:</strong> {paymentProof.reference}</p>
-                        <p><strong>Date:</strong> {new Date(paymentProof.date).toLocaleString()}</p>
-                    </div>
-                )}
-                
-                <div className="proof-actions">
-                    <button 
-                        className="btn-event" 
-                        onClick={downloadPaymentProof}
-                        disabled={processingPayment}
-                    >
-                        <i className="bi bi-download"></i> Download Proof
-                    </button>
-                    <button 
-                        className="btn-event btn-event-success" 
-                        onClick={handleSendEmailReceipt}
-                        disabled={processingPayment}
-                    >
-                        <i className="bi bi-envelope"></i> Email Receipt
-                    </button>
-                    <button 
-                        className="btn-event btn-event-secondary" 
-                        onClick={() => {
-                            setShowProofOptions(false);
-                            localStorage.removeItem("selectedPackageId");
-                            handleBack();
-                        }}
-                    >
-                        <i className="bi bi-check-circle"></i> Continue
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
 
     if (loading) {
         return (

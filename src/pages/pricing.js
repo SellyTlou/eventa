@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import "../App.css";
 import "../responce.css";
-import { Navbar, Footer, Login } from "./components";
+import "bootstrap-icons/font/bootstrap-icons.css";
+import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 import { useNavigate } from "react-router-dom";
 
 function Pricing() {
@@ -17,9 +18,12 @@ function Pricing() {
     const [businessPlans, setBusinessPlans] = useState([]);
     const [loadingPricing, setLoadingPricing] = useState(true);
 
+    // Mobile slider state
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const sliderRef = useRef(null);
+
     useEffect(() => {
         const handleResize = () => {
-            // eslint-disable-next-line no-unused-vars
             setIsMobile(window.innerWidth < 768);
         };
 
@@ -142,8 +146,8 @@ function Pricing() {
                         name: pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1),
                         price: pkg.price === 0 ? "Free" : `R${pkg.price}`,
                         duration: "per month",
-                        max_guests: limits.max_guests,  // Use hardcoded limit
-                        max_events: limits.max_events,  // Use hardcoded limit
+                        max_guests: limits.max_guests,
+                        max_events: limits.max_events,
                         features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : getDefaultFeatures(pkg.package_type, limits.max_guests, limits.max_events),
                         isPopular: pkg.package_type === 'premium'
                     };
@@ -196,7 +200,7 @@ function Pricing() {
                     if (b.name === "CUSTOM PLAN") return -1;
                     return 0;
                 });
-                
+
                 console.log('Setting business plans:', sortedBusinessPlans);
                 setBusinessPlans(sortedBusinessPlans);
             } else {
@@ -314,11 +318,11 @@ function Pricing() {
             setShowTicketMaintenance(true);
         } else {
             setActiveCategory(category);
+            setCurrentIndex(0); // Reset to first card when category changes
         }
     };
 
     // Updated pricing categories using API data
-    console.log('pricingCategories Business plans:', businessPlans);
     const pricingCategories = useMemo(() => ({
         "Personal Events": pricingPlans.map(plan => ({
             name: plan.name,
@@ -330,7 +334,6 @@ function Pricing() {
             ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
         })),
         "Business": businessPlans.length > 0 ? businessPlans.map(plan => {
-            console.log('Mapping business plan:', plan);
             return {
                 name: plan.name,
                 monthlyPrice: plan.monthlyPrice,
@@ -437,6 +440,27 @@ function Pricing() {
         ]
     }), [pricingPlans, businessPlans]);
 
+    // Mobile slider functions
+    const handleNext = () => {
+        const currentCards = pricingCategories[activeCategory];
+        if (currentCards && currentIndex < currentCards.length - 1) {
+            setCurrentIndex(currentIndex + 1);
+        } else {
+            // Loop back to first card
+            setCurrentIndex(0);
+        }
+    };
+
+    const handlePrev = () => {
+        const currentCards = pricingCategories[activeCategory];
+        if (currentCards && currentIndex > 0) {
+            setCurrentIndex(currentIndex - 1);
+        } else {
+            // Loop to last card
+            setCurrentIndex(currentCards.length - 1);
+        }
+    };
+
     const faqItems = [
         {
             question: "What does the Basic plan include?",
@@ -462,6 +486,21 @@ function Pricing() {
 
     const toggleFaq = (index) => {
         setActiveFaq(activeFaq === index ? null : index);
+    };
+
+    // Get visible card for mobile
+    const getVisibleCard = () => {
+        const currentCards = pricingCategories[activeCategory];
+        if (!currentCards || currentCards.length === 0) return null;
+
+        // Sort to ensure CUSTOM PLAN is last
+        const sortedCards = [...currentCards].sort((a, b) => {
+            if (a.name === "CUSTOM PLAN") return 1;
+            if (b.name === "CUSTOM PLAN") return -1;
+            return 0;
+        });
+
+        return sortedCards[currentIndex];
     };
 
     // Show loading state
@@ -497,6 +536,7 @@ function Pricing() {
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
             />
+            <NewEventPopupBtn />
 
             <div className="pricing-page">
                 {/* Hero Section */}
@@ -513,7 +553,6 @@ function Pricing() {
                         </div>
                     </div>
                 </section>
-
 
                 {/* Category Tabs */}
                 <section className="category-section">
@@ -532,110 +571,233 @@ function Pricing() {
                     </div>
                 </section>
 
-                {/* Pricing Cards - Only show if activeCategory is NOT "Selling Tickets" */}
+                {/* Pricing Cards */}
                 {activeCategory !== "Selling Tickets" && (
                     <section className={`pricing-cards-section ${activeCategory === 'Business' ? 'business' : ''}`}>
                         <div className="container">
-                            {console.log('Active category:', activeCategory, 'Plans:', pricingCategories[activeCategory])}
-                            <div className="row justify-content-center">
-                                {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
-                                    // Ensure CUSTOM PLAN is always last when rendering
-                                    [...pricingCategories[activeCategory]]
-                                        .sort((a, b) => {
-                                            if (a.name === "CUSTOM PLAN") return 1;
-                                            if (b.name === "CUSTOM PLAN") return -1;
-                                            return 0;
-                                        })
-                                        .map((plan, index) => {
-                                        const colClass = activeCategory === 'Selling Tickets' ? 'col-lg-4' : 'col-lg-3';
-                                        return (
-                                            <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
-                                                <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
-                                                    {plan.isContactSales ? (
-                                                        <>
-                                                            {/* Show different labels for ADVANCE PLUS PLAN vs CUSTOM PLAN */}
-                                                            {plan.name === "ADVANCE PLUS PLAN" ? (
+                            {!isMobile ? (
+                                <div className="row justify-content-center">
+                                    {/* Desktop View - Grid Layout */}
+                                    {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
+                                        [...pricingCategories[activeCategory]]
+                                            .sort((a, b) => {
+                                                if (a.name === "CUSTOM PLAN") return 1;
+                                                if (b.name === "CUSTOM PLAN") return -1;
+                                                return 0;
+                                            })
+                                            .map((plan, index) => {
+                                                const cardCount = pricingCategories[activeCategory].length;
+                                                const colClass = cardCount === 4 ? 'col-lg-3' :
+                                                    cardCount === 3 ? 'col-lg-4' :
+                                                        cardCount === 2 ? 'col-lg-6' : 'col-lg-12';
+                                                return (
+                                                    <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
+                                                        <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
+                                                            {plan.isContactSales ? (
                                                                 <>
-                                                                    <div className="enterprise-label large-green">Advanced</div>
-                                                                    <div className="basic-label get-in-touch-label">Get in touch</div>
-                                                                </>
-                                                            ) : plan.name === "CUSTOM PLAN" ? (
-                                                                <>
-                                                                    <div className="enterprise-label large-green">CUSTOM PLAN</div>
-                                                                    {/* No second label for CUSTOM PLAN */}
+                                                                    {plan.name === "ADVANCE PLUS PLAN" ? (
+                                                                        <>
+                                                                            <div className="enterprise-label large-green">Advanced</div>
+                                                                            <div className="basic-label get-in-touch-label">Get in touch</div>
+                                                                        </>
+                                                                    ) : plan.name === "CUSTOM PLAN" ? (
+                                                                        <div className="enterprise-label large-green">CUSTOM PLAN</div>
+                                                                    ) : (
+                                                                        <div className="enterprise-label large-green">Enterprise</div>
+                                                                    )}
+
+                                                                    <ul className="features-list contact-features">
+                                                                        {plan.features.map((feature, featureIndex) => (
+                                                                            <li key={featureIndex}>
+                                                                                <i className="bi bi-check2-circle text-success me-2"></i>
+                                                                                {feature}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+
+                                                                    <div className="contact-cta-wrapper">
+                                                                        {plan.name === "CUSTOM PLAN" ? (
+                                                                            <button
+                                                                                className="btn btn-create w-100"
+                                                                                onClick={() => setShowContactSalesModal(true)}
+                                                                            >
+                                                                                Get in touch
+                                                                            </button>
+                                                                        ) : plan.name === "ADVANCE PLUS PLAN" ? (
+                                                                            <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
+                                                                                Coming soon
+                                                                            </div>
+                                                                        ) : null}
+                                                                    </div>
                                                                 </>
                                                             ) : (
-                                                                <div className="enterprise-label large-green">Enterprise</div>
-                                                            )}
+                                                                <>
+                                                                    {plan.isPopular && (
+                                                                        <div className="popular-badge">MOST POPULAR</div>
+                                                                    )}
+                                                                    <h3>{plan.name}</h3>
+                                                                    <p className="plan-description">{plan.description}</p>
 
-                                                            <ul className="features-list contact-features">
-                                                                {plan.features.map((feature, featureIndex) => (
-                                                                    <li key={featureIndex}>
-                                                                        <i className="bi bi-check2-circle text-success me-2"></i>
-                                                                        {feature}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-
-                                                            <div className="contact-cta-wrapper">
-                                                                {/* For CUSTOM PLAN, show button instead of "Coming soon" */}
-                                                                {plan.name === "CUSTOM PLAN" ? (
-                                                                    <button
-                                                                        className="btn btn-create w-100"
-                                                                        onClick={() => setShowContactSalesModal(true)}
-                                                                    >
-                                                                        Get in touch
-                                                                    </button>
-                                                                ) : plan.name === "ADVANCE PLUS PLAN" ? (
-                                                                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
-                                                                        Coming soon
+                                                                    <div className="price-tag">
+                                                                        <span className="price">{plan.monthlyPrice}</span>
+                                                                        <span className="duration">/month</span>
                                                                     </div>
-                                                                ) : null}
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {plan.isPopular && (
-                                                                <div className="popular-badge">MOST POPULAR</div>
+
+                                                                    <ul className="features-list">
+                                                                        {plan.features.map((feature, featureIndex) => (
+                                                                            <li key={featureIndex}>
+                                                                                <i className="bi bi-check2-circle"></i> {feature}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+
+                                                                    <button
+                                                                        className={`btn ${plan.ctaVariant} w-100`}
+                                                                        onClick={handleCreateEvent}
+                                                                    >
+                                                                        {plan.ctaText}
+                                                                    </button>
+                                                                </>
                                                             )}
-                                                            <h3>{plan.name}</h3>
-                                                            <p className="plan-description">{plan.description}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                    ) : (
+                                        <div className="col-12 text-center">
+                                            <p>Loading packages...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
 
-                                                            <div className="price-tag">
-                                                                <span className="price">
-                                                                    {plan.monthlyPrice}
-                                                                </span>
-                                                                <span className="duration">
-                                                                    /month
-                                                                </span>
+                                <div className="mobile-slider-container">
+                                    {/* Mobile View - Single Card with Slider Buttons */}
+                                    {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
+                                        <>
+                                            <div className="slider-wrapper">
+                                                <button className="slider-btn prev" onClick={handlePrev} aria-label="Previous plan">
+                                                    <i className="bi bi-chevron-left"></i>
+                                                </button>
+
+                                                <div className="single-card-container">
+                                                    {(() => {
+                                                        const visibleCard = getVisibleCard();
+                                                        if (!visibleCard) return null;
+
+                                                        const sortedCards = [...pricingCategories[activeCategory]].sort((a, b) => {
+                                                            if (a.name === "CUSTOM PLAN") return 1;
+                                                            if (b.name === "CUSTOM PLAN") return -1;
+                                                            return 0;
+                                                        });
+                                                        const isPopular = visibleCard.isPopular;
+
+                                                        return (
+                                                            <div className={`pricing-card-wrapper ${isPopular ? 'popular' : ''}`}>
+                                                                <div className={`pricing-card text-center ${visibleCard.isContactSales ? 'contact-card' : ''}`}>
+                                                                    {visibleCard.isContactSales ? (
+                                                                        <>
+                                                                            {visibleCard.name === "ADVANCE PLUS PLAN" ? (
+                                                                                <>
+                                                                                    <div className="enterprise-label large-green">Advanced</div>
+                                                                                    <div className="basic-label get-in-touch-label">Get in touch</div>
+                                                                                </>
+                                                                            ) : visibleCard.name === "CUSTOM PLAN" ? (
+                                                                                <div className="enterprise-label large-green">CUSTOM PLAN</div>
+                                                                            ) : (
+                                                                                <div className="enterprise-label large-green">Enterprise</div>
+                                                                            )}
+
+                                                                            <ul className="features-list contact-features">
+                                                                                {visibleCard.features.map((feature, featureIndex) => (
+                                                                                    <li key={featureIndex}>
+                                                                                        <i className="bi bi-check2-circle text-success me-2"></i>
+                                                                                        {feature}
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+
+                                                                            <div className="contact-cta-wrapper">
+                                                                                {visibleCard.name === "CUSTOM PLAN" ? (
+                                                                                    <button
+                                                                                        className="btn btn-create w-100"
+                                                                                        onClick={() => setShowContactSalesModal(true)}
+                                                                                    >
+                                                                                        Get in touch
+                                                                                    </button>
+                                                                                ) : visibleCard.name === "ADVANCE PLUS PLAN" ? (
+                                                                                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
+                                                                                        Coming soon
+                                                                                    </div>
+                                                                                ) : null}
+                                                                            </div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            {isPopular && (
+                                                                                <div className="popular-badge">MOST POPULAR</div>
+                                                                            )}
+                                                                            <h3>{visibleCard.name}</h3>
+                                                                            <p className="plan-description">{visibleCard.description}</p>
+
+                                                                            <div className="price-tag">
+                                                                                <span className="price">{visibleCard.monthlyPrice}</span>
+                                                                                <span className="duration">/month</span>
+                                                                            </div>
+
+                                                                            <ul className="features-list">
+                                                                                {visibleCard.features.map((feature, featureIndex) => (
+                                                                                    <li key={featureIndex}>
+                                                                                        <i className="bi bi-check2-circle"></i> {feature}
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+
+                                                                            <button
+                                                                                className={`btn ${visibleCard.ctaVariant} w-100`}
+                                                                                onClick={handleCreateEvent}
+                                                                            >
+                                                                                {visibleCard.ctaText}
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
                                                             </div>
-
-                                                            <ul className="features-list">
-                                                                {plan.features.map((feature, featureIndex) => (
-                                                                    <li key={featureIndex}>
-                                                                        <i className="bi bi-check2-circle"></i> {feature}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-
-                                                            <button
-                                                                className={`btn ${plan.ctaVariant} w-100`}
-                                                                onClick={handleCreateEvent}
-                                                            >
-                                                                {plan.ctaText}
-                                                            </button>
-                                                        </>
-                                                    )}
+                                                        );
+                                                    })()}
                                                 </div>
+
+                                                <button className="slider-btn next" onClick={handleNext} aria-label="Next plan">
+                                                    <i className="bi bi-chevron-right"></i>
+                                                </button>
                                             </div>
-                                        );
-                                    })
-                                ) : (
-                                    <div className="col-12 text-center">
-                                        <p>Loading business packages...</p>
-                                    </div>
-                                )}
-                            </div>
+
+                                            {/* Mobile Indicators */}
+                                            <div className="mobile-indicators">
+                                                {pricingCategories[activeCategory] &&
+                                                    [...pricingCategories[activeCategory]]
+                                                        .sort((a, b) => {
+                                                            if (a.name === "CUSTOM PLAN") return 1;
+                                                            if (b.name === "CUSTOM PLAN") return -1;
+                                                            return 0;
+                                                        })
+                                                        .map((_, index) => (
+                                                            <span
+                                                                key={index}
+                                                                className={`indicator-dot ${currentIndex === index ? 'active' : ''}`}
+                                                                onClick={() => setCurrentIndex(index)}
+                                                                aria-label={`Go to plan ${index + 1}`}
+                                                            ></span>
+                                                        ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center">
+                                            <p>Loading packages...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </section>
                 )}
@@ -676,120 +838,120 @@ function Pricing() {
 
             <Footer />
 
-            {/* Ticket Selling Maintenance Modal */}
-            {showTicketMaintenance && (
-                <div className="modal-overlay-new" onClick={() => setShowTicketMaintenance(false)}>
-                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header-new">
-                            <div className="modal-title-section">
-                                <div className="modal-icon-large">
-                                    <i className="bi bi-tools"></i>
-                                </div>
-                                <div className="modal-title">
-                                    <h2>Ticket Selling Under Maintenance</h2>
-                                    <p>We're working hard to bring you ticketing features</p>
-                                </div>
-                            </div>
-                            <button
-                                className="close-btn-new"
-                                onClick={() => setShowTicketMaintenance(false)}
-                            >
-                                <i className="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-
-                        <div className="modal-body-new">
-                            <div className="maintenance-message">
-                                <div className="maintenance-icon">
-                                    <i className="bi bi-ticket-perforated"></i>
-                                </div>
-                                <h3>Coming Soon!</h3>
-                                <p>Our ticket selling feature is currently being developed and will be available in our next update.</p>
-                                <p>We're building a comprehensive ticketing system to make your event ticket sales seamless and efficient!</p>
-
-                                <div className="maintenance-tips">
-                                    <h4>In the meantime, you can:</h4>
-                                    <ul>
-                                        <li>Create free events with RSVP functionality</li>
-                                        <li>Explore our event management tools</li>
-                                        <li>Set up your event details and invitations</li>
-                                        <li>Contact support for early access inquiries</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div className="modal-actions-new">
-                                <button
-                                    className="action-btn-new primary"
-                                    onClick={() => setShowTicketMaintenance(false)}
-                                >
-                                    <i className="bi bi-check-circle"></i>
-                                    Got It
-                                </button>
-                                <button
-                                    className="action-btn-new secondary"
-                                    onClick={handleCreateEvent}
-                                >
-                                    <i className="bi bi-calendar-event"></i>
-                                    Create Free Event
-                                </button>
-                            </div>
-                        </div>
+           {/* Ticket Selling Maintenance Modal */}
+{showTicketMaintenance && (
+    <div className="modal-overlay-new" onClick={() => setShowTicketMaintenance(false)}>
+        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+                <div className="modal-title-section">
+                    <div className="modal-icon-large">
+                        <i className="bi bi-tools"></i>
+                    </div>
+                    <div className="modal-title">
+                        <h2>Ticket Selling Under Maintenance</h2>
+                        <p>We're working hard to bring you ticketing features</p>
                     </div>
                 </div>
-            )}
-            {/* Contact Sales Maintenance Modal */}
-            {showContactSalesModal && (
-                <div className="modal-overlay-new" onClick={() => setShowContactSalesModal(false)}>
-                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header-new">
-                            <div className="modal-title-section">
-                                <div className="modal-icon-large">
-                                    <i className="bi bi-people"></i>
-                                </div>
-                                <div className="modal-title">
-                                    <h2>Contact Sales</h2>
-                                    <p>Our sales desk is temporarily unavailable — we're working on it.</p>
-                                </div>
-                            </div>
-                            <button
-                                className="close-btn-new"
-                                onClick={() => setShowContactSalesModal(false)}
-                            >
-                                <i className="bi bi-x-lg"></i>
-                            </button>
-                        </div>
+                <button
+                    className="close-btn-new"
+                    onClick={() => setShowTicketMaintenance(false)}
+                >
+                    <i className="bi bi-x-lg"></i>
+                </button>
+            </div>
 
-                        <div className="modal-body-new">
-                            <div className="maintenance-message">
-                                <div className="maintenance-icon">
-                                    <i className="bi bi-envelope-paper"></i>
-                                </div>
-                                <h3>Get in touch</h3>
-                                <p>We're preparing a dedicated sales experience for enterprise customers. Please check back soon or contact support for early access.</p>
+            <div className="modal-body-new">
+                <div className="maintenance-message">
+                    <div className="maintenance-icon">
+                        <i className="bi bi-ticket-perforated"></i>
+                    </div>
+                    <h3>Coming Soon!</h3>
+                    <p>Our ticket selling feature is currently being developed and will be available in our next update.</p>
+                    <p>We're building a comprehensive ticketing system to make your event ticket sales seamless and efficient!</p>
 
-                            </div>
-
-                            <div className="modal-actions-new">
-                                <button
-                                    className="action-btn-new primary"
-                                    onClick={() => setShowContactSalesModal(false)}
-                                >
-                                    <i className="bi bi-check-circle"></i>
-                                    Got It
-                                </button>
-                                <button
-                                    className="action-btn-new secondary"
-                                    onClick={() => { setShowContactSalesModal(false); handleCreateEvent(); }}
-                                >
-                                    <i className="bi bi-calendar-event"></i>
-                                    Create Event
-                                </button>
-                            </div>
-                        </div>
+                    <div className="maintenance-tips">
+                        <h4>In the meantime, you can:</h4>
+                        <ul>
+                            <li>Create free events with RSVP functionality</li>
+                            <li>Explore our event management tools</li>
+                            <li>Set up your event details and invitations</li>
+                            <li>Contact support for early access inquiries</li>
+                        </ul>
                     </div>
                 </div>
-            )}
+
+                <div className="modal-actions-new">
+                    <button
+                        className="action-btn-new primary"
+                        onClick={() => setShowTicketMaintenance(false)}
+                    >
+                        <i className="bi bi-check-circle"></i>
+                        Got It
+                    </button>
+                    <button
+                        className="action-btn-new secondary"
+                        onClick={handleCreateEvent}
+                    >
+                        <i className="bi bi-calendar-event"></i>
+                        Create Free Event
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
+
+{/* Contact Sales Maintenance Modal */}
+{showContactSalesModal && (
+    <div className="modal-overlay-new" onClick={() => setShowContactSalesModal(false)}>
+        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-new">
+                <div className="modal-title-section">
+                    <div className="modal-icon-large">
+                        <i className="bi bi-people"></i>
+                    </div>
+                    <div className="modal-title">
+                        <h2>Contact Sales</h2>
+                        <p>Our sales desk is temporarily unavailable — we're working on it.</p>
+                    </div>
+                </div>
+                <button
+                    className="close-btn-new"
+                    onClick={() => setShowContactSalesModal(false)}
+                >
+                    <i className="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div className="modal-body-new">
+                <div className="maintenance-message">
+                    <div className="maintenance-icon">
+                        <i className="bi bi-envelope-paper"></i>
+                    </div>
+                    <h3>Get in touch</h3>
+                    <p>We're preparing a dedicated sales experience for enterprise customers. Please check back soon or contact support for early access.</p>
+                </div>
+
+                <div className="modal-actions-new">
+                    <button
+                        className="action-btn-new primary"
+                        onClick={() => setShowContactSalesModal(false)}
+                    >
+                        <i className="bi bi-check-circle"></i>
+                        Got It
+                    </button>
+                    <button
+                        className="action-btn-new secondary"
+                        onClick={() => { setShowContactSalesModal(false); handleCreateEvent(); }}
+                    >
+                        <i className="bi bi-calendar-event"></i>
+                        Create Event
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
         </>
     );
 }

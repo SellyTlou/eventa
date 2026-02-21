@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "../App.css";
 import "../responce.css";
 import "./support.css";
-import { Navbar, Footer, Login } from "./components";
+import { Navbar, Footer, Login ,NewEventPopupBtn} from "./components";
 import { useNavigate } from "react-router-dom";
 
 function Support() {
@@ -10,6 +10,7 @@ function Support() {
     const [loginMode, setLoginMode] = useState("login");
     const [showMaintenance, setShowMaintenance] = useState(false);
     const [showContactModal, setShowContactModal] = useState(false);
+    const [activeFaq, setActiveFaq] = useState(null);
     const navigate = useNavigate();
 
     const handleLoginClick = () => {
@@ -21,8 +22,6 @@ function Support() {
         setLoginMode("signup");
         setIsLoginOpen(true);
     };
-
-    
 
     const handleCreateEvent = () => {
         navigate("/createevent");
@@ -36,6 +35,10 @@ function Support() {
         setShowContactModal(true);
     };
 
+    const toggleFaq = (index) => {
+        setActiveFaq(activeFaq === index ? null : index);
+    };
+
     return (
         <>
             <Navbar
@@ -47,6 +50,7 @@ function Support() {
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
             />
+            <NewEventPopupBtn />
 
             <section className="support-page">
                 
@@ -61,15 +65,15 @@ function Support() {
                     <div className="container">
                         <div className="row">
                             <div className="col-lg-7">
-                                <h1>We're Here to Help</h1>
+                                <h1>We're Here to <span className="text-yellow">Help</span></h1>
                                 <p className="lead">
                                     Your success is our priority. Get the support you need to create unforgettable events.
                                 </p>
                                 <button 
-                                    className="btns"
+                                    className="btn btn-create"
                                     onClick={handleCreateEvent}
                                 >
-                                    Get Started
+                                    Get Started <i className="bi bi-arrow-right"></i>
                                 </button>
                             </div>
                         </div>
@@ -80,13 +84,13 @@ function Support() {
                 <section className="features-page">
                     <div className="container">
                         <div className="section-header text-center">
-                            <h2>How Can We Help You?</h2>
+                            <h2>How Can We <span className="text-purple">Help</span> You?</h2>
                             <p>
                                 Choose from our support options to get the assistance you need.
                             </p>
                         </div>
                         <div className="features-row">
-                            <div className="feature-card col-lg-4 col-md-6 col-12">
+                            <div className="feature-card">
                                 <div className="feature-icon">
                                     <i className="bi bi-envelope"></i>
                                 </div>
@@ -98,10 +102,10 @@ function Support() {
                                     className="btn btn-view-more"
                                     onClick={handleMaintenanceClick}
                                 >
-                                    Email Us
+                                    Email Us <i className="bi bi-arrow-right"></i>
                                 </button>
                             </div>
-                            <div className="feature-card col-lg-4 col-md-6 col-12">
+                            <div className="feature-card">
                                 <div className="feature-icon">
                                     <i className="bi bi-telephone"></i>
                                 </div>
@@ -113,10 +117,10 @@ function Support() {
                                     className="btn btn-view-more"
                                     onClick={handleContactClick}
                                 >
-                                    Call Now
+                                    Call Now <i className="bi bi-arrow-right"></i>
                                 </button>
                             </div>
-                            <div className="feature-card col-lg-4 col-md-6 col-12">
+                            <div className="feature-card">
                                 <div className="feature-icon">
                                     <i className="bi bi-ticket-perforated"></i>
                                 </div>
@@ -128,7 +132,7 @@ function Support() {
                                     className="btn btn-view-more"
                                     onClick={() => navigate('/ticket-selection')}
                                 >
-                                    Open Ticket
+                                    Open Ticket <i className="bi bi-arrow-right"></i>
                                 </button>
                             </div>
                         </div>
@@ -139,48 +143,92 @@ function Support() {
                 <section className="faq-section">
                     <div className="container">
                         <div className="section-header text-center">
-                            <h2>Frequently Asked Questions</h2>
+                            <h2>Frequently Asked <span className="text-blue">Questions</span></h2>
                             <p>
                                 Quick answers to common questions about Evendi.
                             </p>
                         </div>
                         <div className="faq-container">
                             <div className="faq-item">
-                                <h4>How do I create my first event?</h4>
-                                <p>Click "Get Started" and follow our simple step-by-step guide to set up your event in minutes.</p>
+                                <div 
+                                    className="faq-question"
+                                    onClick={() => toggleFaq(0)}
+                                >
+                                    <h4>How do I create my first event?</h4>
+                                    <i className={`bi ${activeFaq === 0 ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                                </div>
+                                {activeFaq === 0 && (
+                                    <div className="faq-answer">
+                                        <p>Click "Get Started" and follow our simple step-by-step guide to set up your event in minutes. You can choose from various templates and customize your event details.</p>
+                                    </div>
+                                )}
                             </div>
                             <div className="faq-item">
-                                <h4>Can I customize my event invitations?</h4>
-                                <p>Yes! We offer various templates and customization options to match your event's theme.</p>
+                                <div 
+                                    className="faq-question"
+                                    onClick={() => toggleFaq(1)}
+                                >
+                                    <h4>Can I customize my event invitations?</h4>
+                                    <i className={`bi ${activeFaq === 1 ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                                </div>
+                                {activeFaq === 1 && (
+                                    <div className="faq-answer">
+                                        <p>Yes! We offer various templates and customization options to match your event's theme. You can customize colors, fonts, images, and add your personal touch to make your invitations stand out.</p>
+                                    </div>
+                                )}
                             </div>
                             <div className="faq-item">
-                                <h4>What's your response time for support?</h4>
-                                <p>We typically respond within 2 hours for emails and instantly for live chat during business hours.</p>
+                                <div 
+                                    className="faq-question"
+                                    onClick={() => toggleFaq(2)}
+                                >
+                                    <h4>What's your response time for support?</h4>
+                                    <i className={`bi ${activeFaq === 2 ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                                </div>
+                                {activeFaq === 2 && (
+                                    <div className="faq-answer">
+                                        <p>We typically respond within 2 hours for emails and instantly for live chat during business hours (Monday-Friday, 8 AM - 6 PM). For urgent matters, our phone support is available 24/7.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="faq-item">
+                                <div 
+                                    className="faq-question"
+                                    onClick={() => toggleFaq(3)}
+                                >
+                                    <h4>Is there a free trial available?</h4>
+                                    <i className={`bi ${activeFaq === 3 ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                                </div>
+                                {activeFaq === 3 && (
+                                    <div className="faq-answer">
+                                        <p>Yes! We offer a 14-day free trial on all our plans. No credit card required. You can explore all features and see how Evendi can transform your event planning experience.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </section>
 
                 {/* Contact CTA */}
-                <section className="cta-banner text-light d-flex align-items-center">
+                <section className="cta-banner">
                     <img
                         src="/images/SalesHero.jpeg"
                         alt="Support CTA background"
                         className="cta-bg-img"
                     />
                     <div className="cta-overlay"/>
-                    <div className="container position-relative text-center text-lg-start">
+                    <div className="container">
                         <div className="row align-items-center">
                             <div className="col-lg-8">
-                                <h3 className="fw-semibold">Still need help? We're here for you.</h3>
-                                <p>Our support team is ready to assist you with any questions or concerns.</p>
+                                <h3>Still need help? <span className="text-yellow">We're here for you.</span></h3>
+                                <p>Our support team is ready to assist you with any questions or concerns, 24/7.</p>
                             </div>
-                            <div>
+                            <div className="col-lg-4 text-lg-end">
                                 <button 
-                                    className="btn btn-view-more"
+                                    className="btn btn-cta"
                                     onClick={handleContactClick}
                                 >
-                                    Contact Support
+                                    Contact Support <i className="bi bi-arrow-right"></i>
                                 </button>
                             </div>
                         </div>
@@ -219,7 +267,7 @@ function Support() {
                                 </div>
                                 <h3>Coming Soon!</h3>
                                 <p>This feature is currently being developed and will be available in our next update.</p>
-                                <p>We appreciate your patience as we work to make Eventa even better!</p>
+                                <p>We appreciate your patience as we work to make Evendi even better!</p>
                                 
                                 <div className="maintenance-tips">
                                     <h4>In the meantime, you can:</h4>
@@ -252,7 +300,7 @@ function Support() {
                         <div className="modal-header-new">
                             <div className="modal-title-section">
                                 <div className="modal-icon-large">
-                                    <i className="bi bi-telephone-fill"></i>
+                                    <i className="bi bi-headset"></i>
                                 </div>
                                 <div className="modal-title">
                                     <h2>Contact Our Support Team</h2>
@@ -269,43 +317,60 @@ function Support() {
 
                         <div className="modal-body-new">
                             <div className="contact-message">
-                                <div className="contact-icon">
-                                    <i className="bi bi-headset"></i>
+                                <div className="contact-icon-large">
+                                    <i className="bi bi-chat-dots"></i>
                                 </div>
                                 <h3>We're Here to Help!</h3>
-                                <p>Our support team is available to assist you with any questions about your events.</p>
+                                <p>Our support team is available 24/7 to assist you with any questions about your events.</p>
                                 
-                                <div className="contact-info">
+                                <div className="contact-info-grid">
                                     <div className="contact-item">
-                                        <i className="bi bi-telephone"></i>
-                                        <div>
-                                            <h4>Phone Number</h4>
-                                            <p>+27 11 123 4567</p>
-                                            <small>Available Monday - Friday, 8:00 AM - 5:00 PM</small>
+                                        <div className="contact-item-icon">
+                                            <i className="bi bi-telephone-fill"></i>
+                                        </div>
+                                        <div className="contact-item-details">
+                                            <h4>Phone</h4>
+                                            <p><a href="tel:+27111234567">+27 11 123 4567</a></p>
+                                            <small>Mon-Fri, 8AM - 6PM</small>
                                         </div>
                                     </div>
                                     
                                     <div className="contact-item">
-                                        <i className="bi bi-whatsapp"></i>
-                                        <div>
+                                        <div className="contact-item-icon">
+                                            <i className="bi bi-whatsapp"></i>
+                                        </div>
+                                        <div className="contact-item-details">
                                             <h4>WhatsApp</h4>
-                                            <p>+27 82 123 4567</p>
-                                            <small>24/7 support for urgent matters</small>
+                                            <p><a href="https://wa.me/27821234567">+27 82 123 4567</a></p>
+                                            <small>24/7 urgent support</small>
                                         </div>
                                     </div>
                                     
                                     <div className="contact-item">
-                                        <i className="bi bi-envelope"></i>
-                                        <div>
+                                        <div className="contact-item-icon">
+                                            <i className="bi bi-envelope-fill"></i>
+                                        </div>
+                                        <div className="contact-item-details">
                                             <h4>Email</h4>
-                                            <p>support@evenda.co.za</p>
-                                            <small>Response within 2 business hours</small>
+                                            <p><a href="mailto:support@evendi.co.za">support@evendi.co.za</a></p>
+                                            <small>Response within 2 hours</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="contact-item">
+                                        <div className="contact-item-icon">
+                                            <i className="bi bi-chat"></i>
+                                        </div>
+                                        <div className="contact-item-details">
+                                            <h4>Live Chat</h4>
+                                            <p><button className="chat-link" onClick={handleMaintenanceClick}>Start Chat</button></p>
+                                            <small>Available 24/7</small>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="contact-tips">
-                                    <h4>Before Calling:</h4>
+                                    <h4><i className="bi bi-lightbulb"></i> Before Contacting:</h4>
                                     <ul>
                                         <li>Have your event details ready</li>
                                         <li>Note down any error messages you've encountered</li>

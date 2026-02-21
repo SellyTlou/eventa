@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "../App.css";
 import "../responce.css";
-import { Navbar, Footer, Login } from "./components";
+import { Navbar, Footer, Login,NewEventPopupBtn } from "./components";
 
 function Features() {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -181,6 +181,7 @@ function Features() {
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
             />
+      <NewEventPopupBtn />
 
             {/* Maintenance Modal */}
             {showMaintenance && (

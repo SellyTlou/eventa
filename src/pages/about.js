@@ -1,7 +1,7 @@
 import React from "react";
 import "../App.css";
 import "../responce.css";
-import { Navbar, Footer, Login } from "./components";
+import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 
 function About() {
     const [isLoginOpen, setIsLoginOpen] = React.useState(false);
@@ -28,6 +28,8 @@ function About() {
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
             />
+                  <NewEventPopupBtn />
+            
 
             <div className="about-page">
                 {/* Hero Section */}

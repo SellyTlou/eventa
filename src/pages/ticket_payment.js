@@ -689,7 +689,7 @@ function Ticket_payment() {
   return (
     <div className="ticket-payment-page">
       <div className="payment-container">
-        {/* Left Column: Event Details */}
+        {/* Left Column: Event Details - BLACK BACKGROUND */}
         <div className="event-summary">
           <div className="event-header">
             <h2>Event Details</h2>

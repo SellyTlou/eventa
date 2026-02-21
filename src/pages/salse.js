@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "../responce.css";
 import "./sales.css";
-import { Navbar, Footer, Login } from "./components";
+import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 import { useNavigate } from "react-router-dom";
 
 function Sales() {
@@ -35,6 +35,8 @@ function Sales() {
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
             />
+                  <NewEventPopupBtn />
+            
 
             <section className="sales-page">
                 

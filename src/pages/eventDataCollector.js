@@ -76,17 +76,32 @@ export const useEventCreation = () => {
 
     const saveStep2Data = (step2Data) => {
         if (!step2Data || typeof step2Data !== 'object') return false;
+        
+        // Only validate required fields (date, time, timezone)
         const { eventStartDate, eventStartTime, eventEndDate, eventEndTime, timezone } = step2Data;
         if (!eventStartDate || !eventStartTime || !eventEndDate || !eventEndTime || !timezone) {
             return false;
         }
+        
+        // FIX: Save ALL fields from step2Data
         return saveEventData({
+            // Required fields
             eventStartDate,
             eventStartTime,
             eventEndDate,
             eventEndTime,
             timezone,
+            
+            // Location fields (with defaults)
             eventLocation: step2Data.eventLocation || '',
+            eventCity: step2Data.eventCity || '',           // ADD THIS
+            eventProvince: step2Data.eventProvince || '',   // ADD THIS
+            
+            // Category fields (with defaults)
+            eventCategory: step2Data.eventCategory || '',   // ADD THIS
+            customCategory: step2Data.customCategory || '', // ADD THIS
+            
+            // Keep existing fields
             eventUrl: step2Data.eventUrl || 'myevent'
         });
     };
