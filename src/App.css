@@ -1,4 +1,5 @@
 
+
 .logged-in-container {
   display: flex;
   align-items: center;
@@ -11502,3 +11503,76 @@ justify-content: end;
 .homePricing .col-lg-4:nth-child(2) .pricing-card { animation-delay: 0.2s; }
 .homePricing .col-lg-4:nth-child(3) .pricing-card { animation-delay: 0.3s; }
 .homePricing .col-lg-4:nth-child(4) .pricing-card { animation-delay: 0.4s; }
+
+/* Ultra Compact Toggle */
+.annual-toggle-container {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0;
+    padding: 0 10px;
+}
+
+.toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    border: 1px solid #ddd;
+}
+
+.toggle-label {
+    font-size: 12px;
+    color: #333;
+    font-weight: 500;
+}
+
+.save-badge {
+    background-color: #007bff;
+    color: white;
+    padding: 1px 4px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 600;
+    margin-left: 3px;
+}
+
+/* Micro toggle switch */
+.toggle-switch {
+    width: 36px;
+    height: 18px;
+    background-color: #e0e0e0;
+    border-radius: 9px;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-switch.monthly {
+    background-color: #4a5568;
+}
+
+.toggle-switch.annual {
+    background-color: #007bff;
+}
+
+.toggle-knob {
+    width: 14px;
+    height: 14px;
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.toggle-switch.monthly .toggle-knob {
+    transform: translateX(2px);
+}
+
+.toggle-switch.annual .toggle-knob {
+    transform: translateX(20px);
+}

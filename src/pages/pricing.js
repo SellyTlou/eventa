@@ -22,6 +22,9 @@ function Pricing() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const sliderRef = useRef(null);
 
+    // NEW: State for annual billing toggle (OFF by default)
+    const [annualBilling, setAnnualBilling] = useState(false);
+
     useEffect(() => {
         const handleResize = () => {
             setIsMobile(window.innerWidth < 768);
@@ -299,6 +302,17 @@ function Pricing() {
         }
     };
 
+    // NEW: Helper function to calculate annual price with 15% discount
+    const calculateAnnualPrice = (monthlyPrice) => {
+        // Extract numeric value from price string (e.g., "R649.00" -> 649.00)
+        const priceMatch = monthlyPrice.match(/R([\d,.]+)/);
+        if (!priceMatch) return monthlyPrice; // Return as-is for "Contact Sales" or similar
+        
+        const price = parseFloat(priceMatch[1].replace(',', ''));
+        const annualPrice = (price * 12) * 0.85; // 12 months with 15% discount
+        return `R${annualPrice.toFixed(2)}`;
+    };
+
     const handleLoginClick = () => {
         setLoginMode("login");
         setIsLoginOpen(true);
@@ -319,6 +333,10 @@ function Pricing() {
         } else {
             setActiveCategory(category);
             setCurrentIndex(0); // Reset to first card when category changes
+            // Reset annual billing when switching away from Business
+            if (category !== "Business") {
+                setAnnualBilling(false);
+            }
         }
     };
 
@@ -571,6 +589,42 @@ function Pricing() {
                     </div>
                 </section>
 
+                {/* NEW: Annual Billing Toggle (Business Tab Only) */}
+{activeCategory === "Business" && (
+    <div className="annual-toggle-container">
+        <div className="toggle-wrapper">
+            <span className="toggle-label">Monthly</span>
+            <div 
+                className={`toggle-switch ${annualBilling ? 'annual' : 'monthly'}`}
+                onClick={() => setAnnualBilling(!annualBilling)}
+            >
+                <div className="toggle-knob"></div>
+            </div>
+            <span className="toggle-label">
+                Annual <span className="save-badge">15% off</span>
+            </span>
+        </div>
+    </div>
+)}
+
+                {/* NEW: Annual Billing Toggle (Business Tab Only) */}
+{activeCategory === "Business" && (
+    <div className="annual-toggle-container">
+        <div className="toggle-wrapper">
+            <span className="toggle-label">Monthly</span>
+            <div 
+                className={`toggle-switch ${annualBilling ? 'annual' : 'monthly'}`}
+                onClick={() => setAnnualBilling(!annualBilling)}
+            >
+                <div className="toggle-knob"></div>
+            </div>
+            <span className="toggle-label">
+                Annual <span className="save-badge">15% off</span>
+            </span>
+        </div>
+    </div>
+)}
+
                 {/* Pricing Cards */}
                 {activeCategory !== "Selling Tickets" && (
                     <section className={`pricing-cards-section ${activeCategory === 'Business' ? 'business' : ''}`}>
@@ -638,6 +692,18 @@ function Pricing() {
                                                                     <h3>{plan.name}</h3>
                                                                     <p className="plan-description">{plan.description}</p>
 
+                                                            <div className="price-tag">
+                                                                <span className="price">
+                                                                    {activeCategory === "Business" && annualBilling && !plan.isContactSales
+                                                                        ? calculateAnnualPrice(plan.monthlyPrice)
+                                                                        : plan.monthlyPrice}
+                                                                </span>
+                                                                <span className="duration">
+                                                                    {activeCategory === "Business" && annualBilling && !plan.isContactSales
+                                                                        ? "/year"
+                                                                        : "/month"}
+                                                                </span>
+                                                            </div>
                                                                     <div className="price-tag">
                                                                         <span className="price">{plan.monthlyPrice}</span>
                                                                         <span className="duration">/month</span>
