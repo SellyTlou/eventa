@@ -17,6 +17,11 @@ function CreateEvent() {
   const [eventEndTime, setEventEndTime] = useState("13:15");
   const [timezone, setTimezone] = useState("Africa/Johannesburg");
   const [eventLocation, setEventLocation] = useState("");
+  const [eventCity, setEventCity] = useState("");
+  const [eventProvince, setEventProvince] = useState("");
+  // New state for event category
+  const [eventCategory, setEventCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [error, setError] = useState("");
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [loginMode, setLoginMode] = useState("login");
@@ -24,23 +29,74 @@ function CreateEvent() {
   const [touched, setTouched] = useState({});
   const [user, setUser] = useState(null);
 
-  const { saveStep1Data, saveStep2Data } = useEventCreation();
+  const { saveStep1Data, saveStep2Data, getEventDetails } = useEventCreation();
   const totalSteps = 3;
+
+  // Event categories - Compact list for 4x4 grid
+  const eventCategories = [
+    { value: "conference", label: "Conference", icon: "🎤" },
+    { value: "workshop", label: "Workshop", icon: "🛠️" },
+    { value: "seminar", label: "Seminar", icon: "📚" },
+    { value: "webinar", label: "Webinar", icon: "💻" },
+    { value: "networking", label: "Networking", icon: "🤝" },
+    { value: "party", label: "Party", icon: "🎉" },
+    { value: "wedding", label: "Wedding", icon: "💒" },
+    { value: "concert", label: "Concert", icon: "🎵" },
+    { value: "sports", label: "Sports", icon: "⚽" },
+    { value: "charity", label: "Charity", icon: "❤️" },
+    { value: "corporate", label: "Corporate", icon: "🏢" },
+    { value: "education", label: "Education", icon: "🎓" },
+    { value: "food", label: "Food & Drink", icon: "🍽️" },
+    { value: "arts", label: "Arts", icon: "🎨" },
+    { value: "tech", label: "Tech", icon: "💡" },
+    { value: "other", label: "Other", icon: "📌" }
+  ];
 
   // Check if user is already logged in on component mount
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
-      // If user is logged in, they start at step 1 (event name)
       setCurrentStep(1);
     } else {
-      // If user is not logged in, they need to login/signup first (step 3)
       setCurrentStep(3);
     }
   }, []);
 
-  // Validation rules
+  // Load saved data when user logs in
+  useEffect(() => {
+    const loadSavedData = async () => {
+      if (user) {
+        try {
+          const savedData = await getEventDetails?.();
+          if (savedData) {
+            if (savedData.eventName) setEventName(savedData.eventName);
+            if (savedData.eventStartDate) setEventStartDate(savedData.eventStartDate);
+            if (savedData.eventStartTime) setEventStartTime(savedData.eventStartTime);
+            if (savedData.eventEndDate) setEventEndDate(savedData.eventEndDate);
+            if (savedData.eventEndTime) setEventEndTime(savedData.eventEndTime);
+            if (savedData.timezone) setTimezone(savedData.timezone);
+            if (savedData.eventLocation) setEventLocation(savedData.eventLocation);
+            if (savedData.eventCity) setEventCity(savedData.eventCity);
+            if (savedData.eventProvince) setEventProvince(savedData.eventProvince);
+            // Load saved category
+            if (savedData.eventCategory) {
+              setEventCategory(savedData.eventCategory);
+              if (savedData.eventCategory === "other" && savedData.customCategory) {
+                setCustomCategory(savedData.customCategory);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error loading saved data:", error);
+        }
+      }
+    };
+
+    loadSavedData();
+  }, [user]);
+
+  // Validation rules - Updated with eventCategory
   const validationRules = {
     eventName: {
       required: true,
@@ -76,6 +132,24 @@ function CreateEvent() {
     eventLocation: {
       maxLength: 200,
       message: "Location cannot exceed 200 characters"
+    },
+    eventCity: {
+      maxLength: 100,
+      message: "City/Town cannot exceed 100 characters"
+    },
+    eventProvince: {
+      required: false,
+      message: "Please select a province"
+    },
+    // New validation for event category
+    eventCategory: {
+      required: true,
+      message: "Please select an event category"
+    },
+    customCategory: {
+      required: false,
+      maxLength: 50,
+      message: "Custom category cannot exceed 50 characters"
     }
   };
 
@@ -84,7 +158,6 @@ function CreateEvent() {
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
     setShowLoginPopup(false);
-    // After login, go to step 1 (event name)
     setCurrentStep(1);
   };
 
@@ -93,7 +166,6 @@ function CreateEvent() {
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
     setShowLoginPopup(false);
-    // After signup, go to step 1 (event name)
     setCurrentStep(1);
   };
 
@@ -108,13 +180,13 @@ function CreateEvent() {
       const startDate = new Date(eventStartDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       return startDate > today ? eventStartDate : getTodayDate();
     }
     return getTodayDate();
   };
 
-  // Validation functions
+  // Validation functions - Updated with eventCategory
   const validateField = (name, value, allValues = {}) => {
     const rules = validationRules[name];
     if (!rules) return "";
@@ -139,7 +211,7 @@ function CreateEvent() {
       const inputDate = new Date(value);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (inputDate < today) {
         return "Event date cannot be in the past";
       }
@@ -148,11 +220,11 @@ function CreateEvent() {
     if (rules.afterStartDate && value && allValues.eventStartDate) {
       const startDate = new Date(allValues.eventStartDate);
       const endDate = new Date(value);
-      
+
       if (endDate < startDate) {
         return "End date cannot be before start date";
       }
-      
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (endDate < today) {
@@ -160,16 +232,16 @@ function CreateEvent() {
       }
     }
 
-    if (rules.afterStartTime && value && allValues.eventStartTime && 
-        allValues.eventStartDate && allValues.eventEndDate) {
-      
+    if (rules.afterStartTime && value && allValues.eventStartTime &&
+      allValues.eventStartDate && allValues.eventEndDate) {
+
       const startDateTime = new Date(`${allValues.eventStartDate}T${allValues.eventStartTime}`);
       const endDateTime = new Date(`${allValues.eventEndDate}T${value}`);
-      
+
       if (startDateTime.getTime() === endDateTime.getTime()) {
         return "End time cannot be the same as start time";
       }
-      
+
       if (endDateTime <= startDateTime) {
         return "End time must be after start time";
       }
@@ -214,6 +286,21 @@ function CreateEvent() {
       if (subStep === 2) {
         const locationError = validateField("eventLocation", eventLocation);
         if (locationError) newErrors.eventLocation = locationError;
+
+        const cityError = validateField("eventCity", eventCity);
+        if (cityError) newErrors.eventCity = cityError;
+      }
+
+      // New validation for event category (substep 3)
+      if (subStep === 3) {
+        const categoryError = validateField("eventCategory", eventCategory);
+        if (categoryError) newErrors.eventCategory = categoryError;
+
+        // Validate custom category if "other" is selected
+        if (eventCategory === "other") {
+          const customError = validateField("customCategory", customCategory);
+          if (customError) newErrors.customCategory = customError;
+        }
       }
     }
 
@@ -223,7 +310,7 @@ function CreateEvent() {
 
   const handleBlur = (fieldName) => {
     setTouched(prev => ({ ...prev, [fieldName]: true }));
-    
+
     const allValues = {
       eventStartDate,
       eventStartTime,
@@ -231,9 +318,13 @@ function CreateEvent() {
       eventEndTime,
       eventName,
       eventLocation,
-      timezone
+      eventCity,
+      eventProvince,
+      timezone,
+      eventCategory,
+      customCategory
     };
-    
+
     const error = validateField(fieldName, allValues[fieldName], allValues);
     setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
@@ -250,7 +341,7 @@ function CreateEvent() {
 
   const handleNext = async () => {
     setError("");
-    
+
     // Mark all fields in current step as touched
     const newTouched = { ...touched };
     if (currentStep === 1) {
@@ -264,6 +355,13 @@ function CreateEvent() {
         newTouched.timezone = true;
       } else if (step2SubStep === 2) {
         newTouched.eventLocation = true;
+        newTouched.eventCity = true;
+        newTouched.eventProvince = true;
+      } else if (step2SubStep === 3) {
+        newTouched.eventCategory = true;
+        if (eventCategory === "other") {
+          newTouched.customCategory = true;
+        }
       }
     }
     setTouched(newTouched);
@@ -283,19 +381,23 @@ function CreateEvent() {
 
     // Step 2 validation and saving
     if (currentStep === 2) {
-      if (step2SubStep < 2) {
+      if (step2SubStep < 3) {
         setStep2SubStep(step2SubStep + 1);
         return;
       }
 
-      if (step2SubStep === 2) {
+      if (step2SubStep === 3) {
         const step2Data = {
           eventStartDate,
           eventStartTime,
           eventEndDate,
           eventEndTime,
           timezone,
-          eventLocation
+          eventLocation,
+          eventCity,     
+          eventProvince,  
+          eventCategory, 
+          customCategory: eventCategory === "other" ? customCategory : ""
         };
 
         const success = saveStep2Data(step2Data);
@@ -307,7 +409,7 @@ function CreateEvent() {
     }
 
     // If user is logged in and completed step 2, go to event theme
-    if (user && currentStep === 2 && step2SubStep === 2) {
+    if (user && currentStep === 2 && step2SubStep === 3) {
       navigate("/eventTheme");
       return;
     }
@@ -326,19 +428,36 @@ function CreateEvent() {
   };
 
   const handleBack = () => {
-  if (currentStep === 2 && step2SubStep > 1) {
-    setStep2SubStep(step2SubStep - 1);
-  } else if (currentStep > 1) {
-    setCurrentStep(currentStep - 1);
-  } else {
-    navigate(-1); 
-  }
-  setError("");
-  setFieldErrors({});
-};
+    if (currentStep === 2 && step2SubStep > 1) {
+      setStep2SubStep(step2SubStep - 1);
+    } else if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    } else {
+      navigate(-1);
+    }
+    setError("");
+    setFieldErrors({});
+  };
 
   const shouldShowError = (fieldName) => {
     return touched[fieldName] && fieldErrors[fieldName];
+  };
+
+  const handleCategorySelect = (categoryValue) => {
+    setEventCategory(categoryValue);
+    if (categoryValue !== "other") {
+      setCustomCategory(""); // Clear custom category when not "other"
+    }
+    setTouched(prev => ({ ...prev, eventCategory: true }));
+    setFieldErrors(prev => ({ ...prev, eventCategory: "" }));
+  };
+
+  // Get selected category details
+  const getSelectedCategory = () => {
+    if (eventCategory === "other") {
+      return { label: customCategory || "Other", icon: "📌" };
+    }
+    return eventCategories.find(cat => cat.value === eventCategory) || null;
   };
 
   return (
@@ -516,12 +635,15 @@ function CreateEvent() {
                 <>
                   <h2 className="step-title">Event Location</h2>
                   <p className="step-subtitle">Where is your Event?</p>
+
+                  {/* Venue/Address field */}
                   <div className="form-group-event">
+                    <label htmlFor="eventLocation">VENUE / ADDRESS</label>
                     <input
                       type="text"
                       className={`form-control-event ${shouldShowError('eventLocation') ? 'error' : ''}`}
                       id="eventLocation"
-                      placeholder="Venue or Address"
+                      placeholder="e.g., 123 Main Street, Convention Center"
                       value={eventLocation}
                       onChange={(e) => setEventLocation(e.target.value)}
                       onBlur={() => handleBlur('eventLocation')}
@@ -532,8 +654,126 @@ function CreateEvent() {
                         {fieldErrors.eventLocation}
                       </div>
                     )}
-                    <p className="text-muted small mt-1">Not sure yet? You can add location later.</p>
                   </div>
+
+                  {/* City/Town field */}
+                  <div className="form-group-event">
+                    <label htmlFor="eventCity">CITY / TOWN</label>
+                    <input
+                      type="text"
+                      className={`form-control-event ${shouldShowError('eventCity') ? 'error' : ''}`}
+                      id="eventCity"
+                      placeholder="e.g., Johannesburg, Cape Town"
+                      value={eventCity}
+                      onChange={(e) => setEventCity(e.target.value)}
+                      onBlur={() => handleBlur('eventCity')}
+                    />
+                    {shouldShowError('eventCity') && (
+                      <div className="field-error">
+                        <span className="error-icon">⚠</span>
+                        {fieldErrors.eventCity}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Province dropdown */}
+                  <div className="form-group-event">
+                    <label htmlFor="eventProvince">PROVINCE / STATE</label>
+                    <select
+                      className={`form-control-event ${shouldShowError('eventProvince') ? 'error' : ''}`}
+                      id="eventProvince"
+                      value={eventProvince}
+                      onChange={(e) => setEventProvince(e.target.value)}
+                      onBlur={() => handleBlur('eventProvince')}
+                    >
+                      <option value="">Select a province</option>
+                      <option value="Eastern Cape">Eastern Cape</option>
+                      <option value="Free State">Free State</option>
+                      <option value="Gauteng">Gauteng</option>
+                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                      <option value="Limpopo">Limpopo</option>
+                      <option value="Mpumalanga">Mpumalanga</option>
+                      <option value="Northern Cape">Northern Cape</option>
+                      <option value="North West">North West</option>
+                      <option value="Western Cape">Western Cape</option>
+                    </select>
+                    {shouldShowError('eventProvince') && (
+                      <div className="field-error">
+                        <span className="error-icon">⚠</span>
+                        {fieldErrors.eventProvince}
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-muted small mt-1">
+                    Not sure yet? You can add location details later.
+                  </p>
+                </>
+              )}
+
+              {/* New Step 2.3: Event Category - Compact 4x4 Grid */}
+              {step2SubStep === 3 && (
+                <>
+                  <h2 className="step-title">Event Category</h2>
+                  <p className="step-subtitle">Select the type of event you're creating</p>
+
+                  <div className="event-category-compact">
+                    <div className="category-grid-4x4">
+                      {eventCategories.map((category) => (
+                        <div
+                          key={category.value}
+                          className={`category-option ${eventCategory === category.value ? 'selected' : ''}`}
+                          onClick={() => handleCategorySelect(category.value)}
+                        >
+                          <span className="category-option-icon">{category.icon}</span>
+                          <span className="category-option-label">{category.label}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {shouldShowError('eventCategory') && (
+                      <div className="field-error">
+                        <span className="error-icon">⚠</span>
+                        {fieldErrors.eventCategory}
+                      </div>
+                    )}
+
+                    {/* Custom category input for "Other" */}
+                    {eventCategory === "other" && (
+                      <div className="custom-category-input-container">
+                        <label htmlFor="customCategory">Specify event type</label>
+                        <input
+                          type="text"
+                          id="customCategory"
+                          className={`form-control-event ${shouldShowError('customCategory') ? 'error' : ''}`}
+                          placeholder="e.g., Festival, Meetup, etc."
+                          value={customCategory}
+                          onChange={(e) => setCustomCategory(e.target.value)}
+                          onBlur={() => handleBlur('customCategory')}
+                          autoFocus
+                        />
+                        {shouldShowError('customCategory') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.customCategory}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {eventCategory && (
+                      <div className="selected-category-badge">
+                        <span>Selected: </span>
+                        <strong>
+                          {getSelectedCategory()?.icon} {eventCategory === "other" ? customCategory || "Other" : getSelectedCategory()?.label}
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-muted small mt-2">
+                    Choose a category to help attendees find your event
+                  </p>
                 </>
               )}
             </div>
@@ -544,23 +784,23 @@ function CreateEvent() {
             <div className="event-step">
               <h2 className="step-title">Account Required</h2>
               <p className="step-subtitle">To create and manage your event, you need an account</p>
-              
+
               <div className="account-prompt-container">
                 <div className="account-prompt-card">
                   <h3>Already have an account?</h3>
                   <p>Log in to continue creating your event</p>
-                  <button 
+                  <button
                     className="btn-event btn-event-primary"
                     onClick={handleLoginClick}
                   >
                     Log In
                   </button>
                 </div>
-                
+
                 <div className="account-prompt-card">
                   <h3>New to Eventa?</h3>
                   <p>Create an account to start managing your events</p>
-                  <button 
+                  <button
                     className="btn-event btn-event-secondary"
                     onClick={handleSignupClick}
                   >
@@ -568,7 +808,7 @@ function CreateEvent() {
                   </button>
                 </div>
               </div>
-              
+
               <p className="text-muted small mt-3">
                 Don't worry, your event details are saved. You can continue where you left off after logging in.
               </p>
@@ -590,8 +830,9 @@ function CreateEvent() {
             {user ? (
               <button className="btn-event btn-event-next" onClick={handleNext}>
                 {currentStep === 1 && "NEXT: EVENT DETAILS"}
-                {currentStep === 2 && step2SubStep < 2 && "NEXT"}
-                {currentStep === 2 && step2SubStep === 2 && "NEXT: EVENT THEME"}
+                {currentStep === 2 && step2SubStep === 1 && "NEXT: LOCATION"}
+                {currentStep === 2 && step2SubStep === 2 && "NEXT: EVENT CATEGORY"}
+                {currentStep === 2 && step2SubStep === 3 && "NEXT: EVENT THEME"}
               </button>
             ) : (
               <button className="btn-event btn-event-next" onClick={handleNext}>

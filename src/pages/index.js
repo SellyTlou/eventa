@@ -1,17 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "../App.css";
-import"../../src/pages/planner/main.css";
+import "../../src/pages/planner/main.css";
 import "../responce.css";
-import { Navbar, Footer, Login } from "./components";
-import { Star } from 'react-konva';
+import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 
 function Index() {
+    const navigate = useNavigate();
     const [startIndex, setStartIndex] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [showMaintenance, setShowMaintenance] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [pricingPlans, setPricingPlans] = useState([]);
     const [loadingPricing, setLoadingPricing] = useState(true);
+    const [trendingEvents, setTrendingEvents] = useState([]);
+    const [loadingTrending, setLoadingTrending] = useState(true);
+    const [trendingIndex, setTrendingIndex] = useState(0);
+    const sliderIntervalRef = useRef(null);
 
     const events = [
         { id: 1, title: "Wedding Bash", img: "/images/popular events/wedding.png", description: "Turn your wedding dream into a reality." },
@@ -40,9 +45,8 @@ function Index() {
             if (data.success && data.packages) {
                 const formattedPlans = data.packages.map(pkg => {
                     const baseName = pkg.package_type.toUpperCase();
-                    // Special handling for free plan - show as "Free" not "FREE"
                     const displayName = pkg.price == 0 ? "Free" : baseName;
-                    
+
                     return {
                         id: pkg.package_id,
                         name: displayName,
@@ -50,29 +54,146 @@ function Index() {
                         duration: "per month",
                         max_guests: pkg.max_guests,
                         max_events: pkg.max_events,
-                        features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) : 
+                        features: pkg.features ? pkg.features.split(',').map(feature => feature.trim()) :
                             getDefaultFeatures(pkg.package_type, pkg.max_guests, pkg.max_events),
                         isPopular: pkg.package_type.toUpperCase() === 'PREMIUM'
                     };
                 });
                 setPricingPlans(formattedPlans);
             } else {
-                // Fallback to default plans if API fails
                 setPricingPlans(getDefaultPricingPlans());
             }
         } catch (err) {
             console.error("Error fetching pricing plans:", err);
-            // Fallback to default plans
             setPricingPlans(getDefaultPricingPlans());
         } finally {
             setLoadingPricing(false);
         }
     };
 
-    // Fallback function for features (only used if API doesn't provide features)
+    // Fetch trending events based on ticket sales
+    const fetchTrendingEvents = async () => {
+        try {
+            setLoadingTrending(true);
+            const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+            const formData = new FormData();
+            formData.append("function", "getTrendingEvents");
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+            console.log("Trending events data:", data);
+
+            if (data.success && Array.isArray(data.events)) {
+                // Ensure each event has an event_id
+                const validEvents = data.events.filter(event => event.event_id != null);
+                console.log("Valid events with IDs:", validEvents.length);
+                setTrendingEvents(validEvents);
+            } else {
+                console.error("Failed to fetch trending events:", data.message);
+                setTrendingEvents([]);
+            }
+        } catch (err) {
+            console.error("Error fetching trending events:", err);
+            setTrendingEvents([]);
+        } finally {
+            setLoadingTrending(false);
+        }
+    };
+
+// Handle click on event
+const handleEventClick = (event) => {
+    console.log("Event clicked:", event);
+    const eventId = event?.event_id;
+    
+    console.log("Event ID to use:", eventId);
+    console.log("Event ID type:", typeof eventId);
+    console.log("Event ID length:", eventId?.length);
+    
+    if (eventId) {
+        navigate(`/ticketEvent_details?id=${encodeURIComponent(eventId)}`);
+    } else {
+        console.error("No event ID found in:", event);
+        alert("Cannot open event: No ID found");
+    }
+};
+
+    // Trending events slider functions
+    const getVisibleTrendingEvents = () => {
+        const cardsToShow = isMobile ? 1 : 3;
+        
+        // If we have fewer events than cards to show, just show all events
+        if (trendingEvents.length <= cardsToShow) {
+            return trendingEvents;
+        }
+        
+        // Otherwise, show a sliding window of events
+        const visibleEvents = [];
+        for (let i = 0; i < cardsToShow; i++) {
+            const index = (trendingIndex + i) % trendingEvents.length;
+            visibleEvents.push(trendingEvents[index]);
+        }
+        return visibleEvents;
+    };
+
+    const handleTrendingNext = () => {
+        const cardsToShow = isMobile ? 1 : 3;
+        if (trendingEvents.length > cardsToShow) {
+            setTrendingIndex((prevIndex) => (prevIndex + 1) % trendingEvents.length);
+            resetSliderInterval();
+        }
+    };
+
+    const handleTrendingPrev = () => {
+        const cardsToShow = isMobile ? 1 : 3;
+        if (trendingEvents.length > cardsToShow) {
+            setTrendingIndex((prevIndex) => (prevIndex - 1 + trendingEvents.length) % trendingEvents.length);
+            resetSliderInterval();
+        }
+    };
+
+    const resetSliderInterval = () => {
+        const cardsToShow = isMobile ? 1 : 3;
+        if (sliderIntervalRef.current) {
+            clearInterval(sliderIntervalRef.current);
+        }
+        // Only start interval if there are enough events to slide
+        if (trendingEvents.length > cardsToShow) {
+            sliderIntervalRef.current = setInterval(() => {
+                setTrendingIndex((prevIndex) => (prevIndex + 1) % trendingEvents.length);
+            }, 5000);
+        }
+    };
+
+    // Auto-slide for trending events
+    useEffect(() => {
+        resetSliderInterval();
+        return () => {
+            if (sliderIntervalRef.current) {
+                clearInterval(sliderIntervalRef.current);
+            }
+        };
+    }, [trendingEvents.length, isMobile]);
+
+    // Reset index when events change
+    useEffect(() => {
+        setTrendingIndex(0);
+    }, [trendingEvents]);
+
+    // Log trending events when they change
+    useEffect(() => {
+        console.log("Current trending events:", trendingEvents);
+    }, [trendingEvents]);
+
+    // Fallback function for features
     const getDefaultFeatures = (packageType, maxGuests, maxEvents) => {
         const packageTypeUpper = packageType.toUpperCase();
-        
+
         const featuresMap = {
             'FREE': [
                 `${maxEvents === 1 ? '1 event' : `${maxEvents} events`}`,
@@ -108,11 +229,11 @@ function Index() {
                 "Custom integrations"
             ]
         };
-        
+
         return featuresMap[packageTypeUpper] || ["Event management features"];
     };
 
-    // Fallback default pricing plans (only used if API fails)
+    // Fallback default pricing plans
     const getDefaultPricingPlans = () => {
         return [
             {
@@ -188,6 +309,7 @@ function Index() {
 
     useEffect(() => {
         fetchPricingPlans();
+        fetchTrendingEvents();
     }, []);
 
     useEffect(() => {
@@ -288,16 +410,19 @@ function Index() {
     };
 
     const handleGetStartedClick = (planName, planId) => {
-        // Check if it's a free plan (price = 0 or name = Free)
         const isFreePlan = planName.toLowerCase() === 'free' || planName === 'Free';
-        
+
         if (isFreePlan) {
             window.location.href = "/createevent";
         } else {
-            // For paid plans, redirect to upgrade page with package ID
             window.location.href = `/upgrade_package?package_id=${planId}`;
         }
     };
+
+    // Get visible trending events
+    const visibleTrendingEvents = getVisibleTrendingEvents();
+    const cardsToShow = isMobile ? 1 : 3;
+    const canSlide = trendingEvents.length > cardsToShow;
 
     return (
         <>
@@ -310,11 +435,12 @@ function Index() {
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
             />
+            <NewEventPopupBtn />
 
             <div className="homepage-section">
+                {/* Home Header with Carousel */}
                 <section className="homeHeader">
                     <div className="hero-carousel">
-
                         {/* SLIDE 1 */}
                         <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`}>
                             <div className="container">
@@ -394,162 +520,251 @@ function Index() {
                                 />
                             ))}
                         </div>
-
                     </div>
                 </section>
 
-                <section className="homeFeatures">
-                    <div className="popular-events">
-                        <div className="container">
-                            <h2 className="mb-4">Popular Events</h2>
-                            <div className="slider-wrapper">
-                                <button className="slider-btn" onClick={handlePrev}>
-                                    <i className="bi bi-caret-left"></i>
-                                </button>
-                                <div className="cards-container">
-                                    {getVisibleEvents().map((event) => (
-                                        <div key={event.id} className="event-card">
-                                            <div className="card-img-container">
-                                                <h5>{event.title}</h5>
-                                                <div className="card-img-overlay"></div>
-                                                <img
-                                                    src={event.img}
-                                                    alt={event.title}
-                                                    className="card-img"
-                                                />
-                                            </div>
-                                            <div className="card-content">
-                                                <p>{event.description}</p>
-                                                <button
-                                                    className="btn btn-view"
-                                                    onClick={() => window.location.href = "/createevent"}
-                                                >
-                                                    Get Started
-                                                </button>
-                                            </div>
+                {/* Home Categories Section */}
+                <section className="homeCategories">
+                    <div className="container">
+                        <h2 className="section-title">Exclusive <span>Events</span></h2>
+                        <div className="row g-4">
+                            <div className="col-lg-3">
+                                <div className="category-card">
+                                    <div className="category-overlay"></div>
+                                    <img src="/images/corporate.avif" alt="Corporate" className="img-fluid category-image" />
+                                    <div className="category-border">
+                                        <div className="category-content">
+                                            <h5>Corporate</h5>
+                                            <span className="category-count">12+ Events</span>
                                         </div>
-                                    ))}
-                                </div>
-                                <button className="slider-btn" onClick={handleNext}>
-                                    <i className="bi bi-caret-right"></i>
-                                </button>
-                            </div>
-                            {/* Mobile indicator dots */}
-                            {isMobile && (
-                                <div className="mobile-indicators">
-                                    {events.map((_, index) => (
-                                        <span
-                                            key={index}
-                                            className={`indicator-dot ${index === startIndex ? 'active' : ''}`}
-                                            onClick={() => setStartIndex(index)}
-                                        ></span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </section>
-
-                <section className="ManagementsGuid">
-                    <div className="container">
-                        <div className="ManagementsGuid-header text-content">
-                            <h2>Comprehensive Event Management</h2>
-                            <p>
-                                Planning an event has never been this easy! Evendi helps you manage guest lists, send invites, set up seating charts,
-                                and schedule reminders so you can focus on enjoying the celebration.
-                            </p>
-                        </div>
-                        <div className="row navBtn">
-                            {["Invitations", "Management", "RSVP Tracking"].map((tab) => (
-                                <button
-                                    key={tab}
-                                    className={`btn ${activeTab === tab ? 'btn-create' : 'btn-demo'}`}
-                                    onClick={() => {
-                                        setActiveTab(tab);
-                                        setManagementStartIndex(0);
-                                    }}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="slider-wrapper">
-                            <button className="slider-btn" onClick={handleManagementPrev}>
-                                <i className="bi bi-caret-left"></i>
-                            </button>
-                            <div className="cards-container features-row">
-                                {getVisibleManagementCards().map((card) => (
-                                    <div key={card.id} className="col-lg-4 feature-card">
-                                        <h4><i className={card.icon}></i> {card.title}</h4>
-                                        <p>{card.description}</p>
-                                        <button className="btn btn-view-more" onClick={handleViewMoreClick}>View More</button>
                                     </div>
-                                ))}
+                                </div>
                             </div>
-                            <button className="slider-btn" onClick={handleManagementNext}>
-                                <i className="bi bi-caret-right"></i>
-                            </button>
+                            
+                            <div className="col-lg-6 mid-category-card">
+                                <div className="category-card">
+                                    <div className="category-overlay"></div>
+                                    <img src="/images/bafana.jpg" alt="Sports" className="img-fluid category-image" />
+                                    <div className="category-border">
+                                        <div className="category-content">
+                                            <h5>Sports</h5>
+                                            <span className="category-count">8+ Events</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="category-card">
+                                    <div className="category-overlay"></div>
+                                    <img src="/images/music.jpg" alt="Music" className="img-fluid category-image" />
+                                    <div className="category-border">
+                                        <div className="category-content">
+                                            <h5>Music</h5>
+                                            <span className="category-count">20+ Events</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="col-lg-3">
+                                <div className="category-card">
+                                    <div className="category-overlay"></div>
+                                    <img src="/images/parties.jpg" alt="Party" className="img-fluid category-image" />
+                                    <div className="category-border">
+                                        <div className="category-content">
+                                            <h5>Parties</h5>
+                                            <span className="category-count">15+ Events</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        {isMobile && (
-                            <div className="mobile-indicators">
-                                {managementFeatures[activeTab].map((_, index) => (
-                                    <span
-                                        key={index}
-                                        className={`indicator-dot ${index === managementStartIndex ? 'active' : ''}`}
-                                        onClick={() => setManagementStartIndex(index)}
-                                    ></span>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </section>
 
-                <section className="our-pricing">
+                {/* Trending Events Section */}
+                <section className="homeTrendings">
                     <div className="container">
-                        <div className="pricing-header text-center mb-5">
-                            <h2>Our Flexible Pricing Plans</h2>
-                            <p className="lead text-muted">Choose the right plan to match your event, from cozy get-togethers to grand conferences.</p>
+                        <div className="section-header">
+                            <h2 className="section-title">Trending <span>Events</span></h2>
+                            <p className="section-subtitle">Most popular events based on ticket sales</p>
                         </div>
-
-                        {loadingPricing ? (
-                            <div className="text-center">
-                                <div className="spinner-border text-primary" role="status">
-                                    <span className="visually-hidden">Loading plans...</span>
+                        
+                        {loadingTrending ? (
+                            <div className="text-center py-5">
+                                <div className="spinner-border text-warning" role="status">
+                                    <span className="visually-hidden">Loading trending events...</span>
                                 </div>
-                                <p className="mt-2">Loading pricing plans...</p>
+                                <p className="mt-3 text-white">Loading trending events...</p>
+                            </div>
+                        ) : trendingEvents.length > 0 ? (
+                            <div className="trending-wrapper">
+                                <div className="circle-slider-container">
+                                    {/* Show navigation buttons only if we have enough events */}
+                                    {canSlide && (
+                                        <>
+                                            <button className="slider-nav prev" onClick={handleTrendingPrev}>
+                                                <i className="bi bi-chevron-left"></i>
+                                            </button>
+                                            <button className="slider-nav next" onClick={handleTrendingNext}>
+                                                <i className="bi bi-chevron-right"></i>
+                                            </button>
+                                        </>
+                                    )}
+                                    
+                                    {/* Slider track with conditional class */}
+                                    <div className={`slider-track ${!canSlide ? 'no-animation' : ''}`}>
+                                        {visibleTrendingEvents.map((event, index) => (
+                                            <div 
+                                                className="car-item" 
+                                                key={event.event_id || index}
+                                                onClick={() => handleEventClick(event)}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                <div className="car-card">
+                                                    <div className="car-image-wrapper">
+                                                        <img 
+                                                            src={event.event_image || (event.event_image ? `/uploads/events/${event.event_image}` : "/images/default-event.jpg")} 
+                                                            alt={event.event_name || event.title || "Event"} 
+                                                            className="car-image"
+                                                            onError={(e) => {
+                                                                e.target.src = "/images/default-event.jpg";
+                                                            }}
+                                                        />
+                                                        <div className="car-overlay">
+                                                            <span className="trending-badge">
+                                                                #{trendingEvents.findIndex(e => e.event_id === event.event_id) + 1} Trending
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="car-info">
+                                                        <h3>{event.event_name || event.title || "Event Name"}</h3>
+                                                        <div className="car-meta">
+                                                            <span className="event-date">
+                                                                <i className="bi bi-calendar"></i> 
+                                                                {event.formatted_date || event.event_start_date || "Date TBD"}
+                                                            </span>
+                                                            <span className="event-location">
+                                                                <i className="bi bi-map"></i> 
+                                                                {event.location || event.city || "Location TBD"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="car-stats">
+                                                            <span className="sold">
+                                                                <i className="bi bi-ticket-alt"></i> 
+                                                                {event.total_tickets_sold || 0} Ticket's Sold
+                                                            </span>
+                                                        </div>
+                                                        <button 
+                                                            className="btn-view" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEventClick(event);
+                                                            }}
+                                                        >
+                                                            View Event →
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Progress Indicators - only show if can slide */}
+                                {canSlide && (
+                                    <div className="slider-progress">
+                                        <div className="progress-bar">
+                                            <div className="progress-fill" style={{
+                                                width: `${(cardsToShow / trendingEvents.length) * 100}%`,
+                                                transform: `translateX(${(trendingIndex / (trendingEvents.length - cardsToShow)) * 100}%)`
+                                            }}></div>
+                                        </div>
+                                        <div className="slide-indicators">
+                                            {Array.from({ length: trendingEvents.length - cardsToShow + 1 }).map((_, index) => (
+                                                <span 
+                                                    key={index} 
+                                                    className={`indicator ${index === trendingIndex ? 'active' : ''}`}
+                                                    onClick={() => {
+                                                        if (canSlide) {
+                                                            setTrendingIndex(index);
+                                                            resetSliderInterval();
+                                                        }
+                                                    }}
+                                                ></span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
-                            <div className="row d-flex justify-content-center">
-                                {pricingPlans.map((plan) => (
-                                    <div key={plan.id || plan.name} className={`col-lg-3 pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
-                                        <div className="pricing-card text-center">
-                                            {plan.isPopular && <div className="popular-badge">Most Popular</div>}
-                                            <h3>{plan.name}</h3>
-                                            <div className="price-tag">
-                                                <span className="price">{plan.price}</span>
-                                                <p className="duration">{plan.duration}</p>
-                                            </div>
-                                            <ul className="features-list list-unstyled text-left">
-                                                {plan.features.map((feature, index) => (
-                                                    <li key={index}>
-                                                        <i className="bi bi-check2-circle"></i> {feature}
-                                                    </li>
-                                                ))}
-                                            </ul>  
-                                            <button 
-                                                className="btn btn-create" 
-                                                onClick={() => handleGetStartedClick(plan.name, plan.id)}
-                                            >
-                                                {plan.price === "Free" ? "Get Started Free" : "Choose Plan"}
-                                            </button>                 
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="text-center py-5">
+                                <div className="no-events-message">
+                                    <i className="fas fa-calendar-alt fa-3x mb-3" style={{color: '#ffd700'}}></i>
+                                    <h3 style={{color: 'white', marginBottom: '15px'}}>No Trending Events Yet</h3>
+                                    <p style={{color: 'rgba(255,255,255,0.7)'}}>Check back soon for exciting events!</p>
+                                </div>
                             </div>
                         )}
                     </div>
                 </section>
 
+               <section className="homePricing">
+    <div className="container">
+        <div className="pricing-header text-center mb-5">
+            <h2>Choose Your <span className="highlight">Perfect Plan</span></h2>
+            <p className="lead">Simple, transparent pricing for events of any size</p>
+        </div>
+
+        {loadingPricing ? (
+            <div className="text-center">
+                <div className="spinner-border text-warning" role="status">
+                    <span className="visually-hidden">Loading plans...</span>
+                </div>
+                <p className="mt-3">Loading pricing plans...</p>
+            </div>
+        ) : (
+            <div className="row g-4 justify-content-center">
+                {pricingPlans.map((plan) => (
+                    <div key={plan.id || plan.name} className="col-lg-4 col-md-6">
+                        <div className={`pricing-card ${plan.isPopular ? 'popular' : ''} ${plan.name === 'Free' ? 'free-plan' : ''}`}>
+                            {plan.isPopular && <div className="popular-badge">Most Popular</div>}
+                            
+                            <div className="card-header">
+                                <h3>{plan.name}</h3>
+                                <div className="price-tag">
+                                    <span className="currency">R</span>
+                                    <span className="amount">{plan.price === 'Free' ? '0' : plan.price.replace('R', '')}</span>
+                                    <span className="period">/month</span>
+                                </div>
+                            </div>
+
+                            <div className="card-body">
+                                <ul className="features-list">
+                                    {plan.features.map((feature, index) => (
+                                        <li key={index}>
+                                            <i className="bi bi-check-circle-fill"></i>
+                                            <span>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <div className="card-footer">
+                                <button
+                                    className="btn-select"
+                                    onClick={() => handleGetStartedClick(plan.name, plan.id)}
+                                >
+                                    {plan.price === "Free" ? "Get Started Free" : "Select Plan"}
+                                    <i className="bi bi-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+    </div>
+</section>
             </div>
 
             <Footer />

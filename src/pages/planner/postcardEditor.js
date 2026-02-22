@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 function useHistory(initialState) {
-    
+
     const [history, setHistory] = useState([initialState]);
     const [index, setIndex] = useState(0);
 
@@ -38,37 +38,37 @@ function useHistory(initialState) {
 }
 
 const MobileBlocker = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
-  if (!isMobile) return null;
+    if (!isMobile) return null;
 
-  return (
-    <div className="mobile-blocker-overlay">
-      <div className="mobile-blocker-content">
-              <div className="mobile-icon">
-                  <i className="bi bi-phone-fill"></i>
-              </div>
+    return (
+        <div className="mobile-blocker-overlay">
+            <div className="mobile-blocker-content">
+                <div className="mobile-icon">
+                    <i className="bi bi-phone-fill"></i>
+                </div>
 
-        <h2>Oops! Screen Too Small</h2>
-        <p>
-          The postcard editor is designed for larger screens.<br />
-          Please use a <strong>tablet</strong> or <strong>desktop/laptop</strong> for the best experience.
-        </p>
-        <p className="small-text">
-          Minimum recommended width: <strong>768px</strong>
-        </p>
-      </div>
-    </div>
-  );
+                <h2>Oops! Screen Too Small</h2>
+                <p>
+                    The postcard editor is designed for larger screens.<br />
+                    Please use a <strong>tablet</strong> or <strong>desktop/laptop</strong> for the best experience.
+                </p>
+                <p className="small-text">
+                    Minimum recommended width: <strong>768px</strong>
+                </p>
+            </div>
+        </div>
+    );
 };
 
 const CornerTransformer = ({ selectedShapeName, ...props }) => {
@@ -92,7 +92,7 @@ const CornerTransformer = ({ selectedShapeName, ...props }) => {
 const centerEventTexts = (texts, canvasWidth = 500, canvasHeight = 400) => {
     // For template mode, only center texts that are from event data
     const templateTextIds = ["439:28", "439:29", "439:30"]; // Your template text IDs
-    
+
     const eventTexts = texts.filter(text => templateTextIds.includes(text.id));
     const otherTexts = texts.filter(text => !templateTextIds.includes(text.id));
 
@@ -120,7 +120,7 @@ const centerEventTexts = (texts, canvasWidth = 500, canvasHeight = 400) => {
     const recenteredTexts = eventTexts.map(text => {
         const lines = text.text.split('\n').length;
         const approxHeight = text.fontSize * 1.5 * lines;
-        
+
         const newText = {
             ...text,
             x: canvasWidth / 2,
@@ -138,9 +138,9 @@ const centerEventTexts = (texts, canvasWidth = 500, canvasHeight = 400) => {
 
 // Check if current design is using a fixed template
 const isFixedTemplate = (texts) => {
-  // If texts have specific IDs from templates, consider it fixed
-  const templateTextIds = ["text-title", "text-date", "text-time", "text-location"];
-  return texts.some(text => templateTextIds.includes(text.id));
+    // If texts have specific IDs from templates, consider it fixed
+    const templateTextIds = ["text-title", "text-date", "text-time", "text-location"];
+    return texts.some(text => templateTextIds.includes(text.id));
 };
 
 // Component for draggable text - Modified for fixed templates
@@ -358,10 +358,10 @@ const CenterButton = ({ onClick }) => (
 const FixedTemplateTextControls = ({ selectedText, selectedId, setTexts, texts }) => (
     <div className="control-section">
         <h3>Template Text Colors</h3>
-        <p className="template-notice" style={{fontSize: '12px', color: '#bdc3c7', marginBottom: '15px'}}>
-          This template uses fixed positioning. You can only change text colors.
+        <p className="template-notice" style={{ fontSize: '12px', color: '#bdc3c7', marginBottom: '15px' }}>
+            This template uses fixed positioning. You can only change text colors.
         </p>
-        
+
         <label className="control-label">
             Text Color:
             <input
@@ -381,240 +381,240 @@ const FixedTemplateTextControls = ({ selectedText, selectedId, setTexts, texts }
 
 // Updated Text Controls Component
 const TextControls = ({ selectedText, selectedId, setTexts, texts, isFixedTemplate }) => {
-  if (isFixedTemplate) {
-    return <FixedTemplateTextControls selectedText={selectedText} selectedId={selectedId} setTexts={setTexts} texts={texts} />;
-  }
+    if (isFixedTemplate) {
+        return <FixedTemplateTextControls selectedText={selectedText} selectedId={selectedId} setTexts={setTexts} texts={texts} />;
+    }
 
-  return (
-    <div className="control-section">
-        <h3>Text Settings</h3>
-        <label className="control-label">
-            Content:
-            <input
-                type="text"
-                value={selectedText.text}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, text: e.target.value } : t
+    return (
+        <div className="control-section">
+            <h3>Text Settings</h3>
+            <label className="control-label">
+                Content:
+                <input
+                    type="text"
+                    value={selectedText.text}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, text: e.target.value } : t
+                            )
                         )
-                    )
-                }
-                className="control-input"
-            />
-        </label>
-        <label className="control-label">
-            Font:
-            <select
-                value={selectedText.fontFamily}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, fontFamily: e.target.value } : t
+                    }
+                    className="control-input"
+                />
+            </label>
+            <label className="control-label">
+                Font:
+                <select
+                    value={selectedText.fontFamily}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, fontFamily: e.target.value } : t
+                            )
                         )
-                    )
-                }
-                className="control-input"
-            >
-                <option value="Arial">Arial</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Courier New">Courier New</option>
-                <option value="Verdana">Verdana</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Impact">Impact</option>
-                <option value="Comic Sans MS">Comic Sans MS</option>
-                <option value="Trebuchet MS">Trebuchet MS</option>
-                <option value="Palatino">Palatino</option>
-                <option value="Garamond">Garamond</option>
-                <option value="Brush Script MT">Brush Script MT</option>
-                <option value="Tahoma">Tahoma</option>
-                <option value="Helvetica">Helvetica</option>
-                <option value="Futura">Futura</option>
-            </select>
-        </label>
-        <label className="control-label">
-            Color:
-            <input
-                type="color"
-                value={selectedText.fill}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, fill: e.target.value } : t
+                    }
+                    className="control-input"
+                >
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Impact">Impact</option>
+                    <option value="Comic Sans MS">Comic Sans MS</option>
+                    <option value="Trebuchet MS">Trebuchet MS</option>
+                    <option value="Palatino">Palatino</option>
+                    <option value="Garamond">Garamond</option>
+                    <option value="Brush Script MT">Brush Script MT</option>
+                    <option value="Tahoma">Tahoma</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Futura">Futura</option>
+                </select>
+            </label>
+            <label className="control-label">
+                Color:
+                <input
+                    type="color"
+                    value={selectedText.fill}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, fill: e.target.value } : t
+                            )
                         )
-                    )
-                }
-            />
-        </label>
-        <label className="control-label">
-            Font Size:
-            <input
-                type="number"
-                min="8"
-                max="100"
-                value={selectedText.fontSize}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId
-                                ? { ...t, fontSize: Number(e.target.value) }
-                                : t
+                    }
+                />
+            </label>
+            <label className="control-label">
+                Font Size:
+                <input
+                    type="number"
+                    min="8"
+                    max="100"
+                    value={selectedText.fontSize}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId
+                                    ? { ...t, fontSize: Number(e.target.value) }
+                                    : t
+                            )
                         )
-                    )
-                }
-                className="control-input"
-            />
-        </label>
-        <label className="control-label">
-            Rotation:
-            <input
-                type="number"
-                value={selectedText.rotation}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId
-                                ? { ...t, rotation: Number(e.target.value) }
-                                : t
+                    }
+                    className="control-input"
+                />
+            </label>
+            <label className="control-label">
+                Rotation:
+                <input
+                    type="number"
+                    value={selectedText.rotation}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId
+                                    ? { ...t, rotation: Number(e.target.value) }
+                                    : t
+                            )
                         )
-                    )
-                }
-                className="control-input"
-            />
-        </label>
-        <label className="control-label">
-            Opacity:
-            <div className="transparency-slider">
+                    }
+                    className="control-input"
+                />
+            </label>
+            <label className="control-label">
+                Opacity:
+                <div className="transparency-slider">
+                    <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={selectedText.opacity}
+                        onChange={(e) =>
+                            setTexts(
+                                texts.map((t) =>
+                                    t.id === selectedId ? { ...t, opacity: Number(e.target.value) } : t
+                                )
+                            )
+                        }
+                    />
+                    <span className="transparency-value">{selectedText.opacity}</span>
+                </div>
+            </label>
+            <h4>Advanced Styling</h4>
+            <label className="control-label">
+                Shadow Color:
+                <input
+                    type="color"
+                    value={selectedText.shadowColor}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, shadowColor: e.target.value } : t
+                            )
+                        )
+                    }
+                />
+            </label>
+            <label className="control-label">
+                Shadow Blur:
+                <input
+                    type="range"
+                    min="0"
+                    max="50"
+                    value={selectedText.shadowBlur}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, shadowBlur: Number(e.target.value) } : t
+                            )
+                        )
+                    }
+                />
+            </label>
+            <label className="control-label">
+                Shadow Offset X:
+                <input
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value={selectedText.shadowOffsetX}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, shadowOffsetX: Number(e.target.value) } : t
+                            )
+                        )
+                    }
+                />
+            </label>
+            <label className="control-label">
+                Shadow Offset Y:
+                <input
+                    type="range"
+                    min="-20"
+                    max="20"
+                    value={selectedText.shadowOffsetY}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, shadowOffsetY: Number(e.target.value) } : t
+                            )
+                        )
+                    }
+                />
+            </label>
+            <label className="control-label">
+                Shadow Opacity:
                 <input
                     type="range"
                     min="0"
                     max="1"
                     step="0.1"
-                    value={selectedText.opacity}
+                    value={selectedText.shadowOpacity}
                     onChange={(e) =>
                         setTexts(
                             texts.map((t) =>
-                                t.id === selectedId ? { ...t, opacity: Number(e.target.value) } : t
+                                t.id === selectedId ? { ...t, shadowOpacity: Number(e.target.value) } : t
                             )
                         )
                     }
                 />
-                <span className="transparency-value">{selectedText.opacity}</span>
-            </div>
-        </label>
-        <h4>Advanced Styling</h4>
-        <label className="control-label">
-            Shadow Color:
-            <input
-                type="color"
-                value={selectedText.shadowColor}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, shadowColor: e.target.value } : t
+            </label>
+            <label className="control-label">
+                Stroke Color:
+                <input
+                    type="color"
+                    value={selectedText.stroke || ""}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, stroke: e.target.value } : t
+                            )
                         )
-                    )
-                }
-            />
-        </label>
-        <label className="control-label">
-            Shadow Blur:
-            <input
-                type="range"
-                min="0"
-                max="50"
-                value={selectedText.shadowBlur}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, shadowBlur: Number(e.target.value) } : t
+                    }
+                />
+            </label>
+            <label className="control-label">
+                Stroke Width:
+                <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={selectedText.strokeWidth || 0}
+                    onChange={(e) =>
+                        setTexts(
+                            texts.map((t) =>
+                                t.id === selectedId ? { ...t, strokeWidth: Number(e.target.value) } : t
+                            )
                         )
-                    )
-                }
-            />
-        </label>
-        <label className="control-label">
-            Shadow Offset X:
-            <input
-                type="range"
-                min="-20"
-                max="20"
-                value={selectedText.shadowOffsetX}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, shadowOffsetX: Number(e.target.value) } : t
-                        )
-                    )
-                }
-            />
-        </label>
-        <label className="control-label">
-            Shadow Offset Y:
-            <input
-                type="range"
-                min="-20"
-                max="20"
-                value={selectedText.shadowOffsetY}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, shadowOffsetY: Number(e.target.value) } : t
-                        )
-                    )
-                }
-            />
-        </label>
-        <label className="control-label">
-            Shadow Opacity:
-            <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={selectedText.shadowOpacity}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, shadowOpacity: Number(e.target.value) } : t
-                        )
-                    )
-                }
-            />
-        </label>
-        <label className="control-label">
-            Stroke Color:
-            <input
-                type="color"
-                value={selectedText.stroke || ""}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, stroke: e.target.value } : t
-                        )
-                    )
-                }
-            />
-        </label>
-        <label className="control-label">
-            Stroke Width:
-            <input
-                type="number"
-                min="0"
-                max="10"
-                value={selectedText.strokeWidth || 0}
-                onChange={(e) =>
-                    setTexts(
-                        texts.map((t) =>
-                            t.id === selectedId ? { ...t, strokeWidth: Number(e.target.value) } : t
-                        )
-                    )
-                }
-                className="control-input"
-            />
-        </label>
-    </div>
-  );
+                    }
+                    className="control-input"
+                />
+            </label>
+        </div>
+    );
 };
 
 // Image Controls Component
@@ -1368,27 +1368,27 @@ const BackgroundControls = ({ bgConfig, setBgConfig }) => (
 
 // Add Elements Component - Hide for fixed templates
 const AddElements = ({ addText, addShape, handleImageUpload, isFixedTemplate }) => {
-  if (isFixedTemplate) {
-    return null; // Hide add elements for fixed templates
-  }
+    if (isFixedTemplate) {
+        return null; // Hide add elements for fixed templates
+    }
 
-  return (
-    <div className="control-section">
-        <h3>Add Elements</h3>
-        <button onClick={addText} className="add-btn">➕ Add Text</button>
-        <label className="upload-btn">
-            📁 Upload Image
-            <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-        </label>
-        <div className="shape-buttons">
-            <button onClick={() => addShape("rect")} className="shape-btn">⬛ Rectangle</button>
-            <button onClick={() => addShape("circle")} className="shape-btn">⚪ Circle</button>
-            <button onClick={() => addShape("line")} className="shape-btn">➖ Line</button>
-            <button onClick={() => addShape("star")} className="shape-btn">⭐ Star</button>
-            <button onClick={() => addShape("arrow")} className="shape-btn">➡️ Arrow</button>
+    return (
+        <div className="control-section">
+            <h3>Add Elements</h3>
+            <button onClick={addText} className="add-btn">➕ Add Text</button>
+            <label className="upload-btn">
+                📁 Upload Image
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+            </label>
+            <div className="shape-buttons">
+                <button onClick={() => addShape("rect")} className="shape-btn">⬛ Rectangle</button>
+                <button onClick={() => addShape("circle")} className="shape-btn">⚪ Circle</button>
+                <button onClick={() => addShape("line")} className="shape-btn">➖ Line</button>
+                <button onClick={() => addShape("star")} className="shape-btn">⭐ Star</button>
+                <button onClick={() => addShape("arrow")} className="shape-btn">➡️ Arrow</button>
+            </div>
         </div>
-    </div>
-  );
+    );
 };
 
 // Fixed Right Sidebar Component
@@ -1500,11 +1500,11 @@ const Sidebar = ({
                 )}
 
                 {selectedText && (
-                    <TextControls 
-                        selectedText={selectedText} 
-                        selectedId={selectedId} 
-                        setTexts={setTexts} 
-                        texts={texts} 
+                    <TextControls
+                        selectedText={selectedText}
+                        selectedId={selectedId}
+                        setTexts={setTexts}
+                        texts={texts}
                         isFixedTemplate={isFixedTemplate}
                     />
                 )}
@@ -1528,7 +1528,7 @@ const Sidebar = ({
                     isFixedTemplate={isFixedTemplate}
                 />
 
-                <div className="control-section" style={{marginTop: 'auto'}}>
+                <div className="control-section" style={{ marginTop: 'auto' }}>
                     <button className="save-btn" onClick={downloadImage}>
                         💾 Save PostCard
                     </button>
@@ -1546,19 +1546,19 @@ const getEventDataFromStorage = () => {
 
         const eventDataKey = `eventa_${deviceId}_current_event`;
         const data = localStorage.getItem(eventDataKey);
-        
+
         if (!data) return null;
-        
+
         const eventData = JSON.parse(data);
-        
+
         // Get ticket data
         const ticketDataKey = `eventa_${deviceId}_ticket_config`;
         const ticketData = localStorage.getItem(ticketDataKey);
-        
+
         if (ticketData) {
             eventData.ticketData = JSON.parse(ticketData);
         }
-        
+
         return eventData;
     } catch (error) {
         console.error('Error retrieving event data:', error);
@@ -1758,7 +1758,7 @@ export default function PostcardEditor() {
         if (template && template.data) {
             const eventData = getEventDataFromStorage();
             const templateData = { ...template.data };
-            
+
             // Remove the dark overlay shape from template data
             if (templateData.shapes) {
                 templateData.shapes = templateData.shapes.filter(
@@ -1775,7 +1775,7 @@ export default function PostcardEditor() {
             if (templateData.texts && eventData) {
                 updatedTexts = templateData.texts.map(templateText => {
                     let newText = { ...templateText };
-                    
+
                     // Replace text content based on template text content
                     if (templateText.text.includes("Welcome To") && eventData.eventName) {
                         newText.text = `Welcome To ${eventData.eventName}`;
@@ -1794,8 +1794,8 @@ export default function PostcardEditor() {
             }
 
             // Set the main background image as the background
-            const newBgConfig = mainBgImage ? 
-                { type: "image", value: mainBgImage.src } : 
+            const newBgConfig = mainBgImage ?
+                { type: "image", value: mainBgImage.src } :
                 templateData.bgConfig || { type: "color", value: "#ffffff" };
 
             // Update state with template data (without the duplicate background image)
@@ -2005,8 +2005,8 @@ export default function PostcardEditor() {
         }
     };
 
-const saveEventToDatabase = async (imageData) => {
-    try {
+   const saveEventToDatabase = async (imageData) => {
+        try {
         setLoading(true);
         const user = JSON.parse(localStorage.getItem("user"));
         const eventData = getEventDataFromStorage();
@@ -2023,13 +2023,6 @@ const saveEventToDatabase = async (imageData) => {
         const ticketData = localStorage.getItem(ticketDataKey);
         const parsedTicketData = ticketData ? JSON.parse(ticketData) : null;
 
-        // Log image data info for debugging
-        console.log('Image data type:', typeof imageData);
-        console.log('Image data length:', imageData ? imageData.length : 0);
-        if (imageData) {
-            console.log('Image data starts with:', imageData.substring(0, 50));
-        }
-
         const formData = new FormData();
         formData.append("function", "saveEvent");
         formData.append("userID", user.user_id);
@@ -2041,6 +2034,20 @@ const saveEventToDatabase = async (imageData) => {
         formData.append("eventEndDate", eventData.eventEndDate || "");
         formData.append("eventEndTime", eventData.eventEndTime || "");
         formData.append("eventLocation", eventData.eventLocation || "");
+        formData.append("eventDescription", eventData.eventDescription || "");
+        formData.append("eventCity", eventData.eventCity || "");
+        formData.append("eventProvince", eventData.eventProvince || "");
+
+        // Handle event type - store either the selected category OR the custom typed value
+        let eventTypeValue = "";
+        if (eventData.eventCategory === "other") {
+            eventTypeValue = eventData.customCategory || "Other"; // Use custom text or fallback to "Other"
+        } else {
+            eventTypeValue = eventData.eventCategory || ""; // Use selected category
+        }
+        
+        formData.append("event_type", eventTypeValue);
+
         formData.append("eventUrlImage", imageData);
         formData.append("eventDesignData", JSON.stringify({
             texts,
@@ -2048,60 +2055,72 @@ const saveEventToDatabase = async (imageData) => {
             shapes,
             bgConfig
         }));
-        
-        // Add ticket data to formData if it exists
-        if (parsedTicketData) {
-            formData.append("hasTickets", parsedTicketData.hasTickets ? "1" : "0");
-            
-            if (parsedTicketData.hasTickets && parsedTicketData.config) {
-                // Add ticket configuration
-                const ticketConfig = parsedTicketData.config;
-                
-                // Early Bird
-                if (ticketConfig.earlyBird && ticketConfig.earlyBird.price && ticketConfig.earlyBird.quantity) {
-                    formData.append("earlyBirdPrice", ticketConfig.earlyBird.price);
-                    formData.append("earlyBirdQuantity", ticketConfig.earlyBird.quantity);
+
+            // Add ticket data to formData if it exists
+            if (parsedTicketData) {
+                formData.append("hasTickets", parsedTicketData.hasTickets ? "1" : "0");
+
+                if (parsedTicketData.hasTickets && parsedTicketData.config) {
+                    // Add ticket configuration
+                    const ticketConfig = parsedTicketData.config;
+
+                    // Early Bird
+                    if (ticketConfig.earlyBird && ticketConfig.earlyBird.price && ticketConfig.earlyBird.quantity) {
+                        formData.append("earlyBirdPrice", ticketConfig.earlyBird.price);
+                        formData.append("earlyBirdQuantity", ticketConfig.earlyBird.quantity);
+                    } else {
+                        formData.append("earlyBirdPrice", "0");
+                        formData.append("earlyBirdQuantity", "0");
+                    }
+
+                    // General Admission
+                    if (ticketConfig.general && ticketConfig.general.price && ticketConfig.general.quantity) {
+                        formData.append("generalPrice", ticketConfig.general.price);
+                        formData.append("generalQuantity", ticketConfig.general.quantity);
+                    } else {
+                        formData.append("generalPrice", "0");
+                        formData.append("generalQuantity", "0");
+                    }
+
+                    // VIP
+                    if (ticketConfig.vip && ticketConfig.vip.price && ticketConfig.vip.quantity) {
+                        formData.append("vipPrice", ticketConfig.vip.price);
+                        formData.append("vipQuantity", ticketConfig.vip.quantity);
+                    } else {
+                        formData.append("vipPrice", "0");
+                        formData.append("vipQuantity", "0");
+                    }
+
+                    // VVIP
+                    if (ticketConfig.vvip && ticketConfig.vvip.price && ticketConfig.vvip.quantity) {
+                        formData.append("vvipPrice", ticketConfig.vvip.price);
+                        formData.append("vvipQuantity", ticketConfig.vvip.quantity);
+                    } else {
+                        formData.append("vvipPrice", "0");
+                        formData.append("vvipQuantity", "0");
+                    }
+
+                    // Event Info
+                    if (parsedTicketData.eventInfo) {
+                        formData.append("eventInfo", parsedTicketData.eventInfo);
+                    }
+
+                    // Add full ticket config as JSON for flexibility
+                    formData.append("ticketConfig", JSON.stringify(parsedTicketData));
                 } else {
+                    // No ticket config, set all to zero
                     formData.append("earlyBirdPrice", "0");
                     formData.append("earlyBirdQuantity", "0");
-                }
-                
-                // General Admission
-                if (ticketConfig.general && ticketConfig.general.price && ticketConfig.general.quantity) {
-                    formData.append("generalPrice", ticketConfig.general.price);
-                    formData.append("generalQuantity", ticketConfig.general.quantity);
-                } else {
                     formData.append("generalPrice", "0");
                     formData.append("generalQuantity", "0");
-                }
-                
-                // VIP
-                if (ticketConfig.vip && ticketConfig.vip.price && ticketConfig.vip.quantity) {
-                    formData.append("vipPrice", ticketConfig.vip.price);
-                    formData.append("vipQuantity", ticketConfig.vip.quantity);
-                } else {
                     formData.append("vipPrice", "0");
                     formData.append("vipQuantity", "0");
-                }
-                
-                // VVIP
-                if (ticketConfig.vvip && ticketConfig.vvip.price && ticketConfig.vvip.quantity) {
-                    formData.append("vvipPrice", ticketConfig.vvip.price);
-                    formData.append("vvipQuantity", ticketConfig.vvip.quantity);
-                } else {
                     formData.append("vvipPrice", "0");
                     formData.append("vvipQuantity", "0");
                 }
-                
-                // Event Info
-                if (parsedTicketData.eventInfo) {
-                    formData.append("eventInfo", parsedTicketData.eventInfo);
-                }
-                
-                // Add full ticket config as JSON for flexibility
-                formData.append("ticketConfig", JSON.stringify(parsedTicketData));
             } else {
-                // No ticket config, set all to zero
+                // No ticket data at all
+                formData.append("hasTickets", "0");
                 formData.append("earlyBirdPrice", "0");
                 formData.append("earlyBirdQuantity", "0");
                 formData.append("generalPrice", "0");
@@ -2110,61 +2129,49 @@ const saveEventToDatabase = async (imageData) => {
                 formData.append("vipQuantity", "0");
                 formData.append("vvipPrice", "0");
                 formData.append("vvipQuantity", "0");
+                formData.append("ticketConfig", "{}");
             }
-        } else {
-            // No ticket data at all
-            formData.append("hasTickets", "0");
-            formData.append("earlyBirdPrice", "0");
-            formData.append("earlyBirdQuantity", "0");
-            formData.append("generalPrice", "0");
-            formData.append("generalQuantity", "0");
-            formData.append("vipPrice", "0");
-            formData.append("vipQuantity", "0");
-            formData.append("vvipPrice", "0");
-            formData.append("vvipQuantity", "0");
-            formData.append("ticketConfig", "{}");
-        }
 
-        const API_URL = process.env.REACT_APP_API_URL;
+            const API_URL = process.env.REACT_APP_API_URL;
 
-        console.log("Saving event with ticket data:", parsedTicketData);
-        console.log("FormData entries:");
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + (pair[0] === 'eventUrlImage' ? '[IMAGE DATA]' : pair[1]));
-        }
-
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData,
-        });
-
-        const result = await response.json();
-        console.log("Save event response:", result);
-
-        if (result.success) {
-            printAlert("Event saved successfully!", "success");
-            
-            // Store the event ID for later use
-            localStorage.setItem("selectedEventId", result.event_id || eventData.eventID);
-            
-            // Clear ticket data from localStorage after successful save
-            if (deviceId) {
-                localStorage.removeItem(ticketDataKey);
+            console.log("Saving event with ticket data:", parsedTicketData);
+            console.log("FormData entries:");
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + (pair[0] === 'eventUrlImage' ? '[IMAGE DATA]' : pair[1]));
             }
-            
-            return true;
-        } else {
-            printAlert(result.message || "Failed to save event.", "error");
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            const result = await response.json();
+            console.log("Save event response:", result);
+
+            if (result.success) {
+                printAlert("Event saved successfully!", "success");
+
+                // Store the event ID for later use
+                localStorage.setItem("selectedEventId", result.event_id || eventData.eventID);
+
+                // Clear ticket data from localStorage after successful save
+                if (deviceId) {
+                    localStorage.removeItem(ticketDataKey);
+                }
+
+                return true;
+            } else {
+                printAlert(result.message || "Failed to save event.", "error");
+                return false;
+            }
+        } catch (error) {
+            console.error("Error saving event:", error);
+            printAlert("Error saving event. Please try again.", "error");
             return false;
+        } finally {
+            setLoading(false);
         }
-    } catch (error) {
-        console.error("Error saving event:", error);
-        printAlert("Error saving event. Please try again.", "error");
-        return false;
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const downloadImage = async () => {
         setSelectedId(null);
@@ -2332,8 +2339,8 @@ const saveEventToDatabase = async (imageData) => {
 
     return (
         <div className="editor-container">
-        {/* This will block everything on small screens */}
-    <MobileBlocker />
+            {/* This will block everything on small screens */}
+            <MobileBlocker />
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i
@@ -2379,7 +2386,7 @@ const saveEventToDatabase = async (imageData) => {
                     </button>
                     <div className="navbar-title">
                         {template?.title || "Postcard"} Editor
-                        {isFixedTemplateMode && <span style={{fontSize: '12px', color: '#7f8c8d', marginLeft: '10px'}}>(Template Mode)</span>}
+                        {isFixedTemplateMode && <span style={{ fontSize: '12px', color: '#7f8c8d', marginLeft: '10px' }}>(Template Mode)</span>}
                     </div>
                     <div className="user-info">{user ? user.name : "Guest"}</div>
                 </div>
@@ -2403,10 +2410,10 @@ const saveEventToDatabase = async (imageData) => {
                                     y={0}
                                 />
                             ) : (
-                                <Rect 
-                                    width={500} 
-                                    height={400} 
-                                    fill={bgConfig.value} 
+                                <Rect
+                                    width={500}
+                                    height={400}
+                                    fill={bgConfig.value}
                                     x={0}
                                     y={0}
                                 />

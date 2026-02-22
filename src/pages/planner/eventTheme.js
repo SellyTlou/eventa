@@ -97,7 +97,26 @@ export default function EventTheme() {
       
       // If we already have ticket config from previous step, pre-fill it
       if (storedEventData.ticketConfig && storedEventData.ticketConfig.config) {
-        setTicketConfig(storedEventData.ticketConfig.config);
+        // Merge with default config to ensure all fields exist
+        const savedConfig = storedEventData.ticketConfig.config;
+        setTicketConfig(prev => ({
+          earlyBird: { 
+            ...prev.earlyBird, 
+            ...(savedConfig.earlyBird || {}) 
+          },
+          general: { 
+            ...prev.general, 
+            ...(savedConfig.general || {}) 
+          },
+          vip: { 
+            ...prev.vip, 
+            ...(savedConfig.vip || {}) 
+          },
+          vvip: { 
+            ...prev.vvip, 
+            ...(savedConfig.vvip || {}) 
+          }
+        }));
         setEventInfo(storedEventData.ticketConfig.eventInfo || "");
       }
     }
@@ -141,6 +160,8 @@ export default function EventTheme() {
     const template = allCategories[activeFilter].find(t => t.id === templateId);
     setSelectedTemplate({ id: templateId, category, template });
     setShowTicketModal(true);
+    // Reset ticket option when opening modal for new template
+    setHasTickets(null);
   };
 
   const handleBack = () => {
@@ -160,32 +181,46 @@ export default function EventTheme() {
     }
   };
 
+  // FIXED: Added safe access with optional chaining and default values
   const handleInputChange = (type, field, value) => {
-    setTicketConfig(prev => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        [field]: value
-      }
-    }));
+    setTicketConfig(prev => {
+      // Ensure the ticket type exists in prev state
+      const ticketType = prev[type] || { 
+        name: type === 'earlyBird' ? 'Early Bird' : 
+              type === 'general' ? 'General Admission' : 
+              type === 'vip' ? 'VIP' : 'VVIP', 
+        price: "", 
+        quantity: "", 
+        description: "" 
+      };
+      
+      return {
+        ...prev,
+        [type]: {
+          ...ticketType,
+          [field]: value
+        }
+      };
+    });
   };
 
+  // FIXED: Added safe checks for undefined values
   const saveTicketConfiguration = () => {
     // Filter out empty ticket types
     const activeTickets = {};
     
     Object.entries(ticketConfig).forEach(([type, config]) => {
-      if (config.price && config.quantity) {
-        // Parse to numbers for validation
+      // Safely check if config exists and has price and quantity
+      if (config && config.price && config.quantity) {
         const price = parseFloat(config.price);
         const quantity = parseInt(config.quantity);
         
         if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
           activeTickets[type] = {
-            name: config.name,
+            name: config.name || getDefaultName(type),
             price: price,
             quantity: quantity,
-            description: config.description
+            description: config.description || getDefaultDescription(type)
           };
         }
       }
@@ -208,9 +243,32 @@ export default function EventTheme() {
         ticketConfig: ticketData
       };
       saveEventDataToStorage(updatedEventData);
+      setEventData(updatedEventData);
     }
     
     return ticketData;
+  };
+
+  // Helper function to get default name
+  const getDefaultName = (type) => {
+    switch(type) {
+      case 'earlyBird': return 'Early Bird';
+      case 'general': return 'General Admission';
+      case 'vip': return 'VIP';
+      case 'vvip': return 'VVIP';
+      default: return type;
+    }
+  };
+
+  // Helper function to get default description
+  const getDefaultDescription = (type) => {
+    switch(type) {
+      case 'earlyBird': return 'Limited early bird tickets';
+      case 'general': return 'Standard admission ticket';
+      case 'vip': return 'VIP experience with perks';
+      case 'vvip': return 'Exclusive VVIP experience';
+      default: return '';
+    }
   };
 
   const navigateToEditor = () => {
@@ -230,6 +288,7 @@ export default function EventTheme() {
           ticketConfig: noTicketData
         };
         saveEventDataToStorage(updatedEventData);
+        setEventData(updatedEventData);
       }
     }
 
@@ -253,13 +312,17 @@ export default function EventTheme() {
     setEventInfo("");
   };
 
+  // FIXED: Added safe validation with optional chaining
   const handleSubmitTickets = () => {
     // Validate ticket configuration
     if (hasTickets) {
       // Check if at least one ticket type has both price and quantity
       const hasValidTicket = Object.entries(ticketConfig).some(([type, config]) => {
-        const price = parseFloat(config.price);
-        const quantity = parseInt(config.quantity);
+        // Safely check if config exists and has price and quantity
+        if (!config) return false;
+        
+        const price = config.price ? parseFloat(config.price) : NaN;
+        const quantity = config.quantity ? parseInt(config.quantity) : NaN;
         
         return !isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1;
       });
@@ -424,7 +487,7 @@ export default function EventTheme() {
                           <label>Price (R)</label>
                           <input
                             type="number"
-                            value={ticketConfig.earlyBird.price}
+                            value={ticketConfig.earlyBird?.price || ''}
                             onChange={(e) => handleInputChange('earlyBird', 'price', e.target.value)}
                             placeholder="e.g., 100"
                             min="0"
@@ -435,7 +498,7 @@ export default function EventTheme() {
                           <label>Quantity</label>
                           <input
                             type="number"
-                            value={ticketConfig.earlyBird.quantity}
+                            value={ticketConfig.earlyBird?.quantity || ''}
                             onChange={(e) => handleInputChange('earlyBird', 'quantity', e.target.value)}
                             placeholder="e.g., 50"
                             min="1"
@@ -453,7 +516,7 @@ export default function EventTheme() {
                           <label>Price (R)</label>
                           <input
                             type="number"
-                            value={ticketConfig.general.price}
+                            value={ticketConfig.general?.price || ''}
                             onChange={(e) => handleInputChange('general', 'price', e.target.value)}
                             placeholder="e.g., 150"
                             min="0"
@@ -464,7 +527,7 @@ export default function EventTheme() {
                           <label>Quantity</label>
                           <input
                             type="number"
-                            value={ticketConfig.general.quantity}
+                            value={ticketConfig.general?.quantity || ''}
                             onChange={(e) => handleInputChange('general', 'quantity', e.target.value)}
                             placeholder="e.g., 200"
                             min="1"
@@ -482,7 +545,7 @@ export default function EventTheme() {
                           <label>Price (R)</label>
                           <input
                             type="number"
-                            value={ticketConfig.vip.price}
+                            value={ticketConfig.vip?.price || ''}
                             onChange={(e) => handleInputChange('vip', 'price', e.target.value)}
                             placeholder="e.g., 300"
                             min="0"
@@ -493,7 +556,7 @@ export default function EventTheme() {
                           <label>Quantity</label>
                           <input
                             type="number"
-                            value={ticketConfig.vip.quantity}
+                            value={ticketConfig.vip?.quantity || ''}
                             onChange={(e) => handleInputChange('vip', 'quantity', e.target.value)}
                             placeholder="e.g., 50"
                             min="1"
@@ -511,7 +574,7 @@ export default function EventTheme() {
                           <label>Price (R)</label>
                           <input
                             type="number"
-                            value={ticketConfig.vvip.price}
+                            value={ticketConfig.vvip?.price || ''}
                             onChange={(e) => handleInputChange('vvip', 'price', e.target.value)}
                             placeholder="e.g., 500"
                             min="0"
@@ -522,7 +585,7 @@ export default function EventTheme() {
                           <label>Quantity</label>
                           <input
                             type="number"
-                            value={ticketConfig.vvip.quantity}
+                            value={ticketConfig.vvip?.quantity || ''}
                             onChange={(e) => handleInputChange('vvip', 'quantity', e.target.value)}
                             placeholder="e.g., 20"
                             min="1"

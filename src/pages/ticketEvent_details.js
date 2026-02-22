@@ -13,7 +13,6 @@ function TicketEvent_details() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState("login");
 
-  // Get ID from query parameter
   const queryParams = new URLSearchParams(location.search);
   const id = queryParams.get('id');
 
@@ -35,7 +34,6 @@ function TicketEvent_details() {
     setLoginMode("signup");
     setIsLoginOpen(true);
   };
-
 
   const fetchEventDetails = async () => {
     try {
@@ -77,7 +75,6 @@ function TicketEvent_details() {
     }
   };
 
-  // Helper function to format date
   const formatDate = (dateString) => {
     if (!dateString) return "Date TBA";
     const date = new Date(dateString);
@@ -89,14 +86,12 @@ function TicketEvent_details() {
     });
   };
 
-  // Helper function to format price
   const formatPrice = (price) => {
     if (!price) return "0.00";
     const num = parseFloat(String(price));
     return isNaN(num) ? "0.00" : num.toFixed(2);
   };
 
-  // Get lowest price from available ticket types
   const getLowestPrice = () => {
     if (!event) return "0.00";
 
@@ -114,10 +109,13 @@ function TicketEvent_details() {
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="loading-overlay">
-          <div className="loading-spinner"></div>
-          <div className="loading-text">Loading event details...</div>
+      <div className="event-details-page">
+        <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
+        <div className="loading-container">
+          <div className="loading-overlay">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">Loading event details...</div>
+          </div>
         </div>
       </div>
     );
@@ -125,17 +123,20 @@ function TicketEvent_details() {
 
   if (error || !event) {
     return (
-      <div className="error-container">
-        <div className="error-content">
-          <i className="fas fa-exclamation-circle error-icon"></i>
-          <h2>Event Not Found</h2>
-          <p>{error || "The event you're looking for doesn't exist or has been removed."}</p>
-          <button
-            className="back-btn"
-            onClick={() => navigate("/ticket-sales")}
-          >
-            <i className="fas fa-arrow-left"></i> Back to Events
-          </button>
+      <div className="event-details-page">
+        <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
+        <div className="error-container">
+          <div className="error-content">
+            <i className="fas fa-exclamation-circle error-icon"></i>
+            <h2>Event Not Found</h2>
+            <p>{error || "The event you're looking for doesn't exist or has been removed."}</p>
+            <button
+              className="back-btn"
+              onClick={() => navigate("/ticket_sales")}
+            >
+              <i className="fas fa-arrow-left"></i> Back to Events
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -149,7 +150,6 @@ function TicketEvent_details() {
 
   return (
     <div className="event-details-page">
-
       <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
       <Login
         isOpen={isLoginOpen}
@@ -157,169 +157,199 @@ function TicketEvent_details() {
         defaultMode={loginMode}
       />
 
-      {/* TOP SECTION */}
-      <div className="event-top">
-        {/* LEFT: BANNER IMAGE */}
-        <div className="event-banner">
-          <img
-            src={event.event_image || event.image || "/images/default-event.jpg"}
-            alt={event.event_name || event.title || "Event"}
-            onError={(e) => {
-              e.target.src = "/images/default-event.jpg";
-            }}
-          />
-        </div>
+      <div className="event-details-container">
+        {/* TOP SECTION */}
+        <div className="event-top">
+          {/* LEFT: BANNER IMAGE */}
+          <div className="event-banner">
+            <img
+              src={event.event_image || event.image || "/images/default-event.jpg"}
+              alt={event.event_name || event.title || "Event"}
+              onError={(e) => {
+                e.target.src = "/images/default-event.jpg";
+              }}
+            />
+            <div className="banner-overlay"></div>
+            {(event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1") && (
+              <div className="ticket-badge">TICKETS AVAILABLE</div>
+            )}
+          </div>
 
-        {/* RIGHT: BOOKING CARD */}
-        <div className="booking-card">
-          <h3>Book Tickets</h3>
+          {/* RIGHT: BOOKING CARD - BLACK BACKGROUND */}
+          <div className="booking-card">
+            <h3>Book Tickets</h3>
 
-          <div className="booking-info">
-            <p>
-              <strong>{formatDate(event.event_start_date)}</strong>
-            </p>
-            <p>
-              {event.event_start_time ? `${event.event_start_time}` : "Time TBA"}
-              {event.event_end_time ? ` – ${event.event_end_time}` : ""}
-            </p>
+            <div className="booking-info">
+              <div className="date-info">
+                <i className="bi bi-calendar-event"></i>
+                <div>
+                  <strong>{formatDate(event.event_start_date)}</strong>
+                </div>
+              </div>
+              <div className="time-info">
+                <i className="bi bi-clock"></i>
+                <div>
+                  {event.event_start_time ? `${event.event_start_time}` : "Time TBA"}
+                  {event.event_end_time ? ` – ${event.event_end_time}` : ""}
+                </div>
+              </div>
+            </div>
+
             {parseFloat(String(event.early_bird_price)) > 0 && (
-              event.early_bird_quantity > 0 ? (
-                <span className="limited">
-                  {event.early_bird_quantity} Early Bird tickets left
-                </span>
-              ) : (
-                <span className="limited sold-out">
-                  Early Bird Sold Out
-                </span>
-              )
+              <div className="early-bird-info">
+                {event.early_bird_quantity > 0 ? (
+                  <span className="limited">
+                    <i className="bi bi-stopwatch"></i>
+                    {event.early_bird_quantity} Early Bird tickets left
+                  </span>
+                ) : (
+                  <span className="limited sold-out">
+                    <i className="bi bi-exclamation-circle"></i>
+                    Early Bird Sold Out
+                  </span>
+                )}
+              </div>
             )}
 
-          </div>
+            <div className="price">
+              <p>Starting from</p>
+              <h2>R {getLowestPrice()}</h2>
+            </div>
 
-          <div className="price">
-            <p>Price from</p>
-            <h2>R {getLowestPrice()}</h2>
+            <button
+              className="book-btn"
+              onClick={handleBooking}
+            >
+              Continue to Booking <i className="bi bi-arrow-right"></i>
+            </button>
           </div>
+        </div>
 
+        {/* EVENT TITLE */}
+        <h1 className="event-title">{event.event_name || event.title || "Untitled Event"}</h1>
+
+        {/* TAGS */}
+        <div className="event-tags">
+          <span className="location-tag">
+            <i className="bi bi-geo-alt-fill"></i> {event.event_location || "Location TBA"}
+          </span>
+          {(event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1") && (
+            <span className="ticket-tag">
+              <i className="bi bi-ticket-fill"></i> Tickets Available
+            </span>
+          )}
+        </div>
+
+        {/* TABS */}
+        <div className="tabs">
           <button
-            className="book-btn"
-            onClick={handleBooking}
+            className={activeTab === "info" ? "active" : ""}
+            onClick={() => setActiveTab("info")}
           >
-            Continue to Booking
+            Info
+          </button>
+          <button
+            className={activeTab === "venue" ? "active" : ""}
+            onClick={() => setActiveTab("venue")}
+          >
+            Venue Information
+          </button>
+          <button
+            className={activeTab === "tickets" ? "active" : ""}
+            onClick={() => setActiveTab("tickets")}
+          >
+            Ticket Details
           </button>
         </div>
-      </div>
 
-      {/* EVENT TITLE */}
-      <h1 className="event-title">{event.event_name || event.title || "Untitled Event"}</h1>
-
-      {/* TAGS */}
-      <div className="event-tags">
-        <span>{event.event_location || "Location TBA"}</span>
-        {(event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1") && (
-          <span className="ticket-tag">Tickets Available</span>
-        )}
-      </div>
-
-      {/* TABS */}
-      <div className="tabs">
-        <button
-          className={activeTab === "info" ? "active" : ""}
-          onClick={() => setActiveTab("info")}
-        >
-          Info
-        </button>
-        <button
-          className={activeTab === "venue" ? "active" : ""}
-          onClick={() => setActiveTab("venue")}
-        >
-          Venue Information
-        </button>
-
-        <button
-          className={activeTab === "tickets" ? "active" : ""}
-          onClick={() => setActiveTab("tickets")}
-        >
-          Ticket Details
-        </button>
-      </div>
-
-      {/* TAB CONTENT */}
-      <div className="tab-content">
-        {activeTab === "info" && (
-          <div className="info-content">
-            <p>{event.event_info || "No event description available."}</p>
-            {event.organizer_name && (
-              <div className="organizer-info">
-                <h4>Organizer</h4>
-                <p>{event.organizer_name}</p>
-                {event.organizer_email && <p>{event.organizer_email}</p>}
+        {/* TAB CONTENT */}
+        <div className="tab-content">
+          {activeTab === "info" && (
+            <div className="info-content">
+              <div className="description-section">
+                <h4>About This Event</h4>
+                <p>{event.event_info || "No event description available."}</p>
               </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "venue" && (
-          <div className="venue-content">
-            <h4>📍 {event.event_location || "Location TBA"}</h4>
-
-            {event.event_location ? (
-              <div className="map-placeholder" style={{ padding: 0, overflow: "hidden" }}>
-                <iframe
-                  title="Event Location Map"
-                  src={getMapEmbedUrl(event.event_location)}
-                  width="100%"
-                  height="300"
-                  style={{ border: 0, borderRadius: "10px" }}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
-            ) : (
-              <p style={{ color: "#666", marginTop: "15px" }}>
-                Location not available for this event.
-              </p>
-            )}
-          </div>
-        )}
-
-
-
-        {activeTab === "tickets" && (
-          <div className="tickets-content">
-            <h4>Available Ticket Types</h4>
-            <div className="ticket-types">
-              {parseFloat(String(event.early_bird_price)) > 0 && (
-                <div className="ticket-type">
-                  <h5>Early Bird</h5>
-                  <p className="ticket-price">R {formatPrice(event.early_bird_price)}</p>
-                  {event.early_bird_quantity && event.early_bird_quantity > 0 && (
-                    <p className="ticket-quantity">{event.early_bird_quantity} tickets left</p>
-                  )}
-                </div>
-              )}
-              {parseFloat(String(event.general_price)) > 0 && (
-                <div className="ticket-type">
-                  <h5>General Admission</h5>
-                  <p className="ticket-price">R {formatPrice(event.general_price)}</p>
-                </div>
-              )}
-              {parseFloat(String(event.vip_price)) > 0 && (
-                <div className="ticket-type">
-                  <h5>VIP</h5>
-                  <p className="ticket-price">R {formatPrice(event.vip_price)}</p>
-                </div>
-              )}
-              {parseFloat(String(event.vvip_price)) > 0 && (
-                <div className="ticket-type">
-                  <h5>VVIP</h5>
-                  <p className="ticket-price">R {formatPrice(event.vvip_price)}</p>
+              
+              {event.organizer_name && (
+                <div className="organizer-section">
+                  <h4>Organizer</h4>
+                  <div className="organizer-info">
+                    <i className="bi bi-person-circle"></i>
+                    <div>
+                      <p className="organizer-name">{event.organizer_name}</p>
+                      {event.organizer_email && <p className="organizer-email">{event.organizer_email}</p>}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+
+          {activeTab === "venue" && (
+            <div className="venue-content">
+              <h4>📍 {event.event_location || "Location TBA"}</h4>
+
+              {event.event_location ? (
+                <div className="map-container">
+                  <iframe
+                    title="Event Location Map"
+                    src={getMapEmbedUrl(event.event_location)}
+                    width="100%"
+                    height="350"
+                    style={{ border: 0, borderRadius: "12px" }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              ) : (
+                <div className="no-location">
+                  <i className="bi bi-geo-alt"></i>
+                  <p>Location not available for this event.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "tickets" && (
+            <div className="tickets-content">
+              <h4>Available Ticket Types</h4>
+              <div className="ticket-types">
+                {parseFloat(String(event.early_bird_price)) > 0 && (
+                  <div className="ticket-type">
+                    <div className="ticket-type-header">
+                      <h5>Early Bird</h5>
+                      {event.early_bird_quantity && event.early_bird_quantity > 0 && (
+                        <span className="ticket-quantity">{event.early_bird_quantity} left</span>
+                      )}
+                    </div>
+                    <p className="ticket-price">R {formatPrice(event.early_bird_price)}</p>
+                  </div>
+                )}
+                {parseFloat(String(event.general_price)) > 0 && (
+                  <div className="ticket-type">
+                    <h5>General Admission</h5>
+                    <p className="ticket-price">R {formatPrice(event.general_price)}</p>
+                  </div>
+                )}
+                {parseFloat(String(event.vip_price)) > 0 && (
+                  <div className="ticket-type">
+                    <h5>VIP</h5>
+                    <p className="ticket-price">R {formatPrice(event.vip_price)}</p>
+                  </div>
+                )}
+                {parseFloat(String(event.vvip_price)) > 0 && (
+                  <div className="ticket-type">
+                    <h5>VVIP</h5>
+                    <p className="ticket-price">R {formatPrice(event.vvip_price)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }

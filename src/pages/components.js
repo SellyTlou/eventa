@@ -43,6 +43,8 @@ import Ticket_payment from './ticket_payment';
 import BusinessDashboard from '../pages/business_planner/businessDashboard';
 import TicketEventManage from './planner/event_ticket_manage';
 import CustomPlanRequestPage from '../pages/business_planner/CustomPlanRequestPage';
+import PaymentCancel from './planner/PaymentCancel';
+import PaymentSuccess from './planner/PaymentSuccess';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -222,8 +224,6 @@ export function SessionHandler() {
                 <Route path="/ticket_payment" element={<Ticket_payment />} />
                 <Route path="/businessdashboard" element={<BusinessDashboard />} />
                 <Route path="/event_ticket_manage" element={<TicketEventManage/>}/>
-                <Route path="/custom-plan-request" element={<CustomPlanRequestPage />} />
-
    
             </Routes>
 
@@ -378,6 +378,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
         setDropdownOpen(false);
         setIsMobileMenuOpen(false);
     };
+    
     const handleDropdownItemClick = (handler, e) => {
         if (e) e.stopPropagation();
         handler(e);
@@ -389,13 +390,13 @@ export function Navbar({ onLoginClick, onSignupClick }) {
             <section className={`nav-section d-none d-md-block ${scrolled ? "scrolled" : ""}`}>
                 <div className="container">
                     <div className="row bottom-nav-row align-items-center">
-                        <div className="col-md-3">
+                        <div className="col-md-8">
                             <a href="/">
                                 <img src="/images/logo.png" alt="Logo" className="logo img-fluid" />
                             </a>
-                        </div>
+                        
 
-                        <div className="col-md-6">
+                       
                             <ul className="nav nav-list justify-content-center">
                                 {["/", "/feature", "/ticket_sales", "/pricing", "/sales", "/support"].map(
                                     (path, i) => (
@@ -501,7 +502,6 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                     </div>
                 </div>
 
-                {/* ADD THIS MOBILE MENU CONTENT */}
                 <div className={`mobile-menu ${isMobileMenuOpen ? "open" : ""}`}>
                     <ul className="mobile-nav-list">
                         {["/", "/feature", "/ticket_sales", "/pricing", "/sales", "/support"].map(
@@ -521,7 +521,6 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                             )
                         )}
 
-                        {/* Add mobile buttons for non-logged in users */}
                         {!user && (
                             <li className="mobile-nav-item">
                                 <div className="mobile-buttons">
@@ -1973,5 +1972,36 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
                 ))}
             </div>
         </>
+    );
+}
+
+export function NewEventPopupBtn() {
+    const navigate = useNavigate();
+
+    const goToCreateEvent = () => {
+        navigate("/createEvent");
+    };
+
+    const goToActiveEventDetails = () => {
+        navigate("/activeEventDetails");
+    };
+
+    const checkNavigate = () => {
+        const storedUser = localStorage.getItem('user');
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        
+        if (user) {
+            goToActiveEventDetails(); 
+        } else {
+            goToCreateEvent(); 
+        }
+    };
+
+    return (
+        <div className="new-event-fixed-container">
+            <button className="new-event-fixed-btn" onClick={checkNavigate}>
+                <i className="bi bi-plus-lg"></i> Create New Event
+            </button>
+        </div>
     );
 }

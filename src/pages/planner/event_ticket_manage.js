@@ -566,7 +566,7 @@ Upgrade to a premium package to unlock bulk messaging features.`,
                                 ? "fa-check-circle"
                                 : alert.type === "warning"
                                     ? "fa-exclamation-triangle"
-                                    : "fa-info-circle"
+                                    : "fa-info-circle" 
                             }`}
                     ></i>
                     <span>{alert.message}</span>

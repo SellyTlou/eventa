@@ -1,164 +1,452 @@
+/* ==========================================================================
+   SALES PAGE - PURPLE/BLUE/YELLOW THEME
+   ========================================================================== */
+
+.sales-page {
+  background: #ffffff;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ───────────────── HEADER SECTION ───────────────── */
 .sales-page .header-section {
-    width: 100%;
-    height: 100vh;
-    overflow: hidden;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: white;
-   
+  position: relative;
+  height: 90vh;
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
 }
 
-.sales-page .header-section .hero-bg-img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 1;
+.sales-page .hero-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.7);
+  transition: transform 8s ease;
 }
 
-.sales-page .header-section .overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
-    z-index: 2;
+.sales-page .header-section:hover .hero-bg-img {
+  transform: scale(1.1);
+}
+
+.sales-page .overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.05);
+  z-index: 1;
 }
 
 .sales-page .header-section .container {
-    position: relative;
-    z-index: 3;
-}
-
-.sales-page .header-section .container .row {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+  position: relative;
+  z-index: 2;
+  color: #ffffff;
+  padding: 0 2rem;
 }
 
 .sales-page .header-section h1 {
-    font-size: 3.5rem;
-    font-weight: 700;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-    margin-bottom: 1rem;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  animation: salesFadeInUp 1s ease;
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+  max-width: 800px;
 }
 
 .sales-page .header-section .lead {
-    font-size: 1.25rem;
-    font-weight: 300;
-    max-width: 600px;
-    margin: 0 auto 2rem;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  margin-bottom: 2rem;
+  animation: salesFadeInUp 1.2s ease;
+  opacity: 0.95;
+  max-width: 600px;
+  line-height: 1.6;
 }
 
-.sales-page .btn-get-demo {
-    background-color: #00b4d8 !important;
-    color: white !important;
-    padding: 12px 30px;
-    border-radius: 50px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: none;
+@keyframes salesFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.sales-page .btn-get-demo:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+/* ───────────────── FEATURES SECTION ───────────────── */
+.sales-page .features-page {
+  padding: 20px 0;
+  background: #ffffff;
+  position: relative;
 }
 
-.sales-page .features-page .section-header {
-    padding-top: 6rem;
-    color: #00b4d8;
+.sales-page .features-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(135deg, rgba(106, 13, 173, 0.03) 0%, rgba(49, 130, 206, 0.03) 100%);
+  pointer-events: none;
 }
 
-.sales-page .features-page .section-header h2 {
-    font-size: 2.5rem;
-    font-weight: 700;
+.sales-page .section-header {
+  margin-bottom: 60px;
+  position: relative;
 }
 
-.sales-page .features-page .section-header p {
-    color: #666;
-    max-width: 700px;
-    margin: 0 auto;
+.sales-page .section-header h2 {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 15px;
+}
+
+.sales-page .section-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(90deg, #6a0dad, #3182ce);
+  border-radius: 2px;
+}
+
+.sales-page .section-header p {
+  font-size: 1.2rem;
+  color: #666666;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.8;
 }
 
 .sales-page .features-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-    padding-bottom: 4rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  margin: 0 -15px;
 }
 
 .sales-page .feature-card {
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    text-align: center;
-    padding: 40px;
-    transition: all 0.3s ease;
-    max-width: 350px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 40px 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background-image: linear-gradient(white, white), 
+                    linear-gradient(135deg, #6a0dad, #3182ce);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  flex: 0 0 calc(33.333% - 30px);
+  min-width: 300px;
 }
 
 .sales-page .feature-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  transform: translateY(-15px);
+  box-shadow: 0 20px 40px rgba(106, 13, 173, 0.15);
+}
+
+.sales-page .feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6a0dad, #3182ce);
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+  transform-origin: left;
+}
+
+.sales-page .feature-card:hover::before {
+  transform: scaleX(1);
 }
 
 .sales-page .feature-icon {
-    font-size: 3rem;
-    color: #fff;
-    margin-bottom: 1rem;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, rgba(106, 13, 173, 0.1), rgba(49, 130, 206, 0.1));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.sales-page .feature-card:hover .feature-icon {
+  background: linear-gradient(135deg, #6a0dad, #3182ce);
+  transform: rotate(360deg) scale(1.1);
+  border-color: #ffd700;
+}
+
+.sales-page .feature-icon i {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, #6a0dad, #3182ce);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.3s ease;
+}
+
+.sales-page .feature-card:hover .feature-icon i {
+  -webkit-text-fill-color: #ffffff;
 }
 
 .sales-page .feature-card h4 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #333;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+}
+
+.sales-page .feature-card:hover h4 {
+  color: #6a0dad;
 }
 
 .sales-page .feature-card p {
-    color: #888;
-    font-size: 1rem;
+  font-size: 1rem;
+  color: #666666;
+  line-height: 1.7;
+  margin-bottom: 25px;
+  flex-grow: 1;
 }
 
 .sales-page .btn-view-more {
-    background: #00b4d8;
-    color: white;
-    border-radius: 50px;
-    padding: 8px 20px;
-    font-weight: 500;
-    margin-top: 1rem;
-    border: none;
+  padding: 12px 28px;
+  background: transparent;
+  border: 2px solid #6a0dad;
+  color: #6a0dad;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  width: 100%;
+}
+
+.sales-page .btn-view-more::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6a0dad, #3182ce);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+  z-index: -1;
 }
 
 .sales-page .btn-view-more:hover {
-    background: #023e8a;
-    transform: translateY(-2px);
+  color: #ffffff;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(106, 13, 173, 0.3);
 }
 
-.sales-page .cta-banner {
-    height: 50vh;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
+.sales-page .btn-view-more:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
-.sales-page .cta-bg-img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 1;
+.sales-page .btn-view-more i {
+  transition: transform 0.3s ease;
+}
+
+.sales-page .btn-view-more:hover i {
+  transform: translateX(5px);
+  color: #ffffff;
+}
+
+/* ───────────────── RESPONSIVE DESIGN ───────────────── */
+@media (max-width: 1200px) {
+  .sales-page .feature-card {
+    flex: 0 0 calc(50% - 30px);
+  }
+}
+
+@media (max-width: 768px) {
+  .sales-page .header-section {
+    height: 70vh;
+    min-height: 500px;
+  }
+  
+  .sales-page .header-section h1 {
+    font-size: 2.2rem;
+  }
+  
+  .sales-page .header-section .lead {
+    font-size: 1.1rem;
+  }
+  
+  .sales-page .features-page {
+    padding: 70px 0;
+  }
+  
+  .sales-page .section-header h2 {
+    font-size: 2.2rem;
+  }
+  
+  .sales-page .section-header p {
+    font-size: 1rem;
+    padding: 0 20px;
+  }
+  
+  .sales-page .features-row {
+    gap: 20px;
+  }
+  
+  .sales-page .feature-card {
+    flex: 0 0 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 35px 25px;
+  }
+  
+  .sales-page .feature-icon {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .sales-page .feature-icon i {
+    font-size: 2rem;
+  }
+  
+  .sales-page .feature-card h4 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sales-page .header-section {
+    height: 60vh;
+    min-height: 400px;
+  }
+  
+  .sales-page .header-section h1 {
+    font-size: 1.8rem;
+  }
+  
+  .sales-page .header-section .lead {
+    font-size: 1rem;
+  }
+  
+  .sales-page .features-page {
+    padding: 50px 0;
+  }
+  
+  .sales-page .section-header h2 {
+    font-size: 1.8rem;
+  }
+  
+  .sales-page .feature-card {
+    padding: 30px 20px;
+  }
+  
+  .sales-page .btn-view-more {
+    padding: 10px 24px;
+    font-size: 0.95rem;
+  }
+}
+
+/* ───────────────── ANIMATIONS ───────────────── */
+@keyframes salesPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(106, 13, 173, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(106, 13, 173, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(106, 13, 173, 0);
+  }
+}
+
+.sales-page .feature-card:nth-child(1) {
+  animation: salesCardAppear 0.5s ease 0.1s forwards;
+  opacity: 0;
+}
+
+.sales-page .feature-card:nth-child(2) {
+  animation: salesCardAppear 0.5s ease 0.3s forwards;
+  opacity: 0;
+}
+
+.sales-page .feature-card:nth-child(3) {
+  animation: salesCardAppear 0.5s ease 0.5s forwards;
+  opacity: 0;
+}
+
+@keyframes salesCardAppear {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ───────────────── UTILITY CLASSES ───────────────── */
+.sales-page .text-purple {
+  color: #6a0dad;
+}
+
+.sales-page .text-blue {
+  color: #3182ce;
+}
+
+.sales-page .text-yellow {
+  color: #ffd700;
+}
+
+.sales-page .bg-purple {
+  background-color: #6a0dad;
+}
+
+.sales-page .bg-blue {
+  background-color: #3182ce;
+}
+
+.sales-page .bg-yellow {
+  background-color: #ffd700;
+}
+
+.sales-page .border-purple {
+  border-color: #6a0dad;
+}
+
+.sales-page .border-blue {
+  border-color: #3182ce;
+}
+
+.sales-page .border-yellow {
+  border-color: #ffd700;
 }

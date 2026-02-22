@@ -5,7 +5,7 @@ import "../App.css";
 import "../responce.css";
 import "../alert.css";
 import PriorityQueue from "js-priority-queue";
-import { Navbar, Footer, Login } from "./components";
+import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 
 function Ticket_Sale() {
   const navigate = useNavigate();
@@ -285,7 +285,7 @@ function Ticket_Sale() {
 
         setEvents(unique);
         if (unique.length > 0) {
-          printAlert(`Loaded ${unique.length} events`, "success");
+          console.log(`Loaded ${unique.length} events`, "success");
         } else {
           printAlert("No ticket events found", "info");
         }
@@ -324,11 +324,8 @@ function Ticket_Sale() {
   return (
     <div className="ticket-sale">
       <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
-      <Login
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-        defaultMode={loginMode}
-      />
+      <Login isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} defaultMode={loginMode} />
+      <NewEventPopupBtn />
 
       {alert.show && (
         <div className={`custom-alert ${alert.type}`}>
@@ -353,8 +350,7 @@ function Ticket_Sale() {
           <div className="row">
             <div className="col-lg-7"></div>
             <h1>
-              Explore Exciting Events
-              <br />& Experiences
+             Live Your Life With <br/>Unforgetteble<br/>Moments
             </h1>
             <p>Discover events that match your vibe — tickets available now</p>
           </div>
@@ -372,11 +368,33 @@ function Ticket_Sale() {
                 onClick={() => setIsFilterOpen(false)}
                 aria-label="Close filters"
               >
-                <i className="fas fa-times"></i>
+                <i className="bi bi-x"></i>
               </button>
             </div>
 
-           
+            <div className="filter-group">
+              <form onSubmit={handleSearchSubmit} className="search-form">
+                <div className="search-input-wrapper">
+                  <i className="bi bi-search search-icon"></i>
+                  <input
+                    type="text"
+                    placeholder="Search events, artists, venues..."
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    className="search-input"
+                  />
+                  {searchTerm && (
+                    <button 
+                      type="button" 
+                      className="clear-search-btn"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      <i className="bi bi-times"></i>
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
 
             <div className="filter-group">
               <h4>Categories</h4>
@@ -423,7 +441,7 @@ function Ticket_Sale() {
               </div>
             </div>
 
-            <div className="filter-group">
+            {/* <div className="filter-group">
               <h4>Event Type</h4>
               <div className="checkbox-group">
                 <label className="checkbox-label">
@@ -434,7 +452,8 @@ function Ticket_Sale() {
                   />
                   <span className="checkbox-custom"></span>
                   <span className="checkbox-text">
-                    <i className="fas fa-star featured-icon"></i> Featured Events
+                    <i className="fas fa-star featured-icon"></i>
+                    Featured Events
                   </span>
                 </label>
                 <label className="checkbox-label">
@@ -445,11 +464,12 @@ function Ticket_Sale() {
                   />
                   <span className="checkbox-custom"></span>
                   <span className="checkbox-text">
-                    <i className="fas fa-ticket-alt free-icon"></i> Free Events
+                    <i className="fas fa-gift free-icon"></i>
+                    Free Events
                   </span>
                 </label>
               </div>
-            </div>
+            </div> */}
 
             <div className="filter-actions">
               <button 
@@ -464,7 +484,44 @@ function Ticket_Sale() {
 
           {/* Events Grid */}
           <div className="events-content">
-          
+            {/* Mobile Filter Toggle */}
+         {/* Mobile Filter Bar - Floating */}
+<div className="mobile-filter-bar">
+  <button 
+    className="filter-toggle-btn"
+    onClick={() => {
+      setIsFilterOpen(true);
+      document.body.classList.add('filter-open');
+    }}
+  >
+    <i className="bi bi-sliders-h"></i>
+    Filters
+    {filterCount > 0 && <span className="filter-count">{filterCount}</span>}
+  </button>
+  <div className="mobile-search">
+    <form onSubmit={handleSearchSubmit} className="search-form">
+      <div className="search-input-wrapper">
+        <i className="bi bi-search search-icon"></i>
+        <input
+          type="text"
+          placeholder="Search events..."
+          value={searchTerm}
+          onChange={handleSearch}
+          className="search-input"
+        />
+        {searchTerm && (
+          <button 
+            type="button" 
+            className="clear-search-btn"
+            onClick={() => setSearchTerm("")}
+          >
+            <i className="bi bi-times"></i>
+          </button>
+        )}
+      </div>
+    </form>
+  </div>
+</div>
 
             {/* Active Filters Bar */}
             {filterCount > 0 && (
@@ -516,30 +573,7 @@ function Ticket_Sale() {
 
             {/* Results Count */}
             <div className="results-count">
-               {/* Search Bar in Sidebar */}
-            <div className="filter-group">
-              <form onSubmit={handleSearchSubmit} className="search-form">
-                <div className="search-input-wrapper">
-                  <i className="fas fa-search search-icon"></i>
-                  <input
-                    type="text"
-                    placeholder="Search events, artists, venues..."
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    className="search-input"
-                  />
-                  {searchTerm && (
-                    <button 
-                      type="button" 
-                      className="clear-search-btn"
-                      onClick={() => setSearchTerm("")}
-                    >
-                      <i className="fas fa-times"></i>
-                    </button>
-                  )}
-                </div>
-              </form>
-            </div>
+              <p>Showing {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'}</p>
             </div>
 
             {/* Events Grid */}
@@ -623,8 +657,8 @@ function Ticket_Sale() {
 
                           <h3>{event.event_name || event.title || "Untitled Event"}</h3>
                           <p className="event-location">
-                            <i className="fas fa-map-marker-alt"></i> 
-                            {event.event_location || event.location || "Location TBA"}
+                            <i className="bi bi-map"></i> 
+                            {event.province || "Province TBA"} | {event.city || "City TBA" }
                           </p>
 
                           <div className="event-footer">
@@ -684,11 +718,6 @@ function Ticket_Sale() {
                     </button>
                   </div>
                 )}
-
-                {/* Page Info */}
-                <div className="page-info">
-                  <p>Showing {indexOfFirstEvent + 1}-{Math.min(indexOfLastEvent, filteredEvents.length)} of {filteredEvents.length} events</p>
-                </div>
               </>
             )}
           </div>

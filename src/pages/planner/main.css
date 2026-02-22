@@ -516,7 +516,7 @@ Profile container dropdown
     position: absolute;
     top: 100% !important;
     right: 0;
-    background-color: #ffffff;
+    background-color: #000;
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     z-index: 1000;
@@ -535,7 +535,7 @@ Profile container dropdown
     text-align: left;
     cursor: pointer;
     font-size: 0.95rem;
-    color: #555;
+    color: #fff;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -3700,7 +3700,7 @@ eventsDashboard {
  --------------------------------------*/
 
 .dashboard-container .invitation-content {
-    padding: 2rem;
+    padding: 70px 0;
     background: #f8f9fa;
     min-height: calc(100vh - 80px);
     width: 100%;
@@ -4350,7 +4350,6 @@ Manage my Event page - Updated Colors (Black, Blue, Purple)
 .manage-my-event-content {
     /* allow page/content to scroll when content overflows viewport */
     overflow-x: auto;
-    padding: 30px;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     position: relative;
     min-height: 100vh;
@@ -5011,7 +5010,7 @@ Manage my Event page - Updated Colors (Black, Blue, Purple)
 /* Event Details Section */
 .manage-my-event-content .eventDetails-section {
     background: white;
-    padding: 40px;
+    padding: 70px 0;
     border-radius: 20px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     margin-bottom: 40px;
@@ -5920,10 +5919,6 @@ Package Payment Page
 
 }
 
-/* Body padding for fixed header */
-body {
-    padding-top: 60px;
-}
 
 /* Mobile */
 @media (max-width: 767.98px) {
@@ -7688,7 +7683,7 @@ body {
 
 /* Event Tickets Content Styles */
 .eventTickets-content {
-    padding: 20px;
+    padding: 70px 20px;
     background: #f8f9fa;
     min-height: calc(100vh - 80px);
 }

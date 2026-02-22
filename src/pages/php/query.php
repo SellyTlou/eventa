@@ -852,6 +852,13 @@ if ($fun === "saveEvent") {
     $eventEndDate = $_POST['eventEndDate'] ?? '';
     $eventEndTime = $_POST['eventEndTime'] ?? '';
     $eventLocation = $_POST['eventLocation'] ?? '';
+    
+    // Single event_type field - stores either selected category OR custom typed value
+    $eventType = $_POST['event_type'] ?? '';
+    
+    // Location detail fields
+    $eventCity = $_POST['eventCity'] ?? '';
+    $eventProvince = $_POST['eventProvince'] ?? '';
     $eventUrlImage = $_POST['eventUrlImage'] ?? '';
     $eventDesignData = $_POST['eventDesignData'] ?? '';
 
@@ -881,6 +888,13 @@ if ($fun === "saveEvent") {
     error_log("saveEvent - VIP Qty: " . $vipQuantity);
     error_log("saveEvent - VVIP Qty: " . $vvipQuantity);
 
+    // Log new event type field
+    error_log("saveEvent - Event Type: " . $eventType);
+    
+    // Log new location fields
+    error_log("saveEvent - Event City: " . $eventCity);
+    error_log("saveEvent - Event Province: " . $eventProvince);
+
     $createdAt = date('Y-m-d H:i:s');
 
     try {
@@ -892,6 +906,9 @@ if ($fun === "saveEvent") {
         $eventName = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
         $userName = mb_convert_encoding($userName, 'UTF-8', 'UTF-8');
         $eventLocation = mb_convert_encoding($eventLocation, 'UTF-8', 'UTF-8');
+        $eventType = mb_convert_encoding($eventType, 'UTF-8', 'UTF-8');
+        $eventCity = mb_convert_encoding($eventCity, 'UTF-8', 'UTF-8');
+        $eventProvince = mb_convert_encoding($eventProvince, 'UTF-8', 'UTF-8');
         $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
         $eventInfo = mb_convert_encoding($eventInfo, 'UTF-8', 'UTF-8');
         $ticketConfig = mb_convert_encoding($ticketConfig, 'UTF-8', 'UTF-8');
@@ -917,7 +934,7 @@ if ($fun === "saveEvent") {
         ]);
 
         if ($checkStmt->fetch()) {
-            // Update existing event with updated ticket data
+            // Update existing event with updated ticket data and new fields
             $stmt = $pdo->prepare("UPDATE events SET
                 event_name = :event_name,
                 event_start_date = :event_start_date,
@@ -925,6 +942,9 @@ if ($fun === "saveEvent") {
                 event_end_date = :event_end_date,
                 event_end_time = :event_end_time,
                 event_location = :event_location,
+                event_type = :event_type,
+                city = :city,
+                province = :province,
                 event_image = :event_image,
                 design_data = :design_data,
                 has_tickets = :has_tickets,
@@ -990,6 +1010,9 @@ if ($fun === "saveEvent") {
                 ':event_end_date' => $eventEndDate,
                 ':event_end_time' => $eventEndTime,
                 ':event_location' => $eventLocation,
+                ':event_type' => $eventType,
+                ':city' => $eventCity,
+                ':province' => $eventProvince,
                 ':event_image' => $eventImageToSave,
                 ':design_data' => $eventDesignData,
                 ':has_tickets' => $hasTickets,
@@ -1008,18 +1031,20 @@ if ($fun === "saveEvent") {
                 ':user_id' => $userID,
             ]);
 
+            echo json_encode(["success" => true, "message" => "Event updated successfully!", "event_id" => $eventID]);
+
         } else {
-            // Insert new event with updated ticket data
+            // Insert new event with updated ticket data and new fields
             $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
-                   event_end_date, event_end_time, event_location, event_image, design_data,
-                   has_tickets, event_info, early_bird_price, early_bird_quantity,
-                   general_price, general_quantity, vip_price, vip_quantity,
+                   event_end_date, event_end_time, event_location, event_type,
+                   city, province, event_image, design_data, has_tickets, event_info, early_bird_price, 
+                   early_bird_quantity, general_price, general_quantity, vip_price, vip_quantity,
                    vvip_price, vvip_quantity, ticket_config, created_at, updated_at";
 
             $values = ":user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
-                  :event_end_date, :event_end_time, :event_location, :event_image, :design_data,
-                  :has_tickets, :event_info, :early_bird_price, :early_bird_quantity,
-                  :general_price, :general_quantity, :vip_price, :vip_quantity,
+                  :event_end_date, :event_end_time, :event_location, :event_type,
+                  :city, :province, :event_image, :design_data, :has_tickets, :event_info, :early_bird_price, 
+                  :early_bird_quantity, :general_price, :general_quantity, :vip_price, :vip_quantity,
                   :vvip_price, :vvip_quantity, :ticket_config, :created_at, :updated_at";
 
             $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
@@ -1076,6 +1101,9 @@ if ($fun === "saveEvent") {
                 ':event_end_date' => $eventEndDate,
                 ':event_end_time' => $eventEndTime,
                 ':event_location' => $eventLocation,
+                ':event_type' => $eventType,
+                ':city' => $eventCity,
+                ':province' => $eventProvince,
                 ':event_image' => $eventImageToSave,
                 ':design_data' => $eventDesignData,
                 ':has_tickets' => $hasTickets,
@@ -1092,9 +1120,9 @@ if ($fun === "saveEvent") {
                 ':created_at' => $createdAt,
                 ':updated_at' => $createdAt,
             ]);
-        }
 
-        echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
+            echo json_encode(["success" => true, "message" => "Event saved successfully!", "event_id" => $eventID]);
+        }
 
     } catch (PDOException $e) {
         // Handle specific MySQL errors
@@ -1108,6 +1136,34 @@ if ($fun === "saveEvent") {
                 "success" => false,
                 "message" => "Event data is too large. Please reduce the design complexity.",
             ]);
+        } elseif (strpos($e->getMessage(), 'Unknown column') !== false) {
+            // Handle missing column error
+            error_log("saveEvent - Missing column error: " . $e->getMessage());
+            
+            if (strpos($e->getMessage(), 'event_type') !== false) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database schema needs to be updated. Please add 'event_type' column to the events table.",
+                    "sql" => "ALTER TABLE events ADD COLUMN event_type VARCHAR(100) DEFAULT NULL AFTER event_location;"
+                ]);
+            } elseif (strpos($e->getMessage(), 'city') !== false) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database schema needs to be updated. Please add 'city' column to the events table.",
+                    "sql" => "ALTER TABLE events ADD COLUMN city VARCHAR(100) DEFAULT NULL AFTER event_location;"
+                ]);
+            } elseif (strpos($e->getMessage(), 'province') !== false) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database schema needs to be updated. Please add 'province' column to the events table.",
+                    "sql" => "ALTER TABLE events ADD COLUMN province VARCHAR(100) DEFAULT NULL AFTER city;"
+                ]);
+            } else {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Database schema needs to be updated. Please contact administrator.",
+                ]);
+            }
         } else {
             error_log("saveEvent PDO Exception: " . $e->getMessage());
             echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
@@ -3307,20 +3363,19 @@ if ($fun === 'recordPayment') {
     $package_name = $_POST['package_name'] ?? '';
     $amount = $_POST['amount'] ?? 0;
     $payment_method = $_POST['payment_method'] ?? '';
-    $payment_status = $_POST['payment_status'] ?? '';
+    $payment_status = $_POST['payment_status'] ?? 'pending';
+    $transaction_id = $_POST['transaction_id'] ?? '';
+    $pf_payment_id = $_POST['pf_payment_id'] ?? '';
 
     try {
-        // ✅ Begin transaction
         $pdo->beginTransaction();
 
-        /* -------------------------------------------------
-            1. Validate package
-            ------------------------------------------------- */
+        // Validate package
         $pkgStmt = $pdo->prepare("
-                        SELECT package_type, max_events, max_guests, price
-                        FROM packagetb
-                        WHERE package_id = ?
-                    ");
+            SELECT package_type, max_events, max_guests, price
+            FROM packagetb
+            WHERE package_id = ?
+        ");
         $pkgStmt->execute([$package_id]);
         $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -3335,104 +3390,125 @@ if ($fun === 'recordPayment') {
         $max_guests = $package['max_guests'];
         $price = $package['price'];
 
-        // Skip payment record creation for FREE package (price = 0)
+        // Generate payment ID for paid packages
         $payment_id = null;
         if ($price > 0) {
-            $payment_id = generateSimpleTransactionId($pdo);
+            // Check if we already have this transaction
+            if (!empty($transaction_id)) {
+                $checkStmt = $pdo->prepare("SELECT payment_id FROM payment_history WHERE transaction_id = ?");
+                $checkStmt->execute([$transaction_id]);
+                $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existing) {
+                    // Update existing payment
+                    $updateStmt = $pdo->prepare("
+                        UPDATE payment_history 
+                        SET payment_status = ?, payment_method = ?, payment_date = NOW()
+                        WHERE transaction_id = ?
+                    ");
+                    $updateStmt->execute([$payment_status, $payment_method, $transaction_id]);
+                    $payment_id = $existing['payment_id'];
+                } else {
+                    // Generate new payment ID
+                    $payment_id = generateSimpleTransactionId($pdo);
+                    
+                    // Insert new payment
+                    $insertPayment = $pdo->prepare("
+                        INSERT INTO payment_history (
+                            payment_id, user_id, user_name,
+                            package_id, package_name,
+                            amount, payment_status, payment_method, payment_date,
+                            transaction_id, pf_payment_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)
+                    ");
+                    $insertPayment->execute([
+                        $payment_id,
+                        $user_id,
+                        $user_name,
+                        $package_id,
+                        $package_type,
+                        $amount,
+                        $payment_status,
+                        $payment_method,
+                        $transaction_id,
+                        $pf_payment_id
+                    ]);
+                }
+            } else {
+                // No transaction ID, create new payment
+                $payment_id = generateSimpleTransactionId($pdo);
+                
+                $insertPayment = $pdo->prepare("
+                    INSERT INTO payment_history (
+                        payment_id, user_id, user_name,
+                        package_id, package_name,
+                        amount, payment_status, payment_method, payment_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ");
+                $insertPayment->execute([
+                    $payment_id,
+                    $user_id,
+                    $user_name,
+                    $package_id,
+                    $package_type,
+                    $amount,
+                    $payment_status,
+                    $payment_method
+                ]);
+            }
+        }
 
-            /* -------------------------------------------------
-                2. Get user name
-                ------------------------------------------------- */
-            $userStmt = $pdo->prepare("SELECT CONCAT(name, ' ', COALESCE(lastname, '')) AS full_name FROM users WHERE user_id = ?");
-            $userStmt->execute([$user_id]);
-            $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+        // Create or update user_packages (only if payment is completed)
+        if ($payment_status === 'completed') {
+            $checkPkg = $pdo->prepare("SELECT COUNT(*) FROM user_packages WHERE user_id = ?");
+            $checkPkg->execute([$user_id]);
+            $exists = (int) $checkPkg->fetchColumn();
 
-            if (!$user) {
-                $pdo->rollBack();
-                echo json_encode(["success" => false, "message" => "User not found"]);
-                exit;
+            if ($exists === 0) {
+                $user_package_id = "PCK-" . strtoupper(substr(md5(uniqid()), 0, 6)) . "-" . time();
+                $insertPkg = $pdo->prepare("
+                    INSERT INTO user_packages (
+                        user_package_id, user_id, package_id,
+                        event_limit, event_used, created_at
+                    ) VALUES (?, ?, ?, ?, 0, NOW())
+                ");
+                $insertPkg->execute([$user_package_id, $user_id, $package_id, $max_events]);
+            } else {
+                $updatePkg = $pdo->prepare("
+                    UPDATE user_packages
+                    SET package_id = ?, event_limit = ?, updated_at = NOW()
+                    WHERE user_id = ?
+                ");
+                $updatePkg->execute([$package_id, $max_events, $user_id]);
             }
 
-            $user_full_name = $user['full_name'];
-
-            /* -------------------------------------------------
-                3. Insert payment record (only for paid packages)
-                ------------------------------------------------- */
-            $insertPayment = $pdo->prepare("
-                            INSERT INTO payment_history (
-                                payment_id, user_id, user_name,
-                                package_id, package_name,
-                                amount, payment_status, payment_method, payment_date
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-                        ");
-            $insertPayment->execute([
-                $payment_id,
-                $user_id,
-                $user_full_name,
-                $package_id,
-                $package_type,
-                $amount,
-                $payment_status,
-                $payment_method,
-            ]);
+            // Assign package to all user's events
+            $updateEvents = $pdo->prepare("
+                UPDATE events
+                SET package_id = ?, updated_at = NOW()
+                WHERE user_id = ?
+            ");
+            $updateEvents->execute([$package_id, $user_id]);
         }
 
-        /* -------------------------------------------------
-            4. Create or update user_packages (for paid packages)
-            ------------------------------------------------- */
-        $checkPkg = $pdo->prepare("SELECT COUNT(*) FROM user_packages WHERE user_id = ?");
-        $checkPkg->execute([$user_id]);
-        $exists = (int) $checkPkg->fetchColumn();
-
-        if ($exists === 0) {
-            // New user package
-            $user_package_id = "PCK-" . strtoupper(substr(md5(uniqid()), 0, 6)) . "-" . time();
-
-            $insertPkg = $pdo->prepare("
-                            INSERT INTO user_packages (
-                                user_package_id, user_id, package_id,
-                                event_limit, event_used, created_at
-                            ) VALUES (?, ?, ?, ?, 0, NOW())
-                        ");
-            $insertPkg->execute([
-                $user_package_id,
-                $user_id,
-                $package_id,
-                $max_events,
-            ]);
-        } else {
-            // Update existing package
-            $updatePkg = $pdo->prepare("
-                            UPDATE user_packages
-                            SET package_id = ?, event_limit = ?, updated_at = NOW()
-                            WHERE user_id = ?
-                        ");
-            $updatePkg->execute([$package_id, $max_events, $user_id]);
-        }
-
-        /* -------------------------------------------------
-            5. Assign package to all user's events
-            ------------------------------------------------- */
-        $updateEvents = $pdo->prepare("
-                        UPDATE events
-                        SET package_id = ?, updated_at = NOW()
-                        WHERE user_id = ?
-                    ");
-        $updateEvents->execute([$package_id, $user_id]);
-
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+        // Log activity
+        $logStmt = $pdo->prepare("
+            INSERT INTO system_activity (user_id, action, description) 
+            VALUES (:user_id, :action, :description)
+        ");
         $logStmt->execute([
             ':user_id' => $user_id,
-            ':action' => 'New Package',
-            ':description' => "Assigned {$package_type} package",
+            ':action' => $payment_status === 'completed' ? 'Payment Completed' : 'Payment Initiated',
+            ':description' => "Package: {$package_type}, Amount: R{$amount}, Method: {$payment_method}"
         ]);
 
         $pdo->commit();
 
         echo json_encode([
             "success" => true,
-            "message" => "Package assigned successfully",
+            "message" => $payment_status === 'completed' ? "Payment recorded successfully" : "Payment initiated",
             "payment_id" => $payment_id,
+            "transaction_id" => $transaction_id,
             "is_free" => ($price == 0)
         ]);
 
@@ -3440,7 +3516,7 @@ if ($fun === 'recordPayment') {
         $pdo->rollBack();
         echo json_encode([
             "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
+            "message" => "Database error: " . $e->getMessage()
         ]);
     }
     exit;
@@ -3450,79 +3526,142 @@ if ($fun === 'sendPaymentReceipt') {
     $email = $_POST['email'] ?? '';
     $name = $_POST['name'] ?? '';
     $transaction_id = $_POST['transaction_id'] ?? '';
-    $amount = $_POST['amount'] ?? 0;
+    $amount = $_POST['amount'] ?? '';
     $package_name = $_POST['package_name'] ?? '';
-    $payment_date = $_POST['payment_date'] ?? date('Y-m-d H:i:s');
-    
-    if (empty($email) || empty($name)) {
-        echo json_encode(["success" => false, "message" => "Missing email or name"]);
+    $payment_date = $_POST['payment_date'] ?? '';
+    $API_URL = $_POST['API_URL'] ?? '';
+    $user_email = $_POST['user_email'] ?? '';
+
+    if (empty($email) || empty($transaction_id) || empty($API_URL)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
         exit;
     }
-    
-    try {
-        // Send email using your existing email system
-        $subject = "Payment Receipt - Evenda";
-        
-        $message = "
+
+    // Clean API_URL (same as your invitation script)
+    $API_URL = rtrim(str_replace(['/php', '/api'], '', $API_URL), '/');
+    if (strpos($API_URL, 'localhost') !== false) {
+        $API_URL = 'http://localhost:3000';
+    }
+
+    // Brevo API Key (same as your invitation script)
+    $BREVO_API_KEY = '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';
+
+    // Format date nicely
+    $formattedDate = date('F j, Y H:i:s', strtotime($payment_date));
+
+    // Email HTML content
+    $htmlContent = "
         <html>
-        <head>
-            <title>Payment Receipt</title>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #0056b3; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { padding: 30px; background: #f9f9f9; }
-                .receipt-details { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border: 1px solid #ddd; }
-                .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
-                .amount { font-size: 24px; font-weight: bold; color: #0056b3; margin: 10px 0; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <h2>Payment Receipt</h2>
+        <body style='font-family:Arial;background:#f9f9f9;padding:20px'>
+            <div style='max-width:600px;margin:auto;background:white;padding:30px;border-radius:12px;'>
+                <div style='text-align:center;margin-bottom:30px'>
+                    <h2 style='color:#8b6a35'>Payment Receipt</h2>
                 </div>
-                <div class='content'>
-                    <p>Dear $name,</p>
-                    <p>Thank you for your payment. Here are your payment details:</p>
-                    
-                    <div class='receipt-details'>
-                        <p><strong>Transaction ID:</strong> $transaction_id</p>
-                        <p><strong>Date:</strong> " . date('F j, Y, g:i a', strtotime($payment_date)) . "</p>
-                        <p><strong>Package:</strong> $package_name</p>
-                        <div class='amount'>Amount: R $amount</div>
-                        <p><strong>Status:</strong> <span style='color: green;'>Completed</span></p>
-                    </div>
-                    
-                    <p>Your package has been activated and is ready to use.</p>
-                    <p>If you have any questions, please contact our support team.</p>
+                
+                <p>Dear <strong>{$name}</strong>,</p>
+                
+                <p>Thank you for your payment. Your transaction has been completed successfully.</p>
+                
+                <div style='background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0'>
+                    <h3 style='margin-top:0;color:#333'>Payment Details</h3>
+                    <table style='width:100%'>
+                        <tr>
+                            <td style='padding:8px 0'><strong>Transaction ID:</strong></td>
+                            <td style='padding:8px 0'>{$transaction_id}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding:8px 0'><strong>Amount:</strong></td>
+                            <td style='padding:8px 0'>R{$amount}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding:8px 0'><strong>Package:</strong></td>
+                            <td style='padding:8px 0'>{$package_name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding:8px 0'><strong>Date:</strong></td>
+                            <td style='padding:8px 0'>{$formattedDate}</td>
+                        </tr>
+                    </table>
                 </div>
-                <div class='footer'>
-                    <p>Thank you for choosing Evenda!</p>
-                    <p>This is an automated email, please do not reply.</p>
+                
+                <p>Your package has been successfully upgraded. You can now enjoy all the features of your new package.</p>
+                
+                <div style='text-align:center;margin:30px 0'>
+                    <a href='{$API_URL}/eventsDashboard' 
+                       style='background:#8b6a35;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold'>
+                        Go to Dashboard
+                    </a>
                 </div>
+                
+                <p style='font-size:12px;color:#888;margin-top:30px;text-align:center'>
+                    If you have any questions, please contact our support team.<br>
+                    &copy; " . date('Y') . " Eventa. All rights reserved.
+                </p>
             </div>
         </body>
         </html>
-        ";
-        
-        // Headers
-        $headers = "MIME-Version: 1.0" . "\r\n";
-        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-        $headers .= "From: Evenda <noreply@evenda.com>" . "\r\n";
-        $headers .= "Reply-To: support@evenda.com" . "\r\n";
-        
-        // Send email
-        $mailSent = mail($email, $subject, $message, $headers);
-        
-        if ($mailSent) {
-            echo json_encode(["success" => true, "message" => "Receipt email sent successfully"]);
-        } else {
-            echo json_encode(["success" => false, "message" => "Failed to send email"]);
-        }
-        
-    } catch (Exception $e) {
-        echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+    ";
+
+    // Text version
+    $textContent = "Dear $name,\n\n" .
+                   "Thank you for your payment. Your transaction has been completed successfully.\n\n" .
+                   "Payment Details:\n" .
+                   "Transaction ID: $transaction_id\n" .
+                   "Amount: R$amount\n" .
+                   "Package: $package_name\n" .
+                   "Date: $formattedDate\n\n" .
+                   "Your package has been successfully upgraded. You can now enjoy all the features of your new package.\n\n" .
+                   "Visit your dashboard: {$API_URL}/eventsDashboard\n\n" .
+                   "If you have any questions, please contact our support team.\n\n" .
+                   "— Eventa Team";
+
+    // Prepare Brevo payload (exactly like your invitation script)
+    $payload = [
+        "sender" => [
+            "email" => "ananiasndou0@gmail.com",
+            "name" => "Eventa Support"
+        ],
+        "to" => [
+            [
+                "email" => $email,
+                "name" => $name
+            ]
+        ],
+        "subject" => "Payment Confirmation - Eventa",
+        "htmlContent" => $htmlContent,
+        "textContent" => $textContent
+    ];
+
+    // cURL request (exactly like your invitation script)
+    $ch = curl_init("https://api.brevo.com/v3/smtp/email");
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            "api-key: $BREVO_API_KEY",
+            "Content-Type: application/json",
+            "Accept: application/json",
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 30,
+    ]);
+
+    $response = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Response (same format as your invitation script)
+    if ($status === 201) {
+        echo json_encode([
+            "success" => true,
+            "message" => "Payment receipt sent successfully!"
+        ]);
+    } else {
+        echo json_encode([
+            "success" => false,
+            "message" => "Failed to send payment receipt.",
+            "debug" => $response
+        ]);
     }
     exit;
 }
@@ -5838,443 +5977,83 @@ if ($fun === "getBookingDetails") {
     exit;
 }
 
-if ($fun === "submitCustomPlanRequest") {
-    // Verify user is logged in
-    $user_id = $_POST['user_id'] ?? '';
-    
-    if (empty($user_id)) {
-        echo json_encode(["success" => false, "message" => "User not authenticated"]);
-        exit;
-    }
-    
-    // Get form data - INCLUDING THE NEW FIELDS
-    $business_name = $_POST['business_name'] ?? '';
-    $contact_name = $_POST['contact_name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
-    $event_type = $_POST['event_type'] ?? '';
-    $event_name = $_POST['event_name'] ?? '';
-    $event_description = $_POST['event_description'] ?? '';
-    
-    // NEW FIELDS - What the business WANTS
-    $requested_guests = $_POST['requested_guests'] ?? 0;
-    $requested_events = $_POST['requested_events'] ?? 0;
-    $proposed_price = $_POST['proposed_price'] ?? 0;
-    $desired_features = $_POST['desired_features'] ?? '';
-    
-    // Original fields (keeping for backward compatibility)
-    $expected_attendees = $_POST['expected_attendees'] ?? 0; // We'll still store this
-    $event_date = $_POST['event_date'] ?? null;
-    $special_requirements = $_POST['special_requirements'] ?? '';
-    $additional_notes = $_POST['additional_notes'] ?? '';
-    
-    // Validate required fields - including new ones
-    if (empty($event_name) || empty($event_type) || empty($requested_guests) || empty($requested_events) || empty($proposed_price)) {
-        echo json_encode(["success" => false, "message" => "Missing required fields. Please fill in event name, type, requested guests, events, and proposed price."]);
-        exit;
-    }
-    
+if ($fun === "getTrendingEvents") {
     try {
-        // Verify user exists and is a business account
-        $userStmt = $pdo->prepare("SELECT account_type FROM users WHERE user_id = ?");
-        $userStmt->execute([$user_id]);
-        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$user) {
-            echo json_encode(["success" => false, "message" => "User not found"]);
-            exit;
-        }
-        
-        if ($user['account_type'] !== 'business') {
-            echo json_encode(["success" => false, "message" => "Custom plans are only available for business accounts"]);
-            exit;
-        }
-        
-        // Generate unique request ID
-        $request_id = "CUSTOM-" . strtoupper(substr(uniqid(), -6)) . "-" . time();
-        
-        // Insert into database with ALL fields
+        // First try to get events that have sold tickets
         $stmt = $pdo->prepare("
-            INSERT INTO custom_plan_requests (
-                request_id, user_id, business_name, contact_name, email, phone,
-                event_type, event_name, event_description, 
-                requested_guests, requested_events, proposed_price, desired_features,
-                expected_attendees, event_date, special_requirements, additional_notes, 
-                status, created_at
-            ) VALUES (
-                :request_id, :user_id, :business_name, :contact_name, :email, :phone,
-                :event_type, :event_name, :event_description,
-                :requested_guests, :requested_events, :proposed_price, :desired_features,
-                :expected_attendees, :event_date, :special_requirements, :additional_notes,
-                'pending', NOW()
-            )
+            SELECT 
+                e.*,
+                u.name AS organizer_name,
+                u.email AS organizer_email,
+                COALESCE(SUM(b.quantity), 0) AS total_tickets_sold,
+                COALESCE(SUM(b.total_amount), 0) AS total_revenue,
+                COUNT(DISTINCT b.bookingId) AS total_bookings
+            FROM events e
+            LEFT JOIN users u ON e.user_id = u.user_id
+            LEFT JOIN bookings b ON e.event_id = b.event_id
+            WHERE e.has_tickets = 1 
+            GROUP BY e.event_id
+            HAVING total_tickets_sold > 0
+            ORDER BY total_tickets_sold DESC
+            LIMIT 10
         ");
         
-        $stmt->execute([
-            ':request_id' => $request_id,
-            ':user_id' => $user_id,
-            ':business_name' => $business_name,
-            ':contact_name' => $contact_name,
-            ':email' => $email,
-            ':phone' => $phone,
-            ':event_type' => $event_type,
-            ':event_name' => $event_name,
-            ':event_description' => $event_description,
-            ':requested_guests' => $requested_guests,
-            ':requested_events' => $requested_events,
-            ':proposed_price' => $proposed_price,
-            ':desired_features' => $desired_features,
-            ':expected_attendees' => $requested_guests, // Using requested_guests for backward compatibility
-            ':event_date' => $event_date,
-            ':special_requirements' => $special_requirements,
-            ':additional_notes' => $additional_notes
-        ]);
+        $stmt->execute();
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Log the activity with details of what they requested
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
-        $logStmt->execute([
-            $user_id,
-            'Custom Plan Requested',
-            "Custom plan request submitted for event: {$event_name} - {$requested_guests} guests, {$requested_events} events, proposed R{$proposed_price}"
-        ]);
-        
-        // Optional: Send email notification to admin
-        // You can implement email sending here
-        
-        echo json_encode([
-            "success" => true,
-            "message" => "Your custom plan request has been submitted successfully! Our team will review your requirements and contact you within 24-48 hours.",
-            "request_id" => $request_id
-        ]);
-        
-    } catch (PDOException $e) {
-        error_log("Custom plan request error: " . $e->getMessage());
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-if ($fun === "submitCustomPlanRequest") {
-    // Verify user is logged in
-    $user_id = $_POST['user_id'] ?? '';
-    
-    if (empty($user_id)) {
-        echo json_encode(["success" => false, "message" => "User not authenticated"]);
-        exit;
-    }
-    
-    // Get form data
-    $business_name = $_POST['business_name'] ?? '';
-    $contact_name = $_POST['contact_name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
-    $event_type = $_POST['event_type'] ?? '';
-    $event_name = $_POST['event_name'] ?? '';
-    $event_description = $_POST['event_description'] ?? '';
-    $expected_attendees = $_POST['expected_attendees'] ?? 0;
-    $event_date = $_POST['event_date'] ?? null;
-    $special_requirements = $_POST['special_requirements'] ?? '';
-    $additional_notes = $_POST['additional_notes'] ?? '';
-    
-    // Validate required fields
-    if (empty($event_name) || empty($event_type) || empty($expected_attendees)) {
-        echo json_encode(["success" => false, "message" => "Missing required fields"]);
-        exit;
-    }
-    
-    try {
-        // Verify user exists and is a business account
-        $userStmt = $pdo->prepare("SELECT account_type FROM users WHERE user_id = ?");
-        $userStmt->execute([$user_id]);
-        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$user) {
-            echo json_encode(["success" => false, "message" => "User not found"]);
-            exit;
-        }
-        
-        if ($user['account_type'] !== 'business') {
-            echo json_encode(["success" => false, "message" => "Custom plans are only available for business accounts"]);
-            exit;
-        }
-        
-        // Generate unique request ID
-        $request_id = "CUSTOM-" . strtoupper(substr(uniqid(), -6)) . "-" . time();
-        
-        // Insert into database
-        $stmt = $pdo->prepare("
-            INSERT INTO custom_plan_requests (
-                request_id, user_id, business_name, contact_name, email, phone,
-                event_type, event_name, event_description, expected_attendees,
-                event_date, special_requirements, additional_notes, status, created_at
-            ) VALUES (
-                :request_id, :user_id, :business_name, :contact_name, :email, :phone,
-                :event_type, :event_name, :event_description, :expected_attendees,
-                :event_date, :special_requirements, :additional_notes, 'pending', NOW()
-            )
-        ");
-        
-        $stmt->execute([
-            ':request_id' => $request_id,
-            ':user_id' => $user_id,
-            ':business_name' => $business_name,
-            ':contact_name' => $contact_name,
-            ':email' => $email,
-            ':phone' => $phone,
-            ':event_type' => $event_type,
-            ':event_name' => $event_name,
-            ':event_description' => $event_description,
-            ':expected_attendees' => $expected_attendees,
-            ':event_date' => $event_date,
-            ':special_requirements' => $special_requirements,
-            ':additional_notes' => $additional_notes
-        ]);
-        
-        // Log the activity
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
-        $logStmt->execute([
-            $user_id,
-            'Custom Plan Requested',
-            "Custom plan request submitted for event: {$event_name}"
-        ]);
-        
-        // Send email notification to admin (optional)
-        // You can implement email sending here
-        
-        echo json_encode([
-            "success" => true,
-            "message" => "Custom plan request submitted successfully",
-            "request_id" => $request_id
-        ]);
-        
-    } catch (PDOException $e) {
-        error_log("Custom plan request error: " . $e->getMessage());
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-if ($fun === "getCustomPlanRequests") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
-    
-    $status_filter = $_POST['status'] ?? 'pending';
-    
-    try {
-        $query = "SELECT cpr.*, u.name as user_firstname, u.lastname as user_lastname, u.email as user_email 
-                  FROM custom_plan_requests cpr
-                  JOIN users u ON cpr.user_id = u.user_id";
-        
-        if ($status_filter !== 'all') {
-            $query .= " WHERE cpr.status = :status";
-        }
-        
-        $query .= " ORDER BY cpr.created_at DESC";
-        
-        $stmt = $pdo->prepare($query);
-        
-        if ($status_filter !== 'all') {
-            $stmt->execute([':status' => $status_filter]);
-        } else {
+        // If no events with sales, get recent events
+        if (empty($events)) {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    e.*,
+                    u.name AS organizer_name,
+                    u.email AS organizer_email,
+                    0 AS total_tickets_sold,
+                    0 AS total_revenue,
+                    0 AS total_bookings
+                FROM events e
+                LEFT JOIN users u ON e.user_id = u.user_id
+                WHERE e.has_tickets = 1 
+                ORDER BY e.created_at DESC
+                LIMIT 10
+            ");
             $stmt->execute();
+            $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
-        
-        $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        echo json_encode(["success" => true, "requests" => $requests]);
-        
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
 
-if ($fun === "updateCustomPlanRequest") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $request_id = $_POST['request_id'] ?? '';
-    $status = $_POST['status'] ?? '';
-    $admin_notes = $_POST['admin_notes'] ?? '';
-    
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
-    
-    if (empty($request_id) || empty($status)) {
-        echo json_encode(["success" => false, "message" => "Missing required fields"]);
-        exit;
-    }
-    
-    try {
-        $stmt = $pdo->prepare("
-            UPDATE custom_plan_requests 
-            SET status = :status, admin_notes = :admin_notes, reviewed_at = NOW(), reviewed_by = :reviewed_by
-            WHERE request_id = :request_id
-        ");
-        
-        $stmt->execute([
-            ':status' => $status,
-            ':admin_notes' => $admin_notes,
-            ':reviewed_by' => $adminUserId,
-            ':request_id' => $request_id
-        ]);
-        
-        // Log the activity
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
-        $logStmt->execute([
-            $adminUserId,
-            'Custom Plan Updated',
-            "Custom plan request {$request_id} status changed to {$status}"
-        ]);
-        
-        echo json_encode(["success" => true, "message" => "Request updated successfully"]);
-        
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-// Add this near your other business package functions
-if ($fun === "assignCustomBusinessPackage") {
-    $adminUserId = $_POST['admin_user_id'] ?? '';
-    $user_id = $_POST['user_id'] ?? '';
-    $request_id = $_POST['request_id'] ?? '';
-    $base_package_id = $_POST['base_package_id'] ?? null;
-    $custom_limits = $_POST['custom_limits'] ?? '';
-    $custom_price = $_POST['custom_price'] ?? 0;
-    $admin_notes = $_POST['admin_notes'] ?? '';
-    
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
-    
-    if (empty($user_id) || empty($custom_limits)) {
-        echo json_encode(["success" => false, "message" => "Missing required fields"]);
-        exit;
-    }
-    
-    try {
-        $pdo->beginTransaction();
-        
-        // Parse custom limits
-        $limits = json_decode($custom_limits, true);
-        $event_limit = $limits['events'] ?? 999999;
-        
-        // First, expire any existing active package
-        $stmt = $pdo->prepare("UPDATE user_business_packages SET status = 'expired' 
-                               WHERE user_id = :user_id AND status = 'active'");
-        $stmt->execute([':user_id' => $user_id]);
-        
-        // Insert new custom package
-        $expiry_date = date('Y-m-d H:i:s', strtotime('+1 month'));
-        
-        $stmt = $pdo->prepare("
-            INSERT INTO user_business_packages 
-            (user_id, business_package_id, is_custom, custom_limits, base_package_id, 
-             custom_price, approved_request_id, event_limit, event_used, status, expiry_date) 
-            VALUES 
-            (:user_id, 4, 1, :custom_limits, :base_package_id, 
-             :custom_price, :request_id, :event_limit, 0, 'active', :expiry_date)
-        ");
-        
-        $stmt->execute([
-            ':user_id' => $user_id,
-            ':custom_limits' => $custom_limits,
-            ':base_package_id' => $base_package_id,
-            ':custom_price' => $custom_price,
-            ':request_id' => $request_id,
-            ':event_limit' => $event_limit,
-            ':expiry_date' => $expiry_date
-        ]);
-        
-        // Update the request status
-        $updateStmt = $pdo->prepare("
-            UPDATE custom_plan_requests 
-            SET status = 'approved', admin_notes = CONCAT(admin_notes, '\n', :admin_notes), 
-                reviewed_at = NOW(), reviewed_by = :reviewed_by 
-            WHERE request_id = :request_id
-        ");
-        $updateStmt->execute([
-            ':admin_notes' => "Approved with custom limits: " . $custom_limits,
-            ':reviewed_by' => $adminUserId,
-            ':request_id' => $request_id
-        ]);
-        
-        // Log the activity
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
-        $logStmt->execute([
-            $adminUserId,
-            'Custom Plan Assigned',
-            "Assigned custom plan to user {$user_id} with limits: {$custom_limits}"
-        ]);
-        
-        $pdo->commit();
-        
-        echo json_encode(["success" => true, "message" => "Custom plan assigned successfully"]);
-        
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-// Update getUserBusinessPackage to handle custom limits
-if ($fun === "getUserBusinessPackage") {
-    $user_id = $_POST['user_id'] ?? '';
-    
-    if (empty($user_id)) {
-        echo json_encode(["success" => false, "message" => "User ID required"]);
-        exit;
-    }
-    
-    try {
-        $stmt = $pdo->prepare("
-            SELECT ubp.*, 
-                   bp.package_type, 
-                   bp.name, 
-                   bp.max_guests, 
-                   bp.max_events, 
-                   bp.price,
-                   cpr.event_name as request_event_name,
-                   cpr.expected_attendees as requested_guests
-            FROM user_business_packages ubp 
-            LEFT JOIN business_packages bp ON ubp.business_package_id = bp.id 
-            LEFT JOIN custom_plan_requests cpr ON ubp.approved_request_id = cpr.request_id
-            WHERE ubp.user_id = :user_id AND ubp.status = 'active' AND ubp.expiry_date > NOW()
-            ORDER BY ubp.created_at DESC LIMIT 1
-        ");
-        $stmt->execute([':user_id' => $user_id]);
-        
-        if ($stmt->rowCount() > 0) {
-            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Format the events - REMOVED (int) casting for event_id
+        foreach ($events as &$event) {
+            // Don't cast to int - keep as string for UUID
+            $event['event_id'] = $event['event_id']; // Keep as original UUID string
+            $event['has_tickets'] = (int) $event['has_tickets'];
+            $event['total_tickets_sold'] = (int) ($event['total_tickets_sold'] ?? 0);
             
-            // If it's a custom plan, parse the custom_limits JSON
-            if ($package['is_custom'] && $package['custom_limits']) {
-                $customLimits = json_decode($package['custom_limits'], true);
-                $package['effective_guests'] = $customLimits['guests'] ?? $package['max_guests'];
-                $package['effective_events'] = $customLimits['events'] ?? $package['event_limit'];
-                $package['effective_features'] = $customLimits['features'] ?? [];
-                $package['effective_price'] = $package['custom_price'] ?? $package['price'];
+            // Format dates
+            if (isset($event['event_start_date']) && $event['event_start_date']) {
+                $event['formatted_date'] = date('F j, Y', strtotime($event['event_start_date']));
             } else {
-                $package['effective_guests'] = $package['max_guests'];
-                $package['effective_events'] = $package['event_limit'];
-                $package['effective_features'] = $package['features'] ? explode(',', $package['features']) : [];
-                $package['effective_price'] = $package['price'];
+                $event['formatted_date'] = date('F j, Y', strtotime($event['created_at']));
             }
             
-            echo json_encode(["success" => true, "userBusinessPackage" => $package]);
-        } else {
-            echo json_encode(["success" => false, "message" => "No active business package found"]);
+            // Handle image
+            if (!empty($event['event_image'])) {
+                $event['event_image_url'] = '/uploads/events/' . $event['event_image'];
+            } else {
+                $event['event_image_url'] = '/images/default-event.jpg';
+            }
         }
+
+        echo json_encode([
+            "success" => true,
+            "events" => $events,
+            "count" => count($events)
+        ]);
+        
     } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
     }
     exit;
 }

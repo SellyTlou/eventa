@@ -45,6 +45,7 @@ Profile Page Styles
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  width: 180px;
 }
 
 .profile-container:hover {
@@ -64,8 +65,12 @@ Profile Page Styles
 }
 
 .profile-container span {
-  font-weight: 600;
   color: #1e293b;
+    overflow: hidden;
+    white-space: nowrap;      
+    text-overflow: ellipsis;  
+    font-size: 12px;
+    width: 100%;
 }
 
 .profile-container i.bi-chevron-bar-down {
