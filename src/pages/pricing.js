@@ -20,6 +20,11 @@ function Pricing() {
     // NEW: State for annual billing toggle (OFF by default)
     const [annualBilling, setAnnualBilling] = useState(false);
 
+    // NEW: States for custom plan modal
+    const [showCustomPlanModal, setShowCustomPlanModal] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [alert, setAlert] = useState({ show: false, message: '', type: '' });
+
     useEffect(() => {
         const handleResize = () => {
             // eslint-disable-next-line no-unused-vars
@@ -35,10 +40,78 @@ function Pricing() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Check for logged-in user
+    useEffect(() => {
+        const userJson = localStorage.getItem('user');
+        if (userJson) {
+            setCurrentUser(JSON.parse(userJson));
+        }
+        
+        // Listen for login/logout events
+        const handleUserChange = () => {
+            const updatedUser = localStorage.getItem('user');
+            setCurrentUser(updatedUser ? JSON.parse(updatedUser) : null);
+        };
+        
+        window.addEventListener('userLoggedIn', handleUserChange);
+        window.addEventListener('userLoggedOut', handleUserChange);
+        
+        return () => {
+            window.removeEventListener('userLoggedIn', handleUserChange);
+            window.removeEventListener('userLoggedOut', handleUserChange);
+        };
+    }, []);
+
+    // Handle login completion for custom plan
+    useEffect(() => {
+        const handleLoginComplete = () => {
+            const userJson = localStorage.getItem('user');
+            if (userJson) {
+                const user = JSON.parse(userJson);
+                setCurrentUser(user);
+                // If we were waiting to show custom plan modal
+                if (user.account_type === 'business') {
+                    setShowCustomPlanModal(true);
+                }
+            }
+        };
+        
+        window.addEventListener('userLoggedIn', handleLoginComplete);
+        return () => window.removeEventListener('userLoggedIn', handleLoginComplete);
+    }, []);
+
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
     const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
     const [showContactSalesModal, setShowContactSalesModal] = useState(false);
+
+    const printAlert = (message, type = 'info') => {
+        setAlert({ show: true, message, type });
+        setTimeout(() => {
+            setAlert({ show: false, message: '', type: '' });
+        }, 5000);
+    };
+
+    // Replace the existing handleCustomPlanClick function with this:
+const handleCustomPlanClick = () => {
+    // Check if user is logged in
+    if (!currentUser) {
+        // Show login modal first
+        setLoginMode("login");
+        setIsLoginOpen(true);
+        printAlert('Please log in to request a custom plan', 'info');
+        return;
+    }
+    
+    // Check if user is business account
+    if (currentUser.account_type !== 'business') {
+        printAlert('Custom plans are only available for business accounts. Please upgrade to a business account.', 'warning');
+        return;
+    }
+    
+    // Navigate to the custom plan request page
+    navigate('/custom-plan-request');
+};
 
     // Helper function to get default features based on package type
     const getDefaultFeatures = (packageType, maxGuests, maxEvents) => {
@@ -242,8 +315,8 @@ function Pricing() {
                         description: "For large-scale business events",
                         isPopular: false,
                         features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
-                        ctaText: "",
-                        ctaVariant: "btn-demo",
+                        ctaText: "Request Custom Plan",
+                        ctaVariant: "btn-create",
                         isContactSales: true
                     }
                 ];
@@ -289,8 +362,8 @@ function Pricing() {
                     description: "For large-scale business events",
                     isPopular: false,
                     features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
-                    ctaText: "Contact Sales",
-                    ctaVariant: "btn-demo",
+                    ctaText: "Request Custom Plan",
+                    ctaVariant: "btn-create",
                     isContactSales: true
                 }
             ];
@@ -396,8 +469,8 @@ function Pricing() {
                 description: "For large-scale business events",
                 isPopular: false,
                 features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
-                ctaText: "Contact Sales",
-                ctaVariant: "btn-demo",
+                ctaText: "Request Custom Plan",
+                ctaVariant: "btn-create",
                 isContactSales: true
             }
         ],
@@ -516,6 +589,18 @@ function Pricing() {
                 defaultMode={loginMode}
             />
 
+            {/* Alert Component */}
+            {alert.show && (
+                <div className={`custom-alert ${alert.type}`}>
+                    <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
+                        alert.type === "success" ? "fa-check-circle" :
+                        alert.type === "warning" ? "fa-exclamation-triangle" :
+                        "fa-info-circle"
+                    }`}></i>
+                    <span>{alert.message}</span>
+                </div>
+            )}
+
             <div className="pricing-page">
                 {/* Hero Section */}
                 <section className="pricing-hero">
@@ -616,17 +701,17 @@ function Pricing() {
                                                             <div className="contact-cta-wrapper">
                                                                 {/* For CUSTOM PLAN, show button instead of "Coming soon" */}
                                                                 {plan.name === "CUSTOM PLAN" ? (
-                                                                    <button
-                                                                        className="btn btn-create w-100"
-                                                                        onClick={() => setShowContactSalesModal(true)}
-                                                                    >
-                                                                        Get in touch
-                                                                    </button>
-                                                                ) : plan.name === "ADVANCE PLUS PLAN" ? (
-                                                                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
-                                                                        Coming soon
-                                                                    </div>
-                                                                ) : null}
+    <button
+        className="btn btn-create w-100"
+        onClick={handleCustomPlanClick}
+    >
+        Request Custom Plan
+    </button>
+) : plan.name === "ADVANCE PLUS PLAN" ? (
+    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
+        Coming soon
+    </div>
+) : null}
                                                             </div>
                                                         </>
                                                     ) : (

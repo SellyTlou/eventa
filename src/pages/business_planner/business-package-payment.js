@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import "../planner/main.css"; // Verify this path is correct
+import "../planner/main.css";
 import "../../alert.css";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut } from "../components"; 
+import { useNavigate } from "react-router-dom";
+import { LoginNav, Footer } from "../components";
 
 const BusinessPackagePayment = () => {
     const dropdownRef = useRef(null);
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const [eventStatus, setEventStatus] = useState("");
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
@@ -22,13 +21,14 @@ const BusinessPackagePayment = () => {
     const vatRate = 0.15;
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
         setTimeout(() => {
             setAlert({ show: false, message: "", type: "" });
         }, 5000);
     };
-
 
     // Memoized calculation function
     const calculatePaymentDetails = useCallback(() => {
@@ -54,9 +54,8 @@ const BusinessPackagePayment = () => {
             const formData = new FormData();
             formData.append("function", "getBusinessPackageById");
             formData.append("package_id", packageId);
-            const API_URL = process.env.REACT_APP_API_URL;
 
-            const response = await fetch(`${API_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });
@@ -99,11 +98,11 @@ const BusinessPackagePayment = () => {
 
             try {
                 const packageId = localStorage.getItem("selectedPackageId");
+                const packageType = localStorage.getItem("selectedPackageType");
                 const storedUser = localStorage.getItem("user");
 
                 if (!storedUser) {
                     printAlert("Session expired. Please log in again.", "error");
-                    logOut();
                     navigate("/");
                     return;
                 }
@@ -119,7 +118,8 @@ const BusinessPackagePayment = () => {
                 
                 setUser(userData);
 
-                if (!packageId) {
+                if (!packageId || packageType !== 'business') {
+                    printAlert("No business package selected.", "warning");
                     navigate("/upgrade_business_package");
                     return;
                 }
@@ -135,7 +135,7 @@ const BusinessPackagePayment = () => {
         };
 
         initializePage();
-    }, [searchParams, navigate]);
+    }, [navigate]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -146,19 +146,6 @@ const BusinessPackagePayment = () => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
-
-    const navigationHandlers = {
-        home: () => {
-            const storedUser = localStorage.getItem('user');
-            const user = storedUser ? JSON.parse(storedUser) : null;
-            const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
-            navigate(dashPath);
-        },
-        eventManagement: () => navigate("/eventManagement"),
-        invitations: () => navigate("/invitationPage"),
-        manage: () => navigate("/manage_my_event")
-    };
 
     const handleBack = () => {
         navigate(-1);
@@ -171,33 +158,27 @@ const BusinessPackagePayment = () => {
 
     const recordBusinessPayment = async (paymentData) => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            // derive a robust user id from the stored user object
-            const resolveUserId = (u) => {
-                if (!u) return null;
-                return u.user_id || u.id || u.userID || u.uid || u.email || null;
-            };
-            const resolvedUserId = resolveUserId(user);
-
+            
             formData.append("function", "recordBusinessPayment");
-            formData.append("user_id", resolvedUserId);
+            formData.append("user_id", user?.user_id);
             formData.append("business_package_id", selectedPackage?.id);
             formData.append("amount", paymentDetails?.totalAmount);
             formData.append("payment_method", selectedPaymentMethod);
+            formData.append("transaction_id", `BP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
             
             console.log("Recording business payment with data:", {
-                user_id: resolvedUserId,
+                user_id: user?.user_id,
                 business_package_id: selectedPackage?.id,
                 amount: paymentDetails?.totalAmount,
                 payment_method: selectedPaymentMethod,
             });
-            const response = await fetch(`${API_URL}/query.php`, {
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });
 
-            // Check if the response is empty or invalid JSON
             const text = await response.text();
             if (!text.trim()) {
                 console.error("Empty response from server (recordBusinessPayment)");
@@ -226,22 +207,21 @@ const BusinessPackagePayment = () => {
         }
     };
 
-    const updateUserBusinessPackage = async () => {
+    const assignBusinessPackage = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            formData.append("function", "updateUserBusinessPackage");
+            formData.append("function", "assignBusinessPackage");
             formData.append("user_id", user?.user_id);
             formData.append("business_package_id", selectedPackage?.id);
 
-            const response = await fetch(`${API_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });
 
             const text = await response.text();
             if (!text.trim()) {
-                console.error("Empty response from server (updateUserBusinessPackage)");
+                console.error("Empty response from server (assignBusinessPackage)");
                 throw new Error("Empty response from server");
             }
 
@@ -255,17 +235,17 @@ const BusinessPackagePayment = () => {
 
             if (!response.ok || !result.success) {
                 console.error("Server error:", result.message || "Unknown error");
-                throw new Error(result.message || "Failed to update user business package");
+                throw new Error(result.message || "Failed to assign business package");
             }
 
             return true;
         } catch (error) {
-            console.error("Error updating business package:", error);
+            console.error("Error assigning business package:", error);
             return false;
         }
     };
 
-    const processPayment = async (paymentData) => {
+    const processPayment = async () => {
         if (processingPayment || paymentStarted) {
             console.log("Payment already in progress, ignoring duplicate click");
             return;
@@ -276,20 +256,29 @@ const BusinessPackagePayment = () => {
         setError("");
 
         try {
+            // Simulate payment processing (replace with actual payment gateway)
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            const paymentSuccess = await recordBusinessPayment(paymentData);
+            const paymentSuccess = await recordBusinessPayment();
 
             console.log("Business payment success status:", paymentSuccess);
             if (paymentSuccess) {
-                const updateSuccess = await updateUserBusinessPackage();
+                const assignSuccess = await assignBusinessPackage();
 
-                if (updateSuccess) {
+                if (assignSuccess) {
+                    // Clear localStorage items
                     localStorage.removeItem("selectedPackageId");
-                    printAlert("Payment successful! Your business package has been upgraded.", "success");
-                    handleBack();
+                    localStorage.removeItem("selectedPackageType");
+                    localStorage.removeItem("selectedBusinessPackage");
+                    
+                    printAlert("Payment successful! Your business package has been activated.", "success");
+                    
+                    // Redirect to business dashboard after 2 seconds
+                    setTimeout(() => {
+                        navigate('/businessdashboard');
+                    }, 2000);
                 } else {
-                    throw new Error("Failed to update user business package");
+                    throw new Error("Failed to assign business package");
                 }
             } else {
                 throw new Error("Payment recording failed");
@@ -311,8 +300,8 @@ const BusinessPackagePayment = () => {
         setError("");
     };
 
-    // Payment Form Components (CreditCardForm, PayPalForm, StripeForm remain the same)
-    const CreditCardForm = ({ onSubmit }) => {
+    // Payment Form Components
+    const CreditCardForm = () => {
         const [cardData, setCardData] = useState({
             cardNumber: "",
             expiryDate: "",
@@ -324,16 +313,7 @@ const BusinessPackagePayment = () => {
         const handleSubmit = (e) => {
             e.preventDefault();
             setLoading(true);
-
-            // Simulate secure card validation
-            setTimeout(() => {
-                setLoading(false);
-                onSubmit({
-                    paymentMethod: "credit_card",
-                    provider: "Visa/MasterCard",
-                    status: "completed"
-                });
-            }, 2500);
+            processPayment();
         };
 
         return (
@@ -387,8 +367,8 @@ const BusinessPackagePayment = () => {
                     </div>
                 </div>
 
-                <button type="submit" className="submit-payment-btn" disabled={loading}>
-                    {loading ? (
+                <button type="submit" className="submit-payment-btn" disabled={loading || processingPayment}>
+                    {loading || processingPayment ? (
                         <>
                             <div className="spinner-border spinner-border-sm" role="status"></div>
                             &nbsp;Processing Secure Payment...
@@ -401,21 +381,13 @@ const BusinessPackagePayment = () => {
         );
     };
 
-    const PayPalForm = ({ onSubmit }) => {
+    const PayPalForm = () => {
         const [loading, setLoading] = useState(false);
 
         const handleSubmit = (e) => {
             e.preventDefault();
             setLoading(true);
-
-            setTimeout(() => {
-                setLoading(false);
-                onSubmit({
-                    paymentMethod: "paypal",
-                    provider: "PayPal",
-                    status: "completed"
-                });
-            }, 2500);
+            processPayment();
         };
 
         return (
@@ -425,7 +397,7 @@ const BusinessPackagePayment = () => {
                     <h4>Pay with PayPal</h4>
                 </div>
                 <p className="payment-info">
-                    This is a demo simulation — no real payment will be processed.
+                    You will be redirected to PayPal to complete your payment.
                 </p>
                 <div className="paypal-amount">
                     <strong>Amount: R{paymentDetails?.totalAmount?.toFixed(2) || "0.00"}</strong>
@@ -433,28 +405,28 @@ const BusinessPackagePayment = () => {
                 <button
                     onClick={handleSubmit}
                     className="submit-payment-btn paypal-btn"
-                    disabled={loading}
+                    disabled={loading || processingPayment}
                 >
-                    {loading ? (
+                    {loading || processingPayment ? (
                         <>
                             <div className="spinner-border spinner-border-sm" role="status"></div>
                             &nbsp;Processing PayPal Payment...
                         </>
                     ) : (
-                        "Confirm Payment"
+                        "Continue to PayPal"
                     )}
                 </button>
             </div>
         );
     };
 
-    const StripeForm = ({ onSubmit }) => {
+    const StripeForm = () => {
+        const [loading, setLoading] = useState(false);
+
         const handleSubmit = (e) => {
             e.preventDefault();
-            onSubmit({
-                paymentMethod: 'stripe',
-                provider: 'Stripe'
-            });
+            setLoading(true);
+            processPayment();
         };
 
         return (
@@ -479,9 +451,9 @@ const BusinessPackagePayment = () => {
                 <button
                     onClick={handleSubmit}
                     className="submit-payment-btn stripe-btn"
-                    disabled={processingPayment}
+                    disabled={loading || processingPayment}
                 >
-                    {processingPayment ? (
+                    {loading || processingPayment ? (
                         <>
                             <div className="spinner-border spinner-border-sm" role="status"></div>
                             Processing with Stripe...
@@ -497,215 +469,232 @@ const BusinessPackagePayment = () => {
     const renderPaymentForm = () => {
         switch (selectedPaymentMethod) {
             case 'credit-card':
-                return <CreditCardForm onSubmit={processPayment} />;
+                return <CreditCardForm />;
             case 'paypal':
-                return <PayPalForm onSubmit={processPayment} />;
+                return <PayPalForm />;
             case 'stripe':
-                return <StripeForm onSubmit={processPayment} />;
+                return <StripeForm />;
             default:
                 return null;
         }
     };
 
-    const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
-    const goToHome = () => {
-        const storedUser = localStorage.getItem('user');
-        const user = storedUser ? JSON.parse(storedUser) : null;
-        const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
-        navigate(dashPath);
-    };
-    const goToEventManagement = () => navigate(`/eventManagement`);
-    const goToInvitations = () => navigate(`/invitationPage`);
-    const goToManage = () => navigate(`/manage_my_event`);
-    const goToGuestInsights = () => navigate("/guest_insights");
-    const goToAttendanceStats = () => navigate("/attendance_stats");
     const goToProfile = () => navigate("/Profile");
+    const goToDashboard = () => navigate('/businessdashboard');
 
     if (loading) {
         return (
-            <div className="loading-container">
-                <div className="loading-overlay">
-                    <div className="loading-spinner"></div>
-                    <p className="loading-text">Loading package details...</p>
+            <>
+                <LoginNav />
+                <div className="loading-container">
+                    <div className="loading-overlay">
+                        <div className="loading-spinner"></div>
+                        <p className="loading-text">Loading package details...</p>
+                    </div>
                 </div>
-            </div>
+                <Footer />
+            </>
         );
     }
 
     if (!selectedPackage) {
         return (
-            <div className="loading-container">
-                <div className="loading-overlay">
-                    <div className="error-message">
-                        <p>Package not found. Please select a valid package.</p>
-                        {error && <p className="text-danger">{error}</p>}
+            <>
+                <LoginNav />
+                <div className="loading-container">
+                    <div className="loading-overlay">
+                        <div className="error-message">
+                            <p>Package not found. Please select a valid package.</p>
+                            {error && <p className="text-danger">{error}</p>}
+                        </div>
+                        <button onClick={handleBack} className="btn-event btn-event-back">
+                            Back to Packages
+                        </button>
                     </div>
-                    <button onClick={handleBack} className="btn-event btn-event-back">
-                        Back to Packages
-                    </button>
                 </div>
-            </div>
+                <Footer />
+            </>
         );
     }
 
     return (
-
-        <div className="dashboard-container">
+        <>
+            <LoginNav />
+            
             {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
-                    <i
-                        className={`fas ${alert.type === "error"
-                            ? "fa-times-circle"
-                            : alert.type === "success"
-                                ? "fa-check-circle"
-                                : alert.type === "warning"
-                                    ? "fa-exclamation-triangle"
-                                    : "fa-info-circle"
-                            }`}
-                    ></i>
+                    <i className={`fas ${alert.type === "error"
+                        ? "fa-times-circle"
+                        : alert.type === "success"
+                            ? "fa-check-circle"
+                            : alert.type === "warning"
+                                ? "fa-exclamation-triangle"
+                                : "fa-info-circle"
+                        }`}></i>
                     <span>{alert.message}</span>
                 </div>
             )}
 
+            <div className="business-payment-page">
+                <div className="container">
+                    <button className="btn-event btn-event-back" onClick={handleBack}>
+                        <i className="bi bi-arrow-left"></i> Back
+                    </button>
 
-            {/* HEADER */}
-            <div className="dashboard-header">
-                <h1>Evenda</h1>
-                <div className="header-tabs">
-                    <button className={`status-btn status-${eventStatus.toLowerCase()}`}>{eventStatus}</button>
-                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
-                        <i className="bi bi-person-circle"></i>
-                        <span>{user?.name || "Guest"}</span>
-                        <i className="bi bi-chevron-bar-down"></i>
-                        {dropdownOpen && (
-                            <div className="dropdown-menu show">
-                                <button className="dropdown-item" onClick={goToProfile}><i className="bi bi-person"></i>Profile</button>
-                                <button className="dropdown-item" onClick={logOut}><i className="bi bi-box-arrow-right"></i>Logout</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* SIDEBAR */}
-            <div className="dashboard-sidebar">
-                <div className="sidebar-header"><h3>Event Management</h3></div>
-                <div className="sidebar-section">
-                    <h4>Event Planning</h4>
-                    <ul>
-                        <li onClick={goToHome}><i className="bi bi-house"></i>Dashboard</li>
-                        <li onClick={goToManage}><i className="bi bi-megaphone"></i>Publish Event</li>
-                        <li onClick={goToInvitations}><i className="bi bi-send"></i>Send Invitations</li>
-                        <li className="active" onClick={goToEventManagement}><i className="bi bi-list-check"></i>RSVP Responses</li>
-                    </ul>
-                </div>
-                <div className="sidebar-section">
-                    <h4>Event Analytics</h4>
-                    <ul>
-                        <li onClick={goToAttendanceStats}><i className="bi bi-graph-up"></i>Attendance Stats</li>
-                        <li onClick={goToGuestInsights}><i className="bi bi-people"></i>Guest Insights</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div className="packagePayment-content container">
-                <button className="btn-event btn-event-back" onClick={handleBack}>
-                    Back
-                </button>
-                <div className="header">
-                    <h2>Complete Your Business Package Payment</h2>
-                    <p>Secure and fast checkout powered by evenda</p>
-                    <hr />
-                </div>
-
-                {error && (
-                    <div className="alert alert-danger" role="alert">
-                        {error}
-                    </div>
-                )}
-
-                <div className="payymentForm">
-                    <div className="paymentInfo">
-                        <h3 className="packageName">{selectedPackage.name}</h3>
-                        <div className="package-features">
-                            <p><i className="bi bi-people"></i> Max Guests: {selectedPackage.max_guests}</p>
+                    <div className="payment-header">
+                        <h1>Complete Your Business Package Payment</h1>
+                        <p className="lead">Secure and fast checkout powered by Evendi</p>
+                        
+                        {/* Business Account Badge */}
+                        <div className="account-badge">
+                            <i className="bi bi-building"></i>
+                            <span>Business Account: {user?.business_name || user?.name}</span>
                         </div>
+                    </div>
 
-                        <div className="payment-breakdown">
-                            <div className="item">
-                                <p className="planCost">Plan Cost</p>
-                                <span className="costAmount">
-                                    R{Number(selectedPackage?.price || 0).toFixed(2)}
-                                </span>
-                            </div>
+                    {error && (
+                        <div className="alert alert-danger" role="alert">
+                            <i className="bi bi-exclamation-triangle"></i>
+                            {error}
+                        </div>
+                    )}
 
-                            {selectedPackage.price > 0 && (
-                                <>
-                                    <div className="item">
-                                        <p className="planCost">VAT (15%)</p>
-                                        <span className="costAmount">R{paymentDetails?.vatAmount.toFixed(2)}</span>
+                    <div className="payment-content">
+                        <div className="payment-left">
+                            {/* Package Summary Card */}
+                            <div className="package-summary-card">
+                                <h2>Package Summary</h2>
+                                <div className="package-info">
+                                    <h3 className="package-name">{selectedPackage.name}</h3>
+                                    <div className="package-limits">
+                                        <div className="limit-item">
+                                            <i className="bi bi-people"></i>
+                                            <span>Max Guests: <strong>{selectedPackage.max_guests}</strong></span>
+                                        </div>
+                                        <div className="limit-item">
+                                            <i className="bi bi-calendar-event"></i>
+                                            <span>Max Events: <strong>{selectedPackage.max_events || 'Unlimited'}</strong></span>
+                                        </div>
                                     </div>
-                                    <div className="item">
-                                        <p className="planCost">Service Fee</p>
-                                        <span className="costAmount">R{paymentDetails?.serviceFee.toFixed(2)}</span>
+
+                                    {selectedPackage.features && (
+                                        <div className="package-features-list">
+                                            <h4>Features Included:</h4>
+                                            <ul>
+                                                {selectedPackage.features.split(',').map((feature, index) => (
+                                                    <li key={index}>
+                                                        <i className="bi bi-check-circle-fill"></i>
+                                                        {feature.trim()}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="price-breakdown">
+                                    <h4>Price Breakdown</h4>
+                                    <div className="breakdown-item">
+                                        <span>Plan Cost:</span>
+                                        <span>R{paymentDetails?.basePrice.toFixed(2)}</span>
                                     </div>
-                                </>
-                            )}
+                                    {selectedPackage.price > 0 && (
+                                        <>
+                                            <div className="breakdown-item">
+                                                <span>VAT (15%):</span>
+                                                <span>R{paymentDetails?.vatAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="breakdown-item">
+                                                <span>Service Fee:</span>
+                                                <span>R{paymentDetails?.serviceFee.toFixed(2)}</span>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="breakdown-total">
+                                        <span>Total Amount:</span>
+                                        <span className="total-price">R{paymentDetails?.totalAmount.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                            <div className="totalAmount">
-                                <h3 className="totalTitle">Total</h3>
-                                <h3 className="totalPrice">R{paymentDetails?.totalAmount.toFixed(2)}</h3>
+                        <div className="payment-right">
+                            <h2>Choose Payment Method</h2>
+
+                            <div className="payment-methods">
+                                <button
+                                    className={`payment-method-card ${selectedPaymentMethod === 'credit-card' ? 'active' : ''}`}
+                                    onClick={() => handlePaymentMethodSelect('credit-card')}
+                                >
+                                    <div className="method-icon">
+                                        <i className="bi bi-credit-card-2-front"></i>
+                                    </div>
+                                    <div className="method-info">
+                                        <h4>Credit/Debit Card</h4>
+                                        <p>Visa, Mastercard, American Express</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    className={`payment-method-card ${selectedPaymentMethod === 'paypal' ? 'active' : ''}`}
+                                    onClick={() => handlePaymentMethodSelect('paypal')}
+                                >
+                                    <div className="method-icon">
+                                        <i className="bi bi-paypal"></i>
+                                    </div>
+                                    <div className="method-info">
+                                        <h4>PayPal</h4>
+                                        <p>Fast and secure online payments</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    className={`payment-method-card ${selectedPaymentMethod === 'stripe' ? 'active' : ''}`}
+                                    onClick={() => handlePaymentMethodSelect('stripe')}
+                                >
+                                    <div className="method-icon">
+                                        <i className="bi bi-shield-check"></i>
+                                    </div>
+                                    <div className="method-info">
+                                        <h4>Stripe</h4>
+                                        <p>Secure payment processing</p>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div className="secure-note">
+                                <i className="bi bi-lock"></i>
+                                <span>Your payment information is secure and encrypted</span>
                             </div>
                         </div>
                     </div>
 
-                    <h3 className="paymentTitle">Choose Payment Method</h3>
+                    {/* Payment Method Popup */}
+                    {showPaymentPopup && (
+                        <div className="payment-popup-overlay" onClick={closePopup}>
+                            <div className="payment-popup" onClick={(e) => e.stopPropagation()}>
+                                <button className="close-popup" onClick={closePopup}>×</button>
+                                <h3>Complete Your Payment</h3>
+                                
+                                <div className="popup-package-summary">
+                                    <p><strong>Package:</strong> {selectedPackage.name}</p>
+                                    <p><strong>Total Amount:</strong> R{paymentDetails?.totalAmount.toFixed(2)}</p>
+                                </div>
 
-                    <div className="payment-method">
-                        <button
-                            className={`paymentOption ${selectedPaymentMethod === 'credit-card' ? 'active' : ''}`}
-                            onClick={() => handlePaymentMethodSelect('credit-card')}
-                        >
-                            <i className="bi bi-credit-card-2-front"></i>
-                            <span>Credit/Debit Card</span>
-                            <small>Visa, Mastercard, Amex</small>
-                        </button>
-                        <button
-                            className={`paymentOption ${selectedPaymentMethod === 'paypal' ? 'active' : ''}`}
-                            onClick={() => handlePaymentMethodSelect('paypal')}
-                        >
-                            <i className="bi bi-paypal"></i>
-                            <span>PayPal</span>
-                            <small>Fast & secure</small>
-                        </button>
-                        <button
-                            className={`paymentOption ${selectedPaymentMethod === 'stripe' ? 'active' : ''}`}
-                            onClick={() => handlePaymentMethodSelect('stripe')}
-                        >
-                            <i className="bi bi-shield-check"></i>
-                            <span>Stripe</span>
-                            <small>Secure payments</small>
-                        </button>
-                    </div>
+                                {renderPaymentForm()}
+
+                                <p className="payment-disclaimer">
+                                    This is a secure transaction. You will not be charged until you confirm.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
-
-                {/* Payment Method Popup */}
-                {showPaymentPopup && (
-                    <div className="payment-popup-overlay">
-                        <div className="payment-popup">
-                            <button className="close-popup" onClick={closePopup}>×</button>
-                            <h3>Complete Payment</h3>
-                            <div className="payment-summary">
-                                <p><strong>Package:</strong> {selectedPackage.name}</p>
-                                <p><strong>Amount:</strong> R{paymentDetails?.totalAmount.toFixed(2)}</p>
-                            </div>
-                            {renderPaymentForm()}
-                        </div>
-                    </div>
-                )}
             </div>
-        </div>
+
+            <Footer />
+        </>
     );
 };
 

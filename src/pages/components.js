@@ -42,6 +42,7 @@ import TicketEvent_details from './ticketEvent_details';
 import Ticket_payment from './ticket_payment';
 import BusinessDashboard from '../pages/business_planner/businessDashboard';
 import TicketEventManage from './planner/event_ticket_manage';
+import CustomPlanRequestPage from '../pages/business_planner/CustomPlanRequestPage';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -221,6 +222,8 @@ export function SessionHandler() {
                 <Route path="/ticket_payment" element={<Ticket_payment />} />
                 <Route path="/businessdashboard" element={<BusinessDashboard />} />
                 <Route path="/event_ticket_manage" element={<TicketEventManage/>}/>
+                <Route path="/custom-plan-request" element={<CustomPlanRequestPage />} />
+
    
             </Routes>
 

@@ -1,55 +1,74 @@
 import React from "react";
-import "./selection.css";
 import { Link } from "react-router-dom";
-import { FiMail } from "react-icons/fi"; // email icon
+import { FiMail } from "react-icons/fi";
+import { DEPARTMENTS, URL_DEPT_MAP } from "./ticketConstants"; // Import
+import "./selection.css";
 
 function TicketSelection() {
+  // Build department links dynamically from constants
+  const departmentLinks = [
+    { 
+      dept: 'general', 
+      title: 'General Support', 
+      desc: 'Issues related to RSVP features & guest lists.',
+      icon: <FiMail className="ticket-icon" />
+    },
+    { 
+      dept: 'technical', 
+      title: 'Technical Issues', 
+      desc: 'System errors, login problems, loading issues.',
+      icon: <FiMail className="ticket-icon" />
+    },
+    { 
+      dept: 'accounts', 
+      title: 'Billing & Accounts', 
+      desc: 'Billing issues and account configuration queries.',
+      icon: <FiMail className="ticket-icon" />
+    },
+    { 
+      dept: 'event', 
+      title: 'Event Management Help', 
+      desc: 'Help with event setup & attendee limits.',
+      icon: <FiMail className="ticket-icon" />
+    },
+    { 
+      dept: 'sales', 
+      title: 'Sales', 
+      desc: 'Questions about pricing and packages.',
+      icon: <FiMail className="ticket-icon" />
+    },
+    { 
+      dept: 'rsvp', 
+      title: 'RSVP Issues', 
+      desc: 'Problems with RSVP forms and responses.',
+      icon: <FiMail className="ticket-icon" />
+    }
+  ];
+
   return (
     <div className="ticket-wrapper">
-
       <div className="ticket-container">
         <h2 className="ticket-title">Open New Support Request</h2>
         <p className="ticket-subtitle">
-         Having trouble with your RSVP event? Select the relevant support department below
+          Having trouble? Select the relevant support department below
         </p>
 
         <div className="ticket-list">
-
-          <Link to="/support-ticket?dept=general" className="ticket-item">
-            <FiMail className="ticket-icon" />
-            <div>
-              <h3>General Support</h3>
-              <p>Issues related to RSVP features & guest lists.</p>
-            </div>
-          </Link>
-
-          <Link to="/support-ticket?dept=technical" className="ticket-item">
-            <FiMail className="ticket-icon" />
-            <div>
-              <h3>Technical Issues</h3>
-              <p>System errors, login problems, loading issues.</p>
-            </div>
-          </Link>
-
-          <Link to="/support-ticket?dept=accounts" className="ticket-item">
-            <FiMail className="ticket-icon" />
-            <div>
-              <h3>Billing & Accounts</h3>
-              <p>Billing issues and account configuration queries.</p>
-            </div>
-          </Link>
-
-          <Link to="/support-ticket?dept=event" className="ticket-item">
-            <FiMail className="ticket-icon" />
-            <div>
-              <h3>Event Management Help</h3>
-              <p>Help with event setup & attendee limits.</p>
-            </div>
-          </Link>
-
+          {departmentLinks.map(item => (
+            <Link 
+              key={item.dept}
+              to={`/support-ticket?dept=${item.dept}`} 
+              className="ticket-item"
+            >
+              {item.icon}
+              <div>
+                <h3>{item.title}</h3>
+                <p>{item.desc}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
-
     </div>
   );
 }

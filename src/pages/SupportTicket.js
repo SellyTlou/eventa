@@ -1,21 +1,44 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { DEPARTMENTS, DEPARTMENT_OPTIONS, PRIORITIES, URL_DEPT_MAP } from "./ticketConstants";
 import "./ticketsupport.css";
 
 export default function SupportTicket() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Get department from URL and map to correct value
+  const queryParams = new URLSearchParams(location.search);
+  const urlDept = queryParams.get('dept') || 'general';
+  const initialDepartment = URL_DEPT_MAP[urlDept] || DEPARTMENTS.GENERAL;
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     subject: "",
-    department: "support",
-    priority: "medium",
+    department: initialDepartment, // Use mapped value
+    priority: PRIORITIES.MEDIUM,
     message: ""
   });
 
   const [attachment, setAttachment] = useState(null);
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: '' });
-  const navigate = useNavigate();
+  
+  // Get admin user from localStorage if available
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isLoggedIn = user && user.user_id;
+
+  // Pre-fill form if user is logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      setFormData(prev => ({
+        ...prev,
+        name: `${user.name || ''} ${user.lastname || ''}`.trim(),
+        email: user.email || ''
+      }));
+    }
+  }, []);
 
   const printAlert = (message, type = 'info') => {
     setAlert({ show: true, message, type });
@@ -25,28 +48,33 @@ export default function SupportTicket() {
   };
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const handleFileChange = (e) => {
-    setAttachment(e.target.files[0]);
-  };
+  const handleFileChange = (e) => setAttachment(e.target.files[0]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || `../php`;
+      // Use consistent API URL - from env or fallback
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+      
       const formDataToSend = new FormData();
       formDataToSend.append("function", "submitTicket");
       formDataToSend.append("name", formData.name);
       formDataToSend.append("email", formData.email);
       formDataToSend.append("subject", formData.subject);
-      formDataToSend.append("department", formData.department);
+      formDataToSend.append("department", formData.department); // Now consistent!
       formDataToSend.append("priority", formData.priority);
       formDataToSend.append("message", formData.message);
+      
+      // Include user ID if logged in
+      if (isLoggedIn) {
+        formDataToSend.append("user_id", user.user_id);
+      }
+      
       if (attachment) formDataToSend.append("attachment", attachment);
 
-      const response = await fetch(`${API_URL}/query.php`, {
+      const response = await fetch(`${API_BASE_URL}/query.php`, {
         method: "POST",
         body: formDataToSend
       });
@@ -55,17 +83,16 @@ export default function SupportTicket() {
 
       if (result.success) {
         printAlert("Support ticket submitted successfully!", 'success');
-        // Clear form
         setFormData({
-          name: "",
-          email: "",
+          name: isLoggedIn ? `${user.name} ${user.lastname}`.trim() : "",
+          email: isLoggedIn ? user.email : "",
           subject: "",
-          department: "support",
-          priority: "medium",
+          department: DEPARTMENTS.GENERAL,
+          priority: PRIORITIES.MEDIUM,
           message: ""
         });
         setAttachment(null);
-        // Navigate back to ticket selection after a short delay
+        
         setTimeout(() => {
           navigate('/ticket-selection');
         }, 2000);
@@ -82,7 +109,6 @@ export default function SupportTicket() {
 
   return (
     <div className="support-container">
-      {/* Custom Alert */}
       {alert.show && (
         <div className={`custom-alert ${alert.type}`}>
           <div className="alert-content">
@@ -97,50 +123,76 @@ export default function SupportTicket() {
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Name</label>
-          <input name="name" value={formData.name} onChange={handleChange} required />
+          <label>Name *</label>
+          <input 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            required 
+            disabled={isLoggedIn} // Auto-filled, can't edit
+          />
         </div>
 
         <div className="form-group">
-          <label>Email Address</label>
-          <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+          <label>Email Address *</label>
+          <input 
+            type="email" 
+            name="email" 
+            value={formData.email} 
+            onChange={handleChange} 
+            required 
+            disabled={isLoggedIn} // Auto-filled, can't edit
+          />
         </div>
 
         <div className="form-group">
-          <label>Subject</label>
+          <label>Subject *</label>
           <input name="subject" value={formData.subject} onChange={handleChange} required />
         </div>
 
         <div className="row">
           <div className="form-group half">
-            <label>Department</label>
-            <select name="department" value={formData.department} onChange={handleChange}>
-              <option value="support">Support</option>
-              <option value="technical">Technical</option>
-              <option value="billing">Billing</option>
+            <label>Department *</label>
+            <select 
+              name="department" 
+              value={formData.department} 
+              onChange={handleChange}
+              required
+            >
+              {DEPARTMENT_OPTIONS.map(dept => (
+                <option key={dept.value} value={dept.value}>
+                  {dept.label}
+                </option>
+              ))}
             </select>
           </div>
 
           <div className="form-group half">
-            <label>Priority</label>
-            <select name="priority" value={formData.priority} onChange={handleChange}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+            <label>Priority *</label>
+            <select name="priority" value={formData.priority} onChange={handleChange} required>
+              <option value={PRIORITIES.LOW}>Low</option>
+              <option value={PRIORITIES.MEDIUM}>Medium</option>
+              <option value={PRIORITIES.HIGH}>High</option>
             </select>
           </div>
         </div>
 
         <div className="form-group">
-          <label>Message</label>
-          <textarea name="message" rows="6" value={formData.message} onChange={handleChange} required></textarea>
+          <label>Message *</label>
+          <textarea 
+            name="message" 
+            rows="6" 
+            value={formData.message} 
+            onChange={handleChange} 
+            required
+            placeholder="Please describe your issue in detail..."
+          ></textarea>
         </div>
 
-        {/* New attachment input */}
         <div className="form-group">
           <label>Attachment (optional)</label>
           <input type="file" onChange={handleFileChange} />
-          {attachment && <p>Selected file: {attachment.name}</p>}
+          {attachment && <p className="file-name">Selected: {attachment.name}</p>}
         </div>
 
         <button type="submit" className="btn" disabled={loading}>

@@ -1135,6 +1135,7 @@ if ($fun === "getusercount") {
 
     exit;
 }
+
 if ($fun === "getEventTickets") {
     $event_id = $_POST['event_id'] ?? '';
     
@@ -5064,18 +5065,16 @@ function sendTicketResolvedEmail($email, $name, $subject)
 }
 
 if ($fun === "submitTicket") {
-    // ADD THIS LINE:
     error_log("=== TICKET SUBMISSION STARTED ===");
-
+    
     $name = $_POST['name'] ?? '';
     $email = $_POST['email'] ?? '';
     $subject = $_POST['subject'] ?? '';
     $department = $_POST['department'] ?? '';
     $priority = $_POST['priority'] ?? 'medium';
     $message = $_POST['message'] ?? '';
-    $user_id = $_POST['user_id'] ?? null; // Optional, for logged-in users
+    $user_id = $_POST['user_id'] ?? null;
 
-    // ADD THESE LINES to see what data is received:
     error_log("Name: " . $name);
     error_log("Email: " . $email);
     error_log("Subject: " . $subject);
@@ -5088,7 +5087,6 @@ if ($fun === "submitTicket") {
     }
 
     try {
-        // ADD THIS LINE:
         error_log("Starting database operations...");
 
         $attachment_path = null;
@@ -5111,41 +5109,49 @@ if ($fun === "submitTicket") {
             error_log("No attachment or upload error");
         }
 
-        // ADD THIS before the INSERT:
         error_log("Executing INSERT into support_tickets...");
 
-        $stmt = $pdo->prepare("INSERT INTO support_tickets (user_id, name, email, subject, department, priority, message, attachment_path, status, created_at)
-                               VALUES (:user_id, :name, :email, :subject, :department, :priority, :message, :attachment_path, 'Open', NOW())");
+        $stmt = $pdo->prepare("INSERT INTO support_tickets 
+            (user_id, name, email, subject, department, priority, message, attachment_path, status, created_at)
+            VALUES (:user_id, :name, :email, :subject, :department, :priority, :message, :attachment_path, 'Open', NOW())");
+        
         $stmt->execute([
             ':user_id' => $user_id,
             ':name' => $name,
             ':email' => $email,
             ':subject' => $subject,
-            ':department' => $department,
+            ':department' => $department, // ✅ Now stores consistent department values
             ':priority' => $priority,
             ':message' => $message,
             ':attachment_path' => $attachment_path
         ]);
 
-        // ADD THIS:
         error_log("=== TICKET SUBMISSION SUCCESSFUL ===");
 
         echo json_encode(["success" => true, "message" => "Ticket submitted successfully"]);
 
     } catch (Exception $e) {
-        // ADD THIS to see the actual error:
         error_log("ERROR in submitTicket: " . $e->getMessage());
         error_log("SQL State: " . $e->getCode());
-
         echo json_encode(["success" => false, "message" => "Error submitting ticket: " . $e->getMessage()]);
     }
     exit;
 }
 
 if ($fun === "getTickets") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
     $status_filter = $_POST['status'] ?? 'All';
     $department_filter = $_POST['department'] ?? 'All';
     $search = $_POST['search'] ?? '';
+
+    // ✅ CRITICAL: Verify admin access
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
 
     try {
         $query = "SELECT * FROM support_tickets WHERE 1=1";
@@ -5155,16 +5161,25 @@ if ($fun === "getTickets") {
             $query .= " AND status = :status";
             $params[':status'] = $status_filter;
         }
+        
         if ($department_filter !== 'All') {
             $query .= " AND department = :department";
             $params[':department'] = $department_filter;
         }
-        if ($search) {
-            $query .= " AND subject LIKE :search";
+        
+        if (!empty($search)) {
+            $query .= " AND (subject LIKE :search OR name LIKE :search OR email LIKE :search)";
             $params[':search'] = '%' . $search . '%';
         }
 
-        $query .= " ORDER BY created_at DESC";
+        $query .= " ORDER BY 
+            CASE status
+                WHEN 'Open' THEN 1
+                WHEN 'In Progress' THEN 2
+                WHEN 'Resolved' THEN 3
+                ELSE 4
+            END,
+            created_at DESC";
 
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
@@ -5172,14 +5187,25 @@ if ($fun === "getTickets") {
 
         echo json_encode(["success" => true, "tickets" => $tickets]);
     } catch (Exception $e) {
-        echo json_encode(["success" => false, "message" => "Error fetching tickets: " . $e->getMessage()]);
+        error_log("Error fetching tickets: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Error fetching tickets"]);
     }
     exit;
 }
 
 if ($fun === "updateTicketStatus") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
     $ticket_id = $_POST['ticket_id'] ?? '';
     $status = $_POST['status'] ?? '';
+
+    // ✅ CRITICAL: Verify admin access
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Unauthorized: Admin access required"
+        ]);
+        exit;
+    }
 
     if (!$ticket_id || !$status) {
         echo json_encode(["success" => false, "message" => "Missing ticket_id or status"]);
@@ -5187,12 +5213,15 @@ if ($fun === "updateTicketStatus") {
     }
 
     try {
-        // First, get the ticket details for email
+        $pdo->beginTransaction();
+
+        // First, get the ticket details for email and logging
         $stmt = $pdo->prepare("SELECT name, email, subject FROM support_tickets WHERE id = :ticket_id");
         $stmt->execute([':ticket_id' => $ticket_id]);
         $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$ticket) {
+            $pdo->rollBack();
             echo json_encode(["success" => false, "message" => "Ticket not found"]);
             exit;
         }
@@ -5201,14 +5230,26 @@ if ($fun === "updateTicketStatus") {
         $stmt = $pdo->prepare("UPDATE support_tickets SET status = :status WHERE id = :ticket_id");
         $stmt->execute([':status' => $status, ':ticket_id' => $ticket_id]);
 
-        // If status is "Resolved", send email notification
+        // ✅ Log admin action
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([
+            $adminUserId,
+            'Ticket Status Updated',
+            "Ticket #{$ticket_id} status changed to {$status} for {$ticket['email']}"
+        ]);
+
+        $pdo->commit();
+
+        // ✅ If status is "Resolved", send email notification
         if ($status === "Resolved") {
             sendTicketResolvedEmail($ticket['email'], $ticket['name'], $ticket['subject']);
         }
 
         echo json_encode(["success" => true, "message" => "Ticket status updated"]);
     } catch (Exception $e) {
-        echo json_encode(["success" => false, "message" => "Error updating ticket: " . $e->getMessage()]);
+        $pdo->rollBack();
+        error_log("Error updating ticket: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Error updating ticket"]);
     }
     exit;
 }
@@ -5790,10 +5831,450 @@ if ($fun === "getBookingDetails") {
             "count" => count($bookingDetails)
         ]);
     } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
+        echo json_encode(["success" => false,
             "message" => "Database error: " . $e->getMessage(),
         ]);
+    }
+    exit;
+}
+
+if ($fun === "submitCustomPlanRequest") {
+    // Verify user is logged in
+    $user_id = $_POST['user_id'] ?? '';
+    
+    if (empty($user_id)) {
+        echo json_encode(["success" => false, "message" => "User not authenticated"]);
+        exit;
+    }
+    
+    // Get form data - INCLUDING THE NEW FIELDS
+    $business_name = $_POST['business_name'] ?? '';
+    $contact_name = $_POST['contact_name'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $phone = $_POST['phone'] ?? '';
+    $event_type = $_POST['event_type'] ?? '';
+    $event_name = $_POST['event_name'] ?? '';
+    $event_description = $_POST['event_description'] ?? '';
+    
+    // NEW FIELDS - What the business WANTS
+    $requested_guests = $_POST['requested_guests'] ?? 0;
+    $requested_events = $_POST['requested_events'] ?? 0;
+    $proposed_price = $_POST['proposed_price'] ?? 0;
+    $desired_features = $_POST['desired_features'] ?? '';
+    
+    // Original fields (keeping for backward compatibility)
+    $expected_attendees = $_POST['expected_attendees'] ?? 0; // We'll still store this
+    $event_date = $_POST['event_date'] ?? null;
+    $special_requirements = $_POST['special_requirements'] ?? '';
+    $additional_notes = $_POST['additional_notes'] ?? '';
+    
+    // Validate required fields - including new ones
+    if (empty($event_name) || empty($event_type) || empty($requested_guests) || empty($requested_events) || empty($proposed_price)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields. Please fill in event name, type, requested guests, events, and proposed price."]);
+        exit;
+    }
+    
+    try {
+        // Verify user exists and is a business account
+        $userStmt = $pdo->prepare("SELECT account_type FROM users WHERE user_id = ?");
+        $userStmt->execute([$user_id]);
+        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            echo json_encode(["success" => false, "message" => "User not found"]);
+            exit;
+        }
+        
+        if ($user['account_type'] !== 'business') {
+            echo json_encode(["success" => false, "message" => "Custom plans are only available for business accounts"]);
+            exit;
+        }
+        
+        // Generate unique request ID
+        $request_id = "CUSTOM-" . strtoupper(substr(uniqid(), -6)) . "-" . time();
+        
+        // Insert into database with ALL fields
+        $stmt = $pdo->prepare("
+            INSERT INTO custom_plan_requests (
+                request_id, user_id, business_name, contact_name, email, phone,
+                event_type, event_name, event_description, 
+                requested_guests, requested_events, proposed_price, desired_features,
+                expected_attendees, event_date, special_requirements, additional_notes, 
+                status, created_at
+            ) VALUES (
+                :request_id, :user_id, :business_name, :contact_name, :email, :phone,
+                :event_type, :event_name, :event_description,
+                :requested_guests, :requested_events, :proposed_price, :desired_features,
+                :expected_attendees, :event_date, :special_requirements, :additional_notes,
+                'pending', NOW()
+            )
+        ");
+        
+        $stmt->execute([
+            ':request_id' => $request_id,
+            ':user_id' => $user_id,
+            ':business_name' => $business_name,
+            ':contact_name' => $contact_name,
+            ':email' => $email,
+            ':phone' => $phone,
+            ':event_type' => $event_type,
+            ':event_name' => $event_name,
+            ':event_description' => $event_description,
+            ':requested_guests' => $requested_guests,
+            ':requested_events' => $requested_events,
+            ':proposed_price' => $proposed_price,
+            ':desired_features' => $desired_features,
+            ':expected_attendees' => $requested_guests, // Using requested_guests for backward compatibility
+            ':event_date' => $event_date,
+            ':special_requirements' => $special_requirements,
+            ':additional_notes' => $additional_notes
+        ]);
+        
+        // Log the activity with details of what they requested
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([
+            $user_id,
+            'Custom Plan Requested',
+            "Custom plan request submitted for event: {$event_name} - {$requested_guests} guests, {$requested_events} events, proposed R{$proposed_price}"
+        ]);
+        
+        // Optional: Send email notification to admin
+        // You can implement email sending here
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "Your custom plan request has been submitted successfully! Our team will review your requirements and contact you within 24-48 hours.",
+            "request_id" => $request_id
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Custom plan request error: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "submitCustomPlanRequest") {
+    // Verify user is logged in
+    $user_id = $_POST['user_id'] ?? '';
+    
+    if (empty($user_id)) {
+        echo json_encode(["success" => false, "message" => "User not authenticated"]);
+        exit;
+    }
+    
+    // Get form data
+    $business_name = $_POST['business_name'] ?? '';
+    $contact_name = $_POST['contact_name'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $phone = $_POST['phone'] ?? '';
+    $event_type = $_POST['event_type'] ?? '';
+    $event_name = $_POST['event_name'] ?? '';
+    $event_description = $_POST['event_description'] ?? '';
+    $expected_attendees = $_POST['expected_attendees'] ?? 0;
+    $event_date = $_POST['event_date'] ?? null;
+    $special_requirements = $_POST['special_requirements'] ?? '';
+    $additional_notes = $_POST['additional_notes'] ?? '';
+    
+    // Validate required fields
+    if (empty($event_name) || empty($event_type) || empty($expected_attendees)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+    
+    try {
+        // Verify user exists and is a business account
+        $userStmt = $pdo->prepare("SELECT account_type FROM users WHERE user_id = ?");
+        $userStmt->execute([$user_id]);
+        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            echo json_encode(["success" => false, "message" => "User not found"]);
+            exit;
+        }
+        
+        if ($user['account_type'] !== 'business') {
+            echo json_encode(["success" => false, "message" => "Custom plans are only available for business accounts"]);
+            exit;
+        }
+        
+        // Generate unique request ID
+        $request_id = "CUSTOM-" . strtoupper(substr(uniqid(), -6)) . "-" . time();
+        
+        // Insert into database
+        $stmt = $pdo->prepare("
+            INSERT INTO custom_plan_requests (
+                request_id, user_id, business_name, contact_name, email, phone,
+                event_type, event_name, event_description, expected_attendees,
+                event_date, special_requirements, additional_notes, status, created_at
+            ) VALUES (
+                :request_id, :user_id, :business_name, :contact_name, :email, :phone,
+                :event_type, :event_name, :event_description, :expected_attendees,
+                :event_date, :special_requirements, :additional_notes, 'pending', NOW()
+            )
+        ");
+        
+        $stmt->execute([
+            ':request_id' => $request_id,
+            ':user_id' => $user_id,
+            ':business_name' => $business_name,
+            ':contact_name' => $contact_name,
+            ':email' => $email,
+            ':phone' => $phone,
+            ':event_type' => $event_type,
+            ':event_name' => $event_name,
+            ':event_description' => $event_description,
+            ':expected_attendees' => $expected_attendees,
+            ':event_date' => $event_date,
+            ':special_requirements' => $special_requirements,
+            ':additional_notes' => $additional_notes
+        ]);
+        
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([
+            $user_id,
+            'Custom Plan Requested',
+            "Custom plan request submitted for event: {$event_name}"
+        ]);
+        
+        // Send email notification to admin (optional)
+        // You can implement email sending here
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "Custom plan request submitted successfully",
+            "request_id" => $request_id
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Custom plan request error: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "getCustomPlanRequests") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+    
+    $status_filter = $_POST['status'] ?? 'pending';
+    
+    try {
+        $query = "SELECT cpr.*, u.name as user_firstname, u.lastname as user_lastname, u.email as user_email 
+                  FROM custom_plan_requests cpr
+                  JOIN users u ON cpr.user_id = u.user_id";
+        
+        if ($status_filter !== 'all') {
+            $query .= " WHERE cpr.status = :status";
+        }
+        
+        $query .= " ORDER BY cpr.created_at DESC";
+        
+        $stmt = $pdo->prepare($query);
+        
+        if ($status_filter !== 'all') {
+            $stmt->execute([':status' => $status_filter]);
+        } else {
+            $stmt->execute();
+        }
+        
+        $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode(["success" => true, "requests" => $requests]);
+        
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "updateCustomPlanRequest") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $request_id = $_POST['request_id'] ?? '';
+    $status = $_POST['status'] ?? '';
+    $admin_notes = $_POST['admin_notes'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+    
+    if (empty($request_id) || empty($status)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE custom_plan_requests 
+            SET status = :status, admin_notes = :admin_notes, reviewed_at = NOW(), reviewed_by = :reviewed_by
+            WHERE request_id = :request_id
+        ");
+        
+        $stmt->execute([
+            ':status' => $status,
+            ':admin_notes' => $admin_notes,
+            ':reviewed_by' => $adminUserId,
+            ':request_id' => $request_id
+        ]);
+        
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([
+            $adminUserId,
+            'Custom Plan Updated',
+            "Custom plan request {$request_id} status changed to {$status}"
+        ]);
+        
+        echo json_encode(["success" => true, "message" => "Request updated successfully"]);
+        
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+// Add this near your other business package functions
+if ($fun === "assignCustomBusinessPackage") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $user_id = $_POST['user_id'] ?? '';
+    $request_id = $_POST['request_id'] ?? '';
+    $base_package_id = $_POST['base_package_id'] ?? null;
+    $custom_limits = $_POST['custom_limits'] ?? '';
+    $custom_price = $_POST['custom_price'] ?? 0;
+    $admin_notes = $_POST['admin_notes'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+    
+    if (empty($user_id) || empty($custom_limits)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // Parse custom limits
+        $limits = json_decode($custom_limits, true);
+        $event_limit = $limits['events'] ?? 999999;
+        
+        // First, expire any existing active package
+        $stmt = $pdo->prepare("UPDATE user_business_packages SET status = 'expired' 
+                               WHERE user_id = :user_id AND status = 'active'");
+        $stmt->execute([':user_id' => $user_id]);
+        
+        // Insert new custom package
+        $expiry_date = date('Y-m-d H:i:s', strtotime('+1 month'));
+        
+        $stmt = $pdo->prepare("
+            INSERT INTO user_business_packages 
+            (user_id, business_package_id, is_custom, custom_limits, base_package_id, 
+             custom_price, approved_request_id, event_limit, event_used, status, expiry_date) 
+            VALUES 
+            (:user_id, 4, 1, :custom_limits, :base_package_id, 
+             :custom_price, :request_id, :event_limit, 0, 'active', :expiry_date)
+        ");
+        
+        $stmt->execute([
+            ':user_id' => $user_id,
+            ':custom_limits' => $custom_limits,
+            ':base_package_id' => $base_package_id,
+            ':custom_price' => $custom_price,
+            ':request_id' => $request_id,
+            ':event_limit' => $event_limit,
+            ':expiry_date' => $expiry_date
+        ]);
+        
+        // Update the request status
+        $updateStmt = $pdo->prepare("
+            UPDATE custom_plan_requests 
+            SET status = 'approved', admin_notes = CONCAT(admin_notes, '\n', :admin_notes), 
+                reviewed_at = NOW(), reviewed_by = :reviewed_by 
+            WHERE request_id = :request_id
+        ");
+        $updateStmt->execute([
+            ':admin_notes' => "Approved with custom limits: " . $custom_limits,
+            ':reviewed_by' => $adminUserId,
+            ':request_id' => $request_id
+        ]);
+        
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([
+            $adminUserId,
+            'Custom Plan Assigned',
+            "Assigned custom plan to user {$user_id} with limits: {$custom_limits}"
+        ]);
+        
+        $pdo->commit();
+        
+        echo json_encode(["success" => true, "message" => "Custom plan assigned successfully"]);
+        
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+// Update getUserBusinessPackage to handle custom limits
+if ($fun === "getUserBusinessPackage") {
+    $user_id = $_POST['user_id'] ?? '';
+    
+    if (empty($user_id)) {
+        echo json_encode(["success" => false, "message" => "User ID required"]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT ubp.*, 
+                   bp.package_type, 
+                   bp.name, 
+                   bp.max_guests, 
+                   bp.max_events, 
+                   bp.price,
+                   cpr.event_name as request_event_name,
+                   cpr.expected_attendees as requested_guests
+            FROM user_business_packages ubp 
+            LEFT JOIN business_packages bp ON ubp.business_package_id = bp.id 
+            LEFT JOIN custom_plan_requests cpr ON ubp.approved_request_id = cpr.request_id
+            WHERE ubp.user_id = :user_id AND ubp.status = 'active' AND ubp.expiry_date > NOW()
+            ORDER BY ubp.created_at DESC LIMIT 1
+        ");
+        $stmt->execute([':user_id' => $user_id]);
+        
+        if ($stmt->rowCount() > 0) {
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // If it's a custom plan, parse the custom_limits JSON
+            if ($package['is_custom'] && $package['custom_limits']) {
+                $customLimits = json_decode($package['custom_limits'], true);
+                $package['effective_guests'] = $customLimits['guests'] ?? $package['max_guests'];
+                $package['effective_events'] = $customLimits['events'] ?? $package['event_limit'];
+                $package['effective_features'] = $customLimits['features'] ?? [];
+                $package['effective_price'] = $package['custom_price'] ?? $package['price'];
+            } else {
+                $package['effective_guests'] = $package['max_guests'];
+                $package['effective_events'] = $package['event_limit'];
+                $package['effective_features'] = $package['features'] ? explode(',', $package['features']) : [];
+                $package['effective_price'] = $package['price'];
+            }
+            
+            echo json_encode(["success" => true, "userBusinessPackage" => $package]);
+        } else {
+            echo json_encode(["success" => false, "message" => "No active business package found"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
 }

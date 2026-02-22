@@ -5,6 +5,7 @@ import "../../index.css";
 import "../../alert.css"
 import activityQueue from "../activityQueue";
 import AdminTicket from "../AdminTicket";
+import CustomPlanRequestsTab from './CustomPlanRequestsTab';
 
 // ==================== PRODUCTION-READY TREE SET ====================
 class ActivityTreeSet {
@@ -159,7 +160,7 @@ class ActivityTreeSet {
 }
 
 // ==================== FIXED LINKED LIST ====================
-class ListNode {
+    class ListNode {
     constructor(data) {
         this.data = data;
         this.next = null;
@@ -372,6 +373,15 @@ function AdminDashboard() {
         password: ''
     });
 
+    // ==================== NEW STATES FOR CUSTOM PLAN REQUESTS ====================
+    const [customPlanRequests, setCustomPlanRequests] = useState([]);
+    const [requestsLoading, setRequestsLoading] = useState(false);
+    const [requestStatusFilter, setRequestStatusFilter] = useState('pending');
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [showRequestModal, setShowRequestModal] = useState(false);
+    const [requestStatus, setRequestStatus] = useState('pending');
+    const [adminNotes, setAdminNotes] = useState('');
+
     // ==================== PRODUCTION TREE SET INTEGRATION ====================
     const [activityTreeSet, setActivityTreeSet] = useState(new ActivityTreeSet());
     const [filteredActivities, setFilteredActivities] = useState([]);
@@ -455,6 +465,68 @@ function AdminDashboard() {
         } else {
             const filtered = activityTreeSet.getActivitiesByAction(actionType);
             setFilteredActivities(filtered);
+        }
+    };
+
+    // ==================== CUSTOM PLAN REQUESTS FUNCTIONS ====================
+    const fetchCustomPlanRequests = async (status = 'pending') => {
+        if (!adminUserId) return;
+        
+        setRequestsLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getCustomPlanRequests');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('status', status);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                setCustomPlanRequests(data.requests);
+            } else {
+                console.error('Error fetching custom plan requests:', data.message);
+            }
+        } catch (error) {
+            console.error('Error fetching custom plan requests:', error);
+        } finally {
+            setRequestsLoading(false);
+        }
+    };
+
+    const updateRequestStatus = async () => {
+        if (!selectedRequest) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('function', 'updateCustomPlanRequest');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('request_id', selectedRequest.request_id);
+            formData.append('status', requestStatus);
+            formData.append('admin_notes', adminNotes);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                printAlert('Request updated successfully', 'success');
+                setShowRequestModal(false);
+                fetchCustomPlanRequests(requestStatusFilter);
+                logActivity('Custom Plan Updated', 
+                    `Updated custom plan request ${selectedRequest.request_id} to status: ${requestStatus}`
+                );
+            } else {
+                printAlert('Error updating request: ' + data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating request:', error);
+            printAlert('Error updating request', 'error');
         }
     };
 
@@ -545,10 +617,13 @@ function AdminDashboard() {
             case "users":
                 fetchUsersData();
                 break;
+            case "custom-plans":
+                fetchCustomPlanRequests(requestStatusFilter);
+                break;
             default:
                 break;
         }
-    }, [refreshTrigger, activeTab]);
+    }, [refreshTrigger, activeTab, requestStatusFilter]);
 
     // Reset forms when modals open
     useEffect(() => {
@@ -638,6 +713,7 @@ function AdminDashboard() {
         fetchPricingPlans();
         fetchInvitationAnalytics();
         fetchRevenueData();
+        fetchCustomPlanRequests('pending');
 
         // Log admin dashboard access
         logActivity('Admin Dashboard Accessed', 'Administrator accessed the system dashboard');
@@ -705,6 +781,9 @@ function AdminDashboard() {
                     case "profile":
                         await fetchAdminProfile();
                         break;
+                    case "custom-plans":
+                        await fetchCustomPlanRequests(requestStatusFilter);
+                        break;
                     default:
                         break;
                 }
@@ -717,7 +796,7 @@ function AdminDashboard() {
         };
 
         fetchData();
-    }, [activeTab, adminUserId, isInitialized]);
+    }, [activeTab, adminUserId, isInitialized, requestStatusFilter]);
 
     // MODIFIED: fetchDashboardData without queue
     const fetchDashboardData = async () => {
@@ -1169,6 +1248,18 @@ function AdminDashboard() {
         }
     };
 
+    // Helper function to format dates
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     // Profile dropdown component
     const ProfileDropdown = () => {
         if (!adminProfile) return null;
@@ -1388,6 +1479,26 @@ function AdminDashboard() {
                 />;
             case "tickets":
                 return <AdminTicket printAlert={printAlert} />;
+            case "custom-plans":
+                return (
+                    <CustomPlanRequestsTab
+                        requests={customPlanRequests}
+                        loading={requestsLoading}
+                        statusFilter={requestStatusFilter}
+                        onStatusFilterChange={(status) => {
+                            setRequestStatusFilter(status);
+                            fetchCustomPlanRequests(status);
+                        }}
+                        onViewDetails={(request) => {
+                            setSelectedRequest(request);
+                            setRequestStatus(request.status);
+                            setAdminNotes(request.admin_notes || '');
+                            setShowRequestModal(true);
+                        }}
+                        onRefresh={() => fetchCustomPlanRequests(requestStatusFilter)}
+                        formatDate={formatDate}
+                    />
+                );
             case "dashboard":
             default:
                 return <>
@@ -1556,6 +1667,25 @@ function AdminDashboard() {
                                         <span>Support Tickets</span>
                                     </div>
                                 </li>
+
+                                {/* NEW: Custom Plan Requests Tab */}
+                                <li
+                                    className={`admin-dashboard-nav-item ${activeTab === "custom-plans" ? "active" : ""}`}
+                                    onClick={() => {
+                                        setActiveTab("custom-plans");
+                                        fetchCustomPlanRequests('pending');
+                                    }}
+                                >
+                                    <div className="nav-item-content">
+                                        <i className="bi bi-file-text"></i>
+                                        <span>Custom Plan Requests</span>
+                                        {customPlanRequests.filter(r => r.status === 'pending').length > 0 && (
+                                            <span className="badge bg-danger ms-2">
+                                                {customPlanRequests.filter(r => r.status === 'pending').length}
+                                            </span>
+                                        )}
+                                    </div>
+                                </li>
                             </ul>
                         </nav>
                     </aside>
@@ -1569,6 +1699,7 @@ function AdminDashboard() {
                                 {activeTab === "pricing" && "Pricing Management"}
                                 {activeTab === "users" && "User Administration"}
                                 {activeTab === "tickets" && "Support Tickets"}
+                                {activeTab === "custom-plans" && "Custom Plan Requests"}
                             </h1>
                             <div className="admin-header-actions">
                                 <div className="profile-section">
@@ -1949,6 +2080,177 @@ function AdminDashboard() {
                 </div>
             )}
 
+            {/* Custom Plan Request Details Modal */}
+            {showRequestModal && selectedRequest && (
+                <div className="modal-overlay-new" onClick={() => setShowRequestModal(false)}>
+                    <div className="modal-content-new request-details-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-file-text"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Custom Plan Request Details</h2>
+                                    <p>Request ID: {selectedRequest.request_id}</p>
+                                </div>
+                            </div>
+                            <button
+                                className="close-btn-new"
+                                onClick={() => setShowRequestModal(false)}
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="request-details-grid">
+                                {/* Business Information Section */}
+                                <div className="details-section">
+                                    <h3 className="section-title">
+                                        <i className="bi bi-building"></i> Business Information
+                                    </h3>
+                                    <div className="details-row">
+                                        <div className="detail-item">
+                                            <label>Business Name:</label>
+                                            <span>{selectedRequest.business_name}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Contact Person:</label>
+                                            <span>{selectedRequest.contact_name}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Email:</label>
+                                            <span>{selectedRequest.email}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Phone:</label>
+                                            <span>{selectedRequest.phone}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Event Details Section */}
+                                <div className="details-section">
+                                    <h3 className="section-title">
+                                        <i className="bi bi-calendar-event"></i> Event Details
+                                    </h3>
+                                    <div className="details-row">
+                                        <div className="detail-item">
+                                            <label>Event Type:</label>
+                                            <span>{selectedRequest.event_type}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Event Name:</label>
+                                            <span>{selectedRequest.event_name}</span>
+                                        </div>
+                                        <div className="detail-item full-width">
+                                            <label>Event Description:</label>
+                                            <p className="event-description">{selectedRequest.event_description || 'No description provided'}</p>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Expected Attendees:</label>
+                                            <span className="attendees-number">{selectedRequest.expected_attendees}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Event Date:</label>
+                                            <span>{selectedRequest.event_date ? new Date(selectedRequest.event_date).toLocaleDateString() : 'Not specified'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Special Requirements */}
+                                {(selectedRequest.special_requirements || selectedRequest.additional_notes) && (
+                                    <div className="details-section">
+                                        <h3 className="section-title">
+                                            <i className="bi bi-pencil"></i> Additional Information
+                                        </h3>
+                                        <div className="details-row">
+                                            {selectedRequest.special_requirements && (
+                                                <div className="detail-item full-width">
+                                                    <label>Special Requirements:</label>
+                                                    <p>{selectedRequest.special_requirements}</p>
+                                                </div>
+                                            )}
+                                            {selectedRequest.additional_notes && (
+                                                <div className="detail-item full-width">
+                                                    <label>Additional Notes:</label>
+                                                    <p>{selectedRequest.additional_notes}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Status Update Section */}
+                                <div className="details-section">
+                                    <h3 className="section-title">
+                                        <i className="bi bi-gear"></i> Update Status
+                                    </h3>
+                                    <div className="status-update-form">
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Request Status</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={requestStatus}
+                                                    onChange={(e) => setRequestStatus(e.target.value)}
+                                                >
+                                                    <option value="pending">Pending</option>
+                                                    <option value="reviewed">Reviewed</option>
+                                                    <option value="approved">Approved</option>
+                                                    <option value="rejected">Rejected</option>
+                                                    <option value="completed">Completed</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="form-row">
+                                            <div className="form-group full-width">
+                                                <label>Admin Notes</label>
+                                                <textarea
+                                                    className="form-textarea"
+                                                    rows="4"
+                                                    value={adminNotes}
+                                                    onChange={(e) => setAdminNotes(e.target.value)}
+                                                    placeholder="Add notes about this request..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="request-metadata">
+                                            <small>
+                                                <strong>Submitted:</strong> {formatDate(selectedRequest.created_at)}
+                                            </small>
+                                            {selectedRequest.reviewed_at && (
+                                                <small>
+                                                    <strong>Last Updated:</strong> {formatDate(selectedRequest.reviewed_at)}
+                                                </small>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions-new">
+                                <button
+                                    className="action-btn-new primary"
+                                    onClick={updateRequestStatus}
+                                >
+                                    <i className="bi bi-check-circle"></i>
+                                    Update Request
+                                </button>
+                                <button
+                                    className="action-btn-new secondary"
+                                    onClick={() => setShowRequestModal(false)}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

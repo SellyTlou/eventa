@@ -1307,6 +1307,14 @@ const BusinessDashboard = () => {
                                 <button className="cta-button" onClick={createEvent}>
                                     <i className="bi bi-plus-circle"></i> Create Event
                                 </button>
+                                // In your BusinessDashboard component, add:
+<button
+    className="btn btn-primary"
+    onClick={() => navigate('/custom-plan-request')}
+>
+    <i className="bi bi-file-text"></i>
+    Request Custom Plan
+</button>
                             </div>
                         )}
                     </div>

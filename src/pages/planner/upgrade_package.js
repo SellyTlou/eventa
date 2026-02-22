@@ -6,7 +6,8 @@ import "../../App.css";
 import { logOut, LoginNav } from "../components";
 
 const UpgradePackage = () => {
-    const [packages, setPackages] = useState([]);
+    const [personalPackages, setPersonalPackages] = useState([]);
+    const [businessPackages, setBusinessPackages] = useState([]);
     const [currentPackage, setCurrentPackage] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedPackage, setSelectedPackage] = useState(null);
@@ -14,7 +15,8 @@ const UpgradePackage = () => {
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
-    const [allFeatures, setAllFeatures] = useState([]);
+    const [packageCategory, setPackageCategory] = useState('personal'); // 'personal' or 'business'
+    const [userBusinessPackage, setUserBusinessPackage] = useState(null);
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
@@ -25,13 +27,23 @@ const UpgradePackage = () => {
 
     const navigate = useNavigate();
     const dropdownRef = useRef(null);
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     // Helper function to parse features safely
     const parseFeatures = (features) => {
         if (!features) return [];
 
         if (typeof features === 'string') {
-            return features.split(',').map(f => f.trim()).filter(f => f.length > 0);
+            // Try to parse as JSON first (for business packages)
+            try {
+                const parsed = JSON.parse(features);
+                if (Array.isArray(parsed)) {
+                    return parsed;
+                }
+            } catch {
+                // If not JSON, treat as comma-separated
+                return features.split(',').map(f => f.trim()).filter(f => f.length > 0);
+            }
         }
 
         if (Array.isArray(features)) {
@@ -43,8 +55,19 @@ const UpgradePackage = () => {
 
     // Helper function to safely get package name
     const getPackageName = (pkg) => {
-        if (!pkg || !pkg.package_type) return 'Unknown Package';
-        return pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1);
+        if (!pkg) return 'Unknown Package';
+        
+        // For business packages, use the name field
+        if (pkg.name) {
+            return pkg.name;
+        }
+        
+        // For personal packages, use package_type
+        if (pkg.package_type) {
+            return pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1);
+        }
+        
+        return 'Unknown Package';
     };
 
     // Helper function to safely get package price
@@ -63,15 +86,25 @@ const UpgradePackage = () => {
                     navigate("/");
                     return;
                 }
-                const user = JSON.parse(storedUser);
-                setUser(user);
-
-                await fetchPackages();
-                await fetchCurrentPackage(user.user_id);
+                
+                const userData = JSON.parse(storedUser);
+                setUser(userData);
+                
+                // Set package category based on account type
+                if (userData.account_type === 'business') {
+                    setPackageCategory('business');
+                    await fetchBusinessPackages();
+                    await fetchCurrentBusinessPackage(userData.user_id);
+                } else {
+                    setPackageCategory('personal');
+                    await fetchPersonalPackages();
+                    await fetchCurrentPersonalPackage(userData.user_id);
+                }
 
                 const handleClickOutside = (event) => {
                     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setDropdownOpen(false);
                 };
+                
                 document.addEventListener("mousedown", handleClickOutside);
                 return () => document.removeEventListener("mousedown", handleClickOutside);
 
@@ -86,54 +119,22 @@ const UpgradePackage = () => {
         fetchData();
     }, [navigate]);
 
-    // Extract all unique features for comparison table
-    useEffect(() => {
-        if (packages.length > 0) {
-            const featuresSet = new Set();
-            packages.forEach(pkg => {
-                const features = Array.isArray(pkg.features) ? pkg.features : [];
-                features.forEach(feature => {
-                    if (feature && typeof feature === 'string') {
-                        featuresSet.add(feature.trim());
-                    }
-                });
-            });
-            setAllFeatures(Array.from(featuresSet));
-        }
-    }, [packages]);
-
-    const toggleDropdown = () => setDropdownOpen(prev => !prev);
-    const goToProfile = () => {
-        navigate("/Profile");
-    }
-    const handleBack = () => { navigate(-1); };
-
-    const fetchPackages = async () => {
+    const fetchPersonalPackages = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
             formData.append("function", "getAllPackages");
 
-            const response = await fetch(`${API_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: "POST",
                 body: formData
             });
 
             const data = await response.json();
-            console.log("Packages API response:", data); // Debug log
+            console.log("Personal Packages API response:", data);
 
             if (data.success && Array.isArray(data.packages)) {
                 const formattedPackages = data.packages.map(pkg => {
-                    // Parse features safely - handle both string and array formats
-                    let features = [];
-
-                    if (pkg.features) {
-                        if (typeof pkg.features === 'string') {
-                            features = pkg.features.split(',').map(f => f.trim()).filter(f => f.length > 0);
-                        } else if (Array.isArray(pkg.features)) {
-                            features = pkg.features.filter(f => f && typeof f === 'string');
-                        }
-                    }
+                    let features = parseFeatures(pkg.features);
 
                     // If no features from database, use default ones
                     if (features.length === 0) {
@@ -145,14 +146,88 @@ const UpgradePackage = () => {
                         features: features
                     };
                 });
-                setPackages(formattedPackages);
+                setPersonalPackages(formattedPackages);
             } else {
-                console.error("No packages found or invalid response:", data);
-                setPackages([]);
+                console.error("No personal packages found:", data);
+                setPersonalPackages([]);
             }
         } catch (error) {
-            console.error("Failed to fetch packages:", error);
-            setPackages([]);
+            console.error("Failed to fetch personal packages:", error);
+            setPersonalPackages([]);
+        }
+    };
+
+    const fetchBusinessPackages = async () => {
+        try {
+            const formData = new FormData();
+            formData.append("function", "getBusinessPackages");
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+            console.log("Business Packages API response:", data);
+
+            if (data.success && Array.isArray(data.packages)) {
+                const formattedPackages = data.packages.map(pkg => {
+                    let features = parseFeatures(pkg.features);
+
+                    return {
+                        ...pkg,
+                        package_type: pkg.package_type || pkg.name?.toLowerCase().replace(' plan', ''),
+                        features: features
+                    };
+                });
+                setBusinessPackages(formattedPackages);
+            } else {
+                console.error("No business packages found:", data);
+                setBusinessPackages([]);
+            }
+        } catch (error) {
+            console.error("Failed to fetch business packages:", error);
+            setBusinessPackages([]);
+        }
+    };
+
+    const fetchCurrentPersonalPackage = async (userId) => {
+        try {
+            const formData = new FormData();
+            formData.append("function", "getUserPackage");
+            formData.append("user_id", userId);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success && data.userPackage) {
+                setCurrentPackage(data.userPackage);
+            }
+        } catch (error) {
+            console.error("Failed to fetch current package:", error);
+        }
+    };
+
+    const fetchCurrentBusinessPackage = async (userId) => {
+        try {
+            const formData = new FormData();
+            formData.append("function", "getUserBusinessPackage");
+            formData.append("user_id", userId);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success && data.userBusinessPackage) {
+                setUserBusinessPackage(data.userBusinessPackage);
+            }
+        } catch (error) {
+            console.error("Failed to fetch current business package:", error);
         }
     };
 
@@ -205,25 +280,14 @@ const UpgradePackage = () => {
         return featuresMap[packageTypeLower] || ["Event management features"];
     };
 
-    const fetchCurrentPackage = async (userId) => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "getUserPackage");
-            formData.append("user_id", userId);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await response.json();
-            if (data.success && data.userPackage) {
-                setCurrentPackage(data.userPackage);
-            }
-        } catch (error) {
-            console.error("Failed to fetch current package:", error);
-        }
+    const toggleDropdown = () => setDropdownOpen(prev => !prev);
+    
+    const goToProfile = () => {
+        navigate("/Profile");
+    };
+    
+    const handleBack = () => { 
+        navigate(-1); 
     };
 
     const handleChoosePackage = (pkg) => {
@@ -237,23 +301,45 @@ const UpgradePackage = () => {
 
         const user = JSON.parse(storedUser);
 
-        if (currentPackage && currentPackage.package_id === pkg.package_id) {
-            printAlert("You are already on this package.", "warning");
-            return;
+        // Check if already on this package
+        if (packageCategory === 'personal') {
+            if (currentPackage && currentPackage.package_id === pkg.package_id) {
+                printAlert("You are already on this package.", "warning");
+                return;
+            }
+        } else {
+            if (userBusinessPackage && userBusinessPackage.business_package_id === pkg.id) {
+                printAlert("You are already on this business package.", "warning");
+                return;
+            }
         }
 
         setProcessing(true);
         setSelectedPackage(pkg);
 
         try {
-            localStorage.setItem("selectedPackageId", pkg.package_id);
-            localStorage.setItem("selectedPackage", JSON.stringify(pkg));
+            // Store package info in localStorage
+            if (packageCategory === 'personal') {
+                localStorage.setItem("selectedPackageId", pkg.package_id);
+                localStorage.setItem("selectedPackageType", "personal");
+                localStorage.setItem("selectedPackage", JSON.stringify(pkg));
+                
+                printAlert(`Selected ${getPackageName(pkg)} package. Redirecting to payment...`, "success");
 
-            printAlert(`Selected ${getPackageName(pkg)} package. Redirecting to payment...`, "success");
+                setTimeout(() => {
+                    navigate("/packagePayment");
+                }, 100);
+            } else {
+                localStorage.setItem("selectedPackageId", pkg.id);
+                localStorage.setItem("selectedPackageType", "business");
+                localStorage.setItem("selectedBusinessPackage", JSON.stringify(pkg));
+                
+                printAlert(`Selected ${pkg.name} business package. Redirecting to payment...`, "success");
 
-            setTimeout(() => {
-                navigate("/packagePayment");
-            }, 100);
+                setTimeout(() => {
+                    navigate("/business-package-payment");
+                }, 100);
+            }
 
         } catch (error) {
             console.error("Package selection error:", error);
@@ -268,38 +354,70 @@ const UpgradePackage = () => {
             'basic': 2,
             'standard': 3,
             'premium': 4,
-            'enterprise': 5
+            'enterprise': 5,
+            'starter': 2,
+            'intermediate': 3,
+            'advance': 4,
+            'advance_plus': 5
         };
         return tiers[(packageType || '').toLowerCase()] || 0;
     };
 
     const isCurrentPackage = (pkg) => {
-        return currentPackage && pkg && currentPackage.package_id === pkg.package_id;
+        if (packageCategory === 'personal') {
+            return currentPackage && pkg && currentPackage.package_id === pkg.package_id;
+        } else {
+            return userBusinessPackage && pkg && userBusinessPackage.business_package_id === pkg.id;
+        }
     };
 
     const canUpgradeTo = (pkg) => {
-        if (!currentPackage || !pkg) return true;
-        const currentTier = getPackageTier(currentPackage.package_type);
-        const newTier = getPackageTier(pkg.package_type);
-        return newTier > currentTier;
+        if (packageCategory === 'personal') {
+            if (!currentPackage || !pkg) return true;
+            const currentTier = getPackageTier(currentPackage.package_type);
+            const newTier = getPackageTier(pkg.package_type);
+            return newTier > currentTier;
+        } else {
+            if (!userBusinessPackage || !pkg) return true;
+            const currentTier = getPackageTier(userBusinessPackage.package_type);
+            const newTier = getPackageTier(pkg.package_type || pkg.name);
+            return newTier > currentTier;
+        }
     };
 
     // Check if package has specific feature
     const hasFeature = (pkg, feature) => {
-        if (!pkg || !pkg.features || !Array.isArray(pkg.features)) return false;
-        return pkg.features.includes(feature);
+        if (!pkg || !pkg.features) return false;
+        const features = parseFeatures(pkg.features);
+        return features.includes(feature);
+    };
+
+    // Get the appropriate packages based on category
+    const displayedPackages = packageCategory === 'personal' ? personalPackages : businessPackages;
+    
+    // Get current package display name
+    const getCurrentPackageDisplay = () => {
+        if (packageCategory === 'personal' && currentPackage) {
+            return getPackageName(currentPackage);
+        } else if (packageCategory === 'business' && userBusinessPackage) {
+            return userBusinessPackage.name || 'Business Package';
+        }
+        return null;
     };
 
     if (loading) {
         return (
-            <div className="upgrade-page">
-                <div className="loading-container">
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Loading...</span>
+            <>
+                <LoginNav />
+                <div className="upgrade-page">
+                    <div className="loading-container">
+                        <div className="spinner-border text-primary" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <div className="loading-text">Loading packages...</div>
                     </div>
-                    <div className="loading-text">Loading packages...</div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -319,51 +437,57 @@ const UpgradePackage = () => {
                     </div>
                 </div>
             )}
-            {/* <div className="dashboard-header">
-                <h1>Evenda</h1>
-                <div className="header-tabs">
-
-                    <div ref={dropdownRef} className={`profile-container ${dropdownOpen ? "open" : ""}`} onClick={toggleDropdown}>
-                        <i className="bi bi-person-circle"></i>
-                        <span>{user ? user.name : "Guest"}</span>
-                        <i className="bi bi-chevron-bar-down"></i>
-                        {dropdownOpen && (
-                            <div className="dropdown-menu show">
-                                <button className="dropdown-item" onClick={goToProfile}>Profile</button>
-                                <button className="dropdown-item" onClick={logOut}>Logout</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div> */}
+            
             <LoginNav/>
+            
             <div className="container">
-
                 <button className="btn-event btn-event-back" onClick={handleBack}>
-                    Back
+                    <i className="bi bi-arrow-left"></i> Back
                 </button>
+                
                 {/* Header */}
                 <div className="upgrade-header">
-                    <h1>Choose Your Package</h1>
-                    <p>Select the perfect plan for your event management needs</p>
-                    {currentPackage && (
+                    <h1>
+                        {packageCategory === 'business' ? 'Choose Your Business Package' : 'Choose Your Package'}
+                    </h1>
+                    <p className="lead">
+                        {packageCategory === 'business' 
+                            ? 'Select the perfect business plan for your company\'s event management needs'
+                            : 'Select the perfect plan for your event management needs'
+                        }
+                    </p>
+                    
+                    {/* Account Type Badge */}
+                    <div className="account-type-badge">
+                        <i className={`bi ${packageCategory === 'business' ? 'bi-building' : 'bi-person'}`}></i>
+                        <span>
+                            {packageCategory === 'business' 
+                                ? `Business Account: ${user?.business_name || user?.name}`
+                                : `Personal Account: ${user?.name} ${user?.lastname || ''}`
+                            }
+                        </span>
+                    </div>
+                    
+                    {/* Current Package Banner */}
+                    {getCurrentPackageDisplay() && (
                         <div className="current-package-banner">
                             <i className="bi bi-info-circle"></i>
-                            Your current package: <strong>{getPackageName(currentPackage)}</strong>
+                            Your current package: <strong>{getCurrentPackageDisplay()}</strong>
                         </div>
                     )}
                 </div>
 
                 {/* Packages Grid */}
                 <div className="packages-grid">
-                    {packages.length > 0 ? (
-                        packages.map((pkg) => {
+                    {displayedPackages.length > 0 ? (
+                        displayedPackages.map((pkg) => {
                             const isCurrent = isCurrentPackage(pkg);
-                            const isPopular = pkg.package_type && pkg.package_type.toLowerCase() === 'premium';
+                            const isPopular = (pkg.package_type && pkg.package_type.toLowerCase() === 'premium') || 
+                                             (pkg.name && pkg.name.toLowerCase().includes('advance'));
 
                             return (
                                 <div
-                                    key={pkg.package_id}
+                                    key={pkg.package_id || pkg.id}
                                     className={`package-card ${isCurrent ? 'current' : ''} ${isPopular ? 'popular' : ''}`}
                                 >
                                     {isPopular && (
@@ -385,23 +509,33 @@ const UpgradePackage = () => {
                                             {getPackageName(pkg)}
                                         </h3>
                                         <div className="package-price">
-                                            R{getPackagePrice(pkg)}
-                                            <span className="price-period"></span>
+                                            {pkg.price > 0 ? (
+                                                <>
+                                                    R{getPackagePrice(pkg)}
+                                                    <span className="price-period">/month</span>
+                                                </>
+                                            ) : (
+                                                <span className="price-free">Free</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="package-limits">
+                                        <div className="limit-item">
+                                            <i className="bi bi-people"></i>
+                                            <span><strong>{pkg.max_guests || 0}</strong> Max Guests</span>
+                                        </div>
+                                        <div className="limit-item">
+                                            <i className="bi bi-calendar-event"></i>
+                                            <span><strong>{pkg.max_events || 0}</strong> Events</span>
                                         </div>
                                     </div>
 
                                     <div className="package-features">
-                                        <div className="feature">
-                                            <i className="bi bi-check-circle"></i>
-                                            <span><strong>{pkg.max_events || 0}</strong> Events</span>
-                                        </div>
-                                        <div className="feature">
-                                            <i className="bi bi-check-circle"></i>
-                                            <span><strong>{pkg.max_guests || 0}</strong> Max Guests</span>
-                                        </div>
-                                        {pkg.features && Array.isArray(pkg.features) && pkg.features.map((feature, index) => (
+                                        <h4>Features:</h4>
+                                        {parseFeatures(pkg.features).map((feature, index) => (
                                             <div key={index} className="feature">
-                                                <i className="bi bi-check-circle"></i>
+                                                <i className="bi bi-check-circle-fill"></i>
                                                 <span>{feature}</span>
                                             </div>
                                         ))}
@@ -426,7 +560,7 @@ const UpgradePackage = () => {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        Choose Plan
+                                                        {packageCategory === 'business' ? 'Select Business Plan' : 'Choose Plan'}
                                                         <i className="bi bi-arrow-right-circle"></i>
                                                     </>
                                                 )}
@@ -440,13 +574,18 @@ const UpgradePackage = () => {
                         <div className="no-packages">
                             <i className="bi bi-exclamation-triangle"></i>
                             <h3>No packages available</h3>
-                            <p>Please try again later or contact support.</p>
+                            <p>
+                                {packageCategory === 'business' 
+                                    ? 'No business packages are currently available. Please try again later or contact support.'
+                                    : 'No personal packages are currently available. Please try again later or contact support.'
+                                }
+                            </p>
                         </div>
                     )}
                 </div>
 
                 {/* Comparison Table - Only show if we have packages */}
-                {packages.length > 0 && allFeatures.length > 0 && (
+                {displayedPackages.length > 0 && (
                     <div className="comparison-section">
                         <h2>Package Comparison</h2>
                         <div className="comparison-table">
@@ -454,8 +593,8 @@ const UpgradePackage = () => {
                                 <thead>
                                     <tr>
                                         <th>Feature</th>
-                                        {packages.map(pkg => (
-                                            <th key={pkg.package_id}>
+                                        {displayedPackages.map(pkg => (
+                                            <th key={pkg.package_id || pkg.id}>
                                                 {getPackageName(pkg)}
                                             </th>
                                         ))}
@@ -464,33 +603,24 @@ const UpgradePackage = () => {
                                 <tbody>
                                     <tr>
                                         <td>Maximum Events</td>
-                                        {packages.map(pkg => (
-                                            <td key={pkg.package_id}>{pkg.max_events || 0}</td>
+                                        {displayedPackages.map(pkg => (
+                                            <td key={pkg.package_id || pkg.id}>{pkg.max_events || 0}</td>
                                         ))}
                                     </tr>
                                     <tr>
                                         <td>Max Guests per Event</td>
-                                        {packages.map(pkg => (
-                                            <td key={pkg.package_id}>{pkg.max_guests || 0}</td>
+                                        {displayedPackages.map(pkg => (
+                                            <td key={pkg.package_id || pkg.id}>{pkg.max_guests || 0}</td>
                                         ))}
                                     </tr>
                                     <tr>
                                         <td>Monthly Price</td>
-                                        {packages.map(pkg => (
-                                            <td key={pkg.package_id}>R{getPackagePrice(pkg)}</td>
+                                        {displayedPackages.map(pkg => (
+                                            <td key={pkg.package_id || pkg.id}>
+                                                {pkg.price > 0 ? `R${getPackagePrice(pkg)}` : 'Free'}
+                                            </td>
                                         ))}
                                     </tr>
-                                    {/* Dynamic features from database */}
-                                    {allFeatures.map((feature, index) => (
-                                        <tr key={index}>
-                                            <td>{feature}</td>
-                                            {packages.map(pkg => (
-                                                <td key={pkg.package_id}>
-                                                    <i className={`bi ${hasFeature(pkg, feature) ? 'bi-check-circle text-success' : 'bi-x-circle text-muted'}`}></i>
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -517,6 +647,12 @@ const UpgradePackage = () => {
                             <h4>Can I get a refund?</h4>
                             <p>We offer a 14-day money-back guarantee for new subscriptions. Contact support for refund requests.</p>
                         </div>
+                        {packageCategory === 'business' && (
+                            <div className="faq-item">
+                                <h4>Can I have multiple team members?</h4>
+                                <p>Business packages include team collaboration features. The number of team members depends on your selected plan.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
