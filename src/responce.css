@@ -498,14 +498,14 @@
         align-items: center;
         justify-content: flex-start;
         gap: 12px;
-        background-color: #db1d1d !important;
+        background-color: #6a0dad  !important;
     }
 
     /* Make Enterprise label larger and green (fixed selector and nesting) */
     .pricing-card.contact-card .enterprise-label.large-green {
         font-size: 2rem;
         font-weight: 800;
-        color: #28a745;
+        color: #fff;
         margin-bottom: 0.2em;
     }
 
@@ -869,10 +869,9 @@ Create Event Page Styling
 .pricing-card.contact-card .enterprise-label.large-green {
     font-size: 1.4rem; /* Slightly smaller than get in touch */
     font-weight: 700;
-    color: #000; /* Black text */
+    color: #fff; /* Black text */
     margin-bottom: 0.3em;
     text-align: center;
-    text-shadow: 0 2px 4px rgba(40, 167, 69, 0.3); /* Green shadow */
     letter-spacing: 0.5px;
 }
 

@@ -106,32 +106,32 @@ function Index() {
         }
     };
 
-// Handle click on event
-const handleEventClick = (event) => {
-    console.log("Event clicked:", event);
-    const eventId = event?.event_id;
-    
-    console.log("Event ID to use:", eventId);
-    console.log("Event ID type:", typeof eventId);
-    console.log("Event ID length:", eventId?.length);
-    
-    if (eventId) {
-        navigate(`/ticketEvent_details?id=${encodeURIComponent(eventId)}`);
-    } else {
-        console.error("No event ID found in:", event);
-        alert("Cannot open event: No ID found");
-    }
-};
+    // Handle click on event
+    const handleEventClick = (event) => {
+        console.log("Event clicked:", event);
+        const eventId = event?.event_id;
+
+        console.log("Event ID to use:", eventId);
+        console.log("Event ID type:", typeof eventId);
+        console.log("Event ID length:", eventId?.length);
+
+        if (eventId) {
+            navigate(`/ticketEvent_details?id=${encodeURIComponent(eventId)}`);
+        } else {
+            console.error("No event ID found in:", event);
+            alert("Cannot open event: No ID found");
+        }
+    };
 
     // Trending events slider functions
     const getVisibleTrendingEvents = () => {
         const cardsToShow = isMobile ? 1 : 3;
-        
+
         // If we have fewer events than cards to show, just show all events
         if (trendingEvents.length <= cardsToShow) {
             return trendingEvents;
         }
-        
+
         // Otherwise, show a sliding window of events
         const visibleEvents = [];
         for (let i = 0; i < cardsToShow; i++) {
@@ -442,73 +442,87 @@ const handleEventClick = (event) => {
                 <section className="homeHeader">
                     <div className="hero-carousel">
                         {/* SLIDE 1 */}
-                        <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`}>
+                        <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`} style={{ backgroundImage: "url('/images/home1.png')" }}>
+                            <div className="overlay"></div>
                             <div className="container">
-                                <div className="row align-items-center">
-                                    <div className="col-lg-6 text-content">
-                                        <h1>Evendi – Where Every Celebration Comes Alive</h1>
-                                        <p>
+                                <div className="row">
+                                    <div className="col-lg-8 mx-auto text-center text-content">
+                                        <span className="slide-tag">Welcome to Evendi</span>
+                                        <h1 className="slide-title">Where Every Celebration Comes Alive</h1>
+                                        <p className="slide-description">
                                             Make every event memorable. From intimate gatherings to grand celebrations,
                                             Evendi helps you design invitations, track responses, and engage your guests effortlessly.
                                         </p>
                                         <div className="btn-container">
-                                            <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
+                                            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = "/createevent"}>
                                                 Get Started
                                             </button>
+                                            <button className="btn btn-outline-light btn-lg" onClick={() => window.location.href = "/ticket_sales"}>
+                                                Explore Events
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div className="col-lg-6 image-content">
-                                        <img src="/images/homeheader.png" alt="Celebrate with Evendi" className="img-fluid hero-image" />
                                     </div>
                                 </div>
                             </div>
                         </section>
 
                         {/* SLIDE 2 */}
-                        <section className={`hero-slide ${currentSlide === 1 ? 'active' : ''}`}>
+                        <section className={`hero-slide ${currentSlide === 1 ? 'active' : ''}`} style={{ backgroundImage: "url('/images/home2.png')" }}>
+                            <div className="overlay"></div>
                             <div className="container">
-                                <div className="row align-items-center">
-                                    <div className="col-lg-6 text-content">
-                                        <h1>Create Stunning Invitations in Minutes</h1>
-                                        <p>
+                                <div className="row">
+                                    <div className="col-lg-8 mx-auto text-center text-content">
+                                        <span className="slide-tag">Beautiful Designs</span>
+                                        <h1 className="slide-title">Create Stunning Invitations in Minutes</h1>
+                                        <p className="slide-description">
                                             Choose from hundreds of elegant templates. Customize colors, fonts, and animations.
                                             Send via Email, WhatsApp, SMS, or QR code — all with one click.
                                         </p>
                                         <div className="btn-container">
-                                            <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
-                                                Get Started
+                                            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = "/createevent"}>
+                                                Start Creating
+                                            </button>
+                                            <button className="btn btn-outline-light btn-lg" onClick={() => window.location.href = "/templates"}>
+                                                View Templates
                                             </button>
                                         </div>
-                                    </div>
-                                    <div className="col-lg-6 image-content">
-                                        <img src="/images/invitation.png" alt="Beautiful Invitations" className="img-fluid hero-image" />
                                     </div>
                                 </div>
                             </div>
                         </section>
 
                         {/* SLIDE 3 */}
-                        <section className={`hero-slide ${currentSlide === 2 ? 'active' : ''}`}>
+                        <section className={`hero-slide ${currentSlide === 2 ? 'active' : ''}`} style={{ backgroundImage: "url('/images/home3.png')" }}>
+                            <div className="overlay"></div>
                             <div className="container">
-                                <div className="row align-items-center">
-                                    <div className="col-lg-6 text-content">
-                                        <h1>Never Chase RSVPs Again</h1>
-                                        <p>
+                                <div className="row">
+                                    <div className="col-lg-8 mx-auto text-center text-content">
+                                        <span className="slide-tag">Smart Management</span>
+                                        <h1 className="slide-title">Never Chase RSVPs Again</h1>
+                                        <p className="slide-description">
                                             Real-time tracking, automated reminders, guest insights, seating charts —
                                             everything you need to stay organized and stress-free.
                                         </p>
                                         <div className="btn-container">
-                                            <button className="btn btn-create" onClick={() => window.location.href = "/createevent"}>
+                                            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = "/createevent"}>
                                                 Get Started
                                             </button>
+                                            <button className="btn btn-outline-light btn-lg" onClick={() => window.location.href = "/feature"}>
+                                                See Features
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div className="col-lg-6 image-content">
-                                        <img src="/images/chirs.png" alt="RSVP Management" className="img-fluid hero-image" />
                                     </div>
                                 </div>
                             </div>
                         </section>
+
+                        {/* Navigation Arrows */}
+                        <button className="carousel-arrow prev" onClick={() => setCurrentSlide((prev) => (prev === 0 ? 2 : prev - 1))}>
+                            <i className="bi bi-chevron-left"></i>
+                        </button>
+                        <button className="carousel-arrow next" onClick={() => setCurrentSlide((prev) => (prev === 2 ? 0 : prev + 1))}>
+                            <i className="bi bi-chevron-right"></i>
+                        </button>
 
                         {/* Navigation Dots */}
                         <div className="carousel-dots">
@@ -540,7 +554,7 @@ const handleEventClick = (event) => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="col-lg-6 mid-category-card">
                                 <div className="category-card">
                                     <div className="category-overlay"></div>
@@ -585,10 +599,10 @@ const handleEventClick = (event) => {
                 <section className="homeTrendings">
                     <div className="container">
                         <div className="section-header">
-                            <h2 className="section-title">Trending <span>Events</span></h2>
+                            <h2 className="section-title">Trending Tickets <span>Events</span></h2>
                             <p className="section-subtitle">Most popular events based on ticket sales</p>
                         </div>
-                        
+
                         {loadingTrending ? (
                             <div className="text-center py-5">
                                 <div className="spinner-border text-warning" role="status">
@@ -610,21 +624,21 @@ const handleEventClick = (event) => {
                                             </button>
                                         </>
                                     )}
-                                    
+
                                     {/* Slider track with conditional class */}
                                     <div className={`slider-track ${!canSlide ? 'no-animation' : ''}`}>
                                         {visibleTrendingEvents.map((event, index) => (
-                                            <div 
-                                                className="car-item" 
+                                            <div
+                                                className="car-item"
                                                 key={event.event_id || index}
                                                 onClick={() => handleEventClick(event)}
                                                 style={{ cursor: 'pointer' }}
                                             >
                                                 <div className="car-card">
                                                     <div className="car-image-wrapper">
-                                                        <img 
-                                                            src={event.event_image || (event.event_image ? `/uploads/events/${event.event_image}` : "/images/default-event.jpg")} 
-                                                            alt={event.event_name || event.title || "Event"} 
+                                                        <img
+                                                            src={event.event_image || (event.event_image ? `/uploads/events/${event.event_image}` : "/images/default-event.jpg")}
+                                                            alt={event.event_name || event.title || "Event"}
                                                             className="car-image"
                                                             onError={(e) => {
                                                                 e.target.src = "/images/default-event.jpg";
@@ -640,22 +654,22 @@ const handleEventClick = (event) => {
                                                         <h3>{event.event_name || event.title || "Event Name"}</h3>
                                                         <div className="car-meta">
                                                             <span className="event-date">
-                                                                <i className="bi bi-calendar"></i> 
+                                                                <i className="bi bi-calendar"></i>
                                                                 {event.formatted_date || event.event_start_date || "Date TBD"}
                                                             </span>
                                                             <span className="event-location">
-                                                                <i className="bi bi-map"></i> 
+                                                                <i className="bi bi-map"></i>
                                                                 {event.location || event.city || "Location TBD"}
                                                             </span>
                                                         </div>
                                                         <div className="car-stats">
                                                             <span className="sold">
-                                                                <i className="bi bi-ticket-alt"></i> 
+                                                                <i className="bi bi-ticket-alt"></i>
                                                                 {event.total_tickets_sold || 0} Ticket's Sold
                                                             </span>
                                                         </div>
-                                                        <button 
-                                                            className="btn-view" 
+                                                        <button
+                                                            className="btn-view"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleEventClick(event);
@@ -681,8 +695,8 @@ const handleEventClick = (event) => {
                                         </div>
                                         <div className="slide-indicators">
                                             {Array.from({ length: trendingEvents.length - cardsToShow + 1 }).map((_, index) => (
-                                                <span 
-                                                    key={index} 
+                                                <span
+                                                    key={index}
                                                     className={`indicator ${index === trendingIndex ? 'active' : ''}`}
                                                     onClick={() => {
                                                         if (canSlide) {
@@ -699,72 +713,72 @@ const handleEventClick = (event) => {
                         ) : (
                             <div className="text-center py-5">
                                 <div className="no-events-message">
-                                    <i className="fas fa-calendar-alt fa-3x mb-3" style={{color: '#ffd700'}}></i>
-                                    <h3 style={{color: 'white', marginBottom: '15px'}}>No Trending Events Yet</h3>
-                                    <p style={{color: 'rgba(255,255,255,0.7)'}}>Check back soon for exciting events!</p>
+                                    <i className="fas fa-calendar-alt fa-3x mb-3" style={{ color: '#ffd700' }}></i>
+                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>No Trending Events Yet</h3>
+                                    <p style={{ color: 'rgba(255,255,255,0.7)' }}>Check back soon for exciting events!</p>
                                 </div>
                             </div>
                         )}
                     </div>
                 </section>
 
-               <section className="homePricing">
-    <div className="container">
-        <div className="pricing-header text-center mb-5">
-            <h2>Choose Your <span className="highlight">Perfect Plan</span></h2>
-            <p className="lead">Simple, transparent pricing for events of any size</p>
-        </div>
-
-        {loadingPricing ? (
-            <div className="text-center">
-                <div className="spinner-border text-warning" role="status">
-                    <span className="visually-hidden">Loading plans...</span>
-                </div>
-                <p className="mt-3">Loading pricing plans...</p>
-            </div>
-        ) : (
-            <div className="row g-4 justify-content-center">
-                {pricingPlans.map((plan) => (
-                    <div key={plan.id || plan.name} className="col-lg-4 col-md-6">
-                        <div className={`pricing-card ${plan.isPopular ? 'popular' : ''} ${plan.name === 'Free' ? 'free-plan' : ''}`}>
-                            {plan.isPopular && <div className="popular-badge">Most Popular</div>}
-                            
-                            <div className="card-header">
-                                <h3>{plan.name}</h3>
-                                <div className="price-tag">
-                                    <span className="currency">R</span>
-                                    <span className="amount">{plan.price === 'Free' ? '0' : plan.price.replace('R', '')}</span>
-                                    <span className="period">/month</span>
-                                </div>
-                            </div>
-
-                            <div className="card-body">
-                                <ul className="features-list">
-                                    {plan.features.map((feature, index) => (
-                                        <li key={index}>
-                                            <i className="bi bi-check-circle-fill"></i>
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="card-footer">
-                                <button
-                                    className="btn-select"
-                                    onClick={() => handleGetStartedClick(plan.name, plan.id)}
-                                >
-                                    {plan.price === "Free" ? "Get Started Free" : "Select Plan"}
-                                    <i className="bi bi-arrow-right"></i>
-                                </button>
-                            </div>
+                <section className="homePricing">
+                    <div className="container">
+                        <div className="pricing-header text-center mb-5">
+                            <h2>Choose Your Private <span className="highlight">Perfect Plan</span></h2>
+                            <p className="lead">Simple, transparent pricing for events of any size</p>
                         </div>
+
+                        {loadingPricing ? (
+                            <div className="text-center">
+                                <div className="spinner-border text-warning" role="status">
+                                    <span className="visually-hidden">Loading plans...</span>
+                                </div>
+                                <p className="mt-3">Loading pricing plans...</p>
+                            </div>
+                        ) : (
+                            <div className="row g-4 justify-content-center">
+                                {pricingPlans.map((plan) => (
+                                    <div key={plan.id || plan.name} className="col-lg-4 col-md-6">
+                                        <div className={`pricing-card ${plan.isPopular ? 'popular' : ''} ${plan.name === 'Free' ? 'free-plan' : ''}`}>
+                                            {plan.isPopular && <div className="popular-badge">Most Popular</div>}
+
+                                            <div className="card-header">
+                                                <h3>{plan.name}</h3>
+                                                <div className="price-tag">
+                                                    <span className="currency">R</span>
+                                                    <span className="amount">{plan.price === 'Free' ? '0' : plan.price.replace('R', '')}</span>
+                                                    <span className="period">/month</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="card-body">
+                                                <ul className="features-list">
+                                                    {plan.features.map((feature, index) => (
+                                                        <li key={index}>
+                                                            <i className="bi bi-check-circle-fill"></i>
+                                                            <span>{feature}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            <div className="card-footer">
+                                                <button
+                                                    className="btn-select"
+                                                    onClick={() => handleGetStartedClick(plan.name, plan.id)}
+                                                >
+                                                    {plan.price === "Free" ? "Get Started Free" : "Select Plan"}
+                                                    <i className="bi bi-arrow-right"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                ))}
-            </div>
-        )}
-    </div>
-</section>
+                </section>
             </div>
 
             <Footer />

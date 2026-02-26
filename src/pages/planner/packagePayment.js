@@ -28,10 +28,10 @@ const PackagePayment = () => {
 
     // ============ PAYFAST CONFIGURATION ============
     const PAYFAST_CONFIG = {
-        MERCHANT_ID: "33426571",
-        MERCHANT_KEY: "lkqoiy0ftb9yc",
+        MERCHANT_ID: "10046113",
+        MERCHANT_KEY: "0kdmnse8055gx",
         PASS_PHRASE: "",
-        ITN_URL: "https://evenditest.evendi.co.za/api/payfast/itn",
+        ITN_URL: "https://evenditest.evendi.co.za/api/payFastInt.php",
         
         PAYFAST_URL: process.env.NODE_ENV === 'production' 
             ? "https://www.payfast.co.za/eng/process"
