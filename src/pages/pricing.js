@@ -20,13 +20,15 @@ function Pricing() {
     // Slider state
     const [startIndex, setStartIndex] = useState(0);
 
-    // State for annual billing toggle
-    const [annualBilling, setAnnualBilling] = useState(false);
-
-    // States for modals
+    // States for modals and user
     const [showCustomPlanModal, setShowCustomPlanModal] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
+
+    const [isLoginOpen, setIsLoginOpen] = useState(false);
+    const [loginMode, setLoginMode] = useState("login");
+    const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
+    const [showContactSalesModal, setShowContactSalesModal] = useState(false);
 
     const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
@@ -51,11 +53,6 @@ function Pricing() {
         };
     }, []);
 
-    const [isLoginOpen, setIsLoginOpen] = useState(false);
-    const [loginMode, setLoginMode] = useState("login");
-    const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
-    const [showContactSalesModal, setShowContactSalesModal] = useState(false);
-
     const printAlert = (message, type = 'info') => {
         setAlert({ show: true, message, type });
         setTimeout(() => setAlert({ show: false, message: '', type: '' }), 5000);
@@ -70,25 +67,10 @@ function Pricing() {
         }
 
         if (currentUser.account_type !== 'business') {
-            printAlert('Custom plans are only available for business accounts. Please upgrade to a business account.', 'warning');
-            return;
-        }
-
-        navigate('/custom-plan-request');
-    };
-    const handleCustomPlanClick = () => {
-        if (!currentUser) {
-            setLoginMode("login");
-            setIsLoginOpen(true);
-            printAlert('Please log in to request a custom plan', 'info');
-            return;
-        }
-        
-        if (currentUser.account_type !== 'business') {
             printAlert('Custom plans are only available for business accounts', 'warning');
             return;
         }
-        
+
         navigate('/custom-plan-request');
     };
 
@@ -163,6 +145,51 @@ function Pricing() {
         ];
     };
 
+    const getDefaultBusinessPlans = () => {
+        return [
+            {
+                name: "STARTER PLAN",
+                monthlyPrice: "R649.00",
+                description: "Perfect for starter business events",
+                isPopular: true,
+                features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
+                ctaText: "Get started",
+                ctaVariant: "btn-create",
+                isContactSales: false
+            },
+            {
+                name: "INTERMEDIATE PLAN",
+                monthlyPrice: "R2149.00",
+                description: "Perfect for intermediate business events",
+                isPopular: false,
+                features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
+                ctaText: "Get started",
+                ctaVariant: "btn-demo",
+                isContactSales: false
+            },
+            {
+                name: "ADVANCE PLUS PLAN",
+                monthlyPrice: "Contact Sales",
+                description: "Perfect for advanced business events",
+                isPopular: false,
+                features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
+                ctaText: "GET IN TOUCH",
+                ctaVariant: "btn-demo",
+                isContactSales: true
+            },
+            {
+                name: "CUSTOM PLAN",
+                monthlyPrice: "Custom Pricing",
+                description: "For large-scale business events",
+                isPopular: false,
+                features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
+                ctaText: "Request Custom Plan",
+                ctaVariant: "btn-create",
+                isContactSales: true
+            }
+        ];
+    };
+
     const fetchPricingPlans = async () => {
         try {
             const formData = new FormData();
@@ -211,7 +238,6 @@ function Pricing() {
 
     const fetchBusinessPlans = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -278,24 +304,31 @@ function Pricing() {
 
                 console.log("Sorted business plans:", sortedBusinessPlans.map(p => p.name));
 
-                const sortedBusinessPlans = formattedBusinessPlans.sort((a, b) => {
+                // Ensure CUSTOM PLAN is last (additional safety)
+                const finalSortedPlans = sortedBusinessPlans.sort((a, b) => {
                     if (a.name === "CUSTOM PLAN") return 1;
                     if (b.name === "CUSTOM PLAN") return -1;
                     return 0;
                 });
                 
-                setBusinessPlans(sortedBusinessPlans);
+                setBusinessPlans(finalSortedPlans);
                 // Reset startIndex when business plans are loaded
                 setStartIndex(0);
             } else {
                 console.error("Error fetching business plans");
-                console.error('Failed to fetch business plans');
                 setBusinessPlans(getDefaultBusinessPlans());
             }
         } catch (err) {
             console.error("Error fetching business plans:", err);
+            setBusinessPlans(getDefaultBusinessPlans());
         }
     };
+
+    useEffect(() => {
+        fetchPricingPlans();
+        fetchBusinessPlans();
+    }, []);
+
     const calculateAnnualPrice = (monthlyPrice) => {
         if (monthlyPrice === 'Contact Sales' || monthlyPrice === 'Custom Pricing') {
             return monthlyPrice;
@@ -358,7 +391,7 @@ function Pricing() {
             ctaText: plan.ctaText,
             ctaVariant: plan.ctaVariant,
             isContactSales: plan.isContactSales
-        })) : [],
+        })) : getDefaultBusinessPlans(),
         "Selling Tickets": [
             {
                 name: "Basic",
@@ -535,7 +568,7 @@ function Pricing() {
                         alert.type === "success" ? "fa-check-circle" :
                             alert.type === "warning" ? "fa-exclamation-triangle" :
                                 "fa-info-circle"}`}>
-                        </i>
+                    </i>
                     <span>{alert.message}</span>
                 </div>
             )}
@@ -593,11 +626,6 @@ function Pricing() {
                         <div className="container">
                             <div className="pricing-cards-wrapper">
                                 <div className="features-content">
-                                    {/* <div className="section-header text-center">
-                                        <h2>{activeCategory}</h2>
-                                        <p>Discover our comprehensive {activeCategory.toLowerCase()} designed to streamline your event planning process</p>
-                                    </div> */}
-
                                     <div className="features-slider-wrapper">
                                         <button className="slider-btn prev" onClick={handlePrev}>
                                             <i className="bi bi-caret-left"></i>
@@ -630,9 +658,9 @@ function Pricing() {
                                                                     {card.name === "CUSTOM PLAN" ? (
                                                                         <button
                                                                             className="btn btn-create w-100"
-                                                                            onClick={() => setShowContactSalesModal(true)}
+                                                                            onClick={handleCustomPlanClick}
                                                                         >
-                                                                            Get in touch
+                                                                            Request Custom Plan
                                                                         </button>
                                                                     ) : (
                                                                         <div className="coming-soon">Coming soon</div>
