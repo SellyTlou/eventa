@@ -160,7 +160,7 @@ class ActivityTreeSet {
 }
 
 // ==================== FIXED LINKED LIST ====================
-    class ListNode {
+class ListNode {
     constructor(data) {
         this.data = data;
         this.next = null;
@@ -382,6 +382,21 @@ function AdminDashboard() {
     const [requestStatus, setRequestStatus] = useState('pending');
     const [adminNotes, setAdminNotes] = useState('');
 
+    // ==================== NEW STATES FOR MESSAGING ====================
+    const [requestMessages, setRequestMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [sendingMessage, setSendingMessage] = useState(false);
+    const [loadingMessages, setLoadingMessages] = useState(false);
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+
+    // ==================== NEW STATES FOR CUSTOM PLAN CONFIGURATION ====================
+    const [requestBasePackage, setRequestBasePackage] = useState('');
+    const [approvedGuests, setApprovedGuests] = useState('');
+    const [approvedEvents, setApprovedEvents] = useState('');
+    const [customPrice, setCustomPrice] = useState('');
+    const [billingCycle, setBillingCycle] = useState('monthly');
+    const [customFeatures, setCustomFeatures] = useState('[]');
+
     // ==================== PRODUCTION TREE SET INTEGRATION ====================
     const [activityTreeSet, setActivityTreeSet] = useState(new ActivityTreeSet());
     const [filteredActivities, setFilteredActivities] = useState([]);
@@ -497,6 +512,99 @@ function AdminDashboard() {
         }
     };
 
+    // ==================== MESSAGING FUNCTIONS ====================
+    const fetchRequestMessages = async (requestId) => {
+        setLoadingMessages(true);
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getRequestMessages');
+            formData.append('request_id', requestId);
+            formData.append('admin_view', 'true'); // Mark as admin viewing
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setRequestMessages(data.messages || []);
+            }
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+        } finally {
+            setLoadingMessages(false);
+        }
+    };
+
+    const sendAdminMessage = async () => {
+        if (!newMessage.trim() || !selectedRequest) return;
+
+        setSendingMessage(true);
+        try {
+            const formData = new FormData();
+            formData.append('function', 'sendRequestMessage');
+            formData.append('request_id', selectedRequest.request_id);
+            formData.append('sender_id', adminUserId);
+            formData.append('sender_type', 'admin');
+            formData.append('sender_name', adminProfile ? `${adminProfile.name} ${adminProfile.lastname}` : 'Admin');
+            formData.append('message', newMessage);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                // Add new message to list
+                setRequestMessages(prev => [...prev, data.newMessage]);
+                setNewMessage('');
+                
+                // Log activity
+                logActivity('Message Sent', `Sent message regarding request ${selectedRequest.request_id}`);
+            } else {
+                printAlert('Failed to send message: ' + data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            printAlert('Error sending message', 'error');
+        } finally {
+            setSendingMessage(false);
+        }
+    };
+
+    const checkUnreadMessages = async () => {
+        if (!adminUserId) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('function', 'getUnreadMessageCount');
+            formData.append('admin_user_id', adminUserId);
+
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setUnreadMessageCount(data.unread_count);
+            }
+        } catch (error) {
+            console.error('Error checking unread messages:', error);
+        }
+    };
+
+    // Set up polling for unread messages
+    useEffect(() => {
+        if (adminUserId && isInitialized) {
+            checkUnreadMessages();
+            const interval = setInterval(checkUnreadMessages, 30000); // Check every 30 seconds
+            return () => clearInterval(interval);
+        }
+    }, [adminUserId, isInitialized]);
+
     const updateRequestStatus = async () => {
         if (!selectedRequest) return;
         
@@ -527,6 +635,111 @@ function AdminDashboard() {
         } catch (error) {
             console.error('Error updating request:', error);
             printAlert('Error updating request', 'error');
+        }
+    };
+
+    // ==================== NEW CUSTOM PLAN APPROVAL FUNCTIONS ====================
+    const getPackageName = (packageId) => {
+        const packages = {
+            '1': 'Starter Plan (200 guests)',
+            '2': 'Intermediate Plan (750 guests)',
+            '3': 'Advance Plan (2000 guests)'
+        };
+        return packages[packageId] || 'Custom';
+    };
+
+    const approveCustomPlan = async () => {
+        if (!selectedRequest) return;
+        
+        // Validate required fields
+        if (!approvedGuests || !approvedEvents || !customPrice) {
+            printAlert('Please fill in all required fields: Guest Limit, Event Limit, and Custom Price', 'error');
+            return;
+        }
+
+        try {
+            // Build custom limits JSON
+            const customLimits = {
+                guests: parseInt(approvedGuests) || selectedRequest.expected_attendees,
+                events: parseInt(approvedEvents) || 999999,
+                features: JSON.parse(customFeatures || '[]'),
+                price: parseFloat(customPrice),
+                billing_cycle: billingCycle
+            };
+            
+            const formData = new FormData();
+            formData.append('function', 'assignCustomBusinessPackage');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('user_id', selectedRequest.user_id);
+            formData.append('request_id', selectedRequest.request_id);
+            formData.append('base_package_id', requestBasePackage || null);
+            formData.append('custom_limits', JSON.stringify(customLimits));
+            formData.append('custom_price', customPrice);
+            formData.append('admin_notes', adminNotes);
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                printAlert('Custom plan approved and assigned successfully!', 'success');
+                setShowRequestModal(false);
+                fetchCustomPlanRequests(requestStatusFilter);
+                
+                // Reset form
+                setRequestBasePackage('');
+                setApprovedGuests('');
+                setApprovedEvents('');
+                setCustomPrice('');
+                setBillingCycle('monthly');
+                setCustomFeatures('[]');
+                setAdminNotes('');
+                
+                logActivity('Custom Plan Approved', 
+                    `Approved custom plan for ${selectedRequest.business_name} with ${customLimits.guests} guests`
+                );
+            } else {
+                printAlert('Error: ' + data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error approving custom plan:', error);
+            printAlert('Error approving custom plan', 'error');
+        }
+    };
+
+    const rejectCustomPlan = async () => {
+        if (!selectedRequest) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('function', 'updateCustomPlanRequest');
+            formData.append('admin_user_id', adminUserId);
+            formData.append('request_id', selectedRequest.request_id);
+            formData.append('status', 'rejected');
+            formData.append('admin_notes', adminNotes || 'Request rejected');
+            
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                printAlert('Request rejected', 'info');
+                setShowRequestModal(false);
+                fetchCustomPlanRequests(requestStatusFilter);
+                
+                logActivity('Custom Plan Rejected', 
+                    `Rejected custom plan request from ${selectedRequest.business_name}`
+                );
+            }
+        } catch (error) {
+            console.error('Error rejecting request:', error);
+            printAlert('Error rejecting request', 'error');
         }
     };
 
@@ -1493,6 +1706,17 @@ function AdminDashboard() {
                             setSelectedRequest(request);
                             setRequestStatus(request.status);
                             setAdminNotes(request.admin_notes || '');
+                            
+                            // Pre-fill custom plan form with requested data
+                            setApprovedGuests(request.requested_guests || '');
+                            setApprovedEvents(request.requested_events || '');
+                            setCustomPrice(request.proposed_price || '');
+                            setCustomFeatures('[]');
+                            setRequestBasePackage('');
+                            
+                            // Fetch messages for this request
+                            fetchRequestMessages(request.request_id);
+                            
                             setShowRequestModal(true);
                         }}
                         onRefresh={() => fetchCustomPlanRequests(requestStatusFilter)}
@@ -1668,7 +1892,7 @@ function AdminDashboard() {
                                     </div>
                                 </li>
 
-                                {/* NEW: Custom Plan Requests Tab */}
+                                {/* Custom Plan Requests Tab with Message Badge */}
                                 <li
                                     className={`admin-dashboard-nav-item ${activeTab === "custom-plans" ? "active" : ""}`}
                                     onClick={() => {
@@ -1679,6 +1903,9 @@ function AdminDashboard() {
                                     <div className="nav-item-content">
                                         <i className="bi bi-file-text"></i>
                                         <span>Custom Plan Requests</span>
+                                        {unreadMessageCount > 0 && (
+                                            <span className="message-badge">{unreadMessageCount}</span>
+                                        )}
                                         {customPlanRequests.filter(r => r.status === 'pending').length > 0 && (
                                             <span className="badge bg-danger ms-2">
                                                 {customPlanRequests.filter(r => r.status === 'pending').length}
@@ -2080,7 +2307,7 @@ function AdminDashboard() {
                 </div>
             )}
 
-            {/* Custom Plan Request Details Modal */}
+            {/* Enhanced Custom Plan Request Details Modal with Messaging */}
             {showRequestModal && selectedRequest && (
                 <div className="modal-overlay-new" onClick={() => setShowRequestModal(false)}>
                     <div className="modal-content-new request-details-modal" onClick={(e) => e.stopPropagation()}>
@@ -2148,8 +2375,16 @@ function AdminDashboard() {
                                             <p className="event-description">{selectedRequest.event_description || 'No description provided'}</p>
                                         </div>
                                         <div className="detail-item">
-                                            <label>Expected Attendees:</label>
-                                            <span className="attendees-number">{selectedRequest.expected_attendees}</span>
+                                            <label>Requested Attendees:</label>
+                                            <span className="attendees-number">{selectedRequest.requested_guests || selectedRequest.expected_attendees}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Requested Events:</label>
+                                            <span className="attendees-number">{selectedRequest.requested_events || 'N/A'}</span>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Proposed Price:</label>
+                                            <span className="attendees-number">R{selectedRequest.proposed_price || '0'}</span>
                                         </div>
                                         <div className="detail-item">
                                             <label>Event Date:</label>
@@ -2181,51 +2416,230 @@ function AdminDashboard() {
                                     </div>
                                 )}
 
-                                {/* Status Update Section */}
-                                <div className="details-section">
+                                {/* Custom Plan Configuration Section */}
+                                <div className="details-section highlight-section">
                                     <h3 className="section-title">
-                                        <i className="bi bi-gear"></i> Update Status
+                                        <i className="bi bi-gear"></i> Configure Custom Plan
                                     </h3>
-                                    <div className="status-update-form">
+                                    
+                                    <div className="custom-config-form">
                                         <div className="form-row">
                                             <div className="form-group">
-                                                <label>Request Status</label>
+                                                <label>Base Package (Template)</label>
                                                 <select
                                                     className="form-select"
-                                                    value={requestStatus}
-                                                    onChange={(e) => setRequestStatus(e.target.value)}
+                                                    value={requestBasePackage}
+                                                    onChange={(e) => setRequestBasePackage(e.target.value)}
                                                 >
-                                                    <option value="pending">Pending</option>
-                                                    <option value="reviewed">Reviewed</option>
-                                                    <option value="approved">Approved</option>
-                                                    <option value="rejected">Rejected</option>
-                                                    <option value="completed">Completed</option>
+                                                    <option value="">Select a base package</option>
+                                                    <option value="1">Starter Plan (200 guests, R649)</option>
+                                                    <option value="2">Intermediate Plan (750 guests, R2149)</option>
+                                                    <option value="3">Advance Plan (2000 guests, R6999)</option>
+                                                </select>
+                                                <small className="form-help">Optional - Select which package to base this on</small>
+                                            </div>
+                                        </div>
+
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Approved Guest Limit *</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    value={approvedGuests}
+                                                    onChange={(e) => setApprovedGuests(e.target.value)}
+                                                    min="1"
+                                                    placeholder="Enter approved guest limit"
+                                                />
+                                                <small>Requested: {selectedRequest.requested_guests || selectedRequest.expected_attendees}</small>
+                                            </div>
+                                            
+                                            <div className="form-group">
+                                                <label>Approved Event Limit *</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    value={approvedEvents}
+                                                    onChange={(e) => setApprovedEvents(e.target.value)}
+                                                    min="1"
+                                                    placeholder="Enter approved event limit"
+                                                />
+                                                <small>Requested: {selectedRequest.requested_events || 'N/A'}</small>
+                                            </div>
+                                        </div>
+
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Final Price (R) *</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    value={customPrice}
+                                                    onChange={(e) => setCustomPrice(e.target.value)}
+                                                    min="0"
+                                                    step="0.01"
+                                                    placeholder="Enter final price"
+                                                />
+                                                <small>Proposed: R{selectedRequest.proposed_price || '0'}</small>
+                                            </div>
+                                            
+                                            <div className="form-group">
+                                                <label>Billing Cycle</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={billingCycle}
+                                                    onChange={(e) => setBillingCycle(e.target.value)}
+                                                >
+                                                    <option value="monthly">Monthly</option>
+                                                    <option value="yearly">Yearly (10% discount)</option>
                                                 </select>
                                             </div>
                                         </div>
-                                        
-                                        <div className="form-row">
-                                            <div className="form-group full-width">
-                                                <label>Admin Notes</label>
-                                                <textarea
-                                                    className="form-textarea"
-                                                    rows="4"
-                                                    value={adminNotes}
-                                                    onChange={(e) => setAdminNotes(e.target.value)}
-                                                    placeholder="Add notes about this request..."
-                                                />
+
+                                        <div className="form-group full-width">
+                                            <label>Additional Features (JSON)</label>
+                                            <textarea
+                                                className="form-textarea"
+                                                rows="3"
+                                                value={customFeatures}
+                                                onChange={(e) => setCustomFeatures(e.target.value)}
+                                                placeholder='["api_access", "custom_branding", "dedicated_support"]'
+                                            />
+                                            {selectedRequest.desired_features && (
+                                                <small className="form-help">Client requested: {selectedRequest.desired_features}</small>
+                                            )}
+                                        </div>
+
+                                        <div className="form-group full-width">
+                                            <label>Admin Notes</label>
+                                            <textarea
+                                                className="form-textarea"
+                                                rows="3"
+                                                value={adminNotes}
+                                                onChange={(e) => setAdminNotes(e.target.value)}
+                                                placeholder="Add internal notes about this custom plan..."
+                                            />
+                                        </div>
+
+                                        <div className="config-summary">
+                                            <h4>Configuration Summary</h4>
+                                            <div className="summary-item">
+                                                <span>Base Package:</span>
+                                                <strong>{requestBasePackage ? getPackageName(requestBasePackage) : 'Custom'}</strong>
                                             </div>
+                                            <div className="summary-item">
+                                                <span>Guest Limit:</span>
+                                                <strong>{approvedGuests || selectedRequest?.requested_guests}</strong>
+                                            </div>
+                                            <div className="summary-item">
+                                                <span>Event Limit:</span>
+                                                <strong>{approvedEvents || 'Unlimited'}</strong>
+                                            </div>
+                                            <div className="summary-item">
+                                                <span>Price:</span>
+                                                <strong>R{parseFloat(customPrice || 0).toFixed(2)}/month</strong>
+                                            </div>
+                                            {customFeatures && customFeatures !== '[]' && (
+                                                <div className="summary-item">
+                                                    <span>Features:</span>
+                                                    <div className="feature-tags">
+                                                        {JSON.parse(customFeatures || '[]').map((f, i) => (
+                                                            <span key={i} className="feature-tag">{f}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="request-metadata">
                                             <small>
                                                 <strong>Submitted:</strong> {formatDate(selectedRequest.created_at)}
                                             </small>
-                                            {selectedRequest.reviewed_at && (
-                                                <small>
-                                                    <strong>Last Updated:</strong> {formatDate(selectedRequest.reviewed_at)}
-                                                </small>
-                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Message Thread Section - NEW */}
+                                <div className="details-section message-section">
+                                    <h3 className="section-title">
+                                        <i className="bi bi-chat-dots"></i> 
+                                        Conversation with Client
+                                        {requestMessages.filter(m => m.sender_type === 'business' && !m.is_read).length > 0 && (
+                                            <span className="unread-badge">
+                                                {requestMessages.filter(m => m.sender_type === 'business' && !m.is_read).length} new
+                                            </span>
+                                        )}
+                                    </h3>
+                                    
+                                    <div className="message-thread">
+                                        {loadingMessages ? (
+                                            <div className="loading-messages">
+                                                <div className="spinner-border spinner-border-sm" role="status"></div>
+                                                Loading messages...
+                                            </div>
+                                        ) : requestMessages.length === 0 ? (
+                                            <div className="no-messages">
+                                                <i className="bi bi-chat-dots"></i>
+                                                <p>No messages yet. Start the conversation with the client.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="message-list">
+                                                {requestMessages.map((msg, index) => (
+                                                    <div 
+                                                        key={msg.id || index} 
+                                                        className={`message-item ${msg.sender_type === 'admin' ? 'admin-message' : 'client-message'}`}
+                                                    >
+                                                        <div className="message-header">
+                                                            <span className="sender">
+                                                                {msg.sender_type === 'admin' ? 'You' : msg.sender_name}
+                                                            </span>
+                                                            <span className="time">
+                                                                {new Date(msg.created_at).toLocaleString()}
+                                                                {msg.sender_type === 'business' && !msg.is_read && (
+                                                                    <span className="unread-dot" title="Unread">●</span>
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                        <div className="message-body">
+                                                            {msg.message}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Message Input */}
+                                        <div className="message-input-container">
+                                            <textarea
+                                                className="message-input"
+                                                rows="3"
+                                                value={newMessage}
+                                                onChange={(e) => setNewMessage(e.target.value)}
+                                                placeholder="Type your message to the client..."
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        sendAdminMessage();
+                                                    }
+                                                }}
+                                            />
+                                            <button 
+                                                className="send-message-btn"
+                                                onClick={sendAdminMessage}
+                                                disabled={sendingMessage || !newMessage.trim()}
+                                            >
+                                                {sendingMessage ? (
+                                                    <>
+                                                        <div className="spinner-border spinner-border-sm" role="status"></div>
+                                                        Sending...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="bi bi-send"></i>
+                                                        Send Message
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -2233,18 +2647,26 @@ function AdminDashboard() {
 
                             <div className="modal-actions-new">
                                 <button
-                                    className="action-btn-new primary"
-                                    onClick={updateRequestStatus}
+                                    className="action-btn-new success"
+                                    onClick={approveCustomPlan}
+                                    disabled={!approvedGuests || !approvedEvents || !customPrice}
                                 >
                                     <i className="bi bi-check-circle"></i>
-                                    Update Request
+                                    Approve & Assign Custom Plan
+                                </button>
+                                <button
+                                    className="action-btn-new warning"
+                                    onClick={rejectCustomPlan}
+                                >
+                                    <i className="bi bi-x-circle"></i>
+                                    Reject Request
                                 </button>
                                 <button
                                     className="action-btn-new secondary"
                                     onClick={() => setShowRequestModal(false)}
                                 >
-                                    <i className="bi bi-x-circle"></i>
-                                    Close
+                                    <i className="bi bi-arrow-left"></i>
+                                    Back
                                 </button>
                             </div>
                         </div>
@@ -2844,7 +3266,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
         open_rate: 0,
         response_rate: 0
     });
-    const [statsLoading, setStatsLoading] = useState(true); // Add separate loading state
+    const [statsLoading, setStatsLoading] = useState(true);
     const [enhancedAnalytics, setEnhancedAnalytics] = useState(null);
     const [loading, setLoading] = useState(false);
     const [sortField, setSortField] = useState('eventName');
@@ -2854,21 +3276,17 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
         eventStatus: 'all'
     });
     const [showExportModal, setShowExportModal] = useState(false);
-
-    // ADD ALL THE MISSING STATES:
     const [exportFilters, setExportFilters] = useState({
         event_type: 'all',
         status: 'all',
         user_id: ''
     });
-
     const [users, setUsers] = useState([]);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showEventModal, setShowEventModal] = useState(false);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
-    // Fetch data when component mounts
     useEffect(() => {
         fetchInvitationStats();
         fetchInvitationAnalytics();
@@ -2878,8 +3296,6 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
     const fetchInvitationStats = async () => {
         try {
             setStatsLoading(true);
-            console.log('Fetching invitation stats...');
-
             const formData = new FormData();
             formData.append('function', 'getInvitationStats');
             formData.append('admin_user_id', adminUserId);
@@ -2889,29 +3305,20 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
                 body: formData
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
-            console.log('Stats API Response:', data);
-
             if (data.success && data.stats) {
                 setInvitationStats(data.stats);
-            } else {
-                console.error('API Error:', data.message);
-                // Keep default values (0, 0, 0)
             }
         } catch (error) {
             console.error('Network Error:', error);
-            // Keep default values (0, 0, 0)
         } finally {
             setStatsLoading(false);
         }
     };
 
     const fetchInvitationAnalytics = async () => {
-
         try {
             setLoading(true);
             const formData = new FormData();
@@ -2975,22 +3382,18 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
     const handleExport = async () => {
         try {
             setLoading(true);
-
-            // Create CSV directly from current data (client-side only)
             let csvContent = "Event Name,Organizer,Invitations Sent,Opened,Responses,Response Rate,Status\n";
 
             if (analytics && analytics.length > 0) {
                 analytics.forEach(item => {
                     const safeEventName = (item.eventName || '').replace(/"/g, '""');
                     const safeOrganizer = (item.organizer || 'N/A').replace(/"/g, '""');
-
                     csvContent += `"${safeEventName}","${safeOrganizer}","${item.sent || 0}","${item.opened || 0}","${item.responded || 0}","${item.responseRate || '0%'}","${item.status || 'draft'}"\n`;
                 });
             } else {
                 csvContent += "No invitation data available for export\n";
             }
 
-            // Create and download CSV
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -3004,7 +3407,6 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
             setShowExportModal(false);
             logActivity('Invitation Data Exported', 'Exported invitation analytics to CSV');
             printAlert('Export downloaded successfully!', 'success');
-
         } catch (error) {
             console.error('Error exporting data:', error);
             printAlert('Export failed: ' + error.message, 'error');
@@ -3027,10 +3429,8 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
         setLoading(false);
     };
 
-    // Sort and filter analytics
     const sortedAnalytics = useMemo(() => {
         if (!analytics || !Array.isArray(analytics)) return [];
-
         return [...analytics].sort((a, b) => {
             let aValue = a[sortField];
             let bValue = b[sortField];
@@ -3055,7 +3455,6 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
 
     const filteredAnalytics = useMemo(() => {
         if (!sortedAnalytics) return [];
-
         return sortedAnalytics.filter(item => {
             if (filters.eventStatus !== 'all' && item.status !== filters.eventStatus) {
                 return false;
@@ -3074,17 +3473,10 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
             <div className="admin-content-header">
                 <h2>Invitation Performance Analytics</h2>
                 <div className="header-actions">
-                    <button
-                        className="btn btn-outline"
-                        onClick={refreshData}
-                        disabled={loading}
-                    >
+                    <button className="btn btn-outline" onClick={refreshData} disabled={loading}>
                         <i className="bi bi-arrow-clockwise"></i> Refresh
                     </button>
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => setShowExportModal(true)}
-                    >
+                    <button className="btn btn-primary" onClick={() => setShowExportModal(true)}>
                         <i className="bi bi-download"></i> Export Data
                     </button>
                 </div>
@@ -3186,11 +3578,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
                                 </span>
                             </span>
                             <span>
-                                <button
-                                    className="btn-icon"
-                                    title="View Details"
-                                    onClick={() => viewEventDetails(item)}
-                                >
+                                <button className="btn-icon" title="View Details" onClick={() => viewEventDetails(item)}>
                                     <i className="bi bi-eye"></i>
                                 </button>
                             </span>
@@ -3218,10 +3606,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
                                     <p>Invitation Performance Details</p>
                                 </div>
                             </div>
-                            <button
-                                className="close-btn-new"
-                                onClick={() => setShowEventModal(false)}
-                            >
+                            <button className="close-btn-new" onClick={() => setShowEventModal(false)}>
                                 <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
@@ -3270,12 +3655,8 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
                             </div>
 
                             <div className="modal-actions">
-                                <button
-                                    className="action-btn secondary"
-                                    onClick={() => setShowEventModal(false)}
-                                >
-                                    <i className="bi bi-x-circle"></i>
-                                    Close
+                                <button className="action-btn secondary" onClick={() => setShowEventModal(false)}>
+                                    <i className="bi bi-x-circle"></i> Close
                                 </button>
                             </div>
                         </div>
@@ -3297,10 +3678,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
                                     <p>Export invitation analytics and performance data</p>
                                 </div>
                             </div>
-                            <button
-                                className="close-btn-new"
-                                onClick={() => setShowExportModal(false)}
-                            >
+                            <button className="close-btn-new" onClick={() => setShowExportModal(false)}>
                                 <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
@@ -3334,20 +3712,11 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
                                 </select>
                             </div>
                             <div className="modal-actions-new">
-                                <button
-                                    className="action-btn-new primary"
-                                    onClick={handleExport}
-                                    disabled={loading}
-                                >
-                                    <i className="bi bi-file-earmark-arrow-down"></i>
-                                    Export to CSV
+                                <button className="action-btn-new primary" onClick={handleExport} disabled={loading}>
+                                    <i className="bi bi-file-earmark-arrow-down"></i> Export to CSV
                                 </button>
-                                <button
-                                    className="action-btn-new secondary"
-                                    onClick={() => setShowExportModal(false)}
-                                >
-                                    <i className="bi bi-x-circle"></i>
-                                    Cancel
+                                <button className="action-btn-new secondary" onClick={() => setShowExportModal(false)}>
+                                    <i className="bi bi-x-circle"></i> Cancel
                                 </button>
                             </div>
                         </div>
@@ -3360,7 +3729,7 @@ const InvitationsTabContent = ({ analytics, logActivity, adminUserId, printAlert
 
 const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     const [activeSection, setActiveSection] = useState('plans');
-    const [packageCategory, setPackageCategory] = useState('personal'); // 'personal' or 'business'
+    const [packageCategory, setPackageCategory] = useState('personal');
     const [editingPlan, setEditingPlan] = useState(null);
     const [editForm, setEditForm] = useState({
         package_type: '',
@@ -3373,11 +3742,6 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     const [allPlans, setAllPlans] = useState(plans);
     const [businessPlans, setBusinessPlans] = useState([]);
     const [showEditModal, setShowEditModal] = useState(false);
-
-    // Keep local plans in sync when parent prop `plans` changes
-    useEffect(() => {
-        setAllPlans(Array.isArray(plans) ? plans : []);
-    }, [plans]);
     const [paymentHistory, setPaymentHistory] = useState([]);
     const [revenueData, setRevenueData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -3390,22 +3754,23 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         billing_cycle: 'monthly'
     });
     const [users, setUsers] = useState([]);
-
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [packageFilter, setPackageFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('all');
-    const [userTypeFilter, setUserTypeFilter] = useState('all'); // 'all', 'personal', 'business'
+    const [userTypeFilter, setUserTypeFilter] = useState('all');
     const [sortBy, setSortBy] = useState('payment_date');
     const [sortOrder, setSortOrder] = useState('desc');
     const [selectedPayment, setSelectedPayment] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-
-    // New states for real data
     const [activeSubscriptions, setActiveSubscriptions] = useState({});
     const [packageUsageStats, setPackageUsageStats] = useState([]);
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+
+    useEffect(() => {
+        setAllPlans(Array.isArray(plans) ? plans : []);
+    }, [plans]);
 
     useEffect(() => {
         fetchBusinessPlans();
@@ -3420,54 +3785,24 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
     }, [activeSection]);
 
-    useEffect(() => {
-    console.log('🔄 Business plans state updated:', businessPlans);
-    console.log('📊 Business plans count:', businessPlans.length);
-    
-    if (businessPlans.length > 0) {
-        console.log('📋 First business plan:', businessPlans[0]);
-        console.log('🔍 First plan features:', businessPlans[0].features);
-        console.log('🔍 First plan features type:', typeof businessPlans[0].features);
-    }
-}, [businessPlans]);
-
-useEffect(() => {
-    // Also log when packageCategory changes
-    console.log('📦 Package category changed to:', packageCategory);
-    console.log('🏢 Business plans available:', businessPlans.length);
-    console.log('👤 Personal plans available:', allPlans.length);
-}, [packageCategory, businessPlans, allPlans]);
-
     const fetchBusinessPlans = async () => {
-    try {
-        console.log('Fetching business plans...');
-        
-        // FIX: Use 'function' parameter instead of 'action'
-        const response = await fetch(`${API_BASE_URL}/query.php`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
-            },
-            body: new URLSearchParams({ 
-                function: 'getBusinessPackages'  // Change from 'action' to 'function'
-            })
-        });
-        
-        console.log('Response status:', response.status);
-        const data = await response.json();
-        console.log('Business plans response:', data);
-        
-        if (data.success) {
-            setBusinessPlans(data.packages);
-            console.log('Business plans set:', data.packages);
-        } else {
-            console.error('Failed to fetch business plans:', data.message);
+        try {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ function: 'getBusinessPackages' })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                setBusinessPlans(data.packages);
+            } else {
+                console.error('Failed to fetch business plans:', data.message);
+            }
+        } catch (error) {
+            console.error('Error fetching business plans:', error);
         }
-    } catch (error) {
-        console.error('Error fetching business plans:', error);
-    }
-};
+    };
 
     const fetchPaymentHistory = async () => {
         try {
@@ -3591,7 +3926,6 @@ useEffect(() => {
         }
     };
 
-    // Calculate personal revenue
     const getPersonalRevenue = () => {
         if (!paymentHistory || !Array.isArray(paymentHistory)) return 0;
         return paymentHistory
@@ -3599,7 +3933,6 @@ useEffect(() => {
             .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
     };
 
-    // Calculate business revenue
     const getBusinessRevenue = () => {
         if (!paymentHistory || !Array.isArray(paymentHistory)) return 0;
         return paymentHistory
@@ -3607,7 +3940,6 @@ useEffect(() => {
             .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
     };
 
-    // Calculate filtered revenue (based on current filters)
     const getFilteredRevenue = () => {
         return filteredPayments
             .filter(p => p.payment_status === 'completed')
@@ -3704,41 +4036,30 @@ useEffect(() => {
         logActivity('Payment Details Viewed', `Viewed payment details for transaction: ${payment.payment_id}`);
     };
 
-   // Helper function to parse features safely - UPDATED VERSION
-const parseFeatures = (features) => {
-    console.log('parseFeatures input:', features, 'Type:', typeof features);
-    
-    if (!features) return [];
-    
-    // If it's already an array, return it
-    if (Array.isArray(features)) {
-        console.log('Features is already an array');
-        return features.filter(f => f && typeof f === 'string');
-    }
-    
-    // If it's a string, try to parse as JSON first
-    if (typeof features === 'string') {
-        try {
-            // Try parsing as JSON (for business packages from PHP)
-            const parsed = JSON.parse(features);
-            console.log('Successfully parsed as JSON:', parsed);
-            if (Array.isArray(parsed)) {
-                return parsed.filter(f => f && typeof f === 'string');
-            }
-        } catch (e) {
-            console.log('Not JSON, treating as comma-separated string');
-            // If not valid JSON, treat as comma-separated string
-            return features.split(',').map(f => f.trim()).filter(f => f.length > 0);
+    const parseFeatures = (features) => {
+        if (!features) return [];
+        
+        if (Array.isArray(features)) {
+            return features.filter(f => f && typeof f === 'string');
         }
-    }
-    
-    console.log('Returning empty array');
-    return [];
-};
+        
+        if (typeof features === 'string') {
+            try {
+                const parsed = JSON.parse(features);
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(f => f && typeof f === 'string');
+                }
+            } catch (e) {
+                return features.split(',').map(f => f.trim()).filter(f => f.length > 0);
+            }
+        }
+        
+        return [];
+    };
 
     const startEditing = (plan) => {
         setEditingPlan(plan.package_id || plan.id);
-        const rawFeatures = plan.features || ''; // ← safety
+        const rawFeatures = plan.features || '';
         const parsedFeatures = parseFeatures(rawFeatures);
 
         setEditForm({
@@ -3750,14 +4071,6 @@ const parseFeatures = (features) => {
             features: parsedFeatures.join(', ')
         });
         setShowEditModal(true);
-
-        console.group('Edit Modal Opened');
-        console.log('Plan ID:', plan.package_id || plan.id);
-        console.log('Plan Name:', formatPlanName(plan.package_type || plan.name));
-        console.log('Raw Features (DB):', plan.features);
-        console.log('Parsed Features:', parsedFeatures);
-        console.log('Features String:', parsedFeatures.join(', '));
-        console.groupEnd();
     };
 
     const cancelEditing = () => {
@@ -3806,28 +4119,12 @@ const parseFeatures = (features) => {
                 formData.append('admin_user_id', adminUserId);
             }
 
-            // Detailed logging for debugging
-            console.group('📦 Package Update Debug Info');
-            console.log('⏱️ Timestamp:', new Date().toISOString());
-            console.log('🆔 Package ID:', editingPlan);
-            console.log('📝 Package Type:', editForm.package_type);
-            console.log('👥 Max Guests:', editForm.max_guests);
-            console.log('📅 Max Events:', editForm.max_events);
-            console.log('💰 Price:', editForm.price);
-            console.log('✨ Features:', editForm.features);
-            console.log('🏢 Is Business Package:', isBusinessPackage);
-            console.log('🌐 API URL:', API_BASE_URL);
-            console.groupEnd();
-
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
 
-            console.log('📡 Network Response Status:', response.status, response.statusText);
-
             const data = await response.json();
-            console.log('✅ Server Response:', JSON.stringify(data, null, 2));
 
             if (data.success) {
                 if (isBusinessPackage) {
@@ -3864,7 +4161,6 @@ const parseFeatures = (features) => {
                 );
                 printAlert('Package updated successfully!', 'success');
             } else {
-                console.error('❌ Server error response:', data.message);
                 if (data.message && data.message.includes("Unauthorized")) {
                     printAlert('Access denied: Admin privileges required', 'error');
                 } else {
@@ -3873,12 +4169,7 @@ const parseFeatures = (features) => {
                 logActivity('Package Update Failed', `Failed to update package: ${data.message}`);
             }
         } catch (error) {
-            console.error('❌ Error updating package:', error);
-            console.error('🔍 Error details:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            });
+            console.error('Error updating package:', error);
             printAlert('Error updating package', 'error');
             logActivity('Package Update Error', `Package update error: ${error.message}`);
         }
@@ -3965,13 +4256,11 @@ const parseFeatures = (features) => {
     };
 
     const getActiveSubscriptions = (packageType) => {
-        // Ensure count is displayed as a normal integer (no leading zeros)
         const val = activeSubscriptions[packageType] || 0;
         return typeof val === 'string' ? parseInt(val, 10) : val;
     };
 
     const getPaidSubscriptions = () => {
-        // Calculate total paid subscriptions (excluding FREE tier)
         const paidTypes = ['basic', 'premium', 'enterprise'];
         return paidTypes.reduce((total, type) => {
             const val = activeSubscriptions[type] || 0;
@@ -3981,7 +4270,6 @@ const parseFeatures = (features) => {
     };
 
     const getTotalActiveUsers = () => {
-        // Calculate total active users (including FREE tier)
         return Object.values(activeSubscriptions).reduce((total, val) => {
             const count = typeof val === 'string' ? parseInt(val, 10) : val;
             return total + count;
@@ -4027,16 +4315,10 @@ const parseFeatures = (features) => {
                         </div>
                     </div>
                     <div className="tab-buttons">
-                        <button
-                            className={`tab-button ${activeSection === 'plans' ? 'active' : ''}`}
-                            onClick={() => setActiveSection('plans')}
-                        >
+                        <button className={`tab-button ${activeSection === 'plans' ? 'active' : ''}`} onClick={() => setActiveSection('plans')}>
                             Pricing Plans
                         </button>
-                        <button
-                            className={`tab-button ${activeSection === 'payments' ? 'active' : ''}`}
-                            onClick={() => setActiveSection('payments')}
-                        >
+                        <button className={`tab-button ${activeSection === 'payments' ? 'active' : ''}`} onClick={() => setActiveSection('payments')}>
                             Payment History
                         </button>
                     </div>
@@ -4047,175 +4329,76 @@ const parseFeatures = (features) => {
                 <>
                     <div className="package-category-selector">
                         <div className="selector-buttons">
-                            <button
-                                className={`category-btn ${packageCategory === 'personal' ? 'active' : ''}`}
-                                onClick={() => {
-                                    console.log('Switching to personal packages');
-                                    setPackageCategory('personal');
-                                }}
-                            >
+                            <button className={`category-btn ${packageCategory === 'personal' ? 'active' : ''}`} onClick={() => setPackageCategory('personal')}>
                                 <i className="bi bi-person"></i> Personal Packages
                             </button>
-                            <button
-                                className={`category-btn ${packageCategory === 'business' ? 'active' : ''}`}
-                                onClick={() => {
-                                    console.log('Switching to business packages');
-                                    setPackageCategory('business');
-                                }}
-                            >
+                            <button className={`category-btn ${packageCategory === 'business' ? 'active' : ''}`} onClick={() => setPackageCategory('business')}>
                                 <i className="bi bi-building"></i> Business Packages
                             </button>
                         </div>
                     </div>
                     <div className="pricing-plans-grid">
-    {console.log('DEBUG - Current state:', {
-        packageCategory,
-        allPlansCount: allPlans.length,
-        businessPlansCount: businessPlans.length,
-        businessPlansData: businessPlans
-    })}
+                        {packageCategory === 'business' && businessPlans.length === 0 && (
+                            <div className="empty-state">
+                                <i className="bi bi-building"></i>
+                                <h3>No Business Packages Found</h3>
+                                <p>Check browser console for debugging information</p>
+                                <button className="btn btn-primary" onClick={fetchBusinessPlans} style={{ marginTop: '10px' }}>
+                                    Retry Loading Business Plans
+                                </button>
+                            </div>
+                        )}
 
-    {/* Show empty message for business plans */}
-    {packageCategory === 'business' && businessPlans.length === 0 && (
-        <div className="empty-state">
-            <i className="bi bi-building"></i>
-            <h3>No Business Packages Found</h3>
-            <p>Check browser console for debugging information</p>
-            <button 
-                className="btn btn-primary" 
-                onClick={fetchBusinessPlans}
-                style={{ marginTop: '10px' }}
-            >
-                Retry Loading Business Plans
-            </button>
-        </div>
-    )}
-
-    {/* Render plans based on category */}
-    {(packageCategory === 'personal' ? allPlans : businessPlans).map(plan => {
-        console.log('Rendering plan:', plan);
-        
-        // For debugging: Log the features
-        console.log('Plan features raw:', plan.features);
-        console.log('Parsed features:', parseFeatures(plan.features));
-        
-        return (
-            <div key={plan.package_id || plan.id} className="pricing-plan-card">
-                <div className="plan-header">
-                    <h3>
-                        {/* Handle both naming conventions */}
-                        {formatPlanName(plan.package_type || plan.name)}
-                    </h3>
-                    <span className="plan-status active">Active</span>
-                </div>
-
-                <div className="plan-price">
-                    <span className="price-amount">R{plan.price || '0.00'}</span>
-                    <span className="price-interval"></span>
-                </div>
-
-                <div className="plan-subscriptions">
-                    <i className="bi bi-people"></i>
-                    <span>
-                        {/* Use plan.name for business, plan.package_type for personal */}
-                        {getActiveSubscriptions(plan.package_type || plan.name)} active subscriptions
-                    </span>
-                </div>
-
-                <div className="plan-features">
-                    <h4>Features:</h4>
-                    <ul>
-                        <li>
-                            <strong>Max Guests:</strong> {plan.max_guests || 'Unlimited'}
-                        </li>
-                        <li>
-                            <strong>Max Events:</strong> {plan.max_events || 'Unlimited'}
-                        </li>
-                        {parseFeatures(plan.features).map((feature, index) => (
-                            <li key={index}>{feature}</li>
+                        {(packageCategory === 'personal' ? allPlans : businessPlans).map(plan => (
+                            <div key={plan.package_id || plan.id} className="pricing-plan-card">
+                                <div className="plan-header">
+                                    <h3>{formatPlanName(plan.package_type || plan.name)}</h3>
+                                    <span className="plan-status active">Active</span>
+                                </div>
+                                <div className="plan-price">
+                                    <span className="price-amount">R{plan.price || '0.00'}</span>
+                                    <span className="price-interval"></span>
+                                </div>
+                                <div className="plan-subscriptions">
+                                    <i className="bi bi-people"></i>
+                                    <span>{getActiveSubscriptions(plan.package_type || plan.name)} active subscriptions</span>
+                                </div>
+                                <div className="plan-features">
+                                    <h4>Features:</h4>
+                                    <ul>
+                                        <li><strong>Max Guests:</strong> {plan.max_guests || 'Unlimited'}</li>
+                                        <li><strong>Max Events:</strong> {plan.max_events || 'Unlimited'}</li>
+                                        {parseFeatures(plan.features).map((feature, index) => (
+                                            <li key={index}>{feature}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div className="plan-actions">
+                                    <button className="btn btn-outline btn-sm" onClick={() => startEditing(plan)}>
+                                        <i className="bi bi-pencil"></i> Edit
+                                    </button>
+                                </div>
+                            </div>
                         ))}
-                    </ul>
-                </div>
-
-                <div className="plan-actions">
-                    <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => startEditing(plan)}
-                    >
-                        <i className="bi bi-pencil"></i> Edit
-                    </button>
-                </div>
-            </div>
-        );
-    })}
-</div>
+                    </div>
                 </>
             ) : (
                 <div className="payment-history-section">
-                    {/* User Type Filter Buttons */}
-                    <div className="user-type-filter-buttons" style={{
-                        display: 'flex',
-                        gap: '10px',
-                        marginBottom: '20px',
-                        padding: '15px',
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: '8px'
-                    }}>
-                        <button
-                            className={`filter-btn ${userTypeFilter === 'all' ? 'active' : ''}`}
-                            onClick={() => setUserTypeFilter('all')}
-                            style={{
-                                padding: '10px 20px',
-                                border: 'none',
-                                borderRadius: '6px',
-                                backgroundColor: userTypeFilter === 'all' ? '#667eea' : '#e0e0e0',
-                                color: userTypeFilter === 'all' ? 'white' : '#333',
-                                cursor: 'pointer',
-                                fontWeight: userTypeFilter === 'all' ? 'bold' : 'normal',
-                                transition: 'all 0.3s ease'
-                            }}
-                        >
+                    <div className="user-type-filter-buttons">
+                        <button className={`filter-btn ${userTypeFilter === 'all' ? 'active' : ''}`} onClick={() => setUserTypeFilter('all')}>
                             <i className="bi bi-globe"></i> All Users
                         </button>
-                        <button
-                            className={`filter-btn ${userTypeFilter === 'personal' ? 'active' : ''}`}
-                            onClick={() => setUserTypeFilter('personal')}
-                            style={{
-                                padding: '10px 20px',
-                                border: 'none',
-                                borderRadius: '6px',
-                                backgroundColor: userTypeFilter === 'personal' ? '#667eea' : '#e0e0e0',
-                                color: userTypeFilter === 'personal' ? 'white' : '#333',
-                                cursor: 'pointer',
-                                fontWeight: userTypeFilter === 'personal' ? 'bold' : 'normal',
-                                transition: 'all 0.3s ease'
-                            }}
-                        >
+                        <button className={`filter-btn ${userTypeFilter === 'personal' ? 'active' : ''}`} onClick={() => setUserTypeFilter('personal')}>
                             <i className="bi bi-person"></i> Personal
                         </button>
-                        <button
-                            className={`filter-btn ${userTypeFilter === 'business' ? 'active' : ''}`}
-                            onClick={() => setUserTypeFilter('business')}
-                            style={{
-                                padding: '10px 20px',
-                                border: 'none',
-                                borderRadius: '6px',
-                                backgroundColor: userTypeFilter === 'business' ? '#667eea' : '#e0e0e0',
-                                color: userTypeFilter === 'business' ? 'white' : '#333',
-                                cursor: 'pointer',
-                                fontWeight: userTypeFilter === 'business' ? 'bold' : 'normal',
-                                transition: 'all 0.3s ease'
-                            }}
-                        >
+                        <button className={`filter-btn ${userTypeFilter === 'business' ? 'active' : ''}`} onClick={() => setUserTypeFilter('business')}>
                             <i className="bi bi-building"></i> Business
                         </button>
                     </div>
 
                     <div className="revenue-stats-grid">
                         <div className="revenue-card total">
-                            <div className="revenue-icon">
-                                <i className="bi bi-currency-dollar"></i>
-                            </div>
+                            <div className="revenue-icon"><i className="bi bi-currency-dollar"></i></div>
                             <div className="revenue-content">
                                 <h3>Total Revenue</h3>
                                 <p className="revenue-amount">
@@ -4227,11 +4410,8 @@ const parseFeatures = (features) => {
                                 <span className="revenue-trend">{userTypeFilter === 'all' ? 'All time' : `${userTypeFilter} users`}</span>
                             </div>
                         </div>
-
                         <div className="revenue-card monthly">
-                            <div className="revenue-icon">
-                                <i className="bi bi-person"></i>
-                            </div>
+                            <div className="revenue-icon"><i className="bi bi-person"></i></div>
                             <div className="revenue-content">
                                 <h3>Personal Subscriptions</h3>
                                 <p className="revenue-amount">
@@ -4240,11 +4420,8 @@ const parseFeatures = (features) => {
                                 <span className="revenue-trend">Active personal users</span>
                             </div>
                         </div>
-
                         <div className="revenue-card pending">
-                            <div className="revenue-icon">
-                                <i className="bi bi-building"></i>
-                            </div>
+                            <div className="revenue-icon"><i className="bi bi-building"></i></div>
                             <div className="revenue-content">
                                 <h3>Business Subscriptions</h3>
                                 <p className="revenue-amount">
@@ -4259,55 +4436,30 @@ const parseFeatures = (features) => {
                         <div className="control-group">
                             <div className="search-box">
                                 <i className="bi bi-search"></i>
-                                <input
-                                    type="text"
-                                    placeholder="Search by user name, email, or transaction ID..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                {searchQuery && (
-                                    <button className="clear-search" onClick={() => setSearchQuery('')}>
-                                        <i className="bi bi-x"></i>
-                                    </button>
-                                )}
+                                <input type="text" placeholder="Search by user name, email, or transaction ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                {searchQuery && <button className="clear-search" onClick={() => setSearchQuery('')}><i className="bi bi-x"></i></button>}
                             </div>
-
                             <div className="filter-controls">
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                >
+                                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                                     <option value="all">All Statuses</option>
                                     <option value="completed">Completed</option>
                                     <option value="pending">Pending</option>
                                     <option value="failed">Failed</option>
                                 </select>
-
-                                <select
-                                    value={packageFilter}
-                                    onChange={(e) => setPackageFilter(e.target.value)}
-                                >
+                                <select value={packageFilter} onChange={(e) => setPackageFilter(e.target.value)}>
                                     <option value="all">All Packages</option>
                                     <optgroup label="Personal Packages">
                                         {allPlans.map(plan => (
-                                            <option key={plan.package_id} value={plan.package_type}>
-                                                {formatPlanName(plan.package_type)}
-                                            </option>
+                                            <option key={plan.package_id} value={plan.package_type}>{formatPlanName(plan.package_type)}</option>
                                         ))}
                                     </optgroup>
                                     <optgroup label="Business Packages">
                                         {businessPlans.map(plan => (
-                                            <option key={plan.id} value={plan.name}>
-                                                {plan.name.replace(' Business', '').replace(' business', '')}
-                                            </option>
+                                            <option key={plan.id} value={plan.name}>{plan.name.replace(' Business', '').replace(' business', '')}</option>
                                         ))}
                                     </optgroup>
                                 </select>
-
-                                <select
-                                    value={dateFilter}
-                                    onChange={(e) => setDateFilter(e.target.value)}
-                                >
+                                <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
                                     <option value="all">All Time</option>
                                     <option value="today">Today</option>
                                     <option value="week">This Week</option>
@@ -4320,14 +4472,8 @@ const parseFeatures = (features) => {
 
                     <div className="payment-table-container">
                         <div className="table-header-actions">
-                            <h3>
-                                Payment History
-                                <span className="result-count">({filteredPayments.length} payments)</span>
-                            </h3>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => setShowManualPayment(true)}
-                            >
+                            <h3>Payment History <span className="result-count">({filteredPayments.length} payments)</span></h3>
+                            <button className="btn btn-primary" onClick={() => setShowManualPayment(true)}>
                                 <i className="bi bi-plus-circle"></i> Add Manual Payment
                             </button>
                         </div>
@@ -4337,18 +4483,10 @@ const parseFeatures = (features) => {
                         ) : (
                             <div className="payment-table">
                                 <div className="table-header">
-                                    <span className="sortable" onClick={() => handleSort('payment_date')}>
-                                        Date {sortBy === 'payment_date' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                    </span>
-                                    <span className="sortable" onClick={() => handleSort('user_name')}>
-                                        User {sortBy === 'user_name' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                    </span>
-                                    <span className="sortable" onClick={() => handleSort('account_type')}>
-                                        User Type {sortBy === 'account_type' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                    </span>
-                                    <span className="sortable" onClick={() => handleSort('package_type')}>
-                                        Package {sortBy === 'package_type' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                    </span>
+                                    <span className="sortable" onClick={() => handleSort('payment_date')}>Date {sortBy === 'payment_date' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
+                                    <span className="sortable" onClick={() => handleSort('user_name')}>User {sortBy === 'user_name' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
+                                    <span className="sortable" onClick={() => handleSort('account_type')}>User Type {sortBy === 'account_type' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
+                                    <span className="sortable" onClick={() => handleSort('package_type')}>Package {sortBy === 'package_type' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
                                     <span>Amount</span>
                                     <span>Method</span>
                                     <span>Status</span>
@@ -4363,49 +4501,21 @@ const parseFeatures = (features) => {
                                             <div className="user-email">{payment.user_email}</div>
                                         </span>
                                         <span>
-                                            <span className={`user-type-badge ${payment.account_type}`} style={{
-                                                padding: '4px 12px',
-                                                borderRadius: '20px',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold',
-                                                backgroundColor: payment.account_type === 'business' ? '#e7f3ff' : '#f0e7ff',
-                                                color: payment.account_type === 'business' ? '#0066cc' : '#7c3aed'
-                                            }}>
+                                            <span className={`user-type-badge ${payment.account_type}`}>
                                                 {payment.account_type === 'business' ? '🏢 Business' : '👤 Personal'}
                                             </span>
                                         </span>
-                                        <span>
-                                            <span className="package-badge">
-                                                {formatPlanName(payment.package_type)}
-                                            </span>
-                                        </span>
+                                        <span><span className="package-badge">{formatPlanName(payment.package_type)}</span></span>
                                         <span className="amount">{formatCurrency(payment.amount)}</span>
-                                        <span>
-                                            <span className={`method-badge ${payment.payment_method}`}>
-                                                {payment.payment_method}
-                                            </span>
-                                        </span>
-                                        <span>
-                                            <span className={`status-badge ${getStatusBadgeClass(payment.payment_status)}`}>
-                                                {payment.payment_status}
-                                            </span>
-                                        </span>
+                                        <span><span className={`method-badge ${payment.payment_method}`}>{payment.payment_method}</span></span>
+                                        <span><span className={`status-badge ${getStatusBadgeClass(payment.payment_status)}`}>{payment.payment_status}</span></span>
                                         <span className="actions">
                                             {payment.payment_status === 'pending' && (
-                                                <button
-                                                    className="btn-icon success"
-                                                    onClick={() => updatePaymentStatus(payment.payment_id, 'completed')}
-                                                    title="Mark as Completed"
-                                                >
+                                                <button className="btn-icon success" onClick={() => updatePaymentStatus(payment.payment_id, 'completed')} title="Mark as Completed">
                                                     <i className="bi bi-check"></i>
                                                 </button>
                                             )}
-
-                                            <button
-                                                className="btn-icon info"
-                                                onClick={() => viewPaymentDetails(payment)}
-                                                title="View Details"
-                                            >
+                                            <button className="btn-icon info" onClick={() => viewPaymentDetails(payment)} title="View Details">
                                                 <i className="bi bi-eye"></i>
                                             </button>
                                         </span>
@@ -4415,15 +4525,7 @@ const parseFeatures = (features) => {
                                     <div key="no-payments" className="no-payments">
                                         <i className="bi bi-receipt"></i>
                                         <p>No payments found matching your criteria</p>
-                                        <button
-                                            className="btn btn-outline"
-                                            onClick={() => {
-                                                setSearchQuery('');
-                                                setStatusFilter('all');
-                                                setPackageFilter('all');
-                                                setDateFilter('all');
-                                            }}
-                                        >
+                                        <button className="btn btn-outline" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setPackageFilter('all'); setDateFilter('all'); }}>
                                             Clear Filters
                                         </button>
                                     </div>
@@ -4434,7 +4536,7 @@ const parseFeatures = (features) => {
                 </div>
             )}
 
-            {/* Edit Package Modal - FULLY WORKING WITH TAGS */}
+            {/* Edit Package Modal */}
             {showEditModal && (
                 <div className="modal-overlay" onClick={cancelEditing}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -4446,12 +4548,7 @@ const parseFeatures = (features) => {
                             <div className="form-grid">
                                 <div className="form-group">
                                     <label>Package Name *</label>
-                                    <input 
-                                        type="text" 
-                                        value={editForm.name || editForm.package_type} 
-                                        onChange={(e) => handleEditChange('name', e.target.value)} 
-                                        placeholder="Enter package name" 
-                                    />
+                                    <input type="text" value={editForm.name || editForm.package_type} onChange={(e) => handleEditChange('name', e.target.value)} placeholder="Enter package name" />
                                 </div>
                                 <div className="form-group">
                                     <label>Package Type *</label>
@@ -4485,7 +4582,6 @@ const parseFeatures = (features) => {
                                     <label>Price (R) *</label>
                                     <input type="number" step="0.01" value={editForm.price} onChange={(e) => handleEditChange('price', e.target.value)} placeholder="0.00" />
                                 </div>
-
                                 <div className="form-group full-width">
                                     <label>Features *</label>
                                     <div className="features-tags-input">
@@ -4493,25 +4589,14 @@ const parseFeatures = (features) => {
                                             {parseFeatures(editForm.features).map((feature, index) => (
                                                 <span key={index} className="feature-tag">
                                                     {feature}
-                                                    <button
-                                                        type="button"
-                                                        className="remove-tag"
-                                                        onClick={() => {
-                                                            const updated = parseFeatures(editForm.features)
-                                                                .filter((_, i) => i !== index)
-                                                                .join(', ');
-                                                            handleEditChange('features', updated);
-                                                        }}
-                                                    >
-                                                        ×
-                                                    </button>
+                                                    <button type="button" className="remove-tag" onClick={() => {
+                                                        const updated = parseFeatures(editForm.features).filter((_, i) => i !== index).join(', ');
+                                                        handleEditChange('features', updated);
+                                                    }}>×</button>
                                                 </span>
                                             ))}
                                         </div>
-                                        <input
-                                            type="text"
-                                            placeholder={parseFeatures(editForm.features).length === 0 ? "Type a feature and press Enter" : ""}
-                                            className="tag-input"
+                                        <input type="text" placeholder={parseFeatures(editForm.features).length === 0 ? "Type a feature and press Enter" : ""} className="tag-input"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' || e.key === ',') {
                                                     e.preventDefault();
@@ -4540,28 +4625,14 @@ const parseFeatures = (features) => {
                                             }}
                                         />
                                     </div>
-                                    <small className="form-help">
-                                        Press Enter or comma to add. Click × or Backspace to remove.
-                                    </small>
+                                    <small className="form-help">Press Enter or comma to add. Click × or Backspace to remove.</small>
                                 </div>
                             </div>
-
                             <div className="modal-actions">
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={savePackage}
-                                    disabled={
-                                        !editForm.package_type || 
-                                        !editForm.price || 
-                                        !editForm.features.trim() ||
-                                        !editForm.max_guests
-                                    }
-                                >
+                                <button className="btn btn-primary" onClick={savePackage} disabled={!editForm.package_type || !editForm.price || !editForm.features.trim() || !editForm.max_guests}>
                                     Save Changes
                                 </button>
-                                <button className="btn btn-outline" onClick={cancelEditing}>
-                                    Cancel
-                                </button>
+                                <button className="btn btn-outline" onClick={cancelEditing}>Cancel</button>
                             </div>
                         </div>
                     </div>
@@ -4583,9 +4654,7 @@ const parseFeatures = (features) => {
                                     <select value={manualPaymentForm.user_id} onChange={(e) => setManualPaymentForm(prev => ({ ...prev, user_id: e.target.value }))}>
                                         <option value="">Select User</option>
                                         {users.map(user => (
-                                            <option key={user.user_id} value={user.user_id}>
-                                                {user.name} ({user.email})
-                                            </option>
+                                            <option key={user.user_id} value={user.user_id}>{user.name} ({user.email})</option>
                                         ))}
                                     </select>
                                 </div>
@@ -4594,9 +4663,7 @@ const parseFeatures = (features) => {
                                     <select value={manualPaymentForm.package_id} onChange={(e) => setManualPaymentForm(prev => ({ ...prev, package_id: e.target.value }))}>
                                         <option value="">Select Package</option>
                                         {allPlans.map(plan => (
-                                            <option key={plan.package_id} value={plan.package_id}>
-                                                {formatPlanName(plan.package_type)} - R{plan.price}
-                                            </option>
+                                            <option key={plan.package_id} value={plan.package_id}>{formatPlanName(plan.package_type)} - R{plan.price}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -4616,9 +4683,7 @@ const parseFeatures = (features) => {
                                 <button className="btn btn-primary" onClick={handleManualPayment} disabled={!manualPaymentForm.user_id || !manualPaymentForm.package_id || !manualPaymentForm.amount}>
                                     Add Payment
                                 </button>
-                                <button className="btn btn-outline" onClick={() => setShowManualPayment(false)}>
-                                    Cancel
-                                </button>
+                                <button className="btn btn-outline" onClick={() => setShowManualPayment(false)}>Cancel</button>
                             </div>
                         </div>
                     </div>
@@ -4631,110 +4696,75 @@ const parseFeatures = (features) => {
                     <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header-new">
                             <div className="payment-title-section">
-                                <div className="payment-icon-large">
-                                    <i className="bi bi-credit-card"></i>
-                                </div>
+                                <div className="payment-icon-large"><i className="bi bi-credit-card"></i></div>
                                 <div className="payment-title">
                                     <h2>Payment Details</h2>
                                     <p>Payment ID: {selectedPayment.payment_id}</p>
                                 </div>
                             </div>
-                            <button className="close-btn-new" onClick={() => setShowPaymentModal(false)}>
-                                <i className="bi bi-x-lg"></i>
-                            </button>
+                            <button className="close-btn-new" onClick={() => setShowPaymentModal(false)}><i className="bi bi-x-lg"></i></button>
                         </div>
-
                         <div className="modal-body-new">
                             <div className="payment-details-grid-new">
                                 <div className="detail-card-new amount-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-currency-dollar"></i>
-                                    </div>
+                                    <div className="detail-icon-new"><i className="bi bi-currency-dollar"></i></div>
                                     <div className="detail-content-new">
                                         <label>Amount</label>
                                         <p className="amount-large-new">{formatCurrency(selectedPayment.amount)}</p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card-new status-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-activity"></i>
-                                    </div>
+                                    <div className="detail-icon-new"><i className="bi bi-activity"></i></div>
                                     <div className="detail-content-new">
                                         <label>Status</label>
-                                        <p className={`status-indicator-new ${selectedPayment.payment_status}`}>
-                                            {selectedPayment.payment_status}
-                                        </p>
+                                        <p className={`status-indicator-new ${selectedPayment.payment_status}`}>{selectedPayment.payment_status}</p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card-new package-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-box-seam"></i>
-                                    </div>
+                                    <div className="detail-icon-new"><i className="bi bi-box-seam"></i></div>
                                     <div className="detail-content-new">
                                         <label>Package</label>
                                         <p>{formatPlanName(selectedPayment.package_type)}</p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card-new user-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-person"></i>
-                                    </div>
+                                    <div className="detail-icon-new"><i className="bi bi-person"></i></div>
                                     <div className="detail-content-new">
                                         <label>User</label>
                                         <p>{selectedPayment.user_name || 'N/A'}</p>
                                         <small>{selectedPayment.user_email}</small>
                                     </div>
                                 </div>
-
                                 <div className="detail-card-new method-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-wallet2"></i>
-                                    </div>
+                                    <div className="detail-icon-new"><i className="bi bi-wallet2"></i></div>
                                     <div className="detail-content-new">
                                         <label>Payment Method</label>
-                                        <p className={`method-badge-new ${selectedPayment.payment_method}`}>
-                                            {selectedPayment.payment_method}
-                                        </p>
+                                        <p className={`method-badge-new ${selectedPayment.payment_method}`}>{selectedPayment.payment_method}</p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card-new date-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-calendar"></i>
-                                    </div>
+                                    <div className="detail-icon-new"><i className="bi bi-calendar"></i></div>
                                     <div className="detail-content-new">
                                         <label>Payment Date</label>
                                         <p>{formatDate(selectedPayment.payment_date)}</p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card-new transaction-card">
-                                    <div className="detail-icon-new">
-                                        <i className="bi bi-receipt"></i>
-                                    </div>
+                                    <div className="detail-icon-new"><i className="bi bi-receipt"></i></div>
                                     <div className="detail-content-new">
                                         <label>Payment ID</label>
                                         <p>{selectedPayment.payment_id}</p>
                                     </div>
                                 </div>
                             </div>
-
                             <div className="payment-actions-new">
                                 {selectedPayment.payment_status === 'pending' && (
-                                    <button className="action-btn-new success" onClick={() => {
-                                        updatePaymentStatus(selectedPayment.payment_id, 'completed');
-                                        setShowPaymentModal(false);
-                                    }}>
-                                        <i className="bi bi-check-circle"></i>
-                                        Mark as Completed
+                                    <button className="action-btn-new success" onClick={() => { updatePaymentStatus(selectedPayment.payment_id, 'completed'); setShowPaymentModal(false); }}>
+                                        <i className="bi bi-check-circle"></i> Mark as Completed
                                     </button>
                                 )}
                                 <button className="action-btn-new secondary" onClick={() => setShowPaymentModal(false)}>
-                                    <i className="bi bi-x-circle"></i>
-                                    Close
+                                    <i className="bi bi-x-circle"></i> Close
                                 </button>
                             </div>
                         </div>
@@ -4764,12 +4794,10 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
-    // Always fetch fresh data when component mounts
     useEffect(() => {
         fetchUsersData();
     }, []);
 
-    // Initialize with linked list when users data changes - FIXED
     useEffect(() => {
         if (initialUsers && initialUsers.length > 0) {
             const newList = new UsersLinkedList();
@@ -4782,7 +4810,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                 joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
             })));
             setUsersList(newList);
-            setFilteredUsers(newList.toArray()); // Initialize with all users
+            setFilteredUsers(newList.toArray());
             setUsers(initialUsers);
         }
     }, [initialUsers]);
@@ -4821,11 +4849,10 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                     joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'
                 }));
 
-                // Initialize linked list with fetched data
                 const newList = new UsersLinkedList();
                 newList.appendAll(formattedUsers);
                 setUsersList(newList);
-                setFilteredUsers(newList.toArray()); // Show all users initially
+                setFilteredUsers(newList.toArray());
                 setUsers(formattedUsers);
 
                 logActivity('Users Data Loaded', 'Loaded user management data');
@@ -4863,50 +4890,36 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
         }
     };
 
-    // FIXED: Only use linked list for search - NO MORE useEffect OVERRIDE!
     const handleSearch = (e) => {
         const query = e.target.value;
         setSearchQuery(query);
 
         if (!query.trim()) {
-            // Show all users when search is empty
             applyFiltersAndSort(usersList.toArray());
         } else {
-            // USE LINKED LIST SEARCH - This is where the performance boost happens!
             const searchResults = usersList.findByName(query);
             applyFiltersAndSort(searchResults);
         }
     };
 
-    // Helper function to apply status filter and sorting
     const applyFiltersAndSort = (userArray) => {
         let result = [...userArray];
 
-        // Apply status filter
         if (selectedStatus !== 'all') {
             result = result.filter(user => user.status === selectedStatus);
         }
 
-        // Apply sorting
         result.sort((a, b) => {
             if (sortBy === 'name') {
-                return sortOrder === 'asc'
-                    ? a.name.localeCompare(b.name)
-                    : b.name.localeCompare(a.name);
+                return sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
             } else if (sortBy === 'role') {
-                return sortOrder === 'asc'
-                    ? a.role.localeCompare(b.role)
-                    : b.role.localeCompare(a.role);
+                return sortOrder === 'asc' ? a.role.localeCompare(b.role) : b.role.localeCompare(a.role);
             } else if (sortBy === 'status') {
-                return sortOrder === 'asc'
-                    ? a.status.localeCompare(b.status)
-                    : b.status.localeCompare(a.status);
+                return sortOrder === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status);
             } else if (sortBy === 'joined') {
                 const dateA = a.joined === 'N/A' ? new Date(0) : new Date(a.joined);
                 const dateB = b.joined === 'N/A' ? new Date(0) : new Date(b.joined);
-                return sortOrder === 'asc'
-                    ? dateA - dateB
-                    : dateB - dateA;
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
             }
             return 0;
         });
@@ -4921,8 +4934,6 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
             setSortBy(column);
             setSortOrder('asc');
         }
-
-        // Re-apply sorting to current filtered results
         applyFiltersAndSort(filteredUsers);
     };
 
@@ -4938,7 +4949,6 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
         logActivity('User Details Viewed', `Viewed details for user: ${user.name} (${user.email})`);
     };
 
-    // Update user status with linked list - FIXED
     const updateUserStatus = async (userId, newStatus) => {
         try {
             const formData = new FormData();
@@ -4955,18 +4965,13 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
             const data = await response.json();
 
             if (data.success) {
-                // Update local linked list immediately for better UX
                 const updated = usersList.updateUser(userId, { status: newStatus });
                 if (updated) {
-                    setUsersList(usersList); // Trigger re-render
-
-                    // Update the filtered view
+                    setUsersList(usersList);
                     if (searchQuery.trim()) {
-                        // If searching, update search results
                         const searchResults = usersList.findByName(searchQuery);
                         applyFiltersAndSort(searchResults);
                     } else {
-                        // If not searching, update full list
                         applyFiltersAndSort(usersList.toArray());
                     }
                 }
@@ -4987,7 +4992,6 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
         setSelectedStatus(status);
 
         if (searchQuery.trim()) {
-            // If searching, filter the search results
             const searchResults = usersList.findByName(searchQuery);
             let filtered = searchResults;
             if (status !== 'all') {
@@ -4995,7 +4999,6 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
             }
             applyFiltersAndSort(filtered);
         } else {
-            // If not searching, filter the full list
             let filtered = usersList.toArray();
             if (status !== 'all') {
                 filtered = filtered.filter(user => user.status === status);
@@ -5017,9 +5020,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
             <div className="admin-tab-content">
                 <div className="error-message">
                     <p>Error loading users: {error}</p>
-                    <button onClick={fetchUsersData} className="btn btn-primary">
-                        Try Again
-                    </button>
+                    <button onClick={fetchUsersData} className="btn btn-primary">Try Again</button>
                 </div>
             </div>
         );
@@ -5038,29 +5039,21 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
 
             <div className="users-overview">
                 <div className="users-card">
-                    <div className="users-icon">
-                        <i className="bi bi-people"></i>
-                    </div>
+                    <div className="users-icon"><i className="bi bi-people"></i></div>
                     <div className="users-content">
                         <h3>Total Users</h3>
                         <p className="users-number">{totalUsers}</p>
                     </div>
                 </div>
-
                 <div className="users-card">
-                    <div className="users-icon">
-                        <i className="bi bi-check-circle"></i>
-                    </div>
+                    <div className="users-icon"><i className="bi bi-check-circle"></i></div>
                     <div className="users-content">
                         <h3>Active Users</h3>
                         <p className="users-number">{activeUsers}</p>
                     </div>
                 </div>
-
                 <div className="users-card">
-                    <div className="users-icon">
-                        <i className="bi bi-x-circle"></i>
-                    </div>
+                    <div className="users-icon"><i className="bi bi-x-circle"></i></div>
                     <div className="users-content">
                         <h3>Inactive Users</h3>
                         <p className="users-number">{inactiveUsers}</p>
@@ -5072,43 +5065,22 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                 <div className="table-controls">
                     <div className="search-box">
                         <i className="bi bi-search"></i>
-                        <input
-                            type="text"
-                            placeholder="Search users by name..."
-                            value={searchQuery}
-                            onChange={handleSearch}
-                        />
-                        {searchQuery && (
-                            <button className="clear-search" onClick={clearSearch}>
-                                <i className="bi bi-x"></i>
-                            </button>
-                        )}
+                        <input type="text" placeholder="Search users by name..." value={searchQuery} onChange={handleSearch} />
+                        {searchQuery && <button className="clear-search" onClick={clearSearch}><i className="bi bi-x"></i></button>}
                     </div>
                     <div className="filter-controls">
-                        <select
-                            value={selectedStatus}
-                            onChange={(e) => handleStatusFilterChange(e.target.value)}
-                        >
+                        <select value={selectedStatus} onChange={(e) => handleStatusFilterChange(e.target.value)}>
                             <option value="all">All Statuses</option>
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
-                        <button
-                            className={sortBy === 'name' ? 'active' : ''}
-                            onClick={() => handleSort('name')}
-                        >
+                        <button className={sortBy === 'name' ? 'active' : ''} onClick={() => handleSort('name')}>
                             Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </button>
-                        <button
-                            className={sortBy === 'role' ? 'active' : ''}
-                            onClick={() => handleSort('role')}
-                        >
+                        <button className={sortBy === 'role' ? 'active' : ''} onClick={() => handleSort('role')}>
                             Role {sortBy === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </button>
-                        <button
-                            className={sortBy === 'status' ? 'active' : ''}
-                            onClick={() => handleSort('status')}
-                        >
+                        <button className={sortBy === 'status' ? 'active' : ''} onClick={() => handleSort('status')}>
                             Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </button>
                     </div>
@@ -5141,22 +5113,12 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                                 </span>
                             </span>
                             <span className="actions">
-                                <button
-                                    className="btn-icon view-btn"
-                                    title="View Details"
-                                    onClick={() => viewUserDetails(user)}
-                                >
+                                <button className="btn-icon view-btn" title="View Details" onClick={() => viewUserDetails(user)}>
                                     <i className="bi bi-eye"></i>
                                 </button>
-
-                                <button
-                                    className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`}
+                                <button className={`btn-icon ${user.status === 'active' ? 'block-btn' : 'unblock-btn'}`}
                                     title={user.status === 'active' ? 'Block User' : 'Unblock User'}
-                                    onClick={() => updateUserStatus(
-                                        user.id,
-                                        user.status === 'active' ? 'inactive' : 'active'
-                                    )}
-                                >
+                                    onClick={() => updateUserStatus(user.id, user.status === 'active' ? 'inactive' : 'active')}>
                                     <i className={user.status === 'active' ? 'bi bi-person-x' : 'bi bi-person-check'}></i>
                                 </button>
                             </span>
@@ -5165,11 +5127,7 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                     {filteredUsers.length === 0 && (
                         <div key="no-users" className="no-users-message">
                             <p>{searchQuery ? 'No users found matching your search' : 'No users found'}</p>
-                            {searchQuery && (
-                                <button onClick={clearSearch} className="btn btn-outline">
-                                    Clear Search
-                                </button>
-                            )}
+                            {searchQuery && <button onClick={clearSearch} className="btn btn-outline">Clear Search</button>}
                         </div>
                     )}
                 </div>
@@ -5181,48 +5139,32 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                     <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header-new">
                             <div className="user-avatar-section">
-                                <div className="user-avatar-large">
-                                    <i className="bi bi-person-circle"></i>
-                                </div>
+                                <div className="user-avatar-large"><i className="bi bi-person-circle"></i></div>
                                 <div className="user-title">
                                     <h2>{selectedUser.name}</h2>
                                     <p>{selectedUser.email}</p>
                                 </div>
                             </div>
-                            <button
-                                className="close-btn-new"
-                                onClick={() => setShowUserModal(false)}
-                            >
-                                <i className="bi bi-x-lg"></i>
-                            </button>
+                            <button className="close-btn-new" onClick={() => setShowUserModal(false)}><i className="bi bi-x-lg"></i></button>
                         </div>
-
                         <div className="modal-body-new">
                             <div className="user-details-grid">
                                 <div className="detail-card">
-                                    <div className="detail-icon">
-                                        <i className="bi bi-person-badge"></i>
-                                    </div>
+                                    <div className="detail-icon"><i className="bi bi-person-badge"></i></div>
                                     <div className="detail-content">
                                         <label>Role</label>
                                         <p>{selectedUser.role || 'Event Planner'}</p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card">
-                                    <div className="detail-icon">
-                                        <i className="bi bi-calendar-check"></i>
-                                    </div>
+                                    <div className="detail-icon"><i className="bi bi-calendar-check"></i></div>
                                     <div className="detail-content">
                                         <label>Joined Date</label>
                                         <p>{selectedUser.joined}</p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card">
-                                    <div className="detail-icon">
-                                        <i className="bi bi-activity"></i>
-                                    </div>
+                                    <div className="detail-icon"><i className="bi bi-activity"></i></div>
                                     <div className="detail-content">
                                         <label>Status</label>
                                         <p className={`status-indicator ${selectedUser.status === 'active' ? 'active' : 'inactive'}`}>
@@ -5230,38 +5172,22 @@ const UsersTabContent = ({ users: initialUsers, adminUserId, logActivity, printA
                                         </p>
                                     </div>
                                 </div>
-
                                 <div className="detail-card">
-                                    <div className="detail-icon">
-                                        <i className="bi bi-box-seam"></i>
-                                    </div>
+                                    <div className="detail-icon"><i className="bi bi-box-seam"></i></div>
                                     <div className="detail-content">
                                         <label>Total Events</label>
-                                        <p className="events-count">
-                                            {userStats ? userStats.total_events : 'Loading...'}
-                                        </p>
+                                        <p className="events-count">{userStats ? userStats.total_events : 'Loading...'}</p>
                                     </div>
                                 </div>
                             </div>
-
                             <div className="modal-actions">
-                                <button
-                                    className={`action-btn ${selectedUser.status === 'active' ? 'warning' : 'success'}`}
-                                    onClick={() => {
-                                        updateUserStatus(selectedUser.id, selectedUser.status === 'active' ? 'inactive' : 'active');
-                                        setShowUserModal(false);
-                                    }}
-                                >
+                                <button className={`action-btn ${selectedUser.status === 'active' ? 'warning' : 'success'}`}
+                                    onClick={() => { updateUserStatus(selectedUser.id, selectedUser.status === 'active' ? 'inactive' : 'active'); setShowUserModal(false); }}>
                                     <i className={`bi ${selectedUser.status === 'active' ? 'bi-person-x' : 'bi-person-check'}`}></i>
                                     {selectedUser.status === 'active' ? 'Block User' : 'Activate User'}
                                 </button>
-
-                                <button
-                                    className="action-btn secondary"
-                                    onClick={() => setShowUserModal(false)}
-                                >
-                                    <i className="bi bi-x-circle"></i>
-                                    Close
+                                <button className="action-btn secondary" onClick={() => setShowUserModal(false)}>
+                                    <i className="bi bi-x-circle"></i> Close
                                 </button>
                             </div>
                         </div>
@@ -5296,7 +5222,6 @@ const EventManagementTabContent = ({
         violation_severity: 'medium'
     });
 
-    // ADD SEARCH AND FILTER STATES
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('created_at');
@@ -5321,7 +5246,6 @@ const EventManagementTabContent = ({
         }
     }, [activeSection]);
 
-    // ADD FILTERED EVENTS COMPUTATION
     const filteredEvents = useMemo(() => {
         const events = activeSection === 'reported' ? reportedEvents : allEvents;
         
@@ -5329,7 +5253,6 @@ const EventManagementTabContent = ({
 
         let filtered = [...events];
 
-        // Apply search filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(event => 
@@ -5339,7 +5262,6 @@ const EventManagementTabContent = ({
             );
         }
 
-        // Apply status filter for all events tab
         if (activeSection === 'all' && statusFilter !== 'all') {
             filtered = filtered.filter(event => {
                 if (statusFilter === 'published') {
@@ -5351,7 +5273,6 @@ const EventManagementTabContent = ({
             });
         }
 
-        // Apply sorting
         filtered.sort((a, b) => {
             let aValue, bValue;
 
@@ -5374,7 +5295,6 @@ const EventManagementTabContent = ({
         return filtered;
     }, [allEvents, reportedEvents, activeSection, searchQuery, statusFilter, sortBy, sortOrder]);
 
-    // Local function to fetch reported events
     const fetchReportedEventsLocal = async () => {
         try {
             setLoading(true);
@@ -5398,7 +5318,6 @@ const EventManagementTabContent = ({
         }
     };
 
-    // Local function to fetch all events
     const fetchAllEventsLocal = async () => {
         try {
             setLoading(true);
@@ -5412,8 +5331,6 @@ const EventManagementTabContent = ({
             });
 
             const text = await response.text();
-            console.log('Raw response:', text);
-
             let data;
             try {
                 data = JSON.parse(text);
@@ -5440,13 +5357,10 @@ const EventManagementTabContent = ({
         }
     };
 
-    // FIXED: Proper event status checking
     const isEventPublished = (event) => {
-        // Check multiple possible published field names and values
         const published = event.published;
         const status = event.status;
         
-        // Handle different data types: boolean, number, string
         if (published !== undefined && published !== null) {
             if (typeof published === 'boolean') return published;
             if (typeof published === 'number') return published === 1;
@@ -5455,7 +5369,6 @@ const EventManagementTabContent = ({
             }
         }
         
-        // Check status field as fallback
         if (status) {
             return status === 'published' || status === 'active';
         }
@@ -5463,23 +5376,13 @@ const EventManagementTabContent = ({
         return false;
     };
 
-    // FIXED: viewEventPreview function
     const viewEventPreview = (event) => {
-        console.log('Event preview clicked:', {
-            event_name: event.event_name,
-            published: event.published,
-            status: event.status,
-            isPublished: isEventPublished(event)
-        });
-
-        // Use the fixed published check
         if (!isEventPublished(event)) {
             setSelectedEvent(event);
             setShowUnpublishedModal(true);
             return;
         }
 
-        // Open event in new tab for preview
         window.open(`/rsvpForm?event_id=${event.event_id}`, '_blank');
         logActivity('Event Previewed', `Previewed published event: ${event.event_name}`);
     };
@@ -5585,12 +5488,10 @@ const EventManagementTabContent = ({
         return violation ? violation.label : type;
     };
 
-    // ADD: Clear search function
     const clearSearch = () => {
         setSearchQuery('');
     };
 
-    // ADD: Handle sort function
     const handleSort = (column) => {
         if (sortBy === column) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -5611,79 +5512,40 @@ const EventManagementTabContent = ({
                 <h2>Event Management</h2>
                 <div className="header-actions">
                     <div className="tab-buttons">
-                        <button
-                            className={`tab-button ${activeSection === 'reported' ? 'active' : ''}`}
-                            onClick={() => setActiveSection('reported')}
-                        >
-                            Reported Events
-                            {reportedEvents.length > 0 && (
-                                <span className="badge">{reportedEvents.length}</span>
-                            )}
+                        <button className={`tab-button ${activeSection === 'reported' ? 'active' : ''}`} onClick={() => setActiveSection('reported')}>
+                            Reported Events {reportedEvents.length > 0 && <span className="badge">{reportedEvents.length}</span>}
                         </button>
-                        <button
-                            className={`tab-button ${activeSection === 'all' ? 'active' : ''}`}
-                            onClick={() => setActiveSection('all')}
-                        >
+                        <button className={`tab-button ${activeSection === 'all' ? 'active' : ''}`} onClick={() => setActiveSection('all')}>
                             All Events
                         </button>
                     </div>
-                    <button
-                        className="btn btn-outline"
-                        onClick={activeSection === 'reported' ? fetchReportedEventsLocal : fetchAllEventsLocal}
-                        disabled={loading}
-                    >
+                    <button className="btn btn-outline" onClick={activeSection === 'reported' ? fetchReportedEventsLocal : fetchAllEventsLocal} disabled={loading}>
                         <i className="bi bi-arrow-clockwise"></i> Refresh
                     </button>
                 </div>
             </div>
 
-            {/* ADD SEARCH AND FILTER CONTROLS - UPDATED WITH SMALLER SEARCH BAR */}
             <div className="table-controls event-management-controls">
                 <div className="search-box-compact">
                     <i className="bi bi-search"></i>
-                    <input
-                        type="text"
-                        placeholder={`Search ${activeSection === 'reported' ? 'reported' : 'all'} events...`}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="compact-search-input"
-                    />
-                    {searchQuery && (
-                        <button className="clear-search" onClick={clearSearch}>
-                            <i className="bi bi-x"></i>
-                        </button>
-                    )}
+                    <input type="text" placeholder={`Search ${activeSection === 'reported' ? 'reported' : 'all'} events...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="compact-search-input" />
+                    {searchQuery && <button className="clear-search" onClick={clearSearch}><i className="bi bi-x"></i></button>}
                 </div>
                 
                 {activeSection === 'all' && (
                     <div className="filter-controls">
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
+                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                             <option value="all">All Statuses</option>
                             <option value="published">Published</option>
                             <option value="draft">Draft</option>
                         </select>
-                        
-                        <button
-                            className={`sort-btn ${sortBy === 'event_name' ? 'active' : ''}`}
-                            onClick={() => handleSort('event_name')}
-                        >
+                        <button className={`sort-btn ${sortBy === 'event_name' ? 'active' : ''}`} onClick={() => handleSort('event_name')}>
                             Name {getSortIcon('event_name')}
                         </button>
-                        
-                        <button
-                            className={`sort-btn ${sortBy === 'created_at' ? 'active' : ''}`}
-                            onClick={() => handleSort('created_at')}
-                        >
+                        <button className={`sort-btn ${sortBy === 'created_at' ? 'active' : ''}`} onClick={() => handleSort('created_at')}>
                             Date {getSortIcon('created_at')}
                         </button>
-                        
-                        <button
-                            className={`sort-btn ${sortBy === 'user_name' ? 'active' : ''}`}
-                            onClick={() => handleSort('user_name')}
-                        >
+                        <button className={`sort-btn ${sortBy === 'user_name' ? 'active' : ''}`} onClick={() => handleSort('user_name')}>
                             Owner {getSortIcon('user_name')}
                         </button>
                     </div>
@@ -5697,27 +5559,14 @@ const EventManagementTabContent = ({
                     <div className="section-header">
                         <h3>Pending Event Reports</h3>
                         <p>Review and take action on reported events</p>
-                        {searchQuery && (
-                            <div className="search-results-info">
-                                Showing {filteredEvents.length} of {reportedEvents.length} reported events
-                            </div>
-                        )}
+                        {searchQuery && <div className="search-results-info">Showing {filteredEvents.length} of {reportedEvents.length} reported events</div>}
                     </div>
 
                     {filteredEvents.length === 0 ? (
                         <div className="no-data">
                             <i className="bi bi-check-circle"></i>
-                            <p>
-                                {searchQuery 
-                                    ? 'No reported events found matching your search' 
-                                    : 'No pending event reports'
-                                }
-                            </p>
-                            {searchQuery && (
-                                <button onClick={clearSearch} className="btn btn-outline">
-                                    Clear Search
-                                </button>
-                            )}
+                            <p>{searchQuery ? 'No reported events found matching your search' : 'No pending event reports'}</p>
+                            {searchQuery && <button onClick={clearSearch} className="btn btn-outline">Clear Search</button>}
                         </div>
                     ) : (
                         <div className="reported-events-grid">
@@ -5726,66 +5575,29 @@ const EventManagementTabContent = ({
                                     <div className="event-header">
                                         <h4>{report.event_name}</h4>
                                         <div className="event-meta">
-                                            {/* UPDATED STATUS BADGES WITH COLORS */}
                                             <span className={`status-badge ${isEventPublished(report) ? 'status-published' : 'status-draft'}`}>
                                                 {isEventPublished(report) ? 'Published' : 'Draft'}
                                             </span>
-                                            <span className="report-date">
-                                                Reported: {new Date(report.reported_at).toLocaleDateString()}
-                                            </span>
+                                            <span className="report-date">Reported: {new Date(report.reported_at).toLocaleDateString()}</span>
                                         </div>
                                     </div>
-
                                     <div className="event-details">
-                                        <div className="detail-row">
-                                            <label>Event Owner:</label>
-                                            <span>{report.event_owner_name}</span>
-                                        </div>
-                                        <div className="detail-row">
-                                            <label>Reported By:</label>
-                                            <span>{report.reporter_name || 'Anonymous'} {report.reporter_email && `(${report.reporter_email})`}</span>
-                                        </div>
-                                        <div className="detail-row">
-                                            <label>Violation Type:</label>
-                                            <span className={`violation-type ${report.violation_type}`}>
-                                                {getViolationLabel(report.violation_type)}
-                                            </span>
-                                        </div>
-                                        <div className="detail-row">
-                                            <label>Description:</label>
-                                            <span>{report.description || 'No additional details provided'}</span>
-                                        </div>
-                                        <div className="detail-row">
-                                            <label>Event Created:</label>
-                                            <span>{new Date(report.event_created_at).toLocaleDateString()}</span>
-                                        </div>
+                                        <div className="detail-row"><label>Event Owner:</label><span>{report.event_owner_name}</span></div>
+                                        <div className="detail-row"><label>Reported By:</label><span>{report.reporter_name || 'Anonymous'} {report.reporter_email && `(${report.reporter_email})`}</span></div>
+                                        <div className="detail-row"><label>Violation Type:</label><span className={`violation-type ${report.violation_type}`}>{getViolationLabel(report.violation_type)}</span></div>
+                                        <div className="detail-row"><label>Description:</label><span>{report.description || 'No additional details provided'}</span></div>
+                                        <div className="detail-row"><label>Event Created:</label><span>{new Date(report.event_created_at).toLocaleDateString()}</span></div>
                                     </div>
-
                                     {report.event_image && (
                                         <div className="event-preview">
                                             <label>Event Image:</label>
                                             <img src={report.event_image} alt="Event preview" className="event-image-preview" />
                                         </div>
                                     )}
-
                                     <div className="action-buttons">
-                                        <button
-                                            className="btn btn-danger"
-                                            onClick={() => openDeleteModal(report)}
-                                        >
-                                            <i className="bi bi-trash"></i> Review & Delete
-                                        </button>
-                                        <button
-                                            className="btn btn-outline"
-                                            onClick={() => dismissReport(report.id)}
-                                        >
-                                            <i className="bi bi-x-circle"></i> Dismiss Report
-                                        </button>
-                                        <button
-                                            className={`btn btn-secondary`}
-                                            onClick={() => viewEventPreview(report)}
-                                            title={isEventPublished(report) ? "View Event" : "Event not published - cannot preview"}
-                                        >
+                                        <button className="btn btn-danger" onClick={() => openDeleteModal(report)}><i className="bi bi-trash"></i> Review & Delete</button>
+                                        <button className="btn btn-outline" onClick={() => dismissReport(report.id)}><i className="bi bi-x-circle"></i> Dismiss Report</button>
+                                        <button className={`btn btn-secondary`} onClick={() => viewEventPreview(report)} title={isEventPublished(report) ? "View Event" : "Event not published - cannot preview"}>
                                             <i className="bi bi-eye"></i> View Event
                                         </button>
                                     </div>
@@ -5800,89 +5612,41 @@ const EventManagementTabContent = ({
                 <div className="all-events-section">
                     <div className="section-header">
                         <h3>All Events</h3>
-                        {searchQuery && (
-                            <div className="search-results-info">
-                                Showing {filteredEvents.length} of {allEvents.length} events
-                                {statusFilter !== 'all' && ` (${statusFilter} only)`}
-                            </div>
-                        )}
+                        {searchQuery && <div className="search-results-info">Showing {filteredEvents.length} of {allEvents.length} events {statusFilter !== 'all' && ` (${statusFilter} only)`}</div>}
                     </div>
-
                     <div className="events-table">
                         <div className="table-header">
-                            <span className="sortable" onClick={() => handleSort('event_name')}>
-                                Event Name {getSortIcon('event_name')}
-                            </span>
-                            <span className="sortable" onClick={() => handleSort('user_name')}>
-                                Owner {getSortIcon('user_name')}
-                            </span>
-                            <span className="sortable" onClick={() => handleSort('created_at')}>
-                                Created {getSortIcon('created_at')}
-                            </span>
+                            <span className="sortable" onClick={() => handleSort('event_name')}>Event Name {getSortIcon('event_name')}</span>
+                            <span className="sortable" onClick={() => handleSort('user_name')}>Owner {getSortIcon('user_name')}</span>
+                            <span className="sortable" onClick={() => handleSort('created_at')}>Created {getSortIcon('created_at')}</span>
                             <span>Status</span>
                             <span>Reports</span>
                             <span>Actions</span>
                         </div>
-
                         <div className="table-body">
                             {filteredEvents.map(event => (
                                 <div key={event.event_id} className="table-row">
                                     <span className="event-name">{event.event_name}</span>
                                     <span>{event.user_name}</span>
                                     <span>{new Date(event.created_at).toLocaleDateString()}</span>
-                                    {/* UPDATED STATUS BADGES WITH COLORS */}
-                                    <span>
-                                        <span className={`status-badge ${isEventPublished(event) ? 'status-published' : 'status-draft'}`}>
-                                            {isEventPublished(event) ? 'Published' : 'Draft'}
-                                        </span>
-                                    </span>
-                                    <span>
-                                        {event.report_count > 0 ? (
-                                            <span className="report-count warning">{event.report_count} reports</span>
-                                        ) : (
-                                            <span className="report-count">No reports</span>
-                                        )}
-                                    </span>
+                                    <span><span className={`status-badge ${isEventPublished(event) ? 'status-published' : 'status-draft'}`}>{isEventPublished(event) ? 'Published' : 'Draft'}</span></span>
+                                    <span>{event.report_count > 0 ? <span className="report-count warning">{event.report_count} reports</span> : <span className="report-count">No reports</span>}</span>
                                     <span className="actions">
-                                        <button
-                                            className={`btn-icon view-btn`}
-                                            onClick={() => viewEventPreview(event)}
-                                            title={isEventPublished(event) ? "View Event" : "Event not published - cannot preview"}
-                                        >
+                                        <button className={`btn-icon view-btn`} onClick={() => viewEventPreview(event)} title={isEventPublished(event) ? "View Event" : "Event not published - cannot preview"}>
                                             <i className="bi bi-eye"></i>
                                         </button>
-                                        <button
-                                            className="btn-icon delete-btn"
-                                            onClick={() => openDeleteModal(event)}
-                                            title="Delete Event"
-                                        >
+                                        <button className="btn-icon delete-btn" onClick={() => openDeleteModal(event)} title="Delete Event">
                                             <i className="bi bi-trash"></i>
                                         </button>
                                     </span>
                                 </div>
                             ))}
                         </div>
-
                         {filteredEvents.length === 0 && (
                             <div className="no-data">
                                 <i className="bi bi-calendar-x"></i>
-                                <p>
-                                    {searchQuery || statusFilter !== 'all' 
-                                        ? 'No events found matching your criteria' 
-                                        : 'No events found'
-                                    }
-                                </p>
-                                {(searchQuery || statusFilter !== 'all') && (
-                                    <button 
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setStatusFilter('all');
-                                        }} 
-                                        className="btn btn-outline"
-                                    >
-                                        Clear Filters
-                                    </button>
-                                )}
+                                <p>{searchQuery || statusFilter !== 'all' ? 'No events found matching your criteria' : 'No events found'}</p>
+                                {(searchQuery || statusFilter !== 'all') && <button onClick={() => { setSearchQuery(''); setStatusFilter('all'); }} className="btn btn-outline">Clear Filters</button>}
                             </div>
                         )}
                     </div>
@@ -5895,109 +5659,58 @@ const EventManagementTabContent = ({
                     <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header-new">
                             <div className="modal-title-section">
-                                <div className="modal-icon-large warning">
-                                    <i className="bi bi-exclamation-triangle"></i>
-                                </div>
+                                <div className="modal-icon-large warning"><i className="bi bi-exclamation-triangle"></i></div>
                                 <div className="modal-title">
                                     <h2>Delete Event</h2>
                                     <p>Review and confirm event deletion</p>
                                 </div>
                             </div>
-                            <button
-                                className="close-btn-new"
-                                onClick={() => setShowDeleteModal(false)}
-                            >
-                                <i className="bi bi-x-lg"></i>
-                            </button>
+                            <button className="close-btn-new" onClick={() => setShowDeleteModal(false)}><i className="bi bi-x-lg"></i></button>
                         </div>
-
                         <div className="modal-body-new">
                             <div className="delete-warning">
-                                <div className="warning-header">
-                                    <i className="bi bi-exclamation-circle"></i>
-                                    <h4>You are about to delete an event</h4>
-                                </div>
+                                <div className="warning-header"><i className="bi bi-exclamation-circle"></i><h4>You are about to delete an event</h4></div>
                                 <p><strong>Event:</strong> {selectedEvent.event_name}</p>
                                 <p><strong>Owner:</strong> {selectedEvent.event_owner_name || selectedEvent.user_name}</p>
-                                {selectedEvent.violation_type && (
-                                    <p><strong>Reported For:</strong> {getViolationLabel(selectedEvent.violation_type)}</p>
-                                )}
+                                {selectedEvent.violation_type && <p><strong>Reported For:</strong> {getViolationLabel(selectedEvent.violation_type)}</p>}
                             </div>
-
                             <div className="form-group-new">
                                 <label>Deletion Reason *</label>
-                                <select
-                                    className="form-select-new"
-                                    value={deleteForm.reason}
-                                    onChange={(e) => setDeleteForm(prev => ({ ...prev, reason: e.target.value }))}
-                                    required
-                                >
+                                <select className="form-select-new" value={deleteForm.reason} onChange={(e) => setDeleteForm(prev => ({ ...prev, reason: e.target.value }))} required>
                                     <option value="">Select a reason</option>
                                     {violationReasons.map(reason => (
-                                        <option key={reason.value} value={reason.value}>
-                                            {reason.label} ({reason.points} points)
-                                        </option>
+                                        <option key={reason.value} value={reason.value}>{reason.label} ({reason.points} points)</option>
                                     ))}
                                 </select>
                             </div>
-
                             {deleteForm.reason === 'other' && (
                                 <div className="form-group-new">
                                     <label>Custom Reason *</label>
-                                    <textarea
-                                        className="form-textarea-new"
-                                        value={deleteForm.custom_reason}
-                                        onChange={(e) => setDeleteForm(prev => ({ ...prev, custom_reason: e.target.value }))}
-                                        placeholder="Please specify the reason for deletion..."
-                                        required
-                                    />
+                                    <textarea className="form-textarea-new" value={deleteForm.custom_reason} onChange={(e) => setDeleteForm(prev => ({ ...prev, custom_reason: e.target.value }))} placeholder="Please specify the reason for deletion..." required />
                                 </div>
                             )}
-
                             <div className="form-group-new">
                                 <label>Violation Severity</label>
-                                <select
-                                    className="form-select-new"
-                                    value={deleteForm.violation_severity}
-                                    onChange={(e) => setDeleteForm(prev => ({ ...prev, violation_severity: e.target.value }))}
-                                >
+                                <select className="form-select-new" value={deleteForm.violation_severity} onChange={(e) => setDeleteForm(prev => ({ ...prev, violation_severity: e.target.value }))}>
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
                                     <option value="high">High</option>
                                     <option value="critical">Critical</option>
                                 </select>
                             </div>
-
                             <div className="form-check-new">
                                 <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={deleteForm.block_user}
-                                        onChange={(e) => setDeleteForm(prev => ({ ...prev, block_user: e.target.checked }))}
-                                    />
-                                    <span className="checkmark"></span>
-                                    Also block event owner from creating new events
+                                    <input type="checkbox" checked={deleteForm.block_user} onChange={(e) => setDeleteForm(prev => ({ ...prev, block_user: e.target.checked }))} />
+                                    <span className="checkmark"></span> Also block event owner from creating new events
                                 </label>
-                                <small className="checkbox-help">
-                                    User will be prevented from creating new events and may lose access to certain features
-                                </small>
+                                <small className="checkbox-help">User will be prevented from creating new events and may lose access to certain features</small>
                             </div>
-
                             <div className="modal-actions-new">
-                                <button
-                                    className="action-btn-new danger"
-                                    onClick={handleDeleteEvent}
-                                    disabled={!deleteForm.reason || (deleteForm.reason === 'other' && !deleteForm.custom_reason)}
-                                >
-                                    <i className="bi bi-trash"></i>
-                                    Delete Event{deleteForm.block_user ? ' & Block User' : ''}
+                                <button className="action-btn-new danger" onClick={handleDeleteEvent} disabled={!deleteForm.reason || (deleteForm.reason === 'other' && !deleteForm.custom_reason)}>
+                                    <i className="bi bi-trash"></i> Delete Event{deleteForm.block_user ? ' & Block User' : ''}
                                 </button>
-                                <button
-                                    className="action-btn-new secondary"
-                                    onClick={() => setShowDeleteModal(false)}
-                                >
-                                    <i className="bi bi-x-circle"></i>
-                                    Cancel
+                                <button className="action-btn-new secondary" onClick={() => setShowDeleteModal(false)}>
+                                    <i className="bi bi-x-circle"></i> Cancel
                                 </button>
                             </div>
                         </div>
@@ -6011,41 +5724,26 @@ const EventManagementTabContent = ({
                     <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header-new">
                             <div className="modal-title-section">
-                                <div className="modal-icon-large warning">
-                                    <i className="bi bi-eye-slash"></i>
-                                </div>
+                                <div className="modal-icon-large warning"><i className="bi bi-eye-slash"></i></div>
                                 <div className="modal-title">
                                     <h2>Event Not Published</h2>
                                     <p>This event is not available for viewing</p>
                                 </div>
                             </div>
-                            <button
-                                className="close-btn-new"
-                                onClick={() => setShowUnpublishedModal(false)}
-                            >
-                                <i className="bi bi-x-lg"></i>
-                            </button>
+                            <button className="close-btn-new" onClick={() => setShowUnpublishedModal(false)}><i className="bi bi-x-lg"></i></button>
                         </div>
-
                         <div className="modal-body-new">
                             <div className="unpublished-warning">
-                                <div className="warning-icon">
-                                    <i className="bi bi-info-circle"></i>
-                                </div>
+                                <div className="warning-icon"><i className="bi bi-info-circle"></i></div>
                                 <div className="warning-content">
                                     <h4>Event Preview Unavailable</h4>
                                     <p>The event "<strong>{selectedEvent.event_name}</strong>" is currently in <span className="status-draft">draft</span> status and has not been published yet.</p>
                                     <p>You can only preview events that have been published by the event organizer.</p>
                                 </div>
                             </div>
-
                             <div className="modal-actions-new">
-                                <button
-                                    className="action-btn-new primary"
-                                    onClick={() => setShowUnpublishedModal(false)}
-                                >
-                                    <i className="bi bi-check-circle"></i>
-                                    Understood
+                                <button className="action-btn-new primary" onClick={() => setShowUnpublishedModal(false)}>
+                                    <i className="bi bi-check-circle"></i> Understood
                                 </button>
                             </div>
                         </div>

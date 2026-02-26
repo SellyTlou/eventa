@@ -3,12 +3,22 @@ import { useNavigate } from "react-router-dom";
 import "./Profile.css";
 import '../../alert.css';
 import { logOut, LoginNav } from "../components";
+import { 
+    getEffectivePackageValue, 
+    getEffectivePackageName,
+    isCustomPackage,
+    formatFeatures,
+    canCreateEvent,
+    canHostGuests 
+} from "../utils/customPackageUtils";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
-  const [userPackage, setUserPackage] = useState(null);
+  const [userPackage, setUserPackage] = useState(null); // For personal packages
   const [packageDetails, setPackageDetails] = useState(null);
+  const [userBusinessPackage, setUserBusinessPackage] = useState(null); // For business packages
+  const [businessPackageDetails, setBusinessPackageDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
@@ -84,7 +94,13 @@ const Profile = () => {
         }
 
         await fetchUserEvents(userData.user_id);
-        await fetchUserPackage(userData.user_id);
+        
+        // Fetch appropriate package based on account type
+        if (userData.account_type === "business") {
+          await fetchUserBusinessPackage(userData.user_id);
+        } else {
+          await fetchUserPackage(userData.user_id);
+        }
 
         const handleClickOutside = (event) => {
           if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setDropdownOpen(false);
@@ -108,7 +124,11 @@ const Profile = () => {
   }
   const handleBack = () => { navigate(-1); };
   const goToUpgradePackage = () => {
-    navigate("/upgrade_package");
+    if (user?.account_type === 'business') {
+      navigate("/upgrade_business_package");
+    } else {
+      navigate("/upgrade_package");
+    }
   }
 
   const fetchUserEvents = async (userId) => {
@@ -132,6 +152,7 @@ const Profile = () => {
     }
   };
 
+  // Fetch personal package (unchanged)
   const fetchUserPackage = async (userId) => {
     try {
       const API_URL = process.env.REACT_APP_API_URL;
@@ -151,6 +172,29 @@ const Profile = () => {
       }
     } catch (error) {
       console.error("Failed to fetch user package:", error);
+    }
+  };
+
+  // Fetch business package (new)
+  const fetchUserBusinessPackage = async (userId) => {
+    try {
+      const API_URL = process.env.REACT_APP_API_URL;
+      const formData = new FormData();
+      formData.append("function", "getUserBusinessPackage");
+      formData.append("user_id", userId);
+
+      const response = await fetch(`${API_URL}/query.php`, {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.success && data.userBusinessPackage) {
+        setUserBusinessPackage(data.userBusinessPackage);
+        setBusinessPackageDetails(data.userBusinessPackage);
+      }
+    } catch (error) {
+      console.error("Error fetching business package:", error);
     }
   };
 
@@ -379,14 +423,32 @@ const Profile = () => {
     }
   };
 
+  // For personal packages only - unchanged
   const getRemainingEvents = () => {
     if (!userPackage) return 0;
     return parseInt(userPackage.event_limit) - parseInt(userPackage.event_used);
   };
 
+  // For personal packages only - unchanged
   const getUsagePercentage = () => {
     if (!userPackage || !userPackage.event_limit || userPackage.event_limit === 0) return 0;
     return (parseInt(userPackage.event_used) / parseInt(userPackage.event_limit)) * 100;
+  };
+
+  // For business packages - uses utility
+  const getBusinessRemainingEvents = () => {
+    if (!userBusinessPackage) return 0;
+    const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
+    if (eventLimit === 0) return 'Unlimited';
+    return eventLimit - (userBusinessPackage.event_used || 0);
+  };
+
+  // For business packages - uses utility
+  const getBusinessUsagePercentage = () => {
+    if (!userBusinessPackage) return 0;
+    const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
+    if (eventLimit === 0) return 0;
+    return ((userBusinessPackage.event_used || 0) / eventLimit) * 100;
   };
 
   // Get user display name based on account type
@@ -420,6 +482,8 @@ const Profile = () => {
     );
   }
 
+  const isBusiness = user?.account_type === 'business';
+
   return (
     <>
       {/* Custom Alert Popup */}
@@ -445,12 +509,12 @@ const Profile = () => {
           </button>
 
           <div className="profile-layout">
-            {/* Sidebar */}
+            {/* Sidebar - Account type aware */}
             <div className="profile-sidebar">
               <div className={`user-card ${user.account_type}`}>
                 <div className="user-avatar">
                   {getAvatarInitials()}
-                  {user.account_type === "business" && (
+                  {isBusiness && (
                     <div className="business-badge">
                       <i className="bi bi-building"></i>
                     </div>
@@ -462,7 +526,7 @@ const Profile = () => {
                   
                   <div className="account-type-badge">
                     <span className={`badge ${user.account_type}`}>
-                      {user.account_type === "business" ? (
+                      {isBusiness ? (
                         <>
                           <i className="bi bi-building me-1"></i>
                           Business Account
@@ -495,10 +559,15 @@ const Profile = () => {
                       <span>Events</span>
                     </div>
                     <div className="stat">
-                      <strong>{getRemainingEvents()}</strong>
+                      <strong>
+                        {isBusiness 
+                          ? (getBusinessRemainingEvents() === 'Unlimited' ? '∞' : getBusinessRemainingEvents())
+                          : getRemainingEvents()
+                        }
+                      </strong>
                       <span>Remaining</span>
                     </div>
-                    {user.account_type === "business" && user.business_type && (
+                    {isBusiness && user.business_type && (
                       <div className="stat">
                         <strong>
                           <i className="bi bi-building"></i>
@@ -516,7 +585,7 @@ const Profile = () => {
                   onClick={() => setActiveTab("profile")}
                 >
                   <i className="bi bi-person"></i>
-                  {user.account_type === "business" ? "Business Profile" : "Profile Information"}
+                  {isBusiness ? "Business Profile" : "Profile Information"}
                 </button>
                 <button
                   className={`nav-item ${activeTab === "events" ? "active" : ""}`}
@@ -532,7 +601,7 @@ const Profile = () => {
                   <i className="bi bi-box-seam"></i>
                   My Package
                 </button>
-                {user.account_type === "business" && (
+                {isBusiness && (
                   <button
                     className={`nav-item ${activeTab === "team" ? "active" : ""}`}
                     onClick={() => setActiveTab("team")}
@@ -553,18 +622,18 @@ const Profile = () => {
 
             {/* Main Content */}
             <div className="profile-content">
-              {/* Profile Tab */}
+              {/* Profile Tab - Account type aware */}
               {activeTab === "profile" && (
                 <div className="tab-content">
                   <div className="tab-header">
-                    <h2>{user.account_type === "business" ? "Business Profile" : "Profile Information"}</h2>
+                    <h2>{isBusiness ? "Business Profile" : "Profile Information"}</h2>
                     {!isEditing ? (
                       <button
                         className="edit-btn"
                         onClick={() => setIsEditing(true)}
                       >
                         <i className="bi bi-pencil"></i>
-                        Edit {user.account_type === "business" ? "Business" : "Profile"}
+                        Edit {isBusiness ? "Business" : "Profile"}
                       </button>
                     ) : (
                       <div className="edit-actions">
@@ -572,7 +641,7 @@ const Profile = () => {
                           className="cancel-btn"
                           onClick={() => {
                             setIsEditing(false);
-                            if (user.account_type === "business") {
+                            if (isBusiness) {
                               setEditForm({
                                 business_name: user.business_name || "",
                                 email: user.email || "",
@@ -612,7 +681,7 @@ const Profile = () => {
                   )}
 
                   <div className="profile-form">
-                    {user.account_type === "business" ? (
+                    {isBusiness ? (
                       <>
                         <div className="form-group">
                           <label>Business Name</label>
@@ -767,8 +836,8 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* Team Tab (Business Only) */}
-              {activeTab === "team" && user.account_type === "business" && (
+              {/* Team Tab (Business Only) - unchanged */}
+              {activeTab === "team" && isBusiness && (
                 <div className="tab-content">
                   <div className="tab-header">
                     <h2>Team Management</h2>
@@ -786,7 +855,7 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* Events Tab */}
+              {/* Events Tab - account type aware but same UI */}
               {activeTab === "events" && (
                 <div className="tab-content">
                   <div className="tab-header">
@@ -822,7 +891,7 @@ const Profile = () => {
                               <i className="bi bi-calendar"></i>
                               {new Date(event.event_start_date).toLocaleDateString()}
                             </p>
-                            {user.account_type === "business" && (
+                            {isBusiness && (
                               <p className="event-organizer">
                                 <i className="bi bi-person"></i>
                                 {event.organizer_name || user.business_name}
@@ -839,7 +908,7 @@ const Profile = () => {
                     <div className="empty-state">
                       <i className="bi bi-calendar-x"></i>
                       <h3>No Events Yet</h3>
-                      <p>{user.account_type === "business" 
+                      <p>{isBusiness 
                         ? "Your business hasn't created any events yet." 
                         : "You haven't created any events yet."}
                       </p>
@@ -854,90 +923,175 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* Package Tab */}
+              {/* Package Tab - Now account type aware but UI stays same */}
               {activeTab === "package" && (
                 <div className="tab-content">
                   <div className="tab-header">
                     <h2>My Package</h2>
                     <button className="upgrade-btn" onClick={goToUpgradePackage}>
-                      {user.account_type === "business" ? "Upgrade Business Plan" : "Upgrade Package"}
+                      {isBusiness ? "Upgrade Business Plan" : "Upgrade Package"}
                     </button>
                   </div>
 
-                  {userPackage ? (
-                    <div className="package-card">
-                      <div className="package-header">
-                        <h3>
-                          {packageDetails ? (
-                            <>
-                              {packageDetails.package_type.charAt(0).toUpperCase() + packageDetails.package_type.slice(1)}
-                              {user.account_type === "business" && " Business Plan"}
-                            </>
-                          ) : userPackage.package_id}
-                        </h3>
-                        <div className="package-badge active">Active</div>
-                      </div>
+                  {isBusiness ? (
+                    // BUSINESS PACKAGE DISPLAY - Same UI, just different data source
+                    userBusinessPackage ? (
+                      <div className="package-card">
+                        <div className="package-header">
+                          <h3>
+                            {getEffectivePackageName(userBusinessPackage)}
+                            {isCustomPackage(userBusinessPackage) && (
+                              <span className="custom-badge">✨ Custom</span>
+                            )}
+                          </h3>
+                          <div className="package-badge active">Active</div>
+                        </div>
 
-                      <div className="package-features">
-                        <div className="feature">
-                          <i className="bi bi-check-circle"></i>
-                          <span>Maximum Events: {userPackage.event_limit}</span>
-                        </div>
-                        <div className="feature">
-                          <i className="bi bi-check-circle"></i>
-                          <span>Events Used: {userPackage.event_used}</span>
-                        </div>
-                        <div className="feature">
-                          <i className="bi bi-check-circle"></i>
-                          <span>Events Remaining: {getRemainingEvents()}</span>
-                        </div>
-                        <div className="feature">
-                          <i className="bi bi-check-circle"></i>
-                          <span>Package Since: {new Date(userPackage.created_at).toLocaleDateString()}</span>
-                        </div>
-                        {packageDetails && packageDetails.price && (
+                        <div className="package-features">
                           <div className="feature">
                             <i className="bi bi-check-circle"></i>
-                            <span>Price: ${parseFloat(packageDetails.price).toFixed(2)}/month</span>
+                            <span>Maximum Guests: {getEffectivePackageValue(userBusinessPackage, 'guests', 0) === 0 ? 'Unlimited' : getEffectivePackageValue(userBusinessPackage, 'guests', 0)}</span>
                           </div>
-                        )}
-                        {user.account_type === "business" && (
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Events Used: {userBusinessPackage.event_used || 0}</span>
+                          </div>
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Events Remaining: {getBusinessRemainingEvents()}</span>
+                          </div>
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Package Since: {new Date(userBusinessPackage.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Price: R{parseFloat(getEffectivePackageValue(userBusinessPackage, 'price', 0)).toFixed(2)}/month</span>
+                          </div>
                           <div className="feature">
                             <i className="bi bi-check-circle"></i>
                             <span>Account Type: Business</span>
                           </div>
+                          
+                          {/* Custom Features if available */}
+                          {isCustomPackage(userBusinessPackage) && (
+                            <div className="custom-features-section">
+                              <h4>Custom Features:</h4>
+                              {getEffectivePackageValue(userBusinessPackage, 'features', []).map((feature, index) => (
+                                <div key={index} className="feature custom-feature">
+                                  <i className="bi bi-star-fill"></i>
+                                  <span>{feature}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="package-usage">
+                          <div className="usage-bar">
+                            <div
+                              className="usage-progress"
+                              style={{
+                                width: `${Math.min(getBusinessUsagePercentage(), 100)}%`
+                              }}
+                            ></div>
+                          </div>
+                          <div className="usage-text">
+                            {userBusinessPackage.event_used || 0} of {getEffectivePackageValue(userBusinessPackage, 'events', 0) === 0 ? 'Unlimited' : getEffectivePackageValue(userBusinessPackage, 'events', 0)} events used
+                            ({getBusinessRemainingEvents()} remaining)
+                          </div>
+                        </div>
+
+                        {/* Show approved request ID for audit if custom */}
+                        {isCustomPackage(userBusinessPackage) && userBusinessPackage.approved_request_id && (
+                          <div className="request-id-info">
+                            <small>
+                              <i className="bi bi-check-circle"></i>
+                              Approved Request: {userBusinessPackage.approved_request_id}
+                            </small>
+                          </div>
                         )}
                       </div>
-
-                      <div className="package-usage">
-                        <div className="usage-bar">
-                          <div
-                            className="usage-progress"
-                            style={{
-                              width: `${getUsagePercentage()}%`
-                            }}
-                          ></div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="bi bi-box-seam"></i>
+                        <h3>No Package Found</h3>
+                        <p>You don't have an active business package yet.</p>
+                        <button className="create-event-btn" onClick={goToUpgradePackage}>
+                          Choose Business Plan
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    // PERSONAL PACKAGE DISPLAY - COMPLETELY UNCHANGED
+                    userPackage ? (
+                      <div className="package-card">
+                        <div className="package-header">
+                          <h3>
+                            {packageDetails ? (
+                              <>
+                                {packageDetails.package_type.charAt(0).toUpperCase() + packageDetails.package_type.slice(1)}
+                              </>
+                            ) : userPackage.package_id}
+                          </h3>
+                          <div className="package-badge active">Active</div>
                         </div>
-                        <div className="usage-text">
-                          {userPackage.event_used} of {userPackage.event_limit} events used
-                          ({getRemainingEvents()} remaining)
+
+                        <div className="package-features">
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Maximum Events: {userPackage.event_limit}</span>
+                          </div>
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Events Used: {userPackage.event_used}</span>
+                          </div>
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Events Remaining: {getRemainingEvents()}</span>
+                          </div>
+                          <div className="feature">
+                            <i className="bi bi-check-circle"></i>
+                            <span>Package Since: {new Date(userPackage.created_at).toLocaleDateString()}</span>
+                          </div>
+                          {packageDetails && packageDetails.price && (
+                            <div className="feature">
+                              <i className="bi bi-check-circle"></i>
+                              <span>Price: ${parseFloat(packageDetails.price).toFixed(2)}/month</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="package-usage">
+                          <div className="usage-bar">
+                            <div
+                              className="usage-progress"
+                              style={{
+                                width: `${getUsagePercentage()}%`
+                              }}
+                            ></div>
+                          </div>
+                          <div className="usage-text">
+                            {userPackage.event_used} of {userPackage.event_limit} events used
+                            ({getRemainingEvents()} remaining)
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="empty-state">
-                      <i className="bi bi-box-seam"></i>
-                      <h3>No Package Found</h3>
-                      <p>You don't have an active package yet.</p>
-                      <button className="create-event-btn" onClick={goToUpgradePackage}>
-                        {user.account_type === "business" ? "Choose Business Plan" : "Choose a Package"}
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="empty-state">
+                        <i className="bi bi-box-seam"></i>
+                        <h3>No Package Found</h3>
+                        <p>You don't have an active package yet.</p>
+                        <button className="create-event-btn" onClick={goToUpgradePackage}>
+                          Choose a Package
+                        </button>
+                      </div>
+                    )
                   )}
                 </div>
               )}
 
-              {/* Security Tab */}
+              {/* Security Tab - unchanged for both account types */}
               {activeTab === "security" && (
                 <div className="tab-content">
                   <div className="tab-header">
@@ -946,7 +1100,7 @@ const Profile = () => {
 
                   <div className="security-section">
                     <h3>Change Password</h3>
-                    <p>Update your password to keep your {user.account_type === "business" ? "business" : "account"} secure.</p>
+                    <p>Update your password to keep your {isBusiness ? "business" : "account"} secure.</p>
 
                     <div className="password-form">
                       <div className="form-group password-input-group">

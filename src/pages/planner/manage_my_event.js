@@ -3,6 +3,14 @@ import "./main.css";
 import '../../alert.css';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut, DashboardHeader, DashboardSidebar, LoginNav, DashboardTicketSidebar } from "../components";
+import { 
+    getEffectivePackageValue, 
+    getEffectivePackageName,
+    isCustomPackage,
+    formatFeatures,
+    canCreateEvent,
+    canHostGuests 
+} from "../utils/customPackageUtils";
 
 const Manage_my_event = () => {
     const [loading, setLoading] = useState(true);
@@ -290,28 +298,38 @@ const Manage_my_event = () => {
             if (data.success && data.userBusinessPackage) {
                 const userPkg = data.userBusinessPackage;
 
-                const availableEvents = userPkg.event_limit === 0 ?
-                    "Unlimited" : // For custom plan
-                    (userPkg.event_limit - userPkg.event_used);
+                // Use utility functions to get effective values
+                const isCustom = isCustomPackage(userPkg);
+                const eventLimit = getEffectivePackageValue(userPkg, 'events', 0);
+                const guestLimit = getEffectivePackageValue(userPkg, 'guests', 0);
+                const price = getEffectivePackageValue(userPkg, 'price', 0);
+                const features = getEffectivePackageValue(userPkg, 'features', []);
+
+                const availableEvents = eventLimit === 0 ?
+                    "Unlimited" : // For custom plan with unlimited events
+                    (eventLimit - (userPkg.event_used || 0));
 
                 setCurrentPlan({
                     hasPackage: true,
-                    plan_name: userPkg.name,
-                    max_guest: userPkg.max_guests,
-                    max_events: userPkg.event_limit === 0 ? "Unlimited" : userPkg.event_limit,
+                    isCustom: isCustom,
+                    plan_name: getEffectivePackageName(userPkg),
+                    max_guest: guestLimit,
+                    max_events: eventLimit === 0 ? "Unlimited" : eventLimit,
                     available_events: availableEvents,
-                    price: parseFloat(userPkg.price),
+                    price: price,
                     renewal_date: userPkg.expiry_date ? new Date(userPkg.expiry_date).toLocaleDateString() : "N/A",
-                    event_limit: userPkg.event_limit,
-                    event_used: userPkg.event_used,
+                    event_limit: eventLimit,
+                    event_used: userPkg.event_used || 0,
                     package_type: userPkg.package_type,
                     is_business: true,
-                    features: getPackageFeatures(userPkg.package_type)
+                    features: features.length > 0 ? features : getPackageFeatures(userPkg.package_type)
                 });
 
                 setUserPackage({
                     package_id: userPkg.business_package_id,
-                    account_type: "business"
+                    account_type: "business",
+                    is_custom: isCustom,
+                    custom_limits: userPkg.custom_limits
                 });
             } else {
                 setCurrentPlan({
@@ -900,46 +918,87 @@ const Manage_my_event = () => {
                 return;
             }
 
-            if (currentPlan && currentPlan.hasPackage &&
-                (currentPlan.available_events > 0 || currentPlan.available_events === "Unlimited")) {
+            // Check if user has available events using utility
+            if (currentPlan && currentPlan.hasPackage) {
+                const canPublish = canCreateEvent(
+                    { 
+                        ...currentPlan, 
+                        is_custom: currentPlan.isCustom,
+                        event_used: currentPlan.event_used,
+                        event_limit: currentPlan.event_limit === "Unlimited" ? 0 : currentPlan.event_limit
+                    }, 
+                    currentPlan.event_used
+                );
 
-                if (user?.account_type === 'business') {
-                    const updated = await updateBusinessEventCount();
-                    if (updated) {
-                        await publishTicketEvent();
+                if (canPublish.allowed || currentPlan.available_events === "Unlimited") {
+                    if (user?.account_type === 'business') {
+                        const updated = await updateBusinessEventCount();
+                        if (updated) {
+                            await publishTicketEvent();
+                        } else {
+                            printAlert("Failed to record event usage. Publish aborted.", "error");
+                        }
                     } else {
-                        printAlert("Failed to record event usage. Publish aborted.", "error");
+                        const updated = await updateEventUsedCount();
+                        if (updated) {
+                            await publishTicketEvent();
+                        } else {
+                            printAlert("Failed to record event usage. Publish aborted.", "error");
+                        }
                     }
                 } else {
-                    const updated = await updateEventUsedCount();
-                    if (updated) {
-                        await publishTicketEvent();
-                    } else {
-                        printAlert("Failed to record event usage. Publish aborted.", "error");
-                    }
+                    printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
                 }
             } else {
                 printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
             }
         } else {
             // For RSVP events
-            if (currentPlan && currentPlan.hasPackage &&
-                (currentPlan.available_events > 0 || currentPlan.available_events === "Unlimited")) {
+            if (currentPlan && currentPlan.hasPackage) {
+                // Check guest limit using utility
+                const canHost = canHostGuests(
+                    { 
+                        ...currentPlan, 
+                        is_custom: currentPlan.isCustom,
+                        max_guests: currentPlan.max_guest
+                    }, 
+                    guestLimit
+                );
 
-                if (user?.account_type === 'business') {
-                    const updated = await updateBusinessEventCount();
-                    if (updated) {
-                        await updateEventStatus();
+                if (!canHost.allowed) {
+                    printAlert(canHost.message, "error");
+                    return;
+                }
+
+                // Check event limit using utility
+                const canPublish = canCreateEvent(
+                    { 
+                        ...currentPlan, 
+                        is_custom: currentPlan.isCustom,
+                        event_used: currentPlan.event_used,
+                        event_limit: currentPlan.event_limit === "Unlimited" ? 0 : currentPlan.event_limit
+                    }, 
+                    currentPlan.event_used
+                );
+
+                if (canPublish.allowed || currentPlan.available_events === "Unlimited") {
+                    if (user?.account_type === 'business') {
+                        const updated = await updateBusinessEventCount();
+                        if (updated) {
+                            await updateEventStatus();
+                        } else {
+                            printAlert("Failed to record event usage. Publish aborted.", "error");
+                        }
                     } else {
-                        printAlert("Failed to record event usage. Publish aborted.", "error");
+                        const updated = await updateEventUsedCount();
+                        if (updated) {
+                            await updateEventStatus();
+                        } else {
+                            printAlert("Failed to record event usage. Publish aborted.", "error");
+                        }
                     }
                 } else {
-                    const updated = await updateEventUsedCount();
-                    if (updated) {
-                        await updateEventStatus();
-                    } else {
-                        printAlert("Failed to record event usage. Publish aborted.", "error");
-                    }
+                    printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
                 }
             } else {
                 printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
@@ -947,7 +1006,8 @@ const Manage_my_event = () => {
         }
     };
 
-    const maxGuests = currentPlan?.hasPackage ? currentPlan.max_guest :
+    const maxGuests = currentPlan?.hasPackage ? 
+        (currentPlan.max_guest || 0) : 
         (user?.account_type === 'business' ? 200 : 50);
 
     const handleMouseDown = (e) => {
@@ -1432,10 +1492,17 @@ const Manage_my_event = () => {
             );
         }
 
+        const isCustom = currentPlan.isCustom || false;
+
         return (
-            <div className="details-card current-plan-card">
+            <div className={`details-card current-plan-card ${isCustom ? 'custom-plan-card' : ''}`}>
                 <div className="card-header">
-                    <h3>{currentPlan.is_business ? 'Business Plan' : 'Current Plan'}</h3>
+                    <h3>
+                        {isCustom ? 'Custom Plan' : (currentPlan.is_business ? 'Business Plan' : 'Current Plan')}
+                        {isCustom && (
+                            <span className="custom-badge">✨ Custom</span>
+                        )}
+                    </h3>
                     <div className={`plan-badge ${currentPlan.available_events === 0 ? 'unavailable' : 'available'}`}>
                         {currentPlan.available_events === 0 ? 'No Events Left' :
                             currentPlan.available_events === "Unlimited" ? 'Unlimited' : 'Active'}
@@ -1445,10 +1512,12 @@ const Manage_my_event = () => {
                     <div className="plan-main-info">
                         <h4 className="plan-name">{currentPlan.plan_name}</h4>
                         <p className="plan-price">
-                            {currentPlan.price === 0 ? 'Custom Pricing' : `R${currentPlan.price}/month`}
+                            {currentPlan.price === 0 ? 'Custom Pricing' : `R${currentPlan.price.toFixed(2)}/month`}
                         </p>
                         {currentPlan.is_business && (
-                            <span className="plan-type-badge business">Business Plan</span>
+                            <span className={`plan-type-badge ${isCustom ? 'custom' : 'business'}`}>
+                                {isCustom ? 'Custom Plan' : 'Business Plan'}
+                            </span>
                         )}
                     </div>
 
@@ -1458,7 +1527,7 @@ const Manage_my_event = () => {
                             <div className="feature-details">
                                 <span className="feature-label">Max Guests</span>
                                 <span className="feature-value">
-                                    {currentPlan.max_guest === 0 ? "Unlimited" : currentPlan.max_guest}
+                                    {currentPlan.max_guest === 0 ? "Unlimited" : currentPlan.max_guest.toLocaleString()}
                                 </span>
                             </div>
                         </div>
@@ -1486,11 +1555,11 @@ const Manage_my_event = () => {
                     {/* Plan Features List */}
                     {currentPlan.features && currentPlan.features.length > 0 && (
                         <div className="plan-included-features">
-                            <h4>Features Included:</h4>
+                            <h4>{isCustom ? 'Your Custom Features:' : 'Features Included:'}</h4>
                             <ul className="features-list">
                                 {currentPlan.features.map((feature, index) => (
-                                    <li key={index}>
-                                        <i className="bi bi-check-circle"></i>
+                                    <li key={index} className={isCustom ? 'custom-feature' : ''}>
+                                        <i className={`bi ${isCustom ? 'bi-star-fill' : 'bi-check-circle'}`}></i>
                                         {feature}
                                     </li>
                                 ))}
@@ -1513,7 +1582,7 @@ const Manage_my_event = () => {
                             </p>
                         )}
                         <button className="upgrade-btn" onClick={goToUpgradePlan}>
-                            {currentPlan.is_business ? 'Upgrade Business Plan' : 'Upgrade Plan'}
+                            {isCustom ? 'View Plan Details' : (currentPlan.is_business ? 'Upgrade Business Plan' : 'Upgrade Plan')}
                         </button>
                     </div>
                 </div>
@@ -1816,7 +1885,7 @@ const Manage_my_event = () => {
                                     </div>
                                 </div>
 
-                                {/* Current Plan Card */}
+                                {/* Current Plan Card - UPDATED with custom plan support */}
                                 {renderCurrentPlanCard()}
                             </div>
                         )}

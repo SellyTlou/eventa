@@ -1,48 +1,31 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "../App.css";
 import "../responce.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
+import { Navbar, Footer, Login } from "./components";
 import { useNavigate } from "react-router-dom";
 
 function Pricing() {
     // eslint-disable-next-line no-unused-vars
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    // Monthly pricing only
     const [activeCategory, setActiveCategory] = useState("Personal Events");
     const [activeFaq, setActiveFaq] = useState(null);
+    const [annualBilling, setAnnualBilling] = useState(false);
     const navigate = useNavigate();
 
-    // New state for pricing plans
+    // State for pricing plans
     const [pricingPlans, setPricingPlans] = useState([]);
     const [businessPlans, setBusinessPlans] = useState([]);
     const [loadingPricing, setLoadingPricing] = useState(true);
 
-    // Mobile slider state
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const sliderRef = useRef(null);
-
-    // NEW: State for annual billing toggle (OFF by default)
-    const [annualBilling, setAnnualBilling] = useState(false);
-
-    // NEW: States for custom plan modal
-    const [showCustomPlanModal, setShowCustomPlanModal] = useState(false);
+    // State for modals and user
+    const [isLoginOpen, setIsLoginOpen] = useState(false);
+    const [loginMode, setLoginMode] = useState("login");
+    const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
+    const [showContactSalesModal, setShowContactSalesModal] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
 
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
-
-        window.addEventListener('resize', handleResize);
-
-        // Fetch pricing plans when component mounts
-        fetchPricingPlans();
-        fetchBusinessPlans();
-
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     // Check for logged-in user
     useEffect(() => {
@@ -51,7 +34,6 @@ function Pricing() {
             setCurrentUser(JSON.parse(userJson));
         }
         
-        // Listen for login/logout events
         const handleUserChange = () => {
             const updatedUser = localStorage.getItem('user');
             setCurrentUser(updatedUser ? JSON.parse(updatedUser) : null);
@@ -66,58 +48,40 @@ function Pricing() {
         };
     }, []);
 
-    // Handle login completion for custom plan
     useEffect(() => {
-        const handleLoginComplete = () => {
-            const userJson = localStorage.getItem('user');
-            if (userJson) {
-                const user = JSON.parse(userJson);
-                setCurrentUser(user);
-                // If we were waiting to show custom plan modal
-                if (user.account_type === 'business') {
-                    setShowCustomPlanModal(true);
-                }
-            }
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
         };
-        
-        window.addEventListener('userLoggedIn', handleLoginComplete);
-        return () => window.removeEventListener('userLoggedIn', handleLoginComplete);
-    }, []);
 
-    const [isLoginOpen, setIsLoginOpen] = useState(false);
-    const [loginMode, setLoginMode] = useState("login");
-    const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
-    const [showContactSalesModal, setShowContactSalesModal] = useState(false);
+        window.addEventListener('resize', handleResize);
+        fetchPricingPlans();
+        fetchBusinessPlans();
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const printAlert = (message, type = 'info') => {
         setAlert({ show: true, message, type });
-        setTimeout(() => {
-            setAlert({ show: false, message: '', type: '' });
-        }, 5000);
+        setTimeout(() => setAlert({ show: false, message: '', type: '' }), 5000);
     };
 
-    // Replace the existing handleCustomPlanClick function with this:
-const handleCustomPlanClick = () => {
-    // Check if user is logged in
-    if (!currentUser) {
-        // Show login modal first
-        setLoginMode("login");
-        setIsLoginOpen(true);
-        printAlert('Please log in to request a custom plan', 'info');
-        return;
-    }
-    
-    // Check if user is business account
-    if (currentUser.account_type !== 'business') {
-        printAlert('Custom plans are only available for business accounts. Please upgrade to a business account.', 'warning');
-        return;
-    }
-    
-    // Navigate to the custom plan request page
-    navigate('/custom-plan-request');
-};
+    const handleCustomPlanClick = () => {
+        if (!currentUser) {
+            setLoginMode("login");
+            setIsLoginOpen(true);
+            printAlert('Please log in to request a custom plan', 'info');
+            return;
+        }
+        
+        if (currentUser.account_type !== 'business') {
+            printAlert('Custom plans are only available for business accounts', 'warning');
+            return;
+        }
+        
+        navigate('/custom-plan-request');
+    };
 
-    // Helper function to get default features based on package type
+    // Helper function to get default features
     const getDefaultFeatures = (packageType, maxGuests, maxEvents) => {
         const baseFeatures = [
             `Up to ${maxGuests} guests per event`,
@@ -144,7 +108,7 @@ const handleCustomPlanClick = () => {
                     "Unlimited events",
                     "Advanced analytics"
                 ];
-            default: // basic/free
+            default:
                 return [
                     ...baseFeatures,
                     "Access to basic templates",
@@ -192,7 +156,6 @@ const handleCustomPlanClick = () => {
 
     const fetchPricingPlans = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
             const formData = new FormData();
             formData.append("function", "getAllPackages");
 
@@ -207,7 +170,6 @@ const handleCustomPlanClick = () => {
             console.log("Pricing plans data:", data);
 
             if (data.success && data.packages) {
-                // Base feature limits - hardcoded per plan type
                 const baseFeatureLimits = {
                     'basic': { max_guests: 250, max_events: 5 },
                     'premium': { max_guests: 1700, max_events: 20 },
@@ -215,7 +177,6 @@ const handleCustomPlanClick = () => {
                 };
 
                 const formattedPlans = data.packages.map(pkg => {
-                    // Use hardcoded base features instead of API values
                     const limits = baseFeatureLimits[pkg.package_type.toLowerCase()] || baseFeatureLimits['basic'];
                     return {
                         id: pkg.package_id,
@@ -230,12 +191,10 @@ const handleCustomPlanClick = () => {
                 });
                 setPricingPlans(formattedPlans);
             } else {
-                // Fallback to default plans if API fails
                 setPricingPlans(getDefaultPricingPlans());
             }
         } catch (err) {
             console.error("Error fetching pricing plans:", err);
-            // Fallback to default plans
             setPricingPlans(getDefaultPricingPlans());
         } finally {
             setLoadingPricing(false);
@@ -244,8 +203,7 @@ const handleCustomPlanClick = () => {
 
     const fetchBusinessPlans = async () => {
         try {
-            console.log('Fetching business plans from pricing.js...');
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
+            console.log('Fetching business plans...');
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -255,7 +213,7 @@ const handleCustomPlanClick = () => {
             if (!response.ok) throw new Error("Network response was not ok");
 
             const data = await response.json();
-            console.log("Business plans data from pricing.js:", data);
+            console.log("Business plans data:", data);
 
             if (data.success && data.packages) {
                 const formattedBusinessPlans = data.packages.map(pkg => ({
@@ -270,172 +228,25 @@ const handleCustomPlanClick = () => {
                     isContactSales: pkg.price === 0 || pkg.price === '0.00' || pkg.name === 'Advanced'
                 }));
 
-                // Sort business plans to ensure CUSTOM PLAN is last
                 const sortedBusinessPlans = formattedBusinessPlans.sort((a, b) => {
                     if (a.name === "CUSTOM PLAN") return 1;
                     if (b.name === "CUSTOM PLAN") return -1;
                     return 0;
                 });
-
-                console.log('Setting business plans:', sortedBusinessPlans);
+                
                 setBusinessPlans(sortedBusinessPlans);
             } else {
-                console.error('Failed to fetch business plans from pricing.js:', data.message);
-                // Use fallback with CUSTOM PLAN last
-                const fallbackPlans = [
-                    {
-                        name: "STARTER PLAN",
-                        monthlyPrice: "R649.00",
-                        description: "Perfect for starter business events",
-                        isPopular: true,
-                        features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
-                        ctaText: "Get started",
-                        ctaVariant: "btn-create",
-                        isContactSales: false
-                    },
-                    {
-                        name: "INTERMEDIATE PLAN",
-                        monthlyPrice: "R2149.00",
-                        description: "Perfect for intermediate business events",
-                        isPopular: false,
-                        features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
-                        ctaText: "Get started",
-                        ctaVariant: "btn-demo",
-                        isContactSales: false
-                    },
-                    {
-                        name: "ADVANCE PLUS PLAN",
-                        monthlyPrice: "Contact Sales",
-                        description: "Perfect for advanced business events",
-                        isPopular: false,
-                        features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
-                        ctaText: "GET IN TOUCH",
-                        ctaVariant: "btn-demo",
-                        isContactSales: true
-                    },
-                    {
-                        name: "CUSTOM PLAN",
-                        monthlyPrice: "Custom Pricing",
-                        description: "For large-scale business events",
-                        isPopular: false,
-                        features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
-                        ctaText: "Request Custom Plan",
-                        ctaVariant: "btn-create",
-                        isContactSales: true
-                    }
-                ];
-                setBusinessPlans(fallbackPlans);
+                console.error('Failed to fetch business plans');
+                setBusinessPlans(getDefaultBusinessPlans());
             }
         } catch (err) {
-            console.error("Error fetching business plans from pricing.js:", err);
-            // Use fallback on error too with CUSTOM PLAN last
-            const fallbackPlans = [
-                {
-                    name: "STARTER PLAN",
-                    monthlyPrice: "R649.00",
-                    description: "Perfect for starter business events",
-                    isPopular: true,
-                    features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
-                    ctaText: "Get started",
-                    ctaVariant: "btn-create",
-                    isContactSales: false
-                },
-                {
-                    name: "INTERMEDIATE PLAN",
-                    monthlyPrice: "R2149.00",
-                    description: "Perfect for intermediate business events",
-                    isPopular: false,
-                    features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
-                    ctaText: "Get started",
-                    ctaVariant: "btn-demo",
-                    isContactSales: false
-                },
-                {
-                    name: "ADVANCE PLUS PLAN",
-                    monthlyPrice: "Contact Sales",
-                    description: "Perfect for advanced business events",
-                    isPopular: false,
-                    features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
-                    ctaText: "GET IN TOUCH",
-                    ctaVariant: "btn-demo",
-                    isContactSales: true
-                },
-                {
-                    name: "CUSTOM PLAN",
-                    monthlyPrice: "Custom Pricing",
-                    description: "For large-scale business events",
-                    isPopular: false,
-                    features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
-                    ctaText: "Request Custom Plan",
-                    ctaVariant: "btn-create",
-                    isContactSales: true
-                }
-            ];
-            setBusinessPlans(fallbackPlans);
+            console.error("Error fetching business plans:", err);
+            setBusinessPlans(getDefaultBusinessPlans());
         }
     };
 
-    // NEW: Helper function to calculate annual price with 15% discount
-    const calculateAnnualPrice = (monthlyPrice) => {
-        // Extract numeric value from price string (e.g., "R649.00" -> 649.00)
-        const priceMatch = monthlyPrice.match(/R([\d,.]+)/);
-        if (!priceMatch) return monthlyPrice; // Return as-is for "Contact Sales" or similar
-        
-        const price = parseFloat(priceMatch[1].replace(',', ''));
-        const annualPrice = (price * 12) * 0.85; // 12 months with 15% discount
-        return `R${annualPrice.toFixed(2)}`;
-    };
-
-    const handleLoginClick = () => {
-        setLoginMode("login");
-        setIsLoginOpen(true);
-    };
-
-    const handleSignupClick = () => {
-        setLoginMode("signup");
-        setIsLoginOpen(true);
-    }
-
-    const handleCreateEvent = () => {
-        navigate("/createevent");
-    };
-
-    const handleCategoryClick = (category) => {
-        if (category === "Selling Tickets") {
-            setShowTicketMaintenance(true);
-        } else {
-            setActiveCategory(category);
-            setCurrentIndex(0); // Reset to first card when category changes
-            // Reset annual billing when switching away from Business
-            if (category !== "Business") {
-                setAnnualBilling(false);
-            }
-        }
-    };
-
-    // Updated pricing categories using API data
-    const pricingCategories = useMemo(() => ({
-        "Personal Events": pricingPlans.map(plan => ({
-            name: plan.name,
-            monthlyPrice: plan.price,
-            description: `Perfect for ${plan.name.toLowerCase()} events`,
-            isPopular: plan.isPopular,
-            features: plan.features,
-            ctaText: plan.price === "Free" ? "Get started for free" : "Get started",
-            ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
-        })),
-        "Business": businessPlans.length > 0 ? businessPlans.map(plan => {
-            return {
-                name: plan.name,
-                monthlyPrice: plan.monthlyPrice,
-                description: plan.description,
-                isPopular: plan.isPopular,
-                features: plan.features,
-                ctaText: plan.ctaText,
-                ctaVariant: plan.ctaVariant,
-                isContactSales: plan.isContactSales
-            };
-        }) : [
+    const getDefaultBusinessPlans = () => {
+        return [
             {
                 name: "STARTER PLAN",
                 monthlyPrice: "R649.00",
@@ -476,7 +287,63 @@ const handleCustomPlanClick = () => {
                 ctaVariant: "btn-create",
                 isContactSales: true
             }
-        ],
+        ];
+    };
+
+    const calculateAnnualPrice = (monthlyPrice) => {
+        const priceMatch = monthlyPrice.match(/R([\d,.]+)/);
+        if (!priceMatch) return monthlyPrice;
+        
+        const price = parseFloat(priceMatch[1].replace(',', ''));
+        const annualPrice = (price * 12) * 0.85;
+        return `R${annualPrice.toFixed(2)}`;
+    };
+
+    const handleLoginClick = () => {
+        setLoginMode("login");
+        setIsLoginOpen(true);
+    };
+
+    const handleSignupClick = () => {
+        setLoginMode("signup");
+        setIsLoginOpen(true);
+    };
+
+    const handleCreateEvent = () => {
+        navigate("/createevent");
+    };
+
+    const handleCategoryClick = (category) => {
+        if (category === "Selling Tickets") {
+            setShowTicketMaintenance(true);
+        } else {
+            setActiveCategory(category);
+            if (category !== "Business") {
+                setAnnualBilling(false);
+            }
+        }
+    };
+
+    const pricingCategories = useMemo(() => ({
+        "Personal Events": pricingPlans.map(plan => ({
+            name: plan.name,
+            monthlyPrice: plan.price,
+            description: `Perfect for ${plan.name.toLowerCase()} events`,
+            isPopular: plan.isPopular,
+            features: plan.features,
+            ctaText: plan.price === "Free" ? "Get started for free" : "Get started",
+            ctaVariant: plan.isPopular ? "btn-create" : "btn-demo"
+        })),
+        "Business": businessPlans.length > 0 ? businessPlans.map(plan => ({
+            name: plan.name,
+            monthlyPrice: plan.monthlyPrice,
+            description: plan.description,
+            isPopular: plan.isPopular,
+            features: plan.features,
+            ctaText: plan.ctaText,
+            ctaVariant: plan.ctaVariant,
+            isContactSales: plan.isContactSales
+        })) : getDefaultBusinessPlans(),
         "Selling Tickets": [
             {
                 name: "Basic",
@@ -531,27 +398,6 @@ const handleCustomPlanClick = () => {
         ]
     }), [pricingPlans, businessPlans]);
 
-    // Mobile slider functions
-    const handleNext = () => {
-        const currentCards = pricingCategories[activeCategory];
-        if (currentCards && currentIndex < currentCards.length - 1) {
-            setCurrentIndex(currentIndex + 1);
-        } else {
-            // Loop back to first card
-            setCurrentIndex(0);
-        }
-    };
-
-    const handlePrev = () => {
-        const currentCards = pricingCategories[activeCategory];
-        if (currentCards && currentIndex > 0) {
-            setCurrentIndex(currentIndex - 1);
-        } else {
-            // Loop to last card
-            setCurrentIndex(currentCards.length - 1);
-        }
-    };
-
     const faqItems = [
         {
             question: "What does the Basic plan include?",
@@ -559,19 +405,19 @@ const handleCustomPlanClick = () => {
         },
         {
             question: "Do you offer a free trial?",
-            answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R200/month to test our features. we don't offer refunds."
+            answer: "We don't offer a traditional free trial, but you can start with our Basic plan at R200/month to test our features."
         },
         {
             question: "How flexible are the plans?",
-            answer: "Our plans are flexible and scalable. You can upgrade, downgrade, or cancel anytime with no long-term contracts. Adjust your plan as your event needs change."
+            answer: "Our plans are flexible and scalable. You can upgrade, downgrade, or cancel anytime with no long-term contracts."
         },
         {
             question: "Can I cancel or change my plan at any time?",
-            answer: "Yes, you can upgrade, downgrade, or cancel your plan at any time. Changes take effect immediately, as for billing we don't do refunds"
+            answer: "Yes, you can upgrade, downgrade, or cancel your plan at any time. Changes take effect immediately."
         },
         {
             question: "Can I get a custom plan?",
-            answer: "Certainly! For large organizations or unique requirements, we offer custom plans. Contact our sales team to discuss your specific needs and get a tailored solution."
+            answer: "Certainly! For large organizations or unique requirements, we offer custom plans. Click the 'Request Custom Plan' button to tell us your needs."
         }
     ];
 
@@ -579,22 +425,6 @@ const handleCustomPlanClick = () => {
         setActiveFaq(activeFaq === index ? null : index);
     };
 
-    // Get visible card for mobile
-    const getVisibleCard = () => {
-        const currentCards = pricingCategories[activeCategory];
-        if (!currentCards || currentCards.length === 0) return null;
-
-        // Sort to ensure CUSTOM PLAN is last
-        const sortedCards = [...currentCards].sort((a, b) => {
-            if (a.name === "CUSTOM PLAN") return 1;
-            if (b.name === "CUSTOM PLAN") return -1;
-            return 0;
-        });
-
-        return sortedCards[currentIndex];
-    };
-
-    // Show loading state
     if (loadingPricing) {
         return (
             <>
@@ -618,15 +448,8 @@ const handleCustomPlanClick = () => {
 
     return (
         <>
-            <Navbar
-                onLoginClick={handleLoginClick}
-                onSignupClick={handleSignupClick}
-            />
-            <Login
-                isOpen={isLoginOpen}
-                onClose={() => setIsLoginOpen(false)}
-                defaultMode={loginMode}
-            />
+            <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
+            <Login isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} defaultMode={loginMode} />
 
             {/* Alert Component */}
             {alert.show && (
@@ -634,12 +457,11 @@ const handleCustomPlanClick = () => {
                     <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
                         alert.type === "success" ? "fa-check-circle" :
                         alert.type === "warning" ? "fa-exclamation-triangle" :
-                        "fa-info-circle"
-                    }`}></i>
+                        "fa-info-circle"}`}>
+                    </i>
                     <span>{alert.message}</span>
                 </div>
             )}
-            <NewEventPopupBtn />
 
             <div className="pricing-page">
                 {/* Hero Section */}
@@ -674,282 +496,127 @@ const handleCustomPlanClick = () => {
                     </div>
                 </section>
 
-                {/* NEW: Annual Billing Toggle (Business Tab Only) */}
-{activeCategory === "Business" && (
-    <div className="annual-toggle-container">
-        <div className="toggle-wrapper">
-            <span className="toggle-label">Monthly</span>
-            <div 
-                className={`toggle-switch ${annualBilling ? 'annual' : 'monthly'}`}
-                onClick={() => setAnnualBilling(!annualBilling)}
-            >
-                <div className="toggle-knob"></div>
-            </div>
-            <span className="toggle-label">
-                Annual <span className="save-badge">15% off</span>
-            </span>
-        </div>
-    </div>
-)}
-
-                {/* NEW: Annual Billing Toggle (Business Tab Only) */}
-{activeCategory === "Business" && (
-    <div className="annual-toggle-container">
-        <div className="toggle-wrapper">
-            <span className="toggle-label">Monthly</span>
-            <div 
-                className={`toggle-switch ${annualBilling ? 'annual' : 'monthly'}`}
-                onClick={() => setAnnualBilling(!annualBilling)}
-            >
-                <div className="toggle-knob"></div>
-            </div>
-            <span className="toggle-label">
-                Annual <span className="save-badge">15% off</span>
-            </span>
-        </div>
-    </div>
-)}
+                {/* Annual Billing Toggle for Business Tab */}
+                {activeCategory === "Business" && (
+                    <div className="annual-toggle-container">
+                        <div className="toggle-wrapper">
+                            <span className="toggle-label">Monthly</span>
+                            <div 
+                                className={`toggle-switch ${annualBilling ? 'annual' : 'monthly'}`}
+                                onClick={() => setAnnualBilling(!annualBilling)}
+                            >
+                                <div className="toggle-knob"></div>
+                            </div>
+                            <span className="toggle-label">
+                                Annual <span className="save-badge">15% off</span>
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 {/* Pricing Cards */}
                 {activeCategory !== "Selling Tickets" && (
                     <section className={`pricing-cards-section ${activeCategory === 'Business' ? 'business' : ''}`}>
                         <div className="container">
-                            {!isMobile ? (
-                                <div className="row justify-content-center">
-                                    {/* Desktop View - Grid Layout */}
-                                    {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
-                                        [...pricingCategories[activeCategory]]
-                                            .sort((a, b) => {
-                                                if (a.name === "CUSTOM PLAN") return 1;
-                                                if (b.name === "CUSTOM PLAN") return -1;
-                                                return 0;
-                                            })
-                                            .map((plan, index) => {
-                                                const cardCount = pricingCategories[activeCategory].length;
-                                                const colClass = cardCount === 4 ? 'col-lg-3' :
-                                                    cardCount === 3 ? 'col-lg-4' :
-                                                        cardCount === 2 ? 'col-lg-6' : 'col-lg-12';
-                                                return (
-                                                    <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
-                                                        <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
-                                                            {plan.isContactSales ? (
-                                                                <>
-                                                                    {plan.name === "ADVANCE PLUS PLAN" ? (
-                                                                        <>
-                                                                            <div className="enterprise-label large-green">Advanced</div>
-                                                                            <div className="basic-label get-in-touch-label">Get in touch</div>
-                                                                        </>
-                                                                    ) : plan.name === "CUSTOM PLAN" ? (
+                            <div className="row justify-content-center">
+                                {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
+                                    [...pricingCategories[activeCategory]]
+                                        .sort((a, b) => {
+                                            if (a.name === "CUSTOM PLAN") return 1;
+                                            if (b.name === "CUSTOM PLAN") return -1;
+                                            return 0;
+                                        })
+                                        .map((plan, index) => {
+                                            const colClass = activeCategory === 'Selling Tickets' ? 'col-lg-4' : 'col-lg-3';
+                                            return (
+                                                <div key={index} className={`${colClass} pricing-card-wrapper ${plan.isPopular ? 'popular' : ''}`}>
+                                                    <div className={`pricing-card text-center ${plan.isContactSales ? 'contact-card' : ''}`}>
+                                                        {plan.isContactSales ? (
+                                                            <>
+                                                                {plan.name === "ADVANCE PLUS PLAN" ? (
+                                                                    <>
+                                                                        <div className="enterprise-label large-green">Advanced</div>
+                                                                        <div className="basic-label get-in-touch-label">Get in touch</div>
+                                                                    </>
+                                                                ) : plan.name === "CUSTOM PLAN" ? (
+                                                                    <>
                                                                         <div className="enterprise-label large-green">CUSTOM PLAN</div>
-                                                                    ) : (
-                                                                        <div className="enterprise-label large-green">Enterprise</div>
-                                                                    )}
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="enterprise-label large-green">Enterprise</div>
+                                                                )}
 
-                                                                    <ul className="features-list contact-features">
-                                                                        {plan.features.map((feature, featureIndex) => (
-                                                                            <li key={featureIndex}>
-                                                                                <i className="bi bi-check2-circle text-success me-2"></i>
-                                                                                {feature}
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
+                                                                <ul className="features-list contact-features">
+                                                                    {plan.features.map((feature, featureIndex) => (
+                                                                        <li key={featureIndex}>
+                                                                            <i className="bi bi-check2-circle text-success me-2"></i>
+                                                                            {feature}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
 
-                                                            <div className="contact-cta-wrapper">
-                                                                {/* For CUSTOM PLAN, show button instead of "Coming soon" */}
-                                                                {plan.name === "CUSTOM PLAN" ? (
-                                                                    <button
-                                                                        className="btn btn-create w-100"
-                                                                        onClick={() => setShowContactSalesModal(true)}
-                                                                    >
-                                                                        Get in touch
-                                                                    </button>
-                                                                ) : plan.name === "ADVANCE PLUS PLAN" ? (
-                                                                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
-                                                                        Coming soon
-                                                                    </div>
-                                                                ) : null}
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {plan.isPopular && (
-                                                                <div className="popular-badge">MOST POPULAR</div>
-                                                            )}
-                                                            <h3>{plan.name}</h3>
-                                                            <p className="plan-description">{plan.description}</p>
-
-                                                            <div className="price-tag">
-                                                                <span className="price">
-                                                                    {activeCategory === "Business" && annualBilling && !plan.isContactSales
-                                                                        ? calculateAnnualPrice(plan.monthlyPrice)
-                                                                        : plan.monthlyPrice}
-                                                                </span>
-                                                                <span className="duration">
-                                                                    {activeCategory === "Business" && annualBilling && !plan.isContactSales
-                                                                        ? "/year"
-                                                                        : "/month"}
-                                                                </span>
-                                                            </div>
-                                                                    <div className="price-tag">
-                                                                        <span className="price">{plan.monthlyPrice}</span>
-                                                                        <span className="duration">/month</span>
-                                                                    </div>
-
-                                                                    <ul className="features-list">
-                                                                        {plan.features.map((feature, featureIndex) => (
-                                                                            <li key={featureIndex}>
-                                                                                <i className="bi bi-check2-circle"></i> {feature}
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
-
-                                                                    <button
-                                                                        className={`btn ${plan.ctaVariant} w-100`}
-                                                                        onClick={handleCreateEvent}
-                                                                    >
-                                                                        {plan.ctaText}
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })
-                                    ) : (
-                                        <div className="col-12 text-center">
-                                            <p>Loading packages...</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-
-                                <div className="mobile-slider-container">
-                                    {/* Mobile View - Single Card with Slider Buttons */}
-                                    {pricingCategories[activeCategory] && pricingCategories[activeCategory].length > 0 ? (
-                                        <>
-                                            <div className="slider-wrapper">
-                                                <button className="slider-btn prev" onClick={handlePrev} aria-label="Previous plan">
-                                                    <i className="bi bi-chevron-left"></i>
-                                                </button>
-
-                                                <div className="single-card-container">
-                                                    {(() => {
-                                                        const visibleCard = getVisibleCard();
-                                                        if (!visibleCard) return null;
-
-                                                        const sortedCards = [...pricingCategories[activeCategory]].sort((a, b) => {
-                                                            if (a.name === "CUSTOM PLAN") return 1;
-                                                            if (b.name === "CUSTOM PLAN") return -1;
-                                                            return 0;
-                                                        });
-                                                        const isPopular = visibleCard.isPopular;
-
-                                                        return (
-                                                            <div className={`pricing-card-wrapper ${isPopular ? 'popular' : ''}`}>
-                                                                <div className={`pricing-card text-center ${visibleCard.isContactSales ? 'contact-card' : ''}`}>
-                                                                    {visibleCard.isContactSales ? (
-                                                                        <>
-                                                                            {visibleCard.name === "ADVANCE PLUS PLAN" ? (
-                                                                                <>
-                                                                                    <div className="enterprise-label large-green">Advanced</div>
-                                                                                    <div className="basic-label get-in-touch-label">Get in touch</div>
-                                                                                </>
-                                                                            ) : visibleCard.name === "CUSTOM PLAN" ? (
-                                                                                <div className="enterprise-label large-green">CUSTOM PLAN</div>
-                                                                            ) : (
-                                                                                <div className="enterprise-label large-green">Enterprise</div>
-                                                                            )}
-
-                                                                            <ul className="features-list contact-features">
-                                                                                {visibleCard.features.map((feature, featureIndex) => (
-                                                                                    <li key={featureIndex}>
-                                                                                        <i className="bi bi-check2-circle text-success me-2"></i>
-                                                                                        {feature}
-                                                                                    </li>
-                                                                                ))}
-                                                                            </ul>
-
-                                                                            <div className="contact-cta-wrapper">
-                                                                                {visibleCard.name === "CUSTOM PLAN" ? (
-                                                                                    <button
-                                                                                        className="btn btn-create w-100"
-                                                                                        onClick={() => setShowContactSalesModal(true)}
-                                                                                    >
-                                                                                        Get in touch
-                                                                                    </button>
-                                                                                ) : visibleCard.name === "ADVANCE PLUS PLAN" ? (
-                                                                                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
-                                                                                        Coming soon
-                                                                                    </div>
-                                                                                ) : null}
-                                                                            </div>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            {isPopular && (
-                                                                                <div className="popular-badge">MOST POPULAR</div>
-                                                                            )}
-                                                                            <h3>{visibleCard.name}</h3>
-                                                                            <p className="plan-description">{visibleCard.description}</p>
-
-                                                                            <div className="price-tag">
-                                                                                <span className="price">{visibleCard.monthlyPrice}</span>
-                                                                                <span className="duration">/month</span>
-                                                                            </div>
-
-                                                                            <ul className="features-list">
-                                                                                {visibleCard.features.map((feature, featureIndex) => (
-                                                                                    <li key={featureIndex}>
-                                                                                        <i className="bi bi-check2-circle"></i> {feature}
-                                                                                    </li>
-                                                                                ))}
-                                                                            </ul>
-
-                                                                            <button
-                                                                                className={`btn ${visibleCard.ctaVariant} w-100`}
-                                                                                onClick={handleCreateEvent}
-                                                                            >
-                                                                                {visibleCard.ctaText}
-                                                                            </button>
-                                                                        </>
-                                                                    )}
+                                                                <div className="contact-cta-wrapper">
+                                                                    {plan.name === "CUSTOM PLAN" ? (
+                                                                        <button
+                                                                            className="btn btn-create w-100"
+                                                                            onClick={handleCustomPlanClick}
+                                                                        >
+                                                                            Request Custom Plan
+                                                                        </button>
+                                                                    ) : plan.name === "ADVANCE PLUS PLAN" ? (
+                                                                        <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#999' }}>
+                                                                            Coming soon
+                                                                        </div>
+                                                                    ) : null}
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    })()}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {plan.isPopular && (
+                                                                    <div className="popular-badge">MOST POPULAR</div>
+                                                                )}
+                                                                <h3>{plan.name}</h3>
+                                                                <p className="plan-description">{plan.description}</p>
+
+                                                                <div className="price-tag">
+                                                                    <span className="price">
+                                                                        {activeCategory === "Business" && annualBilling && !plan.isContactSales
+                                                                            ? calculateAnnualPrice(plan.monthlyPrice)
+                                                                            : plan.monthlyPrice}
+                                                                    </span>
+                                                                    <span className="duration">
+                                                                        {activeCategory === "Business" && annualBilling && !plan.isContactSales
+                                                                            ? "/year"
+                                                                            : "/month"}
+                                                                    </span>
+                                                                </div>
+
+                                                                <ul className="features-list">
+                                                                    {plan.features.map((feature, featureIndex) => (
+                                                                        <li key={featureIndex}>
+                                                                            <i className="bi bi-check2-circle"></i> {feature}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+
+                                                                <button
+                                                                    className={`btn ${plan.ctaVariant} w-100`}
+                                                                    onClick={handleCreateEvent}
+                                                                >
+                                                                    {plan.ctaText}
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
-
-                                                <button className="slider-btn next" onClick={handleNext} aria-label="Next plan">
-                                                    <i className="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-
-                                            {/* Mobile Indicators */}
-                                            <div className="mobile-indicators">
-                                                {pricingCategories[activeCategory] &&
-                                                    [...pricingCategories[activeCategory]]
-                                                        .sort((a, b) => {
-                                                            if (a.name === "CUSTOM PLAN") return 1;
-                                                            if (b.name === "CUSTOM PLAN") return -1;
-                                                            return 0;
-                                                        })
-                                                        .map((_, index) => (
-                                                            <span
-                                                                key={index}
-                                                                className={`indicator-dot ${currentIndex === index ? 'active' : ''}`}
-                                                                onClick={() => setCurrentIndex(index)}
-                                                                aria-label={`Go to plan ${index + 1}`}
-                                                            ></span>
-                                                        ))}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="text-center">
-                                            <p>Loading packages...</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                            );
+                                        })
+                                ) : (
+                                    <div className="col-12 text-center">
+                                        <p>Loading packages...</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </section>
                 )}
@@ -959,7 +626,7 @@ const handleCustomPlanClick = () => {
                     <div className="container">
                         <div className="row">
                             <div className="col-12 text-center">
-                                <h2>Answers to Your Personal Event Planning Questions</h2>
+                                <h2>Frequently Asked Questions</h2>
                             </div>
                         </div>
                         <div className="row justify-content-center">
@@ -990,120 +657,98 @@ const handleCustomPlanClick = () => {
 
             <Footer />
 
-           {/* Ticket Selling Maintenance Modal */}
-{showTicketMaintenance && (
-    <div className="modal-overlay-new" onClick={() => setShowTicketMaintenance(false)}>
-        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-                <div className="modal-title-section">
-                    <div className="modal-icon-large">
-                        <i className="bi bi-tools"></i>
-                    </div>
-                    <div className="modal-title">
-                        <h2>Ticket Selling Under Maintenance</h2>
-                        <p>We're working hard to bring you ticketing features</p>
+            {/* Ticket Selling Maintenance Modal */}
+            {showTicketMaintenance && (
+                <div className="modal-overlay-new" onClick={() => setShowTicketMaintenance(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-tools"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Ticket Selling Under Maintenance</h2>
+                                    <p>We're working hard to bring you ticketing features</p>
+                                </div>
+                            </div>
+                            <button className="close-btn-new" onClick={() => setShowTicketMaintenance(false)}>
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div className="modal-body-new">
+                            <div className="maintenance-message">
+                                <div className="maintenance-icon">
+                                    <i className="bi bi-ticket-perforated"></i>
+                                </div>
+                                <h3>Coming Soon!</h3>
+                                <p>Our ticket selling feature is currently being developed and will be available in our next update.</p>
+                                <p>We're building a comprehensive ticketing system to make your event ticket sales seamless and efficient!</p>
+
+                                <div className="maintenance-tips">
+                                    <h4>In the meantime, you can:</h4>
+                                    <ul>
+                                        <li>Create free events with RSVP functionality</li>
+                                        <li>Explore our event management tools</li>
+                                        <li>Set up your event details and invitations</li>
+                                        <li>Contact support for early access inquiries</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions-new">
+                                <button className="action-btn-new primary" onClick={() => setShowTicketMaintenance(false)}>
+                                    <i className="bi bi-check-circle"></i> Got It
+                                </button>
+                                <button className="action-btn-new secondary" onClick={handleCreateEvent}>
+                                    <i className="bi bi-calendar-event"></i> Create Free Event
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button
-                    className="close-btn-new"
-                    onClick={() => setShowTicketMaintenance(false)}
-                >
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
+            )}
 
-            <div className="modal-body-new">
-                <div className="maintenance-message">
-                    <div className="maintenance-icon">
-                        <i className="bi bi-ticket-perforated"></i>
-                    </div>
-                    <h3>Coming Soon!</h3>
-                    <p>Our ticket selling feature is currently being developed and will be available in our next update.</p>
-                    <p>We're building a comprehensive ticketing system to make your event ticket sales seamless and efficient!</p>
+            {/* Contact Sales Maintenance Modal */}
+            {showContactSalesModal && (
+                <div className="modal-overlay-new" onClick={() => setShowContactSalesModal(false)}>
+                    <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-new">
+                            <div className="modal-title-section">
+                                <div className="modal-icon-large">
+                                    <i className="bi bi-people"></i>
+                                </div>
+                                <div className="modal-title">
+                                    <h2>Contact Sales</h2>
+                                    <p>Our sales desk is temporarily unavailable — we're working on it.</p>
+                                </div>
+                            </div>
+                            <button className="close-btn-new" onClick={() => setShowContactSalesModal(false)}>
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
 
-                    <div className="maintenance-tips">
-                        <h4>In the meantime, you can:</h4>
-                        <ul>
-                            <li>Create free events with RSVP functionality</li>
-                            <li>Explore our event management tools</li>
-                            <li>Set up your event details and invitations</li>
-                            <li>Contact support for early access inquiries</li>
-                        </ul>
-                    </div>
-                </div>
+                        <div className="modal-body-new">
+                            <div className="maintenance-message">
+                                <div className="maintenance-icon">
+                                    <i className="bi bi-envelope-paper"></i>
+                                </div>
+                                <h3>Get in touch</h3>
+                                <p>We're preparing a dedicated sales experience for enterprise customers. Please check back soon or contact support for early access.</p>
+                            </div>
 
-                <div className="modal-actions-new">
-                    <button
-                        className="action-btn-new primary"
-                        onClick={() => setShowTicketMaintenance(false)}
-                    >
-                        <i className="bi bi-check-circle"></i>
-                        Got It
-                    </button>
-                    <button
-                        className="action-btn-new secondary"
-                        onClick={handleCreateEvent}
-                    >
-                        <i className="bi bi-calendar-event"></i>
-                        Create Free Event
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-)}
-
-{/* Contact Sales Maintenance Modal */}
-{showContactSalesModal && (
-    <div className="modal-overlay-new" onClick={() => setShowContactSalesModal(false)}>
-        <div className="modal-content-new" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-new">
-                <div className="modal-title-section">
-                    <div className="modal-icon-large">
-                        <i className="bi bi-people"></i>
-                    </div>
-                    <div className="modal-title">
-                        <h2>Contact Sales</h2>
-                        <p>Our sales desk is temporarily unavailable — we're working on it.</p>
+                            <div className="modal-actions-new">
+                                <button className="action-btn-new primary" onClick={() => setShowContactSalesModal(false)}>
+                                    <i className="bi bi-check-circle"></i> Got It
+                                </button>
+                                <button className="action-btn-new secondary" onClick={() => { setShowContactSalesModal(false); handleCreateEvent(); }}>
+                                    <i className="bi bi-calendar-event"></i> Create Event
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button
-                    className="close-btn-new"
-                    onClick={() => setShowContactSalesModal(false)}
-                >
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
-
-            <div className="modal-body-new">
-                <div className="maintenance-message">
-                    <div className="maintenance-icon">
-                        <i className="bi bi-envelope-paper"></i>
-                    </div>
-                    <h3>Get in touch</h3>
-                    <p>We're preparing a dedicated sales experience for enterprise customers. Please check back soon or contact support for early access.</p>
-                </div>
-
-                <div className="modal-actions-new">
-                    <button
-                        className="action-btn-new primary"
-                        onClick={() => setShowContactSalesModal(false)}
-                    >
-                        <i className="bi bi-check-circle"></i>
-                        Got It
-                    </button>
-                    <button
-                        className="action-btn-new secondary"
-                        onClick={() => { setShowContactSalesModal(false); handleCreateEvent(); }}
-                    >
-                        <i className="bi bi-calendar-event"></i>
-                        Create Event
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-)}
+            )}
         </>
     );
 }

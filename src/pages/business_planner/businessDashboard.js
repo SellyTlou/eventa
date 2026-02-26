@@ -5,6 +5,14 @@ import "../planner/main.css";
 import "../../responce.css";
 import "../../alert.css";
 import { LoginNav } from "../components";
+import { 
+    getEffectivePackageValue, 
+    getEffectivePackageName,
+    isCustomPackage,
+    formatFeatures,
+    canCreateEvent,
+    canHostGuests 
+} from "../utils/customPackageUtils";
 
 const BusinessDashboard = () => {
     const [events, setEvents] = useState([]);
@@ -48,6 +56,9 @@ const BusinessDashboard = () => {
     const [showReserveModal, setShowReserveModal] = useState(false);
     const [reserveEvent, setReserveEvent] = useState(null);
     const [reserveStats, setReserveStats] = useState({ yes: 0, no: 0, maybe: 0 });
+
+    // For showing features dropdown
+    const [showFeatures, setShowFeatures] = useState(false);
 
     const [user, setUserData] = useState(null);
     const [userBusinessPackage, setUserBusinessPackage] = useState(null);
@@ -922,7 +933,7 @@ const BusinessDashboard = () => {
         });
     };
 
-    // Business Package Status Card
+    // Business Package Status Card - UPDATED to use utility functions
     const renderBusinessPackageStatus = () => {
         if (!userBusinessPackage) {
             return (
@@ -941,18 +952,62 @@ const BusinessDashboard = () => {
             );
         }
 
+        const isCustom = isCustomPackage(userBusinessPackage);
+        const packageName = getEffectivePackageName(userBusinessPackage);
         const eventsUsed = userBusinessPackage.event_used || 0;
-        const eventLimit = userBusinessPackage.event_limit || 0;
-        const eventsRemaining = eventLimit - eventsUsed;
+        const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
+        const guestLimit = getEffectivePackageValue(userBusinessPackage, 'guests', 0);
+        const packagePrice = getEffectivePackageValue(userBusinessPackage, 'price', 0);
+        
+        const eventsRemaining = eventLimit === 0 ? 'Unlimited' : eventLimit - eventsUsed;
         const percentUsed = eventLimit > 0 ? (eventsUsed / eventLimit) * 100 : 0;
 
         return (
-            <div className="business-package-status active">
+            <div className={`business-package-status active ${isCustom ? 'custom-package' : ''}`}>
                 <div className="status-icon">
-                    <i className="bi bi-briefcase"></i>
+                    {isCustom ? (
+                        <i className="bi bi-star-fill"></i>
+                    ) : (
+                        <i className="bi bi-briefcase"></i>
+                    )}
                 </div>
                 <div className="status-content">
-                    <h4>{userBusinessPackage.package_type || "Business Package"}</h4>
+                    <div className="package-header">
+                        <h4>
+                            {packageName}
+                            {isCustom && (
+                                <span className="custom-badge">
+                                    <i className="bi bi-star"></i> Custom Plan
+                                </span>
+                            )}
+                        </h4>
+                        {userBusinessPackage.approved_request_id && (
+                            <span className="request-id-badge" title="Approved Custom Request">
+                                <i className="bi bi-check-circle"></i>
+                            </span>
+                        )}
+                    </div>
+                    
+                    <div className="package-details">
+                        <div className="detail-row">
+                            <span className="detail-label">
+                                <i className="bi bi-people"></i> Guest Limit:
+                            </span>
+                            <span className="detail-value">
+                                {guestLimit === 0 ? 'Unlimited' : guestLimit.toLocaleString()}
+                            </span>
+                        </div>
+                        
+                        <div className="detail-row">
+                            <span className="detail-label">
+                                <i className="bi bi-calendar-event"></i> Event Limit:
+                            </span>
+                            <span className="detail-value">
+                                {eventLimit === 0 ? 'Unlimited' : eventLimit}
+                            </span>
+                        </div>
+                    </div>
+
                     <div className="usage-info">
                         <div className="usage-bar">
                             <div 
@@ -961,13 +1016,51 @@ const BusinessDashboard = () => {
                             ></div>
                         </div>
                         <div className="usage-text">
-                            <span>{eventsUsed} of {eventLimit} events used</span>
-                            <span className="remaining">{eventsRemaining} remaining</span>
+                            <span>{eventsUsed} of {eventLimit === 0 ? '∞' : eventLimit} events used</span>
+                            <span className="remaining">
+                                {eventsRemaining === 'Unlimited' ? 'Unlimited left' : `${eventsRemaining} remaining`}
+                            </span>
                         </div>
                     </div>
-                    <button className="btn-manage-package" onClick={goToBusinessUpgrade}>
-                        Manage Package
-                    </button>
+
+                    {/* Custom Features Dropdown */}
+                    {isCustom && (
+                        <div className="package-features-mini">
+                            <span className="features-toggle" onClick={() => setShowFeatures(!showFeatures)}>
+                                <i className={`bi ${showFeatures ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                                {showFeatures ? 'Hide Custom Features' : 'View Custom Features'}
+                            </span>
+                            {showFeatures && (
+                                <div className="features-dropdown">
+                                    {getEffectivePackageValue(userBusinessPackage, 'features', []).map((feature, index) => (
+                                        <div key={index} className="feature-item">
+                                            <i className="bi bi-star-fill"></i>
+                                            {feature}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {packagePrice > 0 && (
+                        <div className="package-price">
+                            <span className="price-label">Monthly Price:</span>
+                            <span className="price-value">R{packagePrice.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    <div className="package-footer">
+                        {userBusinessPackage.expiry_date && (
+                            <p className="expiry-date">
+                                <i className="bi bi-calendar"></i>
+                                Expires: {new Date(userBusinessPackage.expiry_date).toLocaleDateString()}
+                            </p>
+                        )}
+                        <button className="btn-manage-package" onClick={goToBusinessUpgrade}>
+                            {isCustom ? 'View Custom Plan' : 'Manage Package'}
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -1016,12 +1109,22 @@ const BusinessDashboard = () => {
                             <h1 className="dashboard-title">Business Event Dashboard</h1>
                             <p className="dashboard-subtitle">Manage your business events and packages</p>
                         </div>
+                        <button 
+                            className="btn btn-outline me-2"
+                            onClick={() => navigate('/my-requests')}>
+                            <i className="bi bi-file-text"></i>
+                            My Requests
+                        </button>
+                        <button className="btn btn-primary me-2" onClick={() => navigate('/custom-plan-request')}>
+                            <i className="bi bi-file-text"></i>
+                            Request Custom Plan
+                        </button>
                         <button className="create-event-btn-main" onClick={createEvent}>
                             <i className="bi bi-plus-lg"></i> New Event
                         </button>
                     </div>
 
-                    {/* BUSINESS PACKAGE STATUS */}
+                    {/* BUSINESS PACKAGE STATUS - UPDATED */}
                     {renderBusinessPackageStatus()}
 
                     {/* NEXT EVENT CARD */}
@@ -1307,14 +1410,6 @@ const BusinessDashboard = () => {
                                 <button className="cta-button" onClick={createEvent}>
                                     <i className="bi bi-plus-circle"></i> Create Event
                                 </button>
-                                // In your BusinessDashboard component, add:
-<button
-    className="btn btn-primary"
-    onClick={() => navigate('/custom-plan-request')}
->
-    <i className="bi bi-file-text"></i>
-    Request Custom Plan
-</button>
                             </div>
                         )}
                     </div>
