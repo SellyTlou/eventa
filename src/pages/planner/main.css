@@ -9181,3 +9181,191 @@ Package Payment Page
         text-align: center;
     }
 }
+
+/* Simplified Business Package Status Card */
+.business-package-status {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left: 4px solid #667eea;
+}
+
+.business-package-status.active {
+    border-left-color: #28a745;
+}
+
+.business-package-status.custom-package {
+    border-left-color: #ffc107;
+    background: linear-gradient(to right, #fff9e6, #ffffff);
+}
+
+.business-package-status.no-package {
+    border-left-color: #dc3545;
+    background: #fff8f8;
+}
+
+.status-icon {
+    width: 48px;
+    height: 48px;
+    background: #f0f4ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+.business-package-status.custom-package .status-icon {
+    background: #fff3cd;
+    color: #ffc107;
+}
+
+.business-package-status.no-package .status-icon {
+    background: #f8d7da;
+    color: #dc3545;
+}
+
+.status-content {
+    flex: 1;
+}
+
+.package-header {
+    margin-bottom: 15px;
+}
+
+.package-header h4 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.custom-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.custom-badge i {
+    font-size: 12px;
+}
+
+/* Usage Info - This is the main focus now */
+.usage-info {
+    margin: 15px 0 20px;
+}
+
+.usage-bar {
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.usage-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.business-package-status.custom-package .usage-progress {
+    background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
+}
+
+.usage-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #555;
+}
+
+.usage-text .remaining {
+    color: #667eea;
+    font-weight: 500;
+}
+
+.business-package-status.custom-package .usage-text .remaining {
+    color: #fd7e14;
+}
+
+/* Package Footer - Only the button */
+.package-footer {
+    margin-top: 5px;
+}
+
+.btn-manage-package {
+    padding: 10px 20px;
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    color: #667eea;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-manage-package:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.business-package-status.custom-package .btn-manage-package {
+    border-color: #ffc107;
+    color: #fd7e14;
+}
+
+.business-package-status.custom-package .btn-manage-package:hover {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+    border-color: transparent;
+}
+
+.btn-upgrade-small {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-upgrade-small:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .business-package-status {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .status-icon {
+        margin-bottom: 10px;
+    }
+}

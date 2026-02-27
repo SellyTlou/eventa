@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "../App.css";
 import "../responce.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
+import { Navbar, Footer, Login } from "./components";
 import { useNavigate } from "react-router-dom";
 
 function Pricing() {
@@ -10,6 +9,7 @@ function Pricing() {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [activeCategory, setActiveCategory] = useState("Personal Events");
     const [activeFaq, setActiveFaq] = useState(null);
+    const [annualBilling, setAnnualBilling] = useState(false);
     const navigate = useNavigate();
 
     // State for pricing plans
@@ -20,10 +20,7 @@ function Pricing() {
     // Slider state
     const [startIndex, setStartIndex] = useState(0);
 
-    // State for annual billing toggle
-    const [annualBilling, setAnnualBilling] = useState(false);
-
-    // States for modals
+    // States for modals and user
     const [showCustomPlanModal, setShowCustomPlanModal] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
@@ -55,19 +52,12 @@ function Pricing() {
     const [formErrors, setFormErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
+    const [isLoginOpen, setIsLoginOpen] = useState(false);
+    const [loginMode, setLoginMode] = useState("login");
+    const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
+    const [showContactSalesModal, setShowContactSalesModal] = useState(false);
 
-        window.addEventListener('resize', handleResize);
-
-        // Fetch pricing plans when component mounts
-        fetchPricingPlans();
-        fetchBusinessPlans();
-
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
     // Check for logged-in user
     useEffect(() => {
@@ -97,16 +87,9 @@ function Pricing() {
         };
     }, []);
 
-    const [isLoginOpen, setIsLoginOpen] = useState(false);
-    const [loginMode, setLoginMode] = useState("login");
-    const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
-    const [showContactSalesModal, setShowContactSalesModal] = useState(false);
-
     const printAlert = (message, type = 'info') => {
         setAlert({ show: true, message, type });
-        setTimeout(() => {
-            setAlert({ show: false, message: '', type: '' });
-        }, 5000);
+        setTimeout(() => setAlert({ show: false, message: '', type: '' }), 5000);
     };
 
     const handleCustomPlanClick = () => {
@@ -118,7 +101,7 @@ function Pricing() {
         }
 
         if (currentUser.account_type !== 'business') {
-            printAlert('Custom plans are only available for business accounts. Please upgrade to a business account.', 'warning');
+            printAlert('Custom plans are only available for business accounts', 'warning');
             return;
         }
 
@@ -322,9 +305,53 @@ function Pricing() {
         ];
     };
 
+    const getDefaultBusinessPlans = () => {
+        return [
+            {
+                name: "STARTER PLAN",
+                monthlyPrice: "R649.00",
+                description: "Perfect for starter business events",
+                isPopular: true,
+                features: ["Up to 200 guests", "Event management tools", "RSVP tracking", "Create and send invitations", "Priority support"],
+                ctaText: "Get started",
+                ctaVariant: "btn-create",
+                isContactSales: false
+            },
+            {
+                name: "INTERMEDIATE PLAN",
+                monthlyPrice: "R2149.00",
+                description: "Perfect for intermediate business events",
+                isPopular: false,
+                features: ["Up to 750 guests", "Event management tools", "RSVP tracking", "Event Check-In", "Custom branding options", "Priority support"],
+                ctaText: "Get started",
+                ctaVariant: "btn-demo",
+                isContactSales: false
+            },
+            {
+                name: "ADVANCE PLUS PLAN",
+                monthlyPrice: "Contact Sales",
+                description: "Perfect for advanced business events",
+                isPopular: false,
+                features: ["Up to 2000 guests", "Event management tools", "RSVP tracking", "Dedicated account manager", "Custom integrations", "Team collaboration tools", "Event Check-In", "Advanced analytics"],
+                ctaText: "GET IN TOUCH",
+                ctaVariant: "btn-demo",
+                isContactSales: true
+            },
+            {
+                name: "CUSTOM PLAN",
+                monthlyPrice: "Custom Pricing",
+                description: "For large-scale business events",
+                isPopular: false,
+                features: ["Manage large-scale events", "Your brand, ad-free", "Custom data fields", "Custom fonts", "Email whitelabeling", "Self check-in kiosk", "Single sign-on (SSO)", "Priority support", "Dedicated Account Manager"],
+                ctaText: "Request Custom Plan",
+                ctaVariant: "btn-create",
+                isContactSales: true
+            }
+        ];
+    };
+
     const fetchPricingPlans = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
             const formData = new FormData();
             formData.append("function", "getAllPackages");
 
@@ -371,7 +398,6 @@ function Pricing() {
 
     const fetchBusinessPlans = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -438,16 +464,31 @@ function Pricing() {
 
                 console.log("Sorted business plans:", sortedBusinessPlans.map(p => p.name));
 
-                setBusinessPlans(sortedBusinessPlans);
+                // Ensure CUSTOM PLAN is last (additional safety)
+                const finalSortedPlans = sortedBusinessPlans.sort((a, b) => {
+                    if (a.name === "CUSTOM PLAN") return 1;
+                    if (b.name === "CUSTOM PLAN") return -1;
+                    return 0;
+                });
+                
+                setBusinessPlans(finalSortedPlans);
                 // Reset startIndex when business plans are loaded
                 setStartIndex(0);
             } else {
                 console.error("Error fetching business plans");
+                setBusinessPlans(getDefaultBusinessPlans());
             }
         } catch (err) {
             console.error("Error fetching business plans:", err);
+            setBusinessPlans(getDefaultBusinessPlans());
         }
     };
+
+    useEffect(() => {
+        fetchPricingPlans();
+        fetchBusinessPlans();
+    }, []);
+
     const calculateAnnualPrice = (monthlyPrice) => {
         if (monthlyPrice === 'Contact Sales' || monthlyPrice === 'Custom Pricing') {
             return monthlyPrice;
@@ -472,7 +513,7 @@ function Pricing() {
     const handleSignupClick = () => {
         setLoginMode("signup");
         setIsLoginOpen(true);
-    }
+    };
 
     const handleCreateEvent = () => {
         navigate("/createevent");
@@ -510,7 +551,7 @@ function Pricing() {
             ctaText: plan.ctaText,
             ctaVariant: plan.ctaVariant,
             isContactSales: plan.isContactSales
-        })) : [],
+        })) : getDefaultBusinessPlans(),
         "Selling Tickets": [
             {
                 name: "Basic",
@@ -639,7 +680,7 @@ function Pricing() {
         },
         {
             question: "How flexible are the plans?",
-            answer: "Our plans are flexible and scalable. You can upgrade, downgrade, or cancel anytime with no long-term contracts. Adjust your plan as your event needs change."
+            answer: "Our plans are flexible and scalable. You can upgrade, downgrade, or cancel anytime with no long-term contracts."
         },
         {
             question: "Can I cancel or change my plan at any time?",
@@ -647,7 +688,7 @@ function Pricing() {
         },
         {
             question: "Can I get a custom plan?",
-            answer: "Certainly! For large organizations or unique requirements, we offer custom plans. Contact our sales team to discuss your specific needs and get a tailored solution."
+            answer: "Certainly! For large organizations or unique requirements, we offer custom plans. Click the 'Request Custom Plan' button to tell us your needs."
         }
     ];
 
@@ -678,27 +719,19 @@ function Pricing() {
 
     return (
         <>
-            <Navbar
-                onLoginClick={handleLoginClick}
-                onSignupClick={handleSignupClick}
-            />
-            <Login
-                isOpen={isLoginOpen}
-                onClose={() => setIsLoginOpen(false)}
-                defaultMode={loginMode}
-            />
+            <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
+            <Login isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} defaultMode={loginMode} />
 
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
                     <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
                         alert.type === "success" ? "fa-check-circle" :
                             alert.type === "warning" ? "fa-exclamation-triangle" :
-                                "fa-info-circle"
-                        }`}></i>
+                                "fa-info-circle"}`}>
+                    </i>
                     <span>{alert.message}</span>
                 </div>
             )}
-            <NewEventPopupBtn />
 
             <div className="pricing-page">
                 <section className="pricing-hero">
@@ -753,11 +786,6 @@ function Pricing() {
                         <div className="container">
                             <div className="pricing-cards-wrapper">
                                 <div className="features-content">
-                                    {/* <div className="section-header text-center">
-                                        <h2>{activeCategory}</h2>
-                                        <p>Discover our comprehensive {activeCategory.toLowerCase()} designed to streamline your event planning process</p>
-                                    </div> */}
-
                                     <div className="features-slider-wrapper">
                                         <button className="slider-btn prev" onClick={handlePrev}>
                                             <i className="bi bi-caret-left"></i>
@@ -787,7 +815,7 @@ function Pricing() {
                                                                             className="btn btn-create w-100"
                                                                             onClick={handleCustomPlanClick}
                                                                         >
-                                                                            Get in touch
+                                                                            Request Custom Plan
                                                                         </button>
                                                                     ) : (
                                                                         <div className="coming-soon">Coming soon</div>
@@ -862,7 +890,7 @@ function Pricing() {
                     <div className="container">
                         <div className="row">
                             <div className="col-12 text-center">
-                                <h2>Answers to Your Personal Event Planning Questions</h2>
+                                <h2>Frequently Asked Questions</h2>
                             </div>
                         </div>
                         <div className="row justify-content-center">

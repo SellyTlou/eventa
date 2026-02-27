@@ -14,6 +14,12 @@ import {
 } from 'chart.js';
 import './attendance_stats.css';
 import './main.css';
+import { 
+    getEffectivePackageValue, 
+    getEffectivePackageName,
+    isCustomPackage,
+    getAllFeatures 
+} from "../utils/customPackageUtils";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -32,19 +38,45 @@ const AttendanceStats = () => {
         monthlyTrend: []
     });
 
-    const [userPackage, setUserPackage] = useState(null);
+    // Package states - separate for personal and business
+    const [userPackage, setUserPackage] = useState(null); // For personal packages
+    const [userBusinessPackage, setUserBusinessPackage] = useState(null); // For business packages
     const [packageInfo, setPackageInfo] = useState(null);
+    const [loadingPackage, setLoadingPackage] = useState(true);
     const [isTicketEvent, setIsTicketEvent] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
-    // Package-based feature checks
+    // Get active package based on account type
+    const getActivePackage = () => {
+        if (user?.account_type === 'business') {
+            return userBusinessPackage;
+        }
+        return userPackage;
+    };
+
+    const activePackage = getActivePackage();
+
+    // Package-based feature checks - using active package
     const isBasicOrFree = () => {
-        const packageType = userPackage?.package_type?.toLowerCase();
+        if (!activePackage) return true; // No package = basic access
+        
+        const packageType = activePackage?.package_type?.toLowerCase() || 
+                           activePackage?.name?.toLowerCase() || 
+                           'basic';
+        
+        // Business packages have different names, so check accordingly
+        if (user?.account_type === 'business') {
+            // For business, all packages except starter might have full analytics
+            // Adjust this based on your business package tiers
+            return packageType === 'starter' || packageType === 'starter plan';
+        }
+        
+        // Personal packages: basic and free are restricted
         return packageType === 'basic' || packageType === 'free';
     };
 
-    const canViewAttendance = !isBasicOrFree(); // Only lock for Basic/Free
+    const canViewAttendance = !isBasicOrFree(); // Only lock for Basic/Free/Starter
     const canViewAdvancedStats = !isBasicOrFree(); // Same logic for advanced stats
     const canViewHistoricalData = !isBasicOrFree(); // Same logic for historical data
 
@@ -56,21 +88,31 @@ const AttendanceStats = () => {
     const toggleDropdown = () => setDropdownOpen(prev => !prev);
 
     const getPackageColor = () => {
-        const packageType = userPackage?.package_type?.toLowerCase();
+        if (!activePackage) return "#6c757d";
+        
+        const packageType = activePackage?.package_type?.toLowerCase() || 
+                           activePackage?.name?.toLowerCase() || 
+                           'basic';
 
         switch (packageType) {
             case "basic":
             case "free":
+            case "starter":
+            case "starter plan":
                 return "#6c757d"; // Gray
             case "premium":
+            case "intermediate":
+            case "intermediate plan":
                 return "#007bff"; // Blue
             case "advanced":
             case "enterprise":
+            case "advance":
+            case "advance plan":
                 return "#28a745"; // Green
             case "professional":
                 return "#6610f2"; // Purple
             default:
-                return "#6c757d"; // Gray for unknown
+                return "#6c757d";
         }
     };
 
@@ -82,8 +124,16 @@ const AttendanceStats = () => {
                 return ["Basic event management", "Limited RSVP tracking", "Basic analytics"];
             case "basic":
                 return ["Basic event management", "RSVP tracking", "Email notifications", "Basic analytics"];
+            case "starter":
+            case "starter plan":
+                return ["Basic business features", "RSVP tracking", "Standard support"];
+            case "intermediate":
+            case "intermediate plan":
+                return ["Advanced analytics", "Guest insights", "Priority support"];
             case "premium":
                 return ["Advanced analytics", "Guest insights", "Historical data", "Custom branding", "Priority support"];
+            case "advance":
+            case "advance plan":
             case "professional":
                 return ["All Premium features", "Advanced reporting", "Team collaboration", "API access"];
             case "enterprise":
@@ -94,13 +144,13 @@ const AttendanceStats = () => {
         }
     };
 
-    const fetchUserPackage = async () => {
+    // Fetch personal package
+    const fetchUserPackage = async (userId) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
-            const userData = JSON.parse(localStorage.getItem("user"));
             const formData = new FormData();
             formData.append("function", "getUserPackage");
-            formData.append("user_id", userData.user_id);
+            formData.append("user_id", userId);
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -108,46 +158,43 @@ const AttendanceStats = () => {
             });
             const data = await response.json();
 
-            console.log("Package API response:", data);
+            console.log("Personal Package API response:", data);
 
             if (data.success && data.userPackage) {
                 setUserPackage(data.userPackage);
-
-                // Create package info object
-                const packageInfo = {
-                    name: data.userPackage.package_name ||
-                        (data.userPackage.package_type ?
-                            data.userPackage.package_type.charAt(0).toUpperCase() +
-                            data.userPackage.package_type.slice(1) : "Basic"),
-                    type: data.userPackage.package_type || "basic",
-                    color: getPackageColor(),
-                    features: getPackageFeatures(data.userPackage.package_type)
-                };
-                setPackageInfo(packageInfo);
-
-                console.log("Package set to:", data.userPackage.package_type);
-            } else {
-                printAlert("You don't have an active package", "warning");
-                // Default to basic
-                setUserPackage({ package_type: "basic" });
-                setPackageInfo({
-                    name: "Basic",
-                    type: "basic",
-                    color: "#6c757d",
-                    features: ["Basic features only"]
-                });
+                return data.userPackage;
             }
+            return null;
         } catch (error) {
             console.error("Error fetching user package:", error);
-            printAlert("System error fetching user package", "error");
-            // Default to basic on error
-            setUserPackage({ package_type: "basic" });
-            setPackageInfo({
-                name: "Basic",
-                type: "basic",
-                color: "#6c757d",
-                features: ["Basic features only"]
+            return null;
+        }
+    };
+
+    // Fetch business package
+    const fetchUserBusinessPackage = async (userId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getUserBusinessPackage");
+            formData.append("user_id", userId);
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
             });
+            const data = await response.json();
+
+            console.log("Business Package API response:", data);
+
+            if (data.success && data.userBusinessPackage) {
+                setUserBusinessPackage(data.userBusinessPackage);
+                return data.userBusinessPackage;
+            }
+            return null;
+        } catch (error) {
+            console.error("Error fetching business package:", error);
+            return null;
         }
     };
 
@@ -162,8 +209,39 @@ const AttendanceStats = () => {
         const userData = JSON.parse(storedUser);
         setUser(userData);
 
-        // Fetch user package
-        fetchUserPackage();
+        // Fetch appropriate package based on account type
+        const loadPackage = async () => {
+            setLoadingPackage(true);
+            let pkg = null;
+            
+            if (userData.account_type === 'business') {
+                pkg = await fetchUserBusinessPackage(userData.user_id);
+            } else {
+                pkg = await fetchUserPackage(userData.user_id);
+            }
+
+            // Create package info object
+            const packageType = pkg?.package_type || pkg?.name || 'basic';
+            const packageInfo = {
+                name: pkg?.name || 
+                      (pkg?.package_type ? 
+                          pkg.package_type.charAt(0).toUpperCase() + pkg.package_type.slice(1) : 
+                          "Basic"),
+                type: packageType,
+                color: getPackageColor(),
+                features: getPackageFeatures(packageType),
+                isCustom: pkg?.is_custom || false
+            };
+            setPackageInfo(packageInfo);
+            
+            if (!pkg) {
+                printAlert("You don't have an active package", "warning");
+            }
+            
+            setLoadingPackage(false);
+        };
+
+        loadPackage();
 
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -181,6 +259,10 @@ const AttendanceStats = () => {
             navigate("/eventsDashboard");
             return;
         }
+        
+        // Don't fetch stats until package loading is complete
+        if (loadingPackage) return;
+        
         if (!canViewAttendance) {
             // Basic/Free users: skip fetching large stats data
             setLoading(false);
@@ -193,7 +275,7 @@ const AttendanceStats = () => {
         if (canViewHistoricalData) {
             fetchAttendanceStats();
         }
-    }, [navigate, canViewHistoricalData, canViewAttendance]);
+    }, [navigate, canViewHistoricalData, canViewAttendance, loadingPackage, user?.account_type]);
 
     const fetchEventData = async (eventId) => {
         try {
@@ -467,7 +549,7 @@ const AttendanceStats = () => {
     // === PACKAGE-BASED STATS CARDS ===
     const getAdditionalStats = () => {
         if (isBasicOrFree()) {
-            // BASIC/FREE PACKAGE - Limited stats with upgrade prompts
+            // BASIC/FREE/STARTER PACKAGE - Limited stats with upgrade prompts
             return [
                 {
                     title: "Response Rate",
@@ -488,7 +570,7 @@ const AttendanceStats = () => {
                 {
                     title: "Upgrade Required",
                     value: "🔒",
-                    description: "Upgrade to Premium+ for full analytics",
+                    description: "Upgrade for full analytics",
                     type: "upgrade",
                     icon: "bi bi-star-fill",
                     locked: true
@@ -496,7 +578,7 @@ const AttendanceStats = () => {
             ];
         }
 
-        // PREMIUM/ENTERPRISE/PROFESSIONAL/ADVANCED PACKAGE - Full stats
+        // PREMIUM/INTERMEDIATE/ADVANCE PACKAGE - Full stats
         return [
             {
                 title: "Response Rate",
@@ -636,6 +718,18 @@ const AttendanceStats = () => {
         setSidebarOpen(false);
     };
 
+    // Show package loading state
+    if (loadingPackage) {
+        return (
+            <div className="loading-container">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading package information...</p>
+            </div>
+        );
+    }
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -671,7 +765,7 @@ const AttendanceStats = () => {
                 user={user}
                 eventStatus={eventStatus}
                 onToggleSidebar={toggleSidebar}
-                userPackage={userPackage}
+                userPackage={activePackage}
             />
 
             {/* CONDITIONAL SIDEBAR */}
