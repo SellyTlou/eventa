@@ -2174,37 +2174,40 @@ export default function PostcardEditor() {
     };
 
     const downloadImage = async () => {
-        setSelectedId(null);
-        setSelectedType(null);
+    setSelectedId(null);
+    setSelectedType(null);
 
-        setTimeout(async () => {
-            if (!stageRef.current) {
-                console.error("Stage reference is not available");
-                return;
+    setTimeout(async () => {
+        if (!stageRef.current) {
+            console.error("Stage reference is not available");
+            return;
+        }
+
+        try {
+            const uri = stageRef.current.toDataURL({
+                pixelRatio: 2,
+                quality: 1,
+                mimeType: 'image/png'
+            });
+
+            const success = await saveEventToDatabase(uri);
+
+            if (success) {
+                goToEventDashboard(); // Now this will go to the correct dashboard
             }
-
-            try {
-                const uri = stageRef.current.toDataURL({
-                    pixelRatio: 2,
-                    quality: 1,
-                    mimeType: 'image/png'
-                });
-
-                const success = await saveEventToDatabase(uri);
-
-                if (success) {
-                    goToEventDashboard();
-                }
-            } catch (error) {
-                console.error("Error processing image:", error);
-                printAlert("Failed to process image. Please try again.", "error");
-            }
-        }, 100);
-    };
+        } catch (error) {
+            console.error("Error processing image:", error);
+            printAlert("Failed to process image. Please try again.", "error");
+        }
+    }, 100);
+};
 
     const goToEventDashboard = () => {
-        navigate("/eventsDashboard");
-    };
+    const storedUser = localStorage.getItem('user');
+    const user = storedUser ? JSON.parse(storedUser) : null;
+    const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+    navigate(dashPath);
+};
 
     const handleCanvasClick = (e) => {
         const clickedOnEmpty = e.target === e.target.getStage();

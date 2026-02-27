@@ -1190,6 +1190,59 @@ function AdminDashboard() {
         return csv;
     };
 
+    const sendCounterOffer = async () => {
+    if (!selectedRequest) return;
+    
+    // Validate required fields
+    if (!approvedGuests || !approvedEvents || !customPrice) {
+        printAlert('Please fill in all required fields: Guest Limit, Event Limit, and Custom Price', 'error');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('function', 'sendCounterOffer');
+        formData.append('admin_user_id', adminUserId);
+        formData.append('request_id', selectedRequest.request_id);
+        formData.append('approved_guests', approvedGuests);
+        formData.append('approved_events', approvedEvents);
+        formData.append('final_price', customPrice);
+        formData.append('admin_notes', adminNotes);
+        formData.append('custom_features', customFeatures);
+
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            printAlert('Counter-offer sent to business successfully!', 'success');
+            setShowRequestModal(false);
+            fetchCustomPlanRequests(requestStatusFilter);
+            
+            // Reset form
+            setRequestBasePackage('');
+            setApprovedGuests('');
+            setApprovedEvents('');
+            setCustomPrice('');
+            setBillingCycle('monthly');
+            setCustomFeatures('[]');
+            setAdminNotes('');
+            
+            logActivity('Counter Offer Sent', 
+                `Sent counter offer to ${selectedRequest.business_name} with ${approvedGuests} guests at R${customPrice}`
+            );
+        } else {
+            printAlert('Error: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error sending counter-offer:', error);
+        printAlert('Error sending counter-offer', 'error');
+    }
+};
+
     const generateRevenueCSV = () => {
         let csv = "Package Type,Price,Max Events,Max Guests,Active Subscriptions\n";
 
@@ -2647,15 +2700,23 @@ function AdminDashboard() {
 
                             <div className="modal-actions-new">
                                 <button
-                                    className="action-btn-new success"
+                                    className="action-btn-new primary"
                                     onClick={approveCustomPlan}
                                     disabled={!approvedGuests || !approvedEvents || !customPrice}
                                 >
                                     <i className="bi bi-check-circle"></i>
-                                    Approve & Assign Custom Plan
+                                    Approve & Activate Now
                                 </button>
                                 <button
                                     className="action-btn-new warning"
+                                    onClick={sendCounterOffer}
+                                    disabled={!approvedGuests || !approvedEvents || !customPrice}
+                                >
+                                    <i className="bi bi-send"></i>
+                                    Send Counter-Offer
+                                </button>
+                                <button
+                                    className="action-btn-new secondary"
                                     onClick={rejectCustomPlan}
                                 >
                                     <i className="bi bi-x-circle"></i>

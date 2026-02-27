@@ -25,7 +25,27 @@ export const getEffectivePackageValue = (packageData, field, defaultValue = null
                 ? JSON.parse(packageData.custom_limits) 
                 : packageData.custom_limits;
 
-            // Return the custom value if it exists
+            // For features field in custom plans, we need to merge base package features with custom features
+            if (field === 'features') {
+                // Get base package features if available
+                let baseFeatures = [];
+                if (packageData.base_package_features) {
+                    if (Array.isArray(packageData.base_package_features)) {
+                        baseFeatures = packageData.base_package_features;
+                    } else if (typeof packageData.base_package_features === 'string') {
+                        baseFeatures = packageData.base_package_features.split(',').map(f => f.trim());
+                    }
+                }
+                
+                // Get custom features from JSON
+                const customFeatures = customLimits.features || [];
+                
+                // Merge both arrays (remove duplicates if any)
+                const mergedFeatures = [...new Set([...baseFeatures, ...customFeatures])];
+                return mergedFeatures;
+            }
+
+            // For other fields, return the custom value if it exists
             switch (field) {
                 case 'guests':
                     return customLimits.guests !== undefined ? customLimits.guests : packageData.max_guests;
@@ -33,8 +53,6 @@ export const getEffectivePackageValue = (packageData, field, defaultValue = null
                     return customLimits.events !== undefined ? customLimits.events : packageData.event_limit;
                 case 'price':
                     return customLimits.price !== undefined ? customLimits.price : packageData.custom_price || packageData.price;
-                case 'features':
-                    return customLimits.features || [];
                 default:
                     return customLimits[field] !== undefined ? customLimits[field] : defaultValue;
             }
@@ -76,7 +94,10 @@ export const getEffectivePackageName = (packageData) => {
     const isCustom = packageData.is_custom === 1 || packageData.is_custom === true;
     
     if (isCustom) {
-        // You can customize this if you want custom plans to show a different name
+        // If there's a base package name, we could show something like "Custom Plan (based on Advance)"
+        if (packageData.base_package_name) {
+            return `Custom Plan (based on ${packageData.base_package_name})`;
+        }
         return packageData.name || 'Custom Plan';
     }
     
@@ -90,6 +111,57 @@ export const getEffectivePackageName = (packageData) => {
  */
 export const isCustomPackage = (packageData) => {
     return packageData?.is_custom === 1 || packageData?.is_custom === true;
+};
+
+/**
+ * Get the base package name if this is a custom plan
+ * @param {Object} packageData - The package object
+ * @returns {string|null} Base package name or null
+ */
+export const getBasePackageName = (packageData) => {
+    if (!packageData || !isCustomPackage(packageData)) return null;
+    return packageData.base_package_name || null;
+};
+
+/**
+ * Get all features including base package features and custom features
+ * @param {Object} packageData - The package object
+ * @returns {Array} Array of all features
+ */
+export const getAllFeatures = (packageData) => {
+    if (!packageData) return [];
+    
+    const isCustom = isCustomPackage(packageData);
+    
+    if (isCustom && packageData.custom_limits) {
+        try {
+            const customLimits = typeof packageData.custom_limits === 'string' 
+                ? JSON.parse(packageData.custom_limits) 
+                : packageData.custom_limits;
+            
+            // Get base package features
+            let baseFeatures = [];
+            if (packageData.base_package_features) {
+                if (Array.isArray(packageData.base_package_features)) {
+                    baseFeatures = packageData.base_package_features;
+                } else if (typeof packageData.base_package_features === 'string') {
+                    baseFeatures = packageData.base_package_features.split(',').map(f => f.trim());
+                }
+            }
+            
+            // Get custom features
+            const customFeatures = customLimits.features || [];
+            
+            // Merge and remove duplicates
+            return [...new Set([...baseFeatures, ...customFeatures])];
+        } catch (error) {
+            console.error('Error getting all features:', error);
+            return [];
+        }
+    }
+    
+    // For standard packages, return features
+    return getEffectivePackageValue(packageData, 'features', []);
 };
 
 /**
@@ -188,4 +260,17 @@ export const canHostGuests = (packageData, requestedGuests) => {
         allowed: true,
         message: `Within limit of ${guestLimit} guests`
     };
+};
+
+/**
+ * Check if a package has a specific feature
+ * @param {Object} packageData - The package object
+ * @param {string} featureName - The feature to check for
+ * @returns {boolean} True if the package has the feature
+ */
+export const hasFeature = (packageData, featureName) => {
+    if (!packageData || !featureName) return false;
+    
+    const features = getAllFeatures(packageData);
+    return features.some(f => f.toLowerCase().includes(featureName.toLowerCase()));
 };

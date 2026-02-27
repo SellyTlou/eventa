@@ -5,6 +5,15 @@ import { useNavigate } from "react-router-dom";
 import { logOut, DashboardHeader, DashboardSidebar, DashboardTicketSidebar } from "../components";
 import RSVPBinaryTree from "../utils/RSVPTree";
 import { canUseFeature, getPackageInfo } from "../utils/packageFeatures";
+// Import custom package utilities
+import { 
+    getEffectivePackageValue, 
+    getEffectivePackageName,
+    isCustomPackage,
+    getAllFeatures,
+    canCreateEvent,
+    canHostGuests 
+} from "../utils/customPackageUtils";
 
 const RSVPResponses = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -24,8 +33,12 @@ const RSVPResponses = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [exportLoading, setExportLoading] = useState(false);
     const [isTicketEvent, setIsTicketEvent] = useState(false);
-    const [userPackage, setUserPackage] = useState(null);
+    
+    // Package states - FIXED: Separate states for personal and business
+    const [userPackage, setUserPackage] = useState(null); // For personal packages
+    const [userBusinessPackage, setUserBusinessPackage] = useState(null); // For business packages
     const [packageInfo, setPackageInfo] = useState(null);
+    const [loadingPackage, setLoadingPackage] = useState(true);
 
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
@@ -72,10 +85,18 @@ const RSVPResponses = () => {
     const bulkActionRef = useRef(null);
     const navigate = useNavigate();
 
-    // NEW: Package feature checks
-    const canExport = userPackage ? canUseFeature(userPackage, "exportRSVP") : false;
-    const canBulkMessage = userPackage ? canUseFeature(userPackage, "bulkMessages") : false;
-    const canRemoveGuests = userPackage ? canUseFeature(userPackage, "guestRemoval") : false;
+    // Package feature checks - Now checks both personal and business packages
+    const getActivePackage = () => {
+        if (user?.account_type === 'business') {
+            return userBusinessPackage;
+        }
+        return userPackage;
+    };
+
+    const activePackage = getActivePackage();
+    const canExport = activePackage ? canUseFeature(activePackage, "exportRSVP") : false;
+    const canBulkMessage = activePackage ? canUseFeature(activePackage, "bulkMessages") : false;
+    const canRemoveGuests = activePackage ? canUseFeature(activePackage, "guestRemoval") : false;
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -88,33 +109,71 @@ const RSVPResponses = () => {
         const userData = JSON.parse(storedUser);
         setUser(userData);
 
-        // NEW: Fetch user package
-        const fetchUserPackage = async () => {
+        // FIXED: Fetch appropriate package based on account type
+        const fetchPackage = async () => {
+            setLoadingPackage(true);
             try {
                 const API_URL = process.env.REACT_APP_API_URL;
-                const formData = new FormData();
-                formData.append("function", "getUserPackage");
-                formData.append("user_id", userData.user_id);
+                
+                if (userData.account_type === 'business') {
+                    // Fetch business package
+                    const formData = new FormData();
+                    formData.append("function", "getUserBusinessPackage");
+                    formData.append("user_id", userData.user_id);
 
-                const response = await fetch(`${API_URL}/query.php`, {
-                    method: "POST",
-                    body: formData
-                });
-                const data = await response.json();
+                    const response = await fetch(`${API_URL}/query.php`, {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await response.json();
 
-                if (data.success && data.userPackage) {
-                    setUserPackage(data.userPackage);
-                    setPackageInfo(getPackageInfo(data.userPackage));
+                    if (data.success && data.userBusinessPackage) {
+                        console.log("Business package found:", data.userBusinessPackage);
+                        setUserBusinessPackage(data.userBusinessPackage);
+                        
+                        // Create package info for feature checking
+                        const pkgInfo = {
+                            package_type: data.userBusinessPackage.package_type,
+                            is_custom: data.userBusinessPackage.is_custom,
+                            features: data.userBusinessPackage.features
+                        };
+                        setPackageInfo(pkgInfo);
+                    } else {
+                        console.log("No business package found:", data.message);
+                        setUserBusinessPackage(null);
+                        setPackageInfo(null);
+                    }
                 } else {
-                    printAlert("You dont have a Package", "warning");
+                    // Fetch personal package
+                    const formData = new FormData();
+                    formData.append("function", "getUserPackage");
+                    formData.append("user_id", userData.user_id);
+
+                    const response = await fetch(`${API_URL}/query.php`, {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    if (data.success && data.userPackage) {
+                        console.log("Personal package found:", data.userPackage);
+                        setUserPackage(data.userPackage);
+                        setPackageInfo(getPackageInfo(data.userPackage));
+                    } else {
+                        console.log("No personal package found:", data.message);
+                        setUserPackage(null);
+                        setPackageInfo(null);
+                    }
                 }
             } catch (error) {
                 console.error("Error fetching user package:", error);
-                printAlert("System error fetching user package", "warning");
+                printAlert("System error fetching package information", "warning");
+            } finally {
+                setLoadingPackage(false);
             }
         };
 
-        fetchUserPackage();
+        fetchPackage();
 
         const handleClickOutside = (event) => {
             if (bulkActionRef.current && !bulkActionRef.current.contains(event.target)) {
@@ -519,10 +578,27 @@ const RSVPResponses = () => {
         setSidebarOpen(false);
     };
 
+    // Show package loading state
+    if (loadingPackage) {
+        return (
+            <div className="dashboard-container">
+                <DashboardHeader
+                    user={user}
+                    eventStatus={eventStatus}
+                    onToggleSidebar={toggleSidebar}
+                />
+                <div className="loading-container">
+                    <div className="loading-overlay">
+                        <div className="loading-spinner"></div>
+                        <div className="loading-text">Loading package information...</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="dashboard-container">
-            {/* REMOVED: Package Info Banner - No banner at the top */}
-
             {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
@@ -579,7 +655,7 @@ const RSVPResponses = () => {
                 user={user}
                 eventStatus={eventStatus}
                 onToggleSidebar={toggleSidebar}
-                userPackage={userPackage}
+                userPackage={activePackage}
             />
 
             {/* SIDEBAR */}
@@ -600,6 +676,15 @@ const RSVPResponses = () => {
                 <div className="event-management-content">
                     <div className="content-header">
                         <div className="header-actions">
+                            {/* Package indicator - small and unobtrusive */}
+                            {activePackage && (
+                                <div className="package-indicator">
+                                    <span className={`package-badge-mini ${isCustomPackage(activePackage) ? 'custom' : ''}`}>
+                                        {isCustomPackage(activePackage) ? '✨ Custom' : '📦 Standard'}
+                                    </span>
+                                </div>
+                            )}
+
                             {/* UPDATED: Export Button with package restriction */}
                             <button
                                 className={`btn btn-success btn-sm ${!canExport ? 'feature-disabled' : ''}`}

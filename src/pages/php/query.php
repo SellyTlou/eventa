@@ -5554,15 +5554,56 @@ if ($fun === "getUserBusinessPackage") {
     }
     
     try {
-        $stmt = $pdo->prepare("SELECT ubp.*, bp.package_type, bp.name, bp.max_guests, bp.max_events, bp.price 
-                               FROM user_business_packages ubp 
-                               JOIN business_packages bp ON ubp.business_package_id = bp.id 
-                               WHERE ubp.user_id = :user_id AND ubp.status = 'active' AND ubp.expiry_date > NOW()
-                               ORDER BY ubp.created_at DESC LIMIT 1");
+        $stmt = $pdo->prepare("
+            SELECT ubp.*, 
+                   bp.package_type, 
+                   bp.name, 
+                   bp.max_guests, 
+                   bp.max_events, 
+                   bp.price,
+                   bp.features as package_features,
+                   base_pkg.features as base_package_features,
+                   base_pkg.name as base_package_name
+            FROM user_business_packages ubp 
+            JOIN business_packages bp ON ubp.business_package_id = bp.id 
+            LEFT JOIN business_packages base_pkg ON ubp.base_package_id = base_pkg.id
+            WHERE ubp.user_id = :user_id 
+              AND ubp.status = 'active' 
+              AND (ubp.expiry_date IS NULL OR ubp.expiry_date > NOW())
+            ORDER BY ubp.created_at DESC 
+            LIMIT 1
+        ");
+        
         $stmt->execute([':user_id' => $user_id]);
         
         if ($stmt->rowCount() > 0) {
             $package = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Parse custom limits
+            if ($package['is_custom'] && $package['custom_limits']) {
+                $customLimits = json_decode($package['custom_limits'], true);
+                
+                // Get base package features
+                $baseFeatures = [];
+                if (!empty($package['base_package_features'])) {
+                    $baseFeatures = explode(',', $package['base_package_features']);
+                    $baseFeatures = array_map('trim', $baseFeatures);
+                }
+                
+                // Get custom features from JSON
+                $customFeatures = $customLimits['features'] ?? [];
+                
+                // Merge features (base + custom)
+                $allFeatures = array_merge($baseFeatures, $customFeatures);
+                
+                // Apply overrides
+                $package['max_guests'] = $customLimits['guests'] ?? $package['max_guests'];
+                $package['max_events'] = $customLimits['events'] ?? $package['max_events'];
+                $package['price'] = $customLimits['price'] ?? $package['custom_price'] ?? $package['price'];
+                $package['features'] = $allFeatures;
+                $package['base_package_name'] = $package['base_package_name'] ?? null;
+            }
+            
             echo json_encode(["success" => true, "userBusinessPackage" => $package]);
         } else {
             echo json_encode(["success" => false, "message" => "No active business package found"]);
@@ -6260,6 +6301,69 @@ if ($fun === "submitCustomPlanRequest") {
     exit;
 }
 
+// Send counter offer to business
+if ($fun === "sendCounterOffer") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $request_id = $_POST['request_id'] ?? '';
+    $approved_guests = $_POST['approved_guests'] ?? 0;
+    $approved_events = $_POST['approved_events'] ?? 0;
+    $final_price = $_POST['final_price'] ?? 0;
+    $admin_notes = $_POST['admin_notes'] ?? '';
+    $custom_features = $_POST['custom_features'] ?? '[]';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+    
+    if (empty($request_id) || empty($approved_guests) || empty($approved_events) || empty($final_price)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+    
+    try {
+        // Update the request with admin's proposed changes
+        $stmt = $pdo->prepare("
+            UPDATE custom_plan_requests 
+            SET 
+                approved_guests = :approved_guests,
+                approved_events = :approved_events,
+                final_price = :final_price,
+                admin_notes = CONCAT(IFNULL(admin_notes, ''), '\n', :admin_notes),
+                custom_features = :custom_features,
+                status = 'countered',
+                reviewed_at = NOW(),
+                reviewed_by = :reviewed_by
+            WHERE request_id = :request_id
+        ");
+        
+        $stmt->execute([
+            ':approved_guests' => $approved_guests,
+            ':approved_events' => $approved_events,
+            ':final_price' => $final_price,
+            ':admin_notes' => $admin_notes,
+            ':custom_features' => $custom_features,
+            ':reviewed_by' => $adminUserId,
+            ':request_id' => $request_id
+        ]);
+        
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([
+            $adminUserId,
+            'Counter Offer Sent',
+            "Sent counter offer for request {$request_id}"
+        ]);
+        
+        echo json_encode(["success" => true, "message" => "Counter offer sent successfully"]);
+        
+    } catch (PDOException $e) {
+        error_log("sendCounterOffer error: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($fun === "getUserCustomPlanRequests") {
     $user_id = $_POST['user_id'] ?? '';
     
@@ -6270,7 +6374,34 @@ if ($fun === "getUserCustomPlanRequests") {
     
     try {
         $stmt = $pdo->prepare("
-            SELECT * FROM custom_plan_requests 
+            SELECT 
+                request_id,
+                user_id,
+                business_name,
+                contact_name,
+                email,
+                phone,
+                event_type,
+                event_name,
+                event_description,
+                requested_guests,
+                requested_events,
+                approved_guests,      -- ADD THIS
+                approved_events,       -- ADD THIS
+                proposed_price,
+                final_price,           -- ADD THIS
+                desired_features,
+                custom_features,       -- ADD THIS
+                expected_attendees,
+                event_date,
+                special_requirements,
+                additional_notes,
+                status,
+                admin_notes,
+                created_at,
+                reviewed_at,
+                reviewed_by
+            FROM custom_plan_requests 
             WHERE user_id = ? 
             ORDER BY created_at DESC
         ");
@@ -6279,6 +6410,7 @@ if ($fun === "getUserCustomPlanRequests") {
         
         echo json_encode(["success" => true, "requests" => $requests]);
     } catch (PDOException $e) {
+        error_log("getUserCustomPlanRequests error: " . $e->getMessage());
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
@@ -6296,7 +6428,34 @@ if ($fun === "getCustomPlanRequestById") {
     
     try {
         $stmt = $pdo->prepare("
-            SELECT * FROM custom_plan_requests 
+            SELECT 
+                request_id,
+                user_id,
+                business_name,
+                contact_name,
+                email,
+                phone,
+                event_type,
+                event_name,
+                event_description,
+                requested_guests,
+                requested_events,
+                approved_guests,      -- ADD THIS
+                approved_events,       -- ADD THIS
+                proposed_price,
+                final_price,           -- ADD THIS
+                desired_features,
+                custom_features,       -- ADD THIS
+                expected_attendees,
+                event_date,
+                special_requirements,
+                additional_notes,
+                status,
+                admin_notes,
+                created_at,
+                reviewed_at,
+                reviewed_by
+            FROM custom_plan_requests 
             WHERE request_id = ? AND user_id = ?
         ");
         $stmt->execute([$request_id, $user_id]);
@@ -6308,6 +6467,7 @@ if ($fun === "getCustomPlanRequestById") {
             echo json_encode(["success" => false, "message" => "Request not found"]);
         }
     } catch (PDOException $e) {
+        error_log("getCustomPlanRequestById error: " . $e->getMessage());
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
@@ -6550,5 +6710,50 @@ if ($fun === "getUnreadMessageCount") {
     }
     exit;
 }
+
+if ($fun === "getCustomPlanRequests") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+    
+    $status_filter = $_POST['status'] ?? 'pending';
+    
+    try {
+        // FIXED: Using the correct collation that matches your tables
+        $query = "SELECT cpr.*, u.name as user_firstname, u.lastname as user_lastname, u.email as user_email 
+                  FROM custom_plan_requests cpr
+                  JOIN users u ON cpr.user_id = u.user_id";
+        
+        if ($status_filter !== 'all') {
+            $query .= " WHERE cpr.status = :status";
+        }
+        
+        $query .= " ORDER BY cpr.created_at DESC";
+        
+        $stmt = $pdo->prepare($query);
+        
+        if ($status_filter !== 'all') {
+            $stmt->execute([':status' => $status_filter]);
+        } else {
+            $stmt->execute();
+        }
+        
+        $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Log for debugging
+        error_log("getCustomPlanRequests found " . count($requests) . " requests");
+        
+        echo json_encode(["success" => true, "requests" => $requests]);
+        
+    } catch (PDOException $e) {
+        error_log("getCustomPlanRequests error: " . $e->getMessage());
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
 
 ?>

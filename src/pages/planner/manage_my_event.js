@@ -279,74 +279,81 @@ const Manage_my_event = () => {
     };
 
     const fetchUserBusinessPackage = async (userId) => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "getUserBusinessPackage");
-            formData.append("user_id", userId);
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "getUserBusinessPackage");
+        formData.append("user_id", userId);
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        console.log("User business package data:", data);
+
+        if (data.success && data.userBusinessPackage) {
+            const userPkg = data.userBusinessPackage;
+            console.log("Package found:", userPkg);
+
+            // Use utility functions to get effective values
+            const isCustom = isCustomPackage(userPkg);
+            const eventLimit = getEffectivePackageValue(userPkg, 'events', 0);
+            const guestLimit = getEffectivePackageValue(userPkg, 'guests', 0);
+            const price = getEffectivePackageValue(userPkg, 'price', 0);
+            const features = getEffectivePackageValue(userPkg, 'features', []);
+
+            const availableEvents = eventLimit === 0 ?
+                "Unlimited" : // For custom plan with unlimited events
+                (eventLimit - (userPkg.event_used || 0));
+
+            const planData = {
+                hasPackage: true,
+                isCustom: isCustom,
+                plan_name: getEffectivePackageName(userPkg),
+                max_guest: guestLimit,
+                max_events: eventLimit === 0 ? "Unlimited" : eventLimit,
+                available_events: availableEvents,
+                price: price,
+                renewal_date: userPkg.expiry_date ? new Date(userPkg.expiry_date).toLocaleDateString() : "N/A",
+                event_limit: eventLimit,
+                event_used: userPkg.event_used || 0,
+                package_type: userPkg.package_type,
+                is_business: true,
+                features: features.length > 0 ? features : getPackageFeatures(userPkg.package_type)
+            };
+
+            console.log("Setting current plan:", planData);
+            setCurrentPlan(planData);
+
+            setUserPackage({
+                package_id: userPkg.business_package_id,
+                account_type: "business",
+                is_custom: isCustom,
+                custom_limits: userPkg.custom_limits
             });
-
-            if (!response.ok) throw new Error("Network response was not ok");
-
-            const data = await response.json();
-            console.log("User business package data:", data);
-
-            if (data.success && data.userBusinessPackage) {
-                const userPkg = data.userBusinessPackage;
-
-                // Use utility functions to get effective values
-                const isCustom = isCustomPackage(userPkg);
-                const eventLimit = getEffectivePackageValue(userPkg, 'events', 0);
-                const guestLimit = getEffectivePackageValue(userPkg, 'guests', 0);
-                const price = getEffectivePackageValue(userPkg, 'price', 0);
-                const features = getEffectivePackageValue(userPkg, 'features', []);
-
-                const availableEvents = eventLimit === 0 ?
-                    "Unlimited" : // For custom plan with unlimited events
-                    (eventLimit - (userPkg.event_used || 0));
-
-                setCurrentPlan({
-                    hasPackage: true,
-                    isCustom: isCustom,
-                    plan_name: getEffectivePackageName(userPkg),
-                    max_guest: guestLimit,
-                    max_events: eventLimit === 0 ? "Unlimited" : eventLimit,
-                    available_events: availableEvents,
-                    price: price,
-                    renewal_date: userPkg.expiry_date ? new Date(userPkg.expiry_date).toLocaleDateString() : "N/A",
-                    event_limit: eventLimit,
-                    event_used: userPkg.event_used || 0,
-                    package_type: userPkg.package_type,
-                    is_business: true,
-                    features: features.length > 0 ? features : getPackageFeatures(userPkg.package_type)
-                });
-
-                setUserPackage({
-                    package_id: userPkg.business_package_id,
-                    account_type: "business",
-                    is_custom: isCustom,
-                    custom_limits: userPkg.custom_limits
-                });
-            } else {
-                setCurrentPlan({
-                    hasPackage: false,
-                    message: "You don't have an active business package yet.",
-                    is_business: true
-                });
-            }
-        } catch (err) {
-            console.error("Error fetching user business package:", err);
+        } else {
+            console.log("No business package found:", data.message);
             setCurrentPlan({
                 hasPackage: false,
-                message: "Error loading business package information.",
+                message: "You don't have an active business package yet.",
                 is_business: true
             });
+            setUserPackage(null);
         }
-    };
+    } catch (err) {
+        console.error("Error fetching user business package:", err);
+        setCurrentPlan({
+            hasPackage: false,
+            message: "Error loading business package information.",
+            is_business: true
+        });
+        setUserPackage(null);
+    }
+};
 
     const fetchPackageDetails = async (packageId, userPackageData) => {
         try {
@@ -1512,7 +1519,8 @@ const Manage_my_event = () => {
                     <div className="plan-main-info">
                         <h4 className="plan-name">{currentPlan.plan_name}</h4>
                         <p className="plan-price">
-                            {currentPlan.price === 0 ? 'Custom Pricing' : `R${currentPlan.price.toFixed(2)}/month`}
+                                {currentPlan.price === 0 ? 'Custom Pricing' : `R${Number(currentPlan.price).toFixed(2)}/month`}
+
                         </p>
                         {currentPlan.is_business && (
                             <span className={`plan-type-badge ${isCustom ? 'custom' : 'business'}`}>
