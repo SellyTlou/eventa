@@ -1,0 +1,558 @@
+/* createTicketEvent.css */
+
+.create-ticket-event-page {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+    min-height: 100vh;
+    padding: 40px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.create-ticket-event-page .eventa-back-btn {
+    position: fixed;
+    top: 100px;
+    left: 30px;
+    background: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.create-ticket-event-page .eventa-back-btn:hover {
+    transform: translateX(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    color: #667eea;
+}
+
+/* Progress Bar */
+.create-ticket-event-page .progressBar {
+    margin: 40px 0 60px;
+}
+
+.create-ticket-event-page .progressBar .row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 60px;
+    position: relative;
+}
+
+.create-ticket-event-page .progressBar .row::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: calc(50% + 30px);
+    right: calc(50% + 30px);
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 1;
+}
+
+.create-ticket-event-page .progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 2;
+    background: transparent;
+    padding: 0 10px;
+}
+
+.create-ticket-event-page .step-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.create-ticket-event-page .progress-step.completed .step-circle {
+    background: #10b981;
+    color: white;
+}
+
+.create-ticket-event-page .progress-step.active .step-circle {
+    background: #667eea;
+    color: white;
+    box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.5);
+}
+
+.create-ticket-event-page .step-label {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.create-ticket-event-page .progress-step.active .step-label {
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* Container */
+.create-ticket-event-page .create-ticket-event-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 30px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    padding: 40px;
+}
+
+/* Event Step */
+.create-ticket-event-page .event-step {
+    animation: createTicketFadeIn 0.3s ease;
+}
+
+@keyframes createTicketFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.create-ticket-event-page .step-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.create-ticket-event-page .step-subtitle {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+}
+
+/* Form Groups */
+.create-ticket-event-page .form-group-event {
+    margin-bottom: 25px;
+}
+
+.create-ticket-event-page .form-group-event label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.create-ticket-event-page .form-control-event {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.create-ticket-event-page .form-control-event:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.create-ticket-event-page .form-control-event.error {
+    border-color: #e74c3c;
+}
+
+.create-ticket-event-page .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 5px;
+}
+
+.create-ticket-event-page .form-group-event.half {
+    margin-bottom: 0;
+}
+
+/* Image Upload */
+.create-ticket-event-page .image-upload-container {
+    border: 2px dashed #e0e0e0;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.create-ticket-event-page .image-upload-container:hover {
+    border-color: #667eea;
+    background: #f0f3ff;
+}
+
+.create-ticket-event-page .upload-placeholder {
+    width: 100%;
+}
+
+.create-ticket-event-page .upload-placeholder input[type="file"] {
+    display: none;
+}
+
+.create-ticket-event-page .upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 30px;
+}
+
+.create-ticket-event-page .upload-label i {
+    font-size: 3rem;
+    color: #667eea;
+}
+
+.create-ticket-event-page .upload-label span {
+    font-size: 1rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.create-ticket-event-page .upload-hint {
+    font-size: 0.85rem !important;
+    color: #999 !important;
+    font-weight: normal !important;
+}
+
+.create-ticket-event-page .image-preview {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.create-ticket-event-page .image-preview img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.create-ticket-event-page .remove-image {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.create-ticket-event-page .remove-image:hover {
+    transform: scale(1.1);
+    background: #c0392b;
+}
+
+/* Character Counter */
+.create-ticket-event-page .char-counter {
+    text-align: right;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.create-ticket-event-page .char-counter .warning {
+    color: #f59e0b;
+}
+
+/* Ticket Types */
+.create-ticket-event-page .ticket-types-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.create-ticket-event-page .ticket-type-card {
+    background: #f8f9fa;
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.create-ticket-event-page .ticket-type-card:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -10px rgba(102, 126, 234, 0.3);
+}
+
+.create-ticket-event-page .ticket-type-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.create-ticket-event-page .ticket-type-toggle {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.create-ticket-event-page .ticket-type-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Toggle Switch */
+.create-ticket-event-page .switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.create-ticket-event-page .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.create-ticket-event-page .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .3s;
+}
+
+.create-ticket-event-page .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+}
+
+.create-ticket-event-page input:checked + .slider {
+    background-color: #667eea;
+}
+
+.create-ticket-event-page input:focus + .slider {
+    box-shadow: 0 0 1px #667eea;
+}
+
+.create-ticket-event-page input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+.create-ticket-event-page .slider.round {
+    border-radius: 34px;
+}
+
+.create-ticket-event-page .slider.round:before {
+    border-radius: 50%;
+}
+
+.create-ticket-event-page .ticket-type-fields {
+    margin-top: 20px;
+    animation: createTicketSlideDown 0.3s ease;
+}
+
+@keyframes createTicketSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ticket Info Note */
+.create-ticket-event-page .ticket-info-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: #f0f9ff;
+    border-radius: 12px;
+    color: #0369a1;
+    font-size: 0.95rem;
+    margin-top: 20px;
+}
+
+.create-ticket-event-page .ticket-info-note i {
+    font-size: 1.2rem;
+}
+
+/* Error Messages */
+.create-ticket-event-page .field-error {
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.create-ticket-event-page .form-error {
+    background: #fee2e2;
+    color: #e74c3c;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+    border-left: 4px solid #e74c3c;
+}
+
+/* Footer Navigation */
+.create-ticket-event-page .create-event-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.create-ticket-event-page .btn-event {
+    padding: 12px 30px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.create-ticket-event-page .btn-event-next {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+}
+
+.create-ticket-event-page .btn-event-next:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px -5px rgba(102, 126, 234, 0.6);
+}
+
+.create-ticket-event-page .btn-event-back {
+    background: white;
+    color: #666;
+    border: 2px solid #e0e0e0;
+}
+
+.create-ticket-event-page .btn-event-back:hover {
+    background: #f8f9fa;
+    border-color: #999;
+}
+
+.create-ticket-event-page .btn-event:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .create-ticket-event-page .create-ticket-event-container {
+        padding: 20px;
+    }
+
+    .create-ticket-event-page .step-title {
+        font-size: 1.5rem;
+    }
+
+    .create-ticket-event-page .progressBar .row {
+        gap: 20px;
+    }
+
+    .create-ticket-event-page .progressBar .row::before {
+        left: calc(50% + 20px);
+        right: calc(50% + 20px);
+    }
+
+    .create-ticket-event-page .step-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    .create-ticket-event-page .step-label {
+        font-size: 0.8rem;
+    }
+
+    .create-ticket-event-page .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .create-ticket-event-page .form-group-event.half {
+        margin-bottom: 25px;
+    }
+
+    .create-ticket-event-page .create-event-footer {
+        flex-direction: column-reverse;
+        gap: 15px;
+    }
+
+    .create-ticket-event-page .btn-event {
+        width: 100%;
+    }
+
+    .create-ticket-event-page .eventa-back-btn {
+        top: 80px;
+        left: 15px;
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .create-ticket-event-page .create-ticket-event-container {
+        padding: 15px;
+    }
+
+    .create-ticket-event-page .ticket-type-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .create-ticket-event-page .ticket-type-toggle {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

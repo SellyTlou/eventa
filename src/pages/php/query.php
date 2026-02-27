@@ -1172,6 +1172,212 @@ if ($fun === "saveEvent") {
     exit;
 }
 
+if($fun === "saveNewTicketEvent"){
+    $data = json_decode($_POST['data'], true);
+    
+    // Extract data from the parsed JSON
+    $eventName = $data['eventName'] ?? 'Ticket Event';
+    $address = $data['address'] ?? '';
+    $province = $data['province'] ?? '';
+    $cityTown = $data['cityTown'] ?? '';
+    $eventType = $data['eventType'] ?? '';
+    $moreInfo = $data['moreInfo'] ?? '';
+    
+    // Event dates and times
+    $eventStartDate = $data['eventStartDate'] ?? null;
+    $eventEndDate = $data['eventEndDate'] ?? null;
+    $eventStartTime = $data['eventStartTime'] ?? null;
+    $eventEndTime = $data['eventEndTime'] ?? null;
+    
+    // Ticket data - only 4 types
+    $generalPrice = isset($data['generalPrice']) && $data['generalPrice'] !== '' ? floatval($data['generalPrice']) : null;
+    $generalQuantity = isset($data['generalQuantity']) && $data['generalQuantity'] !== '' ? intval($data['generalQuantity']) : null;
+    
+    $earlybirdPrice = isset($data['earlybirdPrice']) && $data['earlybirdPrice'] !== '' ? floatval($data['earlybirdPrice']) : null;
+    $earlybirdQuantity = isset($data['earlybirdQuantity']) && $data['earlybirdQuantity'] !== '' ? intval($data['earlybirdQuantity']) : null;
+    
+    $vipPrice = isset($data['vipPrice']) && $data['vipPrice'] !== '' ? floatval($data['vipPrice']) : null;
+    $vipQuantity = isset($data['vipQuantity']) && $data['vipQuantity'] !== '' ? intval($data['vipQuantity']) : null;
+    
+    $vvipPrice = isset($data['vvipPrice']) && $data['vvipPrice'] !== '' ? floatval($data['vvipPrice']) : null;
+    $vvipQuantity = isset($data['vvipQuantity']) && $data['vvipQuantity'] !== '' ? intval($data['vvipQuantity']) : null;
+    
+    // Generate a unique event ID
+    $eventID = 'TKT' . time() . rand(100, 999);
+    
+    // Get user ID from POST data
+    $userID = $_POST['user_id'] ?? '';
+    $userName = $_POST['user_name'] ?? '';
+    
+    // Also check if they might be inside the data object
+    if (empty($userID) && isset($data['user_id'])) {
+        $userID = $data['user_id'];
+    }
+    if (empty($userName) && isset($data['user_name'])) {
+        $userName = $data['user_name'];
+    }
+    
+    // Log for debugging
+    error_log("saveNewTicketEvent - User ID from POST: " . $userID);
+    
+    if (empty($userID)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "User not logged in"
+        ]);
+        exit;
+    }
+    
+    // Handle image upload
+    $eventImage = $data['image'] ?? null;
+    $eventImageToSave = '';
+    
+    $createdAt = date('Y-m-d H:i:s');
+    
+    try {
+        // Set PHP memory limits
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', 300);
+        
+        // Handle image if it exists
+        if (!empty($eventImage)) {
+            if (is_string($eventImage) && (strpos($eventImage, 'data:image') === 0 || strlen($eventImage) > 1000)) {
+                $eventImageToSave = saveTicketEventImage($eventImage, $eventID);
+            }
+        }
+        
+        // Ensure UTF-8 encoding
+        $eventName = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
+        $address = mb_convert_encoding($address, 'UTF-8', 'UTF-8');
+        $province = mb_convert_encoding($province, 'UTF-8', 'UTF-8');
+        $cityTown = mb_convert_encoding($cityTown, 'UTF-8', 'UTF-8');
+        $eventType = mb_convert_encoding($eventType, 'UTF-8', 'UTF-8');
+        $moreInfo = mb_convert_encoding($moreInfo, 'UTF-8', 'UTF-8');
+        
+        // Insert into ticket_events table
+        $stmt = $pdo->prepare("
+            INSERT INTO ticket_events (
+                event_id, user_id, user_name, event_name, 
+                event_start_date, event_end_date, event_start_time, event_end_time,
+                address, province, city_town, event_type, more_info, event_image,
+                general_price, general_quantity, earlybird_price, earlybird_quantity,
+                vip_price, vip_quantity, vvip_price, vvip_quantity,
+                created_at, updated_at
+            ) VALUES (
+                :event_id, :user_id, :user_name, :event_name,
+                :event_start_date, :event_end_date, :event_start_time, :event_end_time,
+                :address, :province, :city_town, :event_type, :more_info, :event_image,
+                :general_price, :general_quantity, :earlybird_price, :earlybird_quantity,
+                :vip_price, :vip_quantity, :vvip_price, :vvip_quantity,
+                :created_at, :updated_at
+            )
+        ");
+        
+        $result = $stmt->execute([
+            ':event_id' => $eventID,
+            ':user_id' => $userID,
+            ':user_name' => $userName,
+            ':event_name' => $eventName,
+            ':event_start_date' => $eventStartDate,
+            ':event_end_date' => $eventEndDate,
+            ':event_start_time' => $eventStartTime,
+            ':event_end_time' => $eventEndTime,
+            ':address' => $address,
+            ':province' => $province,
+            ':city_town' => $cityTown,
+            ':event_type' => $eventType,
+            ':more_info' => $moreInfo,
+            ':event_image' => $eventImageToSave,
+            ':general_price' => $generalPrice,
+            ':general_quantity' => $generalQuantity,
+            ':earlybird_price' => $earlybirdPrice,
+            ':earlybird_quantity' => $earlybirdQuantity,
+            ':vip_price' => $vipPrice,
+            ':vip_quantity' => $vipQuantity,
+            ':vvip_price' => $vvipPrice,
+            ':vvip_quantity' => $vvipQuantity,
+            ':created_at' => $createdAt,
+            ':updated_at' => $createdAt,
+        ]);
+        
+        if ($result) {
+            echo json_encode([
+                "success" => true, 
+                "message" => "Ticket event created successfully!", 
+                "event_id" => $eventID
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false,
+                "message" => "Failed to insert event into database"
+            ]);
+        }
+        
+    } catch (PDOException $e) {
+        error_log("saveNewTicketEvent PDO Exception: " . $e->getMessage());
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    } catch (Exception $e) {
+        error_log("saveNewTicketEvent Exception: " . $e->getMessage());
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+function saveTicketEventImage($base64Image, $eventID) {
+    try {
+        $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'ticket_events';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Extract base64 data
+        if (preg_match('/^data:image\/(\w+);base64,(.+)$/', $base64Image, $matches)) {
+            $imageType = $matches[1];
+            $base64data = $matches[2];
+        } else {
+            $base64data = $base64Image;
+            $imageType = 'png';
+        }
+        
+        // Validate image type
+        $allowedTypes = ['png', 'jpeg', 'jpg', 'gif', 'webp'];
+        if (!in_array(strtolower($imageType), $allowedTypes)) {
+            $imageType = 'png';
+        }
+        
+        $filename = $eventID . '_' . time() . '.' . $imageType;
+        $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+        
+        $decoded = base64_decode($base64data);
+        if ($decoded === false) {
+            error_log("saveTicketEventImage - Failed to decode base64 data");
+            return '';
+        }
+        
+        if (file_put_contents($filePath, $decoded) === false) {
+            error_log("saveTicketEventImage - Failed to write file: " . $filePath);
+            return '';
+        }
+        
+        // Generate URL for the image
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+        $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/ticket_events/' . $filename;
+        
+        return $fileUrl;
+        
+    } catch (Exception $e) {
+        error_log("saveTicketEventImage Exception: " . $e->getMessage());
+        return '';
+    }
+}
+
 if ($fun === "getusercount") {
 
     try {
