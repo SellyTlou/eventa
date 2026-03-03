@@ -210,8 +210,6 @@ const TicketEventManage = () => {
             });
             const data = await response.json();
 
-            console.log("Package API response:", data);
-
             if (data.success && data.userPackage) {
                 setUserPackage(data.userPackage);
 
@@ -227,11 +225,8 @@ const TicketEventManage = () => {
                 };
                 setPackageInfo(packageInfo);
 
-                console.log("Package set to:", data.userPackage.package_type);
-                console.log("Can Export:", canExport);
             } else {
                 printAlert("You don't have an active package", "warning");
-                // Default to basic
                 setUserPackage({ package_type: "basic" });
                 setPackageInfo({
                     name: "Basic",
@@ -363,7 +358,6 @@ Upgrade to a premium package to unlock:
             if (data.success && data.responses) {
                 const tree = new RSVPBinaryTree();
                 tree.bulkInsert(data.responses);
-                console.log('Booking built — in-order traversal:', tree.toArray());
                 setBST(tree);
                 setFilteredResponses(tree.toArray());
                 setEventData(data.event || null);
@@ -566,7 +560,7 @@ Upgrade to a premium package to unlock bulk messaging features.`,
                                 ? "fa-check-circle"
                                 : alert.type === "warning"
                                     ? "fa-exclamation-triangle"
-                                    : "fa-info-circle" 
+                                    : "fa-info-circle"
                             }`}
                     ></i>
                     <span>{alert.message}</span>
@@ -780,7 +774,7 @@ Upgrade to a premium package to unlock bulk messaging features.`,
                                                 <td>{guest.customer_email}</td>
                                                 <td>
                                                     <span className="ticketType">
-                                                        { guest.ticket_type}
+                                                        {guest.ticket_type}
                                                     </span>
                                                 </td>
                                                 <td>{guest.quantity}</td>

@@ -64,11 +64,10 @@ background-color: #3182ce;
   background-clip: text;
 }
 
-
 .ticket-sale  .ticket-header p {
   color: rgba(255,255,255,.9);
   font-size: 1.2rem;
-  max-width: 520px;
+  text-align: center;
   text-shadow: 0 1px 5px rgba(0,0,0,0.2);
 }
 

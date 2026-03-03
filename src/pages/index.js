@@ -109,17 +109,23 @@ function Index() {
     // Handle click on event
     const handleEventClick = (event) => {
         console.log("Event clicked:", event);
+
+        // Get the event ID - could be in different formats
         const eventId = event?.event_id;
 
-        console.log("Event ID to use:", eventId);
-        console.log("Event ID type:", typeof eventId);
-        console.log("Event ID length:", eventId?.length);
-
         if (eventId) {
+            // Make sure to use the correct path for ticket events
             navigate(`/ticketEvent_details?id=${encodeURIComponent(eventId)}`);
         } else {
             console.error("No event ID found in:", event);
-            alert("Cannot open event: No ID found");
+
+            // Try alternative ID fields
+            const altId = event?.id;
+            if (altId) {
+                navigate(`/ticketEvent_details?id=${encodeURIComponent(altId)}`);
+            } else {
+                alert("Cannot open event: No ID found");
+            }
         }
     };
 
@@ -637,8 +643,8 @@ function Index() {
                                                 <div className="car-card">
                                                     <div className="car-image-wrapper">
                                                         <img
-                                                            src={event.event_image || (event.event_image ? `/uploads/events/${event.event_image}` : "/images/default-event.jpg")}
-                                                            alt={event.event_name || event.title || "Event"}
+                                                            src={event.event_image_url || event.event_image || "/images/default-event.jpg"}
+                                                            alt={event.event_name || "Event"}
                                                             className="car-image"
                                                             onError={(e) => {
                                                                 e.target.src = "/images/default-event.jpg";

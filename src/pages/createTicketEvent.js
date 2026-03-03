@@ -318,8 +318,7 @@ function CreateTicketEvent() {
                 vipPrice: vipPrice === "" ? null : vipPrice,
                 vipQuantity: vipQuantity === "" ? null : vipQuantity,
                 
-                vvipPrice: vvipPrice === "" ? null : vvipPrice,
-                vvipQuantity: vvipQuantity === "" ? null : vvipQuantity
+               
             };
 
             console.log("Submitting ticket event:", ticketEventData);
@@ -798,42 +797,7 @@ function CreateTicketEvent() {
                                         </div>
                                     </div>
 
-                                    {/* VVIP */}
-                                    <div className="ticket-type-card">
-                                        <div className="ticket-type-header">
-                                            <span className="ticket-type-label">VVIP</span>
-                                        </div>
-                                        <div className="ticket-type-fields">
-                                            <div className="form-row">
-                                                <div className="form-group-event half">
-                                                    <label htmlFor="vvipPrice">PRICE (R) - Optional</label>
-                                                    <input
-                                                        type="number"
-                                                        className="form-control-event"
-                                                        id="vvipPrice"
-                                                        placeholder="Leave blank for TBD"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={vvipPrice}
-                                                        onChange={(e) => setVvipPrice(e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="form-group-event half">
-                                                    <label htmlFor="vvipQuantity">QUANTITY - Optional</label>
-                                                    <input
-                                                        type="number"
-                                                        className="form-control-event"
-                                                        id="vvipQuantity"
-                                                        placeholder="Leave blank for unlimited"
-                                                        min="1"
-                                                        step="1"
-                                                        value={vvipQuantity}
-                                                        onChange={(e) => setVvipQuantity(e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                 
                                 </div>
 
                                 <div className="ticket-info-note">
