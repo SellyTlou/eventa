@@ -668,13 +668,13 @@ function AdminDashboard() {
             };
             
             const formData = new FormData();
-            formData.append('function', 'assignCustomBusinessPackage');
+            formData.append('function', 'approveCustomPlanRequest');
             formData.append('admin_user_id', adminUserId);
-            formData.append('user_id', selectedRequest.user_id);
             formData.append('request_id', selectedRequest.request_id);
-            formData.append('base_package_id', requestBasePackage || null);
-            formData.append('custom_limits', JSON.stringify(customLimits));
-            formData.append('custom_price', customPrice);
+            formData.append('approved_guests', approvedGuests);
+            formData.append('approved_events', approvedEvents);
+            formData.append('final_price', customPrice);
+            formData.append('custom_features', customFeatures);
             formData.append('admin_notes', adminNotes);
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
@@ -685,7 +685,7 @@ function AdminDashboard() {
             const data = await response.json();
             
             if (data.success) {
-                printAlert('Custom plan approved and assigned successfully!', 'success');
+                printAlert('Custom plan approved. Business will be directed to payment.', 'success');
                 setShowRequestModal(false);
                 fetchCustomPlanRequests(requestStatusFilter);
                 
