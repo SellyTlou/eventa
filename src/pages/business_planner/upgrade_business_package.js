@@ -4,6 +4,7 @@ import "../planner/UpgradePackage.css";
 import "../../alert.css";
 import "../../App.css";
 import { logOut, LoginNav } from "../components";
+import { isCustomPackage } from "../utils/customPackageUtils";
 
 const UpgradeBusinessPackage = () => {
     const [packages, setPackages] = useState([]);
@@ -230,6 +231,12 @@ const UpgradeBusinessPackage = () => {
     };
 
     const handleChoosePackage = (pkg) => {
+        // If somehow this handler is called for custom plan, redirect to request page instead
+        if (isCustomPackage(pkg)) {
+            navigate('/custom-plan-request');
+            return;
+        }
+
         if (processing) return;
 
         const storedUser = localStorage.getItem("user");
@@ -345,6 +352,7 @@ const UpgradeBusinessPackage = () => {
                         packages.map((pkg) => {
                             const isCurrent = isCurrentPackage(pkg);
                             const isPopular = pkg.name && pkg.name.toLowerCase() === 'advance plan';
+                            const isCustom = isCustomPackage(pkg);
 
                             return (
                                 <div
@@ -365,21 +373,27 @@ const UpgradeBusinessPackage = () => {
                                         </div>
                                     )}
 
-                                    <div className="package-header">
+                                                    <div className="package-header">
                                         <h3 className="package-name">
                                             {getPackageName(pkg)}
                                         </h3>
-                                        <div className="package-price">
-                                            {pkg.price === 0 ? 'Custom Quote' : `R${getPackagePrice(pkg)}`}
-                                            <span className="price-period"></span>
-                                        </div>
+                                        {/* hide price entirely for custom packages */}
+                                        {!isCustom && (
+                                            <div className="package-price">
+                                                {pkg.price === 0 ? 'Custom Quote' : `R${getPackagePrice(pkg)}`}
+                                                <span className="price-period"></span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="package-features">
-                                        <div className="feature">
-                                            <i className="bi bi-check-circle"></i>
-                                            <span><strong>{pkg.max_guests || 0}</strong> Max Guests</span>
-                                        </div>
+                                        {/* do not show guest/limit row for custom plans */}
+                                        {!isCustom && (
+                                            <div className="feature">
+                                                <i className="bi bi-check-circle"></i>
+                                                <span><strong>{pkg.max_guests || 0}</strong> Max Guests</span>
+                                            </div>
+                                        )}
                                         {pkg.features && Array.isArray(pkg.features) && pkg.features.map((feature, index) => (
                                             <div key={index} className="feature">
                                                 <i className="bi bi-check-circle"></i>
@@ -395,23 +409,35 @@ const UpgradeBusinessPackage = () => {
                                                 Current Plan
                                             </button>
                                         ) : (
-                                            <button
-                                                className="btn-upgrade"
-                                                onClick={() => handleChoosePackage(pkg)}
-                                                disabled={processing}
-                                            >
-                                                {processing && selectedPackage?.id === pkg.id ? (
-                                                    <>
-                                                        <div className="spinner-border spinner-border-sm" role="status"></div>
-                                                        Processing...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        Choose Plan
-                                                        <i className="bi bi-arrow-right-circle"></i>
-                                                    </>
-                                                )}
-                                            </button>
+                                            /* custom cards go to request page instead of payment */
+                                            isCustom ? (
+                                                <button
+                                                    className="btn-upgrade"
+                                                    onClick={() => navigate('/custom-plan-request')}
+                                                    disabled={processing}
+                                                >
+                                                    Request Custom Plan
+                                                    <i className="bi bi-arrow-right-circle"></i>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className="btn-upgrade"
+                                                    onClick={() => handleChoosePackage(pkg)}
+                                                    disabled={processing}
+                                                >
+                                                    {processing && selectedPackage?.id === pkg.id ? (
+                                                        <>
+                                                            <div className="spinner-border spinner-border-sm" role="status"></div>
+                                                            Processing...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            Choose Plan
+                                                            <i className="bi bi-arrow-right-circle"></i>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )
                                         )}
                                     </div>
                                 </div>
@@ -446,13 +472,13 @@ const UpgradeBusinessPackage = () => {
                                     <tr>
                                         <td>Max Guests per Event</td>
                                         {packages.map(pkg => (
-                                            <td key={pkg.id}>{pkg.max_guests || 0}</td>
+                                            <td key={pkg.id}>{isCustomPackage(pkg) ? '' : pkg.max_guests || 0}</td>
                                         ))}
                                     </tr>
                                     <tr>
                                         <td>Monthly Price</td>
                                         {packages.map(pkg => (
-                                            <td key={pkg.id}>{pkg.price === 0 ? 'Custom Quote' : `R${getPackagePrice(pkg)}`}</td>
+                                            <td key={pkg.id}>{isCustomPackage(pkg) ? '' : (pkg.price === 0 ? 'Custom Quote' : `R${getPackagePrice(pkg)}`)}</td>
                                         ))}
                                     </tr>
                                     {/* Dynamic features from database */}

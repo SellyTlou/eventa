@@ -888,6 +888,46 @@
 }
 
 /* Custom Plan Requests Tab Styles */
+
+/* Details page for viewing a single custom plan request */
+.request-details-page {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* when rendering details as page, avoid overlay background */
+.request-details-page .modal-header-new {
+    border-bottom: none;
+}
+
+/* neutralize modal styling inside the dedicated request details page */
+.request-details-page .modal-content-new {
+    /* make full width and transparent so it blends with page */
+    background: transparent;
+    border-radius: 0;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    box-shadow: none;
+    animation: none;
+}
+
+.request-details-page .modal-body-new {
+    background: transparent;
+    padding: 0;
+}
+
+.request-details-page .modal-actions-new {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}
+
+
 .requests-table-container {
     background: white;
     border-radius: 12px;
