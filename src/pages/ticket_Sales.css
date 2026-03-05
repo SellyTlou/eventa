@@ -10,7 +10,8 @@
 }
 
 /* ───────────────── HEADER ───────────────── */
-.ticket-header {
+
+.ticket-sale  .ticket-header {
   position: relative;
   height: 70vh;
   min-height: 360px;
@@ -19,7 +20,8 @@
   overflow: hidden;
 }
 
-.hero-bg-img {
+
+.ticket-sale  .hero-bg-img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -33,14 +35,16 @@
   background: linear-gradient(to bottom, rgba(106, 13, 173, 0.3), rgba(0, 0, 0, 0.8));
 }
 
-.ticket-header .container {
+
+.ticket-sale  .ticket-header .container {
   position: relative;
   z-index: 2;
   padding: 0 2rem;
   margin-bottom: 3rem;
 }
 
-.ticket-header h1 {
+
+.ticket-sale  .ticket-header h1 {
   color: #fff;
   font-size: clamp(2.4rem, 5vw, 3.8rem);
   font-weight: 800;
@@ -51,7 +55,8 @@
   text-transform: capitalize !important;
 }
 
-.ticket-header h1 span {
+
+.ticket-sale  .ticket-header h1 span {
   color: #0dcaf0;
 background-color: #3182ce;
   -webkit-background-clip: text;
@@ -59,10 +64,10 @@ background-color: #3182ce;
   background-clip: text;
 }
 
-.ticket-header p {
+.ticket-sale  .ticket-header p {
   color: rgba(255,255,255,.9);
   font-size: 1.2rem;
-  max-width: 520px;
+  text-align: center;
   text-shadow: 0 1px 5px rgba(0,0,0,0.2);
 }
 

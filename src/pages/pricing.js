@@ -361,7 +361,8 @@ function Pricing() {
 
     const handleCategoryClick = (category) => {
         if (category === "Selling Tickets") {
-            setShowTicketMaintenance(true);
+            //setShowTicketMaintenance(true);
+            navigate("/createTicketEvent");
         } else {
             setActiveCategory(category);
             setStartIndex(0);

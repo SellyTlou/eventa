@@ -54,7 +54,7 @@ function Ticket_payment() {
 
     switch (ticketData.ticketType) {
       case "early_bird":
-        price = parseFloat(event.early_bird_price) || 0;
+        price = parseFloat(event.earlybird_price) || 0;
         break;
       case "general":
         price = parseFloat(event.general_price) || 0;
@@ -248,7 +248,7 @@ function Ticket_payment() {
 
     switch (ticketData.ticketType) {
       case "early_bird":
-        return formatPrice(event.early_bird_price);
+        return formatPrice(event.earlybird_price);
       case "general":
         return formatPrice(event.general_price);
       case "vip":
@@ -807,13 +807,13 @@ function Ticket_payment() {
                     value={ticketData.ticketType}
                     onChange={handleInputChange}
                   >
-                    {parseFloat(event.early_bird_price) > 0 && (
+                    {parseFloat(event.earlybird_price) > 0 && (
                       <option
                         value="early_bird"
-                        disabled={event.early_bird_quantity <= 0}
+                        disabled={event.earlybird_quantity <= 0}
                       >
-                        {event.early_bird_quantity > 0
-                          ? `Early Bird - R ${formatPrice(event.early_bird_price)}`
+                        {event.earlybird_quantity > 0
+                          ? `Early Bird - R ${formatPrice(event.earlybird_price)}`
                           : `Early Bird - SOLD OUT`}
                       </option>
                     )}

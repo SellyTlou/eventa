@@ -47,8 +47,7 @@ import PaymentCancel from './planner/PaymentCancel';
 import PaymentSuccess from './planner/PaymentSuccess';
 import MyRequests from '../pages/business_planner/MyRequests';
 import RequestDetails from '../pages/business_planner/RequestDetails';
-
-
+import CreateTicketEvent from '../pages/createTicketEvent';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -227,11 +226,14 @@ export function SessionHandler() {
                 <Route path="/ticketEvent_details" element={<TicketEvent_details />} />
                 <Route path="/ticket_payment" element={<Ticket_payment />} />
                 <Route path="/businessdashboard" element={<BusinessDashboard />} />
-                <Route path="/event_ticket_manage" element={<TicketEventManage/>}/>
+                <Route path="/event_ticket_manage" element={<TicketEventManage />} />
                 <Route path="/my-requests" element={<MyRequests />} />
                 <Route path="/request-details/:requestId" element={<RequestDetails />} />
                 <Route path="/custom-plan-request" element={<CustomPlanRequestPage />} />
                 <Route path="/request/:requestId" element={<RequestDetails />} />
+                <Route path="/paymentCancel" element={<PaymentCancel />} />
+                <Route path="/paymentSuccess" element={<PaymentSuccess />} />
+                <Route path="/createTicketEvent" element={<CreateTicketEvent />} />
             </Routes>
 
             <SessionWarningModal
@@ -385,7 +387,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
         setDropdownOpen(false);
         setIsMobileMenuOpen(false);
     };
-    
+
     const handleDropdownItemClick = (handler, e) => {
         if (e) e.stopPropagation();
         handler(e);
@@ -401,9 +403,9 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                             <a href="/">
                                 <img src="/images/logo.png" alt="Logo" className="logo img-fluid" />
                             </a>
-                        
 
-                       
+
+
                             <ul className="nav nav-list justify-content-center">
                                 {["/", "/feature", "/ticket_sales", "/pricing", "/sales", "/support"].map(
                                     (path, i) => (
@@ -598,17 +600,17 @@ export function Footer() {
                         <h5>Stay Connected</h5>
                         <p>Follow us on our social media channels</p>
                         <div className="social-icons">
-                            <a href="https://web.facebook.com/profile.php?id=61586884803873" 
-                               target="_blank" 
-                               rel="noopener noreferrer" 
-                               className="me-3">
+                            <a href="https://web.facebook.com/profile.php?id=61586884803873"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="me-3">
                                 <i className="bi bi-facebook"></i>
                             </a>
                             <a href="/" className="me-3"><i className="bi bi-twitter"></i></a>
-                            <a href="https://www.instagram.com/evendi_za?utm_source=qr&igsh=Z3kwdDIzamlxYXFj" 
-                               target="_blank" 
-                               rel="noopener noreferrer" 
-                               className="me-3">
+                            <a href="https://www.instagram.com/evendi_za?utm_source=qr&igsh=Z3kwdDIzamlxYXFj"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="me-3">
                                 <i className="bi bi-instagram"></i>
                             </a>
                             <a href="/"><i className="bi bi-linkedin"></i></a>
@@ -786,7 +788,7 @@ export function LoginNav() {
 
                         <div className="col-md-3 btns-container">
                             <div className="logged-in-container">
-                                <button className="btn home-btn" onClick={goToHome} >
+                                <button className="btn signup-btn me-2" onClick={goToHome} >
                                     <i className="bi bi-house-fill me-1"></i> Home
                                 </button>
                                 <button className="btn dashboard-btn me-2" onClick={goToDashboard}>
@@ -1904,7 +1906,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/invitationPage");
         onClose?.();
     };
-  
+
     const goToAttendanceStats = () => {
         navigate("/attendance_stats");
         onClose?.();
@@ -1913,7 +1915,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/guest_insights");
         onClose?.();
     };
-      const goToBookings = () => {
+    const goToBookings = () => {
         navigate("/event_ticket_manage");
         onClose?.();
     };
@@ -1927,8 +1929,8 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
                 { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
                 { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
                 { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
-                {path: '/event_ticket_manage', icon: 'bi-book', label: 'Bookings', onClick: goToBookings}
-               
+                { path: '/event_ticket_manage', icon: 'bi-book', label: 'Bookings', onClick: goToBookings }
+
             ]
         },
         {
@@ -1984,31 +1986,71 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
 
 export function NewEventPopupBtn() {
     const navigate = useNavigate();
+    const [showModal, setShowModal] = useState(false);
 
-    const goToCreateEvent = () => {
+    const goToTicketEvent = () => {
+        setShowModal(false);
+        navigate("/createTicketEvent");
+    };
+
+    const goToFreeEvent = () => {
+        setShowModal(false);
         navigate("/createEvent");
     };
 
-    const goToActiveEventDetails = () => {
-        navigate("/activeEventDetails");
-    };
-
-    const checkNavigate = () => {
-        const storedUser = localStorage.getItem('user');
-        const user = storedUser ? JSON.parse(storedUser) : null;
-        
-        if (user) {
-            goToActiveEventDetails(); 
-        } else {
-            goToCreateEvent(); 
-        }
-    };
-
     return (
-        <div className="new-event-fixed-container">
-            <button className="new-event-fixed-btn" onClick={checkNavigate}>
-                <i className="bi bi-plus-lg"></i> Create New Event
-            </button>
-        </div>
+        <>
+            <div className="new-event-fixed-container">
+                <button
+                    className="new-event-fixed-btn"
+                    onClick={() => setShowModal(true)}
+                >
+                    <i className="bi bi-plus-lg"></i> Create New Event
+                </button>
+            </div>
+
+            {showModal && (
+                <div
+                    className="createticket-overlay"
+                    onClick={() => setShowModal(false)}  // close when clicking outside
+                >
+                    <div
+                        className="createticket-modal"
+                        onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+                    >
+                        <div className="ticket-option-step">
+                            <h3>Does your event require tickets?</h3>
+                            <p>
+                                You can sell tickets for your event or make it free entry.
+                            </p>
+
+                            <div className="ticket-options">
+                                <button
+                                    className="ticket-option-btn ticket-option-yes"
+                                    onClick={goToTicketEvent}
+                                >
+                                    <div className="option-icon">🎫</div>
+                                    <div className="option-content">
+                                        <h4>Yes, sell tickets</h4>
+                                        <p>Set up paid tickets for your event</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    className="ticket-option-btn ticket-option-no"
+                                    onClick={goToFreeEvent}
+                                >
+                                    <div className="option-icon">🎉</div>
+                                    <div className="option-content">
+                                        <h4>No, free entry</h4>
+                                        <p>Create event without tickets</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }

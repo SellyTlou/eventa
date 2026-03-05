@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import EventProgressBar from "./EventProgressBar";
 import "../App.css";
 import "../responce.css";
-import { Login } from "./components";
+
+import { Navbar, Footer, Login } from "./components";
 import { useEventCreation } from "./eventDataCollector";
 
 function CreateEvent() {
@@ -19,7 +20,6 @@ function CreateEvent() {
   const [eventLocation, setEventLocation] = useState("");
   const [eventCity, setEventCity] = useState("");
   const [eventProvince, setEventProvince] = useState("");
-  // New state for event category
   const [eventCategory, setEventCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [error, setError] = useState("");
@@ -32,7 +32,7 @@ function CreateEvent() {
   const { saveStep1Data, saveStep2Data, getEventDetails } = useEventCreation();
   const totalSteps = 3;
 
-  // Event categories - Compact list for 4x4 grid
+  // Event categories
   const eventCategories = [
     { value: "conference", label: "Conference", icon: "🎤" },
     { value: "workshop", label: "Workshop", icon: "🛠️" },
@@ -79,7 +79,6 @@ function CreateEvent() {
             if (savedData.eventLocation) setEventLocation(savedData.eventLocation);
             if (savedData.eventCity) setEventCity(savedData.eventCity);
             if (savedData.eventProvince) setEventProvince(savedData.eventProvince);
-            // Load saved category
             if (savedData.eventCategory) {
               setEventCategory(savedData.eventCategory);
               if (savedData.eventCategory === "other" && savedData.customCategory) {
@@ -96,7 +95,7 @@ function CreateEvent() {
     loadSavedData();
   }, [user]);
 
-  // Validation rules - Updated with eventCategory
+  // Validation rules
   const validationRules = {
     eventName: {
       required: true,
@@ -141,7 +140,6 @@ function CreateEvent() {
       required: false,
       message: "Please select a province"
     },
-    // New validation for event category
     eventCategory: {
       required: true,
       message: "Please select an event category"
@@ -174,7 +172,7 @@ function CreateEvent() {
     return new Date().toISOString().split('T')[0];
   };
 
-  // Enhanced helper function to get minimum end date
+  // Helper function to get minimum end date
   const getMinEndDate = () => {
     if (eventStartDate) {
       const startDate = new Date(eventStartDate);
@@ -186,7 +184,6 @@ function CreateEvent() {
     return getTodayDate();
   };
 
-  // Validation functions - Updated with eventCategory
   const validateField = (name, value, allValues = {}) => {
     const rules = validationRules[name];
     if (!rules) return "";
@@ -291,12 +288,10 @@ function CreateEvent() {
         if (cityError) newErrors.eventCity = cityError;
       }
 
-      // New validation for event category (substep 3)
       if (subStep === 3) {
         const categoryError = validateField("eventCategory", eventCategory);
         if (categoryError) newErrors.eventCategory = categoryError;
 
-        // Validate custom category if "other" is selected
         if (eventCategory === "other") {
           const customError = validateField("customCategory", customCategory);
           if (customError) newErrors.customCategory = customError;
@@ -446,7 +441,7 @@ function CreateEvent() {
   const handleCategorySelect = (categoryValue) => {
     setEventCategory(categoryValue);
     if (categoryValue !== "other") {
-      setCustomCategory(""); // Clear custom category when not "other"
+      setCustomCategory("");
     }
     setTouched(prev => ({ ...prev, eventCategory: true }));
     setFieldErrors(prev => ({ ...prev, eventCategory: "" }));
@@ -636,7 +631,6 @@ function CreateEvent() {
                   <h2 className="step-title">Event Location</h2>
                   <p className="step-subtitle">Where is your Event?</p>
 
-                  {/* Venue/Address field */}
                   <div className="form-group-event">
                     <label htmlFor="eventLocation">VENUE / ADDRESS</label>
                     <input
@@ -656,7 +650,6 @@ function CreateEvent() {
                     )}
                   </div>
 
-                  {/* City/Town field */}
                   <div className="form-group-event">
                     <label htmlFor="eventCity">CITY / TOWN</label>
                     <input
@@ -676,7 +669,6 @@ function CreateEvent() {
                     )}
                   </div>
 
-                  {/* Province dropdown */}
                   <div className="form-group-event">
                     <label htmlFor="eventProvince">PROVINCE / STATE</label>
                     <select
@@ -711,7 +703,7 @@ function CreateEvent() {
                 </>
               )}
 
-              {/* New Step 2.3: Event Category - Compact 4x4 Grid */}
+              {/* Step 2.3: Event Category */}
               {step2SubStep === 3 && (
                 <>
                   <h2 className="step-title">Event Category</h2>
@@ -826,7 +818,6 @@ function CreateEvent() {
             )}
           </div>
           <div>
-            {/* Show different button text based on state */}
             {user ? (
               <button className="btn-event btn-event-next" onClick={handleNext}>
                 {currentStep === 1 && "NEXT: EVENT DETAILS"}

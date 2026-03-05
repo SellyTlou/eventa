@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "../App.css";
 import "../responce.css";
 import "./support.css";
-import { Navbar, Footer, Login ,NewEventPopupBtn} from "./components";
+import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 import { useNavigate } from "react-router-dom";
 
 function Support() {
@@ -53,7 +53,7 @@ function Support() {
             <NewEventPopupBtn />
 
             <section className="support-page">
-                
+
                 {/* Hero Section */}
                 <section className="header-section">
                     <img
@@ -61,7 +61,7 @@ function Support() {
                         alt="Support hero background"
                         className="hero-bg-img"
                     />
-                    <div className="overlayer"/>
+                    <div className="overlayer" />
                     <div className="container">
                         <div className="row">
                             <div className="col-lg-7">
@@ -69,7 +69,7 @@ function Support() {
                                 <p className="lead">
                                     Your success is our priority. Get the support you need to create unforgettable events.
                                 </p>
-                                <button 
+                                <button
                                     className="btn btn-create"
                                     onClick={handleCreateEvent}
                                 >
@@ -98,12 +98,12 @@ function Support() {
                                 <p>
                                     Send us detailed questions and we'll get back to you with comprehensive solutions within hours.
                                 </p>
-                                <button 
+                                <a
+                                    href="mailto:support@evendi.co.za?subject=Support%20Request&body=Hello%20Support%20Team%2C%0A%0AI%20need%20assistance%20with%3A%0A%0A%0A%0AThank%20you%2C%0A%5BYour%20Name%5D"
                                     className="btn btn-view-more"
-                                    onClick={handleMaintenanceClick}
                                 >
                                     Email Us <i className="bi bi-arrow-right"></i>
-                                </button>
+                                </a>
                             </div>
                             <div className="feature-card">
                                 <div className="feature-icon">
@@ -113,7 +113,7 @@ function Support() {
                                 <p>
                                     Prefer to talk? Call our support line for personalized assistance with your event planning.
                                 </p>
-                                <button 
+                                <button
                                     className="btn btn-view-more"
                                     onClick={handleContactClick}
                                 >
@@ -128,7 +128,7 @@ function Support() {
                                 <p>
                                     Have a specific issue? Submit a detailed support ticket and our team will assist you promptly.
                                 </p>
-                                <button 
+                                <button
                                     className="btn btn-view-more"
                                     onClick={() => navigate('/ticket-selection')}
                                 >
@@ -150,7 +150,7 @@ function Support() {
                         </div>
                         <div className="faq-container">
                             <div className="faq-item">
-                                <div 
+                                <div
                                     className="faq-question"
                                     onClick={() => toggleFaq(0)}
                                 >
@@ -164,7 +164,7 @@ function Support() {
                                 )}
                             </div>
                             <div className="faq-item">
-                                <div 
+                                <div
                                     className="faq-question"
                                     onClick={() => toggleFaq(1)}
                                 >
@@ -178,7 +178,7 @@ function Support() {
                                 )}
                             </div>
                             <div className="faq-item">
-                                <div 
+                                <div
                                     className="faq-question"
                                     onClick={() => toggleFaq(2)}
                                 >
@@ -192,7 +192,7 @@ function Support() {
                                 )}
                             </div>
                             <div className="faq-item">
-                                <div 
+                                <div
                                     className="faq-question"
                                     onClick={() => toggleFaq(3)}
                                 >
@@ -216,7 +216,7 @@ function Support() {
                         alt="Support CTA background"
                         className="cta-bg-img"
                     />
-                    <div className="cta-overlay"/>
+                    <div className="cta-overlay" />
                     <div className="container">
                         <div className="row align-items-center">
                             <div className="col-lg-8">
@@ -224,7 +224,7 @@ function Support() {
                                 <p>Our support team is ready to assist you with any questions or concerns, 24/7.</p>
                             </div>
                             <div className="col-lg-4 text-lg-end">
-                                <button 
+                                <button
                                     className="btn btn-cta"
                                     onClick={handleContactClick}
                                 >
@@ -252,7 +252,7 @@ function Support() {
                                     <p>We're working hard to bring you this feature</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowMaintenance(false)}
                             >
@@ -268,7 +268,7 @@ function Support() {
                                 <h3>Coming Soon!</h3>
                                 <p>This feature is currently being developed and will be available in our next update.</p>
                                 <p>We appreciate your patience as we work to make Evendi even better!</p>
-                                
+
                                 <div className="maintenance-tips">
                                     <h4>In the meantime, you can:</h4>
                                     <ul>
@@ -278,9 +278,9 @@ function Support() {
                                     </ul>
                                 </div>
                             </div>
-                            
+
                             <div className="modal-actions-new">
-                                <button 
+                                <button
                                     className="action-btn-new primary"
                                     onClick={() => setShowMaintenance(false)}
                                 >
@@ -307,7 +307,7 @@ function Support() {
                                     <p>Get in touch with us directly</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="close-btn-new"
                                 onClick={() => setShowContactModal(false)}
                             >
@@ -322,7 +322,7 @@ function Support() {
                                 </div>
                                 <h3>We're Here to Help!</h3>
                                 <p>Our support team is available 24/7 to assist you with any questions about your events.</p>
-                                
+
                                 <div className="contact-info-grid">
                                     <div className="contact-item">
                                         <div className="contact-item-icon">
@@ -334,7 +334,7 @@ function Support() {
                                             <small>Mon-Fri, 8AM - 6PM</small>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="contact-item">
                                         <div className="contact-item-icon">
                                             <i className="bi bi-whatsapp"></i>
@@ -345,7 +345,7 @@ function Support() {
                                             <small>24/7 urgent support</small>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="contact-item">
                                         <div className="contact-item-icon">
                                             <i className="bi bi-envelope-fill"></i>
@@ -356,7 +356,7 @@ function Support() {
                                             <small>Response within 2 hours</small>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="contact-item">
                                         <div className="contact-item-icon">
                                             <i className="bi bi-chat"></i>
@@ -378,17 +378,17 @@ function Support() {
                                     </ul>
                                 </div>
                             </div>
-                            
+
                             <div className="modal-actions-new">
-                                <button 
+                                <button
                                     className="action-btn-new primary"
                                     onClick={() => setShowContactModal(false)}
                                 >
                                     <i className="bi bi-check-circle"></i>
                                     Got It
                                 </button>
-                                <a 
-                                    href="tel:+27111234567" 
+                                <a
+                                    href="tel:+27111234567"
                                     className="action-btn-new secondary"
                                 >
                                     <i className="bi bi-telephone"></i>

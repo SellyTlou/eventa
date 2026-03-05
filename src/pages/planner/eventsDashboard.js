@@ -8,6 +8,8 @@ import { LoginNav } from "../components";
 
 const EventsDashboard = () => {
     const [events, setEvents] = useState([]);
+    const [ticketEvents, setTicketEvents] = useState([]);
+    const [allEvents, setAllEvents] = useState([]);
     const [filteredEvents, setFilteredEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
@@ -18,6 +20,7 @@ const EventsDashboard = () => {
         searchQuery: ""
     });
     const [rsvpStats, setRsvpStats] = useState({});
+    const [ticketStats, setTicketStats] = useState({});
     const [deletingEventId, setDeletingEventId] = useState(null);
     const [soonestEvent, setSoonestEvent] = useState(null);
     const [showMenuId, setShowMenuId] = useState(null);
@@ -47,7 +50,7 @@ const EventsDashboard = () => {
     // Reserve modal state
     const [showReserveModal, setShowReserveModal] = useState(false);
     const [reserveEvent, setReserveEvent] = useState(null);
-    const [reserveStats, setReserveStats] = useState({ yes: 0, no: 0, maybe: 0 });
+    const [reserveStats, setReserveStats] = useState({ yes: 0, no: 0, maybe: 0, ticketStats: [] });
 
     const [user, setUserData] = useState(null);
 
@@ -69,37 +72,29 @@ const EventsDashboard = () => {
             return "/images/default-event.jpg";
         }
 
-        // Convert to string if needed
         let imageSrc = typeof imageData === 'string' ? imageData : String(imageData);
 
-        // If it's a URL (absolute or relative), return it directly
         if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://') || imageSrc.startsWith('/')) {
             return imageSrc;
         }
 
-        // If it already starts with data:image, return as-is (it's already in the correct format)
         if (imageSrc.startsWith('data:image')) {
             if (imageSrc.length > 100) {
                 return imageSrc;
             } else {
-                console.warn('Truncated base64 image detected, length:', imageSrc.length);
                 return "/images/default-event.jpg";
             }
         }
 
-        // If it's a raw base64 string (doesn't start with data:image), convert it
-        // This handles cases where only the base64 part is stored without the MIME type prefix
         if (imageSrc.length > 50 && !imageSrc.includes(' ') && !imageSrc.includes('/')) {
-            // Looks like a raw base64 string, wrap it
             return `data:image/png;base64,${imageSrc}`;
         }
 
-        // Fallback to default
         return "/images/default-event.jpg";
     };
 
     // Reserve modal functions
-    const showReserveStats = async (event, rsvpStats) => {
+    const showReserveStats = async (event) => {
         setReserveEvent(event);
 
         if (event.has_tickets) {
@@ -117,34 +112,29 @@ const EventsDashboard = () => {
 
                 const ticketData = await res.json();
                 if (ticketData.success) {
-                    // Combine ticket stats with RSVP stats
                     setReserveStats({
-                        ticketStats: ticketData.ticket_stats,
-                        rsvpStats: rsvpStats,
+                        ticketStats: ticketData.ticket_stats || [],
                         hasBoth: true
                     });
                 } else {
-                    // Fallback to RSVP only
                     setReserveStats({
                         ticketStats: [],
-                        rsvpStats: rsvpStats,
                         hasBoth: false
                     });
                 }
             } catch (error) {
                 console.error("Error fetching ticket stats:", error);
-                // Fallback to RSVP only
                 setReserveStats({
                     ticketStats: [],
-                    rsvpStats: rsvpStats,
                     hasBoth: false
                 });
             }
         } else {
             // RSVP only
+            const stats = rsvpStats[event.event_id] || { yes: 0, no: 0, maybe: 0 };
             setReserveStats({
                 ticketStats: [],
-                rsvpStats: rsvpStats,
+                rsvpStats: stats,
                 hasBoth: false
             });
         }
@@ -222,7 +212,6 @@ const EventsDashboard = () => {
         const pastEvents = [];
         const cancelledEvents = [];
 
-        // Separate events into upcoming, past, and cancelled
         eventsArray.forEach((event) => {
             if (isEventCancelled(event)) {
                 cancelledEvents.push(event);
@@ -239,7 +228,6 @@ const EventsDashboard = () => {
             }
         });
 
-        // Sort upcoming events by date (minHeap - earliest first)
         const upcomingHeap = new PriorityQueue({
             comparator: (a, b) => {
                 const dA = new Date(a.event_start_date || a.created_at);
@@ -252,14 +240,12 @@ const EventsDashboard = () => {
         const sortedUpcoming = [];
         while (upcomingHeap.length > 0) sortedUpcoming.push(upcomingHeap.dequeue());
 
-        // Sort past events by date (most recent first)
         const sortedPast = pastEvents.sort((a, b) => {
             const dA = new Date(a.event_start_date || a.created_at);
             const dB = new Date(b.event_start_date || b.created_at);
             return dB - dA;
         });
 
-        // Combine: upcoming first, then past, then cancelled
         return [...sortedUpcoming, ...sortedPast, ...cancelledEvents];
     };
 
@@ -279,7 +265,7 @@ const EventsDashboard = () => {
             setUserData(userdata);
 
             if (userdata && userdata.user_id) {
-                fetchEvents(userdata.user_id);
+                fetchAllUserEvents(userdata.user_id);
             } else {
                 console.error("Invalid user data:", userdata);
                 printAlert("Invalid user data. Please log in again.", "error");
@@ -294,53 +280,88 @@ const EventsDashboard = () => {
         }
     }, [navigate]);
 
-    const fetchEvents = async (userId) => {
+    const fetchAllUserEvents = async (userId) => {
         try {
             setLoading(true);
             const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "getUserEvents");
-            formData.append("userID", userId);
 
-            const response = await fetch(`${API_URL}/query.php`, {
+            // Fetch regular events
+            const regularFormData = new FormData();
+            regularFormData.append("function", "getUserEvents");
+            regularFormData.append("userID", userId);
+
+            const regularResponse = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
-                body: formData
+                body: regularFormData
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // Fetch ticket events
+            const ticketFormData = new FormData();
+            ticketFormData.append("function", "getUserTicketEvents");
+            ticketFormData.append("userID", userId);
+
+            const ticketResponse = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: ticketFormData
+            });
+
+            let regularEvents = [];
+            let ticketEventsData = [];
+
+            if (regularResponse.ok) {
+                const regularData = await regularResponse.json();
+                if (regularData.success && Array.isArray(regularData.events)) {
+                    regularEvents = regularData.events.map(event => ({
+                        ...event,
+                        has_tickets: 0,
+                        event_type_category: 'rsvp'
+                    }));
+                }
             }
 
-            const data = await response.json();
-
-            if (data.success && Array.isArray(data.events)) {
-                const uniqueEvents = [];
-                data.events.forEach((event) => {
-                    if (!uniqueEvents.some((e) => e.event_id === event.event_id)) {
-                        uniqueEvents.push(event);
-                    }
-                });
-
-                // Apply minHeap sorting
-                const sortedEvents = sortEventsWithMinHeap(uniqueEvents);
-
-                // Find the soonest upcoming event
-                const soonest = sortedEvents.find(event => {
-                    if (isEventCancelled(event)) return false;
-                    const evDate = new Date(event.event_start_date || event.created_at);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    evDate.setHours(0, 0, 0, 0);
-                    return evDate >= today;
-                }) || null;
-
-                setSoonestEvent(soonest);
-                setEvents(sortedEvents);
-                setFilteredEvents(sortedEvents);
-                fetchRSVPStatsForEvents(sortedEvents);
-            } else {
-                printAlert("Failed to load events: " + (data.message || "Unknown error"), "error");
+            if (ticketResponse.ok) {
+                const ticketData = await ticketResponse.json();
+                if (ticketData.success && Array.isArray(ticketData.events)) {
+                    ticketEventsData = ticketData.events;
+                }
             }
+
+            // Combine all events
+            const allUserEvents = [...regularEvents, ...ticketEventsData];
+
+            // Remove duplicates based on event_id
+            const uniqueEvents = [];
+            allUserEvents.forEach((event) => {
+                if (!uniqueEvents.some((e) => e.event_id === event.event_id)) {
+                    uniqueEvents.push(event);
+                }
+            });
+
+            // Apply minHeap sorting
+            const sortedEvents = sortEventsWithMinHeap(uniqueEvents);
+
+            // Find the soonest upcoming event
+            const soonest = sortedEvents.find(event => {
+                if (isEventCancelled(event)) return false;
+                const evDate = new Date(event.event_start_date || event.created_at);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                evDate.setHours(0, 0, 0, 0);
+                return evDate >= today;
+            }) || null;
+
+            setEvents(regularEvents);
+            setTicketEvents(ticketEventsData);
+            setAllEvents(sortedEvents);
+            setFilteredEvents(sortedEvents);
+            setSoonestEvent(soonest);
+            
+            // Fetch RSVP stats for regular events
+            fetchRSVPStatsForEvents(sortedEvents.filter(e => !e.has_tickets));
+            
+            // Fetch ticket stats for ticket events
+            fetchTicketStatsForEvents(sortedEvents.filter(e => e.has_tickets));
+            
         } catch (error) {
             console.error("Failed to fetch events:", error);
             printAlert("Failed to load events. Please check your connection.", "error");
@@ -397,10 +418,60 @@ const EventsDashboard = () => {
         );
         setRsvpStats(stats);
     };
+    
+const fetchTicketStatsForEvents = async (eventsArray) => {
+    const stats = {};
+    await Promise.all(
+        eventsArray.map(async (event) => {
+            try {
+                const API_URL = process.env.REACT_APP_API_URL;
+                const formData = new FormData();
+                formData.append("function", "getTicketSalesStats");
+                formData.append("event_id", event.event_id);
+
+                const response = await fetch(`${API_URL}/query.php`, {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        stats[event.event_id] = data.ticket_stats || [];
+                        
+                        // Also fetch booking IDs for messaging
+                        const bookingFormData = new FormData();
+                        bookingFormData.append("function", "getEventBookings");
+                        bookingFormData.append("event_id", event.event_id);
+                        
+                        const bookingResponse = await fetch(`${API_URL}/query.php`, {
+                            method: "POST",
+                            body: bookingFormData
+                        });
+                        
+                        if (bookingResponse.ok) {
+                            const bookingData = await bookingResponse.json();
+                            if (bookingData.success && bookingData.bookings) {
+                                stats[event.event_id] = stats[event.event_id].map(stat => ({
+                                    ...stat,
+                                    bookingId: bookingData.bookings.find(b => b.ticket_type_label === stat.ticket_type_label)?.bookingId
+                                }));
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(`Error fetching ticket stats for event ${event.event_id}:`, err);
+                stats[event.event_id] = [];
+            }
+        })
+    );
+    setTicketStats(stats);
+};
 
     // Filter and sort logic
     useEffect(() => {
-        let result = [...events];
+        let result = [...allEvents];
 
         // Search filter
         if (filters.searchQuery.trim() !== "") {
@@ -413,9 +484,9 @@ const EventsDashboard = () => {
             result = result.filter((e) => {
                 switch (filters.ticketType) {
                     case "ticket-events":
-                        return e.has_tickets === 1 || e.has_tickets === true || e.has_tickets === "1";
+                        return e.has_tickets === 1;
                     case "rsvp-events":
-                        return !e.has_tickets || e.has_tickets === 0 || e.has_tickets === false || e.has_tickets === "0";
+                        return !e.has_tickets || e.has_tickets === 0;
                     default:
                         return true;
                 }
@@ -456,13 +527,13 @@ const EventsDashboard = () => {
         const sortedFiltered = sortEventsWithMinHeap(result);
         setFilteredEvents(sortedFiltered);
         setCurrentPage(1);
-    }, [filters, events]);
+    }, [filters, allEvents]);
 
     /* -------------------------------------------------------------
        CANCEL EVENT PROCESS
     ------------------------------------------------------------- */
     const initiateCancel = (eventId, eventName) => {
-        const ev = events.find((e) => e.event_id === eventId);
+        const ev = allEvents.find((e) => e.event_id === eventId);
         if (!ev) return;
 
         const stats = rsvpStats[eventId] || { guests: [] };
@@ -487,51 +558,65 @@ const EventsDashboard = () => {
         }
     };
 
-    const performCancelWithMessage = async () => {
-        if (!cancelMessage.trim()) {
-            printAlert("Please enter a message", "warning");
-            return;
-        }
+const performCancelWithMessage = async () => {
+    if (!cancelMessage.trim()) {
+        printAlert("Please enter a message", "warning");
+        return;
+    }
 
-        setSendingMessage(true);
+    setSendingMessage(true);
 
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "sendGuestMessage");
-            formData.append("message", cancelMessage);
-            formData.append("API_URL", API_URL);
-            formData.append("event_id", cancelEventId);
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "sendGuestMessage");
+        formData.append("message", cancelMessage);
+        formData.append("API_URL", API_URL);
+        formData.append("event_id", cancelEventId);
+        formData.append("user_id", user?.user_id || '');
 
+        // Check if it's a ticket event
+        const event = allEvents.find(e => e.event_id === cancelEventId);
+        const isTicketEvent = event?.has_tickets === 1;
+        
+        if (isTicketEvent) {
+            // For ticket events, get booking IDs from ticketStats
+            const bookingIds = ticketStats[cancelEventId]?.map(stat => stat.bookingId) || [];
+            const guestIds = bookingIds.join(',');
+            formData.append("guest_ids", guestIds);
+        } else {
+            // For RSVP events, use affectedGuests
             const guestIds = affectedGuests.map(g => g.guest_id).join(",");
             formData.append("guest_ids", guestIds);
-            formData.append("user_id", user?.user_id || '');
+        }
 
-            const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
-                method: "POST",
-                body: formData
-            });
+        const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
+            method: "POST",
+            body: formData
+        });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (data.success) {
-                const recipientCount = affectedGuests.length;
-                printAlert("Cancellation message sent to " + recipientCount + " guest(s)", "success");
-                await performCancel();
-            } else {
-                printAlert("Failed to send cancellation message: " + data.message, "error");
-                setSendingMessage(false);
-            }
-        } catch (error) {
-            console.error("Error sending cancellation message:", error);
-            printAlert("Error sending cancellation message", "error");
+        if (data.success) {
+            const recipientCount = isTicketEvent ? 
+                (ticketStats[cancelEventId]?.length || 0) : 
+                affectedGuests.length;
+            printAlert(`Cancellation message sent to ${recipientCount} recipient(s)`, "success");
+            await performCancel();
+        } else {
+            printAlert("Failed to send cancellation message: " + data.message, "error");
             setSendingMessage(false);
         }
-    };
+    } catch (error) {
+        console.error("Error sending cancellation message:", error);
+        printAlert("Error sending cancellation message", "error");
+        setSendingMessage(false);
+    }
+};
 
     const performCancel = async () => {
         try {
@@ -554,13 +639,22 @@ const EventsDashboard = () => {
 
             if (data.success) {
                 printAlert("Event cancelled successfully!", "success");
-                const updated = events.map((e) =>
-                    e.event_id === cancelEventId ? { ...e, status: "cancelled" } : e
-                );
-                setEvents(updated);
-                setFilteredEvents(updated);
+                
+                // Update all event arrays
+                const updateEventInArray = (event) => 
+                    event.event_id === cancelEventId ? { ...event, status: "cancelled" } : event;
+                
+                const updatedAll = allEvents.map(updateEventInArray);
+                const updatedRegular = events.map(updateEventInArray);
+                const updatedTicket = ticketEvents.map(updateEventInArray);
+                
+                setAllEvents(updatedAll);
+                setEvents(updatedRegular);
+                setTicketEvents(updatedTicket);
+                setFilteredEvents(sortEventsWithMinHeap(updatedAll));
+                
                 setSoonestEvent(
-                    updated.filter(
+                    updatedAll.filter(
                         (e) =>
                             !isEventCancelled(e) &&
                             new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
@@ -592,7 +686,7 @@ const EventsDashboard = () => {
        DELETE EVENT – SAME UX AS CANCEL
     ------------------------------------------------------------- */
     const initiateDelete = (eventId, eventName) => {
-        const ev = events.find((e) => e.event_id === eventId);
+        const ev = allEvents.find((e) => e.event_id === eventId);
         if (!ev) return;
 
         const stats = rsvpStats[eventId] || { guests: [] };
@@ -617,51 +711,65 @@ const EventsDashboard = () => {
         }
     };
 
-    const performDeleteWithMessage = async () => {
-        if (!deleteMessage.trim()) {
-            printAlert("Please enter a message", "warning");
-            return;
-        }
+const performDeleteWithMessage = async () => {
+    if (!deleteMessage.trim()) {
+        printAlert("Please enter a message", "warning");
+        return;
+    }
 
-        setSendingDeleteMessage(true);
+    setSendingDeleteMessage(true);
 
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "sendGuestMessage");
-            formData.append("message", deleteMessage);
-            formData.append("API_URL", API_URL);
-            formData.append("event_id", deleteEventId);
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "sendGuestMessage");
+        formData.append("message", deleteMessage);
+        formData.append("API_URL", API_URL);
+        formData.append("event_id", deleteEventId);
+        formData.append("user_id", user?.user_id || '');
 
+        // Check if it's a ticket event
+        const event = allEvents.find(e => e.event_id === deleteEventId);
+        const isTicketEvent = event?.has_tickets === 1;
+        
+        if (isTicketEvent) {
+            // For ticket events, get booking IDs from ticketStats
+            const bookingIds = ticketStats[deleteEventId]?.map(stat => stat.bookingId) || [];
+            const guestIds = bookingIds.join(',');
+            formData.append("guest_ids", guestIds);
+        } else {
+            // For RSVP events, use affectedDeleteGuests
             const guestIds = affectedDeleteGuests.map(g => g.guest_id).join(",");
             formData.append("guest_ids", guestIds);
-            formData.append("user_id", user?.user_id || '');
+        }
 
-            const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
-                method: "POST",
-                body: formData
-            });
+        const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
+            method: "POST",
+            body: formData
+        });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (data.success) {
-                const cnt = affectedDeleteGuests.length;
-                printAlert(`Deletion message sent to ${cnt} guest(s)`, "success");
-                await performDelete();
-            } else {
-                printAlert("Failed to send deletion message: " + data.message, "error");
-                setSendingDeleteMessage(false);
-            }
-        } catch (err) {
-            console.error("Error sending deletion message:", err);
-            printAlert("Error sending deletion message", "error");
+        if (data.success) {
+            const cnt = isTicketEvent ? 
+                (ticketStats[deleteEventId]?.length || 0) : 
+                affectedDeleteGuests.length;
+            printAlert(`Deletion message sent to ${cnt} recipient(s)`, "success");
+            await performDelete();
+        } else {
+            printAlert("Failed to send deletion message: " + data.message, "error");
             setSendingDeleteMessage(false);
         }
-    };
+    } catch (err) {
+        console.error("Error sending deletion message:", err);
+        printAlert("Error sending deletion message", "error");
+        setSendingDeleteMessage(false);
+    }
+};
 
     const performDelete = async () => {
         setDeletingEventId(deleteEventId);
@@ -685,11 +793,19 @@ const EventsDashboard = () => {
 
             if (data.success) {
                 printAlert("Event deleted successfully!", "success");
-                const updated = events.filter((e) => e.event_id !== deleteEventId);
-                setEvents(updated);
-                setFilteredEvents(updated);
+                
+                // Update all event arrays
+                const updatedAll = allEvents.filter((e) => e.event_id !== deleteEventId);
+                const updatedRegular = events.filter((e) => e.event_id !== deleteEventId);
+                const updatedTicket = ticketEvents.filter((e) => e.event_id !== deleteEventId);
+                
+                setAllEvents(updatedAll);
+                setEvents(updatedRegular);
+                setTicketEvents(updatedTicket);
+                setFilteredEvents(sortEventsWithMinHeap(updatedAll));
+                
                 setSoonestEvent(
-                    updated.filter(
+                    updatedAll.filter(
                         (e) =>
                             !isEventCancelled(e) &&
                             new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
@@ -744,15 +860,23 @@ const EventsDashboard = () => {
 
             if (data.success) {
                 printAlert("Event reactivated!", "success");
-                const updated = events.map((e) =>
-                    e.event_id === eventId
-                        ? { ...e, status: e.is_published ? "published" : "draft" }
-                        : e
-                );
-                setEvents(updated);
-                setFilteredEvents(updated);
+                
+                const updateEventInArray = (event) => 
+                    event.event_id === eventId
+                        ? { ...event, status: event.is_published ? "published" : "draft" }
+                        : event;
+                
+                const updatedAll = allEvents.map(updateEventInArray);
+                const updatedRegular = events.map(updateEventInArray);
+                const updatedTicket = ticketEvents.map(updateEventInArray);
+                
+                setAllEvents(updatedAll);
+                setEvents(updatedRegular);
+                setTicketEvents(updatedTicket);
+                setFilteredEvents(sortEventsWithMinHeap(updatedAll));
+                
                 setSoonestEvent(
-                    updated.filter(
+                    updatedAll.filter(
                         (e) =>
                             !isEventCancelled(e) &&
                             new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
@@ -784,77 +908,99 @@ const EventsDashboard = () => {
         setShowMenuId(null);
     };
 
-    const handleSaveEdit = async (e) => {
-        e.preventDefault();
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const startDate = new Date(editedEvent.event_start_date);
-        const endDate = editedEvent.event_end_date ? new Date(editedEvent.event_end_date) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(editedEvent.event_start_date);
+    const endDate = editedEvent.event_end_date ? new Date(editedEvent.event_end_date) : null;
 
-        if (startDate < today) {
-            printAlert("Event start date cannot be in the past", "error");
-            return;
+    if (startDate < today) {
+        printAlert("Event start date cannot be in the past", "error");
+        return;
+    }
+    if (endDate && endDate < today) {
+        printAlert("Event end date cannot be in the past", "error");
+        return;
+    }
+    if (endDate && endDate < startDate) {
+        printAlert("Event end date cannot be before start date", "error");
+        return;
+    }
+
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "updateEvent");
+        formData.append("event_id", selectedEvent.event_id);
+        formData.append("user_id", user?.user_id || '');
+        formData.append("event_name", editedEvent.event_name || "");
+        formData.append("event_location", editedEvent.event_location || "");
+        formData.append("event_start_date", editedEvent.event_start_date || "");
+        formData.append("event_start_time", editedEvent.event_start_time || "");
+        formData.append("event_end_date", editedEvent.event_end_date || "");
+        formData.append("event_end_time", editedEvent.event_end_time || "");
+
+        // Log what we're sending
+        console.log("Sending update data:", {
+            event_id: selectedEvent.event_id,
+            user_id: user?.user_id,
+            event_name: editedEvent.event_name,
+            event_location: editedEvent.event_location,
+            event_start_date: editedEvent.event_start_date,
+            event_start_time: editedEvent.event_start_time,
+            event_end_date: editedEvent.event_end_date,
+            event_end_time: editedEvent.event_end_time
+        });
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-        if (endDate && endDate < today) {
-            printAlert("Event end date cannot be in the past", "error");
-            return;
+
+        const data = await response.json();
+        console.log("Update event response:", data);
+
+        if (data.success) {
+            printAlert("Event updated successfully!", "success");
+            
+            // Update local state
+            const updateEventInArray = (event) => 
+                event.event_id === selectedEvent.event_id ? { ...event, ...editedEvent } : event;
+            
+            const updatedAll = allEvents.map(updateEventInArray);
+            const updatedRegular = events.map(updateEventInArray);
+            const updatedTicket = ticketEvents.map(updateEventInArray);
+            
+            setAllEvents(updatedAll);
+            setEvents(updatedRegular);
+            setTicketEvents(updatedTicket);
+            setFilteredEvents(sortEventsWithMinHeap(updatedAll));
+            
+            setSoonestEvent(
+                updatedAll.filter(
+                    (e) =>
+                        !isEventCancelled(e) &&
+                        new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
+                )[0] || null
+            );
+            setShowEditModal(false);
+        } else {
+            printAlert(`Failed: ${data.message}`, "error");
         }
-        if (endDate && endDate < startDate) {
-            printAlert("Event end date cannot be before start date", "error");
-            return;
-        }
+    } catch (error) {
+        console.error("Error updating event:", error);
+        printAlert(`Error updating: ${error.message}`, "error");
+    }
+};
 
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "updateEvent");
-            formData.append("event_id", selectedEvent.event_id);
-            formData.append("event_name", editedEvent.event_name);
-            formData.append("event_location", editedEvent.event_location || "");
-            formData.append("event_start_date", editedEvent.event_start_date);
-            formData.append("event_start_time", editedEvent.event_start_time || "");
-            formData.append("event_end_date", editedEvent.event_end_date || "");
-            formData.append("event_end_time", editedEvent.event_end_time || "");
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                printAlert("Event updated successfully!", "success");
-                const updated = events.map((e) =>
-                    e.event_id === selectedEvent.event_id ? { ...e, ...editedEvent } : e
-                );
-                setEvents(updated);
-                setFilteredEvents(updated);
-                setSoonestEvent(
-                    updated.filter(
-                        (e) =>
-                            !isEventCancelled(e) &&
-                            new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
-                    )[0] || null
-                );
-                setShowEditModal(false);
-            } else {
-                printAlert(`Failed: ${data.message}`, "error");
-            }
-        } catch (error) {
-            console.error("Error updating event:", error);
-            printAlert(`Error updating: ${error.message}`, "error");
-        }
-    };
-
-    // Replace the current handleEventClick function with this:
     const handleEventClick = (eventId) => {
-        const event = events.find((e) => e.event_id === eventId);
+        const event = allEvents.find((e) => e.event_id === eventId);
         if (isEventCancelled(event)) {
             printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
             return;
@@ -862,7 +1008,7 @@ const EventsDashboard = () => {
 
         localStorage.setItem("selectedEventId", eventId);
 
-        const isTicketEvent = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+        const isTicketEvent = event.has_tickets === 1;
 
         if (isTicketEvent) {
             navigate("/event_ticket_manage");
@@ -897,13 +1043,13 @@ const EventsDashboard = () => {
     };
 
     // Counts for dropdown
-    const publishedEventsCount = events.filter(
+    const publishedEventsCount = allEvents.filter(
         (e) => isEventPublished(e) && !isEventCancelled(e)
     ).length;
-    const unpublishedEventsCount = events.filter(
+    const unpublishedEventsCount = allEvents.filter(
         (e) => !isEventPublished(e) && !isEventCancelled(e)
     ).length;
-    const cancelledEventsCount = events.filter(isEventCancelled).length;
+    const cancelledEventsCount = allEvents.filter(isEventCancelled).length;
 
     if (loading) {
         return (
@@ -993,10 +1139,12 @@ const EventsDashboard = () => {
                                         <div className="legend-item rsvp-legend">
                                             <span className="legend-color rsvp-color"></span>
                                             <span className="legend-text">RSVP</span>
+                                            <span className="legend-count">({events.length})</span>
                                         </div>
                                         <div className="legend-item ticket-legend">
                                             <span className="legend-color ticket-color"></span>
                                             <span className="legend-text">Ticket</span>
+                                            <span className="legend-count">({ticketEvents.length})</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1031,7 +1179,7 @@ const EventsDashboard = () => {
                         </div>
                     </div>
 
-                    {/* EVENTS GRID - UPDATED CARD DESIGN */}
+                    {/* EVENTS GRID */}
                     <div className="events-grid">
                         {displayedEvents.length > 0 ? (
                             displayedEvents.map((event) => {
@@ -1043,6 +1191,7 @@ const EventsDashboard = () => {
                                 evDate.setHours(0, 0, 0, 0);
                                 const isUpcoming = evDate >= today;
                                 const stats = rsvpStats[event.event_id] || { yes: 0, no: 0, maybe: 0 };
+                                const eventTicketStats = ticketStats[event.event_id] || [];
 
                                 return (
                                     <div className="event-card-wrapper" key={event.event_id}>
@@ -1062,6 +1211,12 @@ const EventsDashboard = () => {
                                         <div className={`event-date-badge ${isUpcoming ? "upcoming" : "past"}`}>
                                             <i className={`bi ${isUpcoming ? "bi-arrow-up-right" : "bi-arrow-down-left"}`}></i>
                                             <span>{isUpcoming ? "Upcoming" : "Past"}</span>
+                                        </div>
+
+                                        {/* Event Type Badge */}
+                                        <div className={`event-type-badge ${event.has_tickets ? 'ticket-type' : 'rsvp-type'}`}>
+                                            <i className={`bi ${event.has_tickets ? 'bi-ticket-perforated' : 'bi-envelope'}`}></i>
+                                            <span>{event.has_tickets ? 'TICKET' : 'RSVP'}</span>
                                         </div>
 
                                         {/* Menu */}
@@ -1120,7 +1275,7 @@ const EventsDashboard = () => {
                                             </div>
                                         )}
 
-                                        {/* UPDATED CARD DESIGN - Image top, horizontal details, buttons bottom */}
+                                        {/* UPDATED CARD DESIGN */}
                                         <div
                                             className={`event-card modern-design ${event.has_tickets ? 'ticket-event-card' : 'rsvp-event-card'}`}
                                             onClick={() => handleEventClick(event.event_id)}
@@ -1129,20 +1284,19 @@ const EventsDashboard = () => {
                                                 opacity: cancelled ? 0.7 : 1
                                             }}
                                         >
-                                            {/* Event Image - Top Half */}
+                                            {/* Event Image */}
                                             <div className="event-image-section">
                                                 <img
                                                     src={getValidImageSrc(event.event_image)}
                                                     alt={event.event_name}
                                                     onError={(e) => {
-                                                        console.warn('Invalid event image, using fallback for event:', event.event_id);
                                                         e.target.src = "/images/default-event.jpg";
                                                     }}
                                                     className="event-main-image"
                                                 />
                                             </div>
 
-                                            {/* Event Details - Middle Section with HORIZONTAL LAYOUT */}
+                                            {/* Event Details */}
                                             <div className="event-details-section">
                                                 <h3 className="event-title">{event.event_name}</h3>
 
@@ -1179,12 +1333,10 @@ const EventsDashboard = () => {
                                                             </div>
                                                         </div>
                                                     </div>
-
-
                                                 </div>
+
                                                 {/* Location */}
                                                 <div className="detail-horizontal">
-
                                                     <div className="detail-content">
                                                         <div className="detail-value">
                                                             {event.event_location || 'Location TBD'}
@@ -1193,7 +1345,7 @@ const EventsDashboard = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Buttons - Bottom Section */}
+                                            {/* Buttons */}
                                             <div className="event-actions-section">
                                                 <button
                                                     className={`action-btn ${cancelled ? "disabled" : published ? "view-event-btn" : "complete-setup-btn"}`}
@@ -1207,12 +1359,7 @@ const EventsDashboard = () => {
 
                                                         localStorage.setItem("selectedEventId", event.event_id);
 
-                                                        // Check if it's a ticket event or RSVP event
-                                                        const isTicketEvent = event.has_tickets === 1 ||
-                                                            event.has_tickets === true ||
-                                                            event.has_tickets === "1";
-
-                                                        if (isTicketEvent) {
+                                                        if (event.has_tickets) {
                                                             navigate("/event_ticket_manage");
                                                         } else {
                                                             navigate("/eventManagement");
@@ -1238,11 +1385,12 @@ const EventsDashboard = () => {
                                                     className="action-btn reserve-btn"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        showReserveStats(event, stats);
+                                                        showReserveStats(event);
                                                     }}
                                                     disabled={cancelled}
                                                 >
-                                                    <i className="bi bi-people"></i> {event.has_tickets ? 'TICKET' : 'RESERVE'}
+                                                    <i className="bi bi-people"></i> 
+                                                    {event.has_tickets ? 'TICKET SALES' : 'RSVP'}
                                                 </button>
                                             </div>
                                         </div>
@@ -1279,7 +1427,7 @@ const EventsDashboard = () => {
                     <div className="modal-backdrop">
                         <div className="modal-container">
                             <div className="modal-header">
-                                <h2><i className="bi bi-people"></i> {reserveEvent.has_tickets ? 'Ticket Sales Stats' : 'Reserve Stats'}</h2>
+                                <h2><i className="bi bi-people"></i> {reserveEvent.has_tickets ? 'Ticket Sales Stats' : 'RSVP Stats'}</h2>
                                 <button className="modal-close" onClick={closeReserveModal}>
                                     <i className="bi bi-x-lg"></i>
                                 </button>
@@ -1292,31 +1440,34 @@ const EventsDashboard = () => {
                                     {reserveEvent.has_tickets ? (
                                         // Ticket Sales Stats
                                         <div className="reserve-stats-grid">
-                                            {Array.isArray(reserveStats.ticketStats) && reserveStats.ticketStats.length > 0 ? reserveStats.ticketStats.map((stat, index) => (
-                                                <div className="reserve-stat-card ticket-stat" key={index}>
-                                                    <div className="stat-icon">
-                                                        <i className="bi bi-ticket-perforated"></i>
+                                            {reserveStats.ticketStats && reserveStats.ticketStats.length > 0 ? (
+                                                <>
+                                                    {reserveStats.ticketStats.map((stat, index) => (
+                                                        <div className="reserve-stat-card ticket-stat" key={index}>
+                                                            <div className="stat-icon">
+                                                                <i className="bi bi-ticket-perforated"></i>
+                                                            </div>
+                                                            <div className="stat-content">
+                                                                <div className="stat-number">{stat.tickets_sold || 0}</div>
+                                                                <div className="stat-label">{stat.ticket_type_label || 'Unknown'}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <div className="reserve-stat-card total">
+                                                        <div className="stat-icon">
+                                                            <i className="bi bi-graph-up"></i>
+                                                        </div>
+                                                        <div className="stat-content">
+                                                            <div className="stat-number">
+                                                                {reserveStats.ticketStats.reduce((sum, stat) => sum + (parseInt(stat.tickets_sold) || 0), 0)}
+                                                            </div>
+                                                            <div className="stat-label">Total Tickets Sold</div>
+                                                        </div>
                                                     </div>
-                                                    <div className="stat-content">
-                                                        <div className="stat-number">{stat.tickets_sold || 0}</div>
-                                                        <div className="stat-label">{stat.ticket_type_label || 'Unknown'}</div>
-                                                    </div>
-                                                </div>
-                                            )) : (
+                                                </>
+                                            ) : (
                                                 <div className="no-stats">No tickets sold yet</div>
                                             )}
-
-                                            <div className="reserve-stat-card total">
-                                                <div className="stat-icon">
-                                                    <i className="bi bi-graph-up"></i>
-                                                </div>
-                                                <div className="stat-content">
-                                                    <div className="stat-number">
-                                                        {Array.isArray(reserveStats.ticketStats) ? reserveStats.ticketStats.reduce((sum, stat) => sum + (parseInt(stat.tickets_sold) || 0), 0) : 0}
-                                                    </div>
-                                                    <div className="stat-label">Total Tickets Sold</div>
-                                                </div>
-                                            </div>
                                         </div>
                                     ) : (
                                         // RSVP Stats
@@ -1356,7 +1507,11 @@ const EventsDashboard = () => {
                                                     <i className="bi bi-people"></i>
                                                 </div>
                                                 <div className="stat-content">
-                                                    <div className="stat-number">{(reserveStats.yes || 0) + (reserveStats.maybe || 0) + (reserveStats.no || 0)}</div>
+                                                    <div className="stat-number">
+                                                        {(reserveStats.rsvpStats?.yes || 0) + 
+                                                         (reserveStats.rsvpStats?.maybe || 0) + 
+                                                         (reserveStats.rsvpStats?.no || 0)}
+                                                    </div>
                                                     <div className="stat-label">Total Responses</div>
                                                 </div>
                                             </div>
@@ -1561,7 +1716,7 @@ const EventsDashboard = () => {
                     </div>
                 )}
 
-                {/* DELETE MODAL – RE-USES CANCEL UI */}
+                {/* DELETE MODAL */}
                 {showDeleteModal && (
                     <div className="modal-backdrop">
                         <div className="modal-container">

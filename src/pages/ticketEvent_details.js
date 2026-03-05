@@ -42,7 +42,7 @@ function TicketEvent_details() {
 
       const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
       const formData = new FormData();
-      formData.append("function", "getEventById");
+      formData.append("function", "getTicketEventById");
       formData.append("event_id", id);
 
       const res = await fetch(`${API_URL}/query.php`, {
@@ -76,6 +76,7 @@ function TicketEvent_details() {
   };
 
   const formatDate = (dateString) => {
+    console.log("Formatting date:", event.event_start_date);
     if (!dateString) return "Date TBA";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-GB", {
@@ -87,7 +88,7 @@ function TicketEvent_details() {
   };
 
   const formatPrice = (price) => {
-    if (!price) return "0.00";
+    if (!price && price !== 0) return "0.00";
     const num = parseFloat(String(price));
     return isNaN(num) ? "0.00" : num.toFixed(2);
   };
@@ -96,15 +97,44 @@ function TicketEvent_details() {
     if (!event) return "0.00";
 
     const prices = [
-      parseFloat(String(event.early_bird_price)),
-      parseFloat(String(event.general_price)),
-      parseFloat(String(event.vip_price)),
-      parseFloat(String(event.vvip_price)),
-    ].filter(price => price > 0);
+      { price: parseFloat(String(event.earlybird_price)), quantity: parseInt(event.earlybird_quantity) },
+      { price: parseFloat(String(event.general_price)), quantity: parseInt(event.general_quantity) },
+      { price: parseFloat(String(event.vip_price)), quantity: parseInt(event.vip_quantity) },
+      { price: parseFloat(String(event.vvip_price)) || 0, quantity: parseInt(event.vvip_quantity) || 0 }
+    ].filter(item => item.price > 0 && item.quantity > 0);
 
     if (prices.length === 0) return "0.00";
 
-    return Math.min(...prices).toFixed(2);
+    return Math.min(...prices.map(item => item.price)).toFixed(2);
+  };
+
+  // Helper function to get total available tickets
+  const getTotalAvailableTickets = () => {
+    if (!event) return 0;
+    
+    return (
+      (parseInt(event.earlybird_quantity) || 0) +
+      (parseInt(event.general_quantity) || 0) +
+      (parseInt(event.vip_quantity) || 0) +
+      (parseInt(event.vvip_quantity) || 0)
+    );
+  };
+
+  // Helper function to check if a ticket type is available
+  const isTicketTypeAvailable = (quantity, price) => {
+    return parseInt(quantity) > 0 && parseFloat(price) > 0;
+  };
+
+  // Helper function to get ticket status badge
+  const getTicketStatusBadge = (quantity, price) => {
+    if (parseInt(quantity) === 0) {
+      return <span className="ticket-status sold-out">Sold Out</span>;
+    } else if (parseInt(quantity) <= 10) {
+      return <span className="ticket-status limited">Only {quantity} left!</span>;
+    } else if (parseFloat(price) === 0) {
+      return <span className="ticket-status free">Free</span>;
+    }
+    return null;
   };
 
   if (loading) {
@@ -148,6 +178,8 @@ function TicketEvent_details() {
     return `https://www.google.com/maps?q=${encodedLocation}&output=embed`;
   };
 
+  const totalTickets = getTotalAvailableTickets();
+
   return (
     <div className="event-details-page">
       <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
@@ -170,8 +202,10 @@ function TicketEvent_details() {
               }}
             />
             <div className="banner-overlay"></div>
-            {(event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1") && (
-              <div className="ticket-badge">TICKETS AVAILABLE</div>
+            {totalTickets > 0 && (
+              <div className="ticket-badge">
+                <i className="bi bi-ticket-fill"></i> {totalTickets} Tickets Available
+              </div>
             )}
           </div>
 
@@ -183,7 +217,7 @@ function TicketEvent_details() {
               <div className="date-info">
                 <i className="bi bi-calendar-event"></i>
                 <div>
-                  <strong>{formatDate(event.event_start_date)}</strong>
+                  <strong>{formatDate(event.event_start_date || event.event_start_date)}</strong>
                 </div>
               </div>
               <div className="time-info">
@@ -195,21 +229,34 @@ function TicketEvent_details() {
               </div>
             </div>
 
-            {parseFloat(String(event.early_bird_price)) > 0 && (
-              <div className="early-bird-info">
-                {event.early_bird_quantity > 0 ? (
-                  <span className="limited">
-                    <i className="bi bi-stopwatch"></i>
-                    {event.early_bird_quantity} Early Bird tickets left
-                  </span>
-                ) : (
-                  <span className="limited sold-out">
-                    <i className="bi bi-exclamation-circle"></i>
-                    Early Bird Sold Out
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Ticket Availability Summary */}
+            <div className="ticket-summary">
+              <h4>Ticket Availability</h4>
+              {isTicketTypeAvailable(event.earlybird_quantity, event.earlybird_price) && (
+                <div className="ticket-summary-item">
+                  <span>Early Bird</span>
+                  <span className="ticket-summary-count">{event.earlybird_quantity} left</span>
+                </div>
+              )}
+              {isTicketTypeAvailable(event.general_quantity, event.general_price) && (
+                <div className="ticket-summary-item">
+                  <span>General Admission</span>
+                  <span className="ticket-summary-count">{event.general_quantity} left</span>
+                </div>
+              )}
+              {isTicketTypeAvailable(event.vip_quantity, event.vip_price) && (
+                <div className="ticket-summary-item">
+                  <span>VIP</span>
+                  <span className="ticket-summary-count">{event.vip_quantity} left</span>
+                </div>
+              )}
+              {isTicketTypeAvailable(event.vvip_quantity, event.vvip_price) && (
+                <div className="ticket-summary-item">
+                  <span>VVIP</span>
+                  <span className="ticket-summary-count">{event.vvip_quantity} left</span>
+                </div>
+              )}
+            </div>
 
             <div className="price">
               <p>Starting from</p>
@@ -219,8 +266,13 @@ function TicketEvent_details() {
             <button
               className="book-btn"
               onClick={handleBooking}
+              disabled={totalTickets === 0}
             >
-              Continue to Booking <i className="bi bi-arrow-right"></i>
+              {totalTickets > 0 ? (
+                <>Continue to Booking <i className="bi bi-arrow-right"></i></>
+              ) : (
+                <>Sold Out <i className="bi bi-x-circle"></i></>
+              )}
             </button>
           </div>
         </div>
@@ -231,11 +283,15 @@ function TicketEvent_details() {
         {/* TAGS */}
         <div className="event-tags">
           <span className="location-tag">
-            <i className="bi bi-geo-alt-fill"></i> {event.event_location || "Location TBA"}
+            <i className="bi bi-geo-alt-fill"></i> {event.address || event.event_location || "Location TBA"}
           </span>
-          {(event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1") && (
-            <span className="ticket-tag">
-              <i className="bi bi-ticket-fill"></i> Tickets Available
+          {totalTickets > 0 ? (
+            <span className="ticket-tag available">
+              <i className="bi bi-ticket-fill"></i> {totalTickets} Tickets Available
+            </span>
+          ) : (
+            <span className="ticket-tag sold-out">
+              <i className="bi bi-x-circle-fill"></i> Sold Out
             </span>
           )}
         </div>
@@ -258,7 +314,7 @@ function TicketEvent_details() {
             className={activeTab === "tickets" ? "active" : ""}
             onClick={() => setActiveTab("tickets")}
           >
-            Ticket Details
+            Ticket Details ({totalTickets})
           </button>
         </div>
 
@@ -268,7 +324,7 @@ function TicketEvent_details() {
             <div className="info-content">
               <div className="description-section">
                 <h4>About This Event</h4>
-                <p>{event.event_info || "No event description available."}</p>
+                <p>{event.more_info || event.event_info || "No event description available."}</p>
               </div>
               
               {event.organizer_name && (
@@ -288,13 +344,16 @@ function TicketEvent_details() {
 
           {activeTab === "venue" && (
             <div className="venue-content">
-              <h4>📍 {event.event_location || "Location TBA"}</h4>
+              <h4>📍 {event.address || event.event_location || "Location TBA"}</h4>
+              <p className="venue-detail">
+                <i className="bi bi-building"></i> {event.city || "City TBA"}, {event.province || "Province TBA"}
+              </p>
 
-              {event.event_location ? (
+              {event.address ? (
                 <div className="map-container">
                   <iframe
                     title="Event Location Map"
-                    src={getMapEmbedUrl(event.event_location)}
+                    src={getMapEmbedUrl(`${event.address}, ${event.city}, ${event.province}`)}
                     width="100%"
                     height="350"
                     style={{ border: 0, borderRadius: "12px" }}
@@ -313,38 +372,140 @@ function TicketEvent_details() {
 
           {activeTab === "tickets" && (
             <div className="tickets-content">
-              <h4>Available Ticket Types</h4>
+              <div className="tickets-header">
+                <h4>Available Ticket Types</h4>
+                <p className="total-tickets">Total Tickets Available: <strong>{totalTickets}</strong></p>
+              </div>
+              
               <div className="ticket-types">
-                {parseFloat(String(event.early_bird_price)) > 0 && (
-                  <div className="ticket-type">
+                {/* Early Bird Tickets */}
+                {parseFloat(String(event.earlybird_price)) >= 0 && (
+                  <div className={`ticket-type ${parseInt(event.earlybird_quantity) === 0 ? 'sold-out' : ''}`}>
                     <div className="ticket-type-header">
-                      <h5>Early Bird</h5>
-                      {event.early_bird_quantity && event.early_bird_quantity > 0 && (
-                        <span className="ticket-quantity">{event.early_bird_quantity} left</span>
-                      )}
+                      <div>
+                        <h5>Early Bird</h5>
+                        {parseInt(event.earlybird_quantity) > 0 && parseInt(event.earlybird_quantity) <= 10 && (
+                          <span className="limited-badge">Limited!</span>
+                        )}
+                      </div>
+                      {getTicketStatusBadge(event.earlybird_quantity, event.earlybird_price)}
                     </div>
-                    <p className="ticket-price">R {formatPrice(event.early_bird_price)}</p>
+                    <div className="ticket-details">
+                      <p className="ticket-price">R {formatPrice(event.earlybird_price)}</p>
+                      <div className="ticket-quantity-info">
+                        <i className="bi bi-ticket"></i>
+                        <span>{event.earlybird_quantity || 0} tickets left</span>
+                      </div>
+                    </div>
+                    {parseInt(event.earlybird_quantity) > 0 && (
+                      <div className="ticket-progress">
+                        <div 
+                          className="ticket-progress-bar" 
+                          style={{ width: `${Math.min(100, (parseInt(event.earlybird_quantity) / 100) * 100)}%` }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
                 )}
-                {parseFloat(String(event.general_price)) > 0 && (
-                  <div className="ticket-type">
-                    <h5>General Admission</h5>
-                    <p className="ticket-price">R {formatPrice(event.general_price)}</p>
+
+                {/* General Admission Tickets */}
+                {parseFloat(String(event.general_price)) >= 0 && (
+                  <div className={`ticket-type ${parseInt(event.general_quantity) === 0 ? 'sold-out' : ''}`}>
+                    <div className="ticket-type-header">
+                      <div>
+                        <h5>General Admission</h5>
+                        {parseInt(event.general_quantity) > 0 && parseInt(event.general_quantity) <= 10 && (
+                          <span className="limited-badge">Limited!</span>
+                        )}
+                      </div>
+                      {getTicketStatusBadge(event.general_quantity, event.general_price)}
+                    </div>
+                    <div className="ticket-details">
+                      <p className="ticket-price">R {formatPrice(event.general_price)}</p>
+                      <div className="ticket-quantity-info">
+                        <i className="bi bi-ticket"></i>
+                        <span>{event.general_quantity || 0} tickets left</span>
+                      </div>
+                    </div>
+                    {parseInt(event.general_quantity) > 0 && (
+                      <div className="ticket-progress">
+                        <div 
+                          className="ticket-progress-bar" 
+                          style={{ width: `${Math.min(100, (parseInt(event.general_quantity) / 100) * 100)}%` }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
                 )}
-                {parseFloat(String(event.vip_price)) > 0 && (
-                  <div className="ticket-type">
-                    <h5>VIP</h5>
-                    <p className="ticket-price">R {formatPrice(event.vip_price)}</p>
+
+                {/* VIP Tickets */}
+                {parseFloat(String(event.vip_price)) >= 0 && (
+                  <div className={`ticket-type ${parseInt(event.vip_quantity) === 0 ? 'sold-out' : ''}`}>
+                    <div className="ticket-type-header">
+                      <div>
+                        <h5>VIP</h5>
+                        {parseInt(event.vip_quantity) > 0 && parseInt(event.vip_quantity) <= 10 && (
+                          <span className="limited-badge">Limited!</span>
+                        )}
+                      </div>
+                      {getTicketStatusBadge(event.vip_quantity, event.vip_price)}
+                    </div>
+                    <div className="ticket-details">
+                      <p className="ticket-price">R {formatPrice(event.vip_price)}</p>
+                      <div className="ticket-quantity-info">
+                        <i className="bi bi-ticket"></i>
+                        <span>{event.vip_quantity || 0} tickets left</span>
+                      </div>
+                    </div>
+                    {parseInt(event.vip_quantity) > 0 && (
+                      <div className="ticket-progress">
+                        <div 
+                          className="ticket-progress-bar" 
+                          style={{ width: `${Math.min(100, (parseInt(event.vip_quantity) / 100) * 100)}%` }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
                 )}
+
+                {/* VVIP Tickets (if they exist) */}
                 {parseFloat(String(event.vvip_price)) > 0 && (
-                  <div className="ticket-type">
-                    <h5>VVIP</h5>
-                    <p className="ticket-price">R {formatPrice(event.vvip_price)}</p>
+                  <div className={`ticket-type ${parseInt(event.vvip_quantity) === 0 ? 'sold-out' : ''}`}>
+                    <div className="ticket-type-header">
+                      <div>
+                        <h5>VVIP</h5>
+                        {parseInt(event.vvip_quantity) > 0 && parseInt(event.vvip_quantity) <= 10 && (
+                          <span className="limited-badge">Limited!</span>
+                        )}
+                      </div>
+                      {getTicketStatusBadge(event.vvip_quantity, event.vvip_price)}
+                    </div>
+                    <div className="ticket-details">
+                      <p className="ticket-price">R {formatPrice(event.vvip_price)}</p>
+                      <div className="ticket-quantity-info">
+                        <i className="bi bi-ticket"></i>
+                        <span>{event.vvip_quantity || 0} tickets left</span>
+                      </div>
+                    </div>
+                    {parseInt(event.vvip_quantity) > 0 && (
+                      <div className="ticket-progress">
+                        <div 
+                          className="ticket-progress-bar" 
+                          style={{ width: `${Math.min(100, (parseInt(event.vvip_quantity) / 100) * 100)}%` }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+
+              {/* No Tickets Available Message */}
+              {totalTickets === 0 && (
+                <div className="no-tickets-message">
+                  <i className="bi bi-ticket"></i>
+                  <p>No tickets are currently available for this event.</p>
+                </div>
+              )}
             </div>
           )}
         </div>

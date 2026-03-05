@@ -3,6 +3,7 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -865,35 +866,7 @@ if ($fun === "saveEvent") {
     // Ticket data - Updated for new structure with quantities
     $hasTickets = isset($_POST['hasTickets']) ? intval($_POST['hasTickets']) : 0;
     $eventInfo = $_POST['eventInfo'] ?? '';
-    
-    // Individual ticket fields for backward compatibility
-    $earlyBirdPrice = isset($_POST['earlyBirdPrice']) ? floatval($_POST['earlyBirdPrice']) : 0.00;
-    $earlyBirdQuantity = isset($_POST['earlyBirdQuantity']) ? intval($_POST['earlyBirdQuantity']) : 0;
-    $generalPrice = isset($_POST['generalPrice']) ? floatval($_POST['generalPrice']) : 0.00;
-    $generalQuantity = isset($_POST['generalQuantity']) ? intval($_POST['generalQuantity']) : 0;
-    $vipPrice = isset($_POST['vipPrice']) ? floatval($_POST['vipPrice']) : 0.00;
-    $vipQuantity = isset($_POST['vipQuantity']) ? intval($_POST['vipQuantity']) : 0;
-    $vvipPrice = isset($_POST['vvipPrice']) ? floatval($_POST['vvipPrice']) : 0.00;
-    $vvipQuantity = isset($_POST['vvipQuantity']) ? intval($_POST['vvipQuantity']) : 0;
-    
-    $ticketConfig = $_POST['ticketConfig'] ?? '{}';
 
-    // Log ticket data for debugging
-    error_log("saveEvent - Has Tickets: " . $hasTickets);
-    error_log("saveEvent - Ticket Config (first 200 chars): " . substr($ticketConfig, 0, 200));
-    
-    // Log individual ticket quantities
-    error_log("saveEvent - Early Bird Qty: " . $earlyBirdQuantity);
-    error_log("saveEvent - General Qty: " . $generalQuantity);
-    error_log("saveEvent - VIP Qty: " . $vipQuantity);
-    error_log("saveEvent - VVIP Qty: " . $vvipQuantity);
-
-    // Log new event type field
-    error_log("saveEvent - Event Type: " . $eventType);
-    
-    // Log new location fields
-    error_log("saveEvent - Event City: " . $eventCity);
-    error_log("saveEvent - Event Province: " . $eventProvince);
 
     $createdAt = date('Y-m-d H:i:s');
 
@@ -911,11 +884,9 @@ if ($fun === "saveEvent") {
         $eventProvince = mb_convert_encoding($eventProvince, 'UTF-8', 'UTF-8');
         $eventDesignData = mb_convert_encoding($eventDesignData, 'UTF-8', 'UTF-8');
         $eventInfo = mb_convert_encoding($eventInfo, 'UTF-8', 'UTF-8');
-        $ticketConfig = mb_convert_encoding($ticketConfig, 'UTF-8', 'UTF-8');
 
         // Remove any invalid UTF-8 characters
         $eventDesignData = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $eventDesignData);
-        $ticketConfig = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $ticketConfig);
 
         // Check if eventDesignData is too large
         $designDataSize = strlen($eventDesignData);
@@ -947,17 +918,7 @@ if ($fun === "saveEvent") {
                 province = :province,
                 event_image = :event_image,
                 design_data = :design_data,
-                has_tickets = :has_tickets,
                 event_info = :event_info,
-                early_bird_price = :early_bird_price,
-                early_bird_quantity = :early_bird_quantity,
-                general_price = :general_price,
-                general_quantity = :general_quantity,
-                vip_price = :vip_price,
-                vip_quantity = :vip_quantity,
-                vvip_price = :vvip_price,
-                vvip_quantity = :vvip_quantity,
-                ticket_config = :ticket_config,
                 updated_at = :updated_at
                 WHERE event_id = :event_id AND user_id = :user_id
             ");
@@ -1015,17 +976,7 @@ if ($fun === "saveEvent") {
                 ':province' => $eventProvince,
                 ':event_image' => $eventImageToSave,
                 ':design_data' => $eventDesignData,
-                ':has_tickets' => $hasTickets,
                 ':event_info' => $eventInfo,
-                ':early_bird_price' => $earlyBirdPrice,
-                ':early_bird_quantity' => $earlyBirdQuantity,
-                ':general_price' => $generalPrice,
-                ':general_quantity' => $generalQuantity,
-                ':vip_price' => $vipPrice,
-                ':vip_quantity' => $vipQuantity,
-                ':vvip_price' => $vvipPrice,
-                ':vvip_quantity' => $vvipQuantity,
-                ':ticket_config' => $ticketConfig,
                 ':updated_at' => $createdAt,
                 ':event_id' => $eventID,
                 ':user_id' => $userID,
@@ -1037,15 +988,11 @@ if ($fun === "saveEvent") {
             // Insert new event with updated ticket data and new fields
             $columns = "user_id, user_name, event_id, event_name, event_start_date, event_start_time,
                    event_end_date, event_end_time, event_location, event_type,
-                   city, province, event_image, design_data, has_tickets, event_info, early_bird_price, 
-                   early_bird_quantity, general_price, general_quantity, vip_price, vip_quantity,
-                   vvip_price, vvip_quantity, ticket_config, created_at, updated_at";
+                   city, province, event_image, design_data, event_info, created_at, updated_at";
 
             $values = ":user_id, :user_name, :event_id, :event_name, :event_start_date, :event_start_time,
                   :event_end_date, :event_end_time, :event_location, :event_type,
-                  :city, :province, :event_image, :design_data, :has_tickets, :event_info, :early_bird_price, 
-                  :early_bird_quantity, :general_price, :general_quantity, :vip_price, :vip_quantity,
-                  :vvip_price, :vvip_quantity, :ticket_config, :created_at, :updated_at";
+                  :city, :province, :event_image, :design_data, :event_info, :created_at, :updated_at";
 
             $stmt = $pdo->prepare("INSERT INTO events ({$columns}) VALUES ({$values})");
 
@@ -1106,17 +1053,7 @@ if ($fun === "saveEvent") {
                 ':province' => $eventProvince,
                 ':event_image' => $eventImageToSave,
                 ':design_data' => $eventDesignData,
-                ':has_tickets' => $hasTickets,
                 ':event_info' => $eventInfo,
-                ':early_bird_price' => $earlyBirdPrice,
-                ':early_bird_quantity' => $earlyBirdQuantity,
-                ':general_price' => $generalPrice,
-                ':general_quantity' => $generalQuantity,
-                ':vip_price' => $vipPrice,
-                ':vip_quantity' => $vipQuantity,
-                ':vvip_price' => $vvipPrice,
-                ':vvip_quantity' => $vvipQuantity,
-                ':ticket_config' => $ticketConfig,
                 ':created_at' => $createdAt,
                 ':updated_at' => $createdAt,
             ]);
@@ -1172,6 +1109,207 @@ if ($fun === "saveEvent") {
     exit;
 }
 
+if($fun === "saveNewTicketEvent"){
+    $data = json_decode($_POST['data'], true);
+    
+    // Extract data from the parsed JSON
+    $eventName = $data['eventName'] ?? 'Ticket Event';
+    $address = $data['address'] ?? '';
+    $province = $data['province'] ?? '';
+    $cityTown = $data['cityTown'] ?? '';
+    $eventType = $data['eventType'] ?? '';
+    $moreInfo = $data['moreInfo'] ?? '';
+    
+    // Event dates and times
+    $eventStartDate = $data['eventStartDate'] ?? null;
+    $eventEndDate = $data['eventEndDate'] ?? null;
+    $eventStartTime = $data['eventStartTime'] ?? null;
+    $eventEndTime = $data['eventEndTime'] ?? null;
+    
+    // Ticket data - only 4 types
+    $generalPrice = isset($data['generalPrice']) && $data['generalPrice'] !== '' ? floatval($data['generalPrice']) : null;
+    $generalQuantity = isset($data['generalQuantity']) && $data['generalQuantity'] !== '' ? intval($data['generalQuantity']) : null;
+    
+    $earlybirdPrice = isset($data['earlybirdPrice']) && $data['earlybirdPrice'] !== '' ? floatval($data['earlybirdPrice']) : null;
+    $earlybirdQuantity = isset($data['earlybirdQuantity']) && $data['earlybirdQuantity'] !== '' ? intval($data['earlybirdQuantity']) : null;
+    
+    $vipPrice = isset($data['vipPrice']) && $data['vipPrice'] !== '' ? floatval($data['vipPrice']) : null;
+    $vipQuantity = isset($data['vipQuantity']) && $data['vipQuantity'] !== '' ? intval($data['vipQuantity']) : null;
+  
+    // Generate a unique event ID
+    $eventID = 'TKT' . time() . rand(100, 999);
+    
+    // Get user ID from POST data
+    $userID = $_POST['user_id'] ?? '';
+    $userName = $_POST['user_name'] ?? '';
+    
+    // Also check if they might be inside the data object
+    if (empty($userID) && isset($data['user_id'])) {
+        $userID = $data['user_id'];
+    }
+    if (empty($userName) && isset($data['user_name'])) {
+        $userName = $data['user_name'];
+    }
+    
+    // Log for debugging
+    error_log("saveNewTicketEvent - User ID from POST: " . $userID);
+    
+    if (empty($userID)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "User not logged in"
+        ]);
+        exit;
+    }
+    
+    // Handle image upload
+    $eventImage = $data['image'] ?? null;
+    $eventImageToSave = '';
+    
+    $createdAt = date('Y-m-d H:i:s');
+    
+    try {
+        // Set PHP memory limits
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', 300);
+        
+        // Handle image if it exists
+        if (!empty($eventImage)) {
+            if (is_string($eventImage) && (strpos($eventImage, 'data:image') === 0 || strlen($eventImage) > 1000)) {
+                $eventImageToSave = saveTicketEventImage($eventImage, $eventID);
+            }
+        }
+        
+        // Ensure UTF-8 encoding
+        $eventName = mb_convert_encoding($eventName, 'UTF-8', 'UTF-8');
+        $address = mb_convert_encoding($address, 'UTF-8', 'UTF-8');
+        $province = mb_convert_encoding($province, 'UTF-8', 'UTF-8');
+        $cityTown = mb_convert_encoding($cityTown, 'UTF-8', 'UTF-8');
+        $eventType = mb_convert_encoding($eventType, 'UTF-8', 'UTF-8');
+        $moreInfo = mb_convert_encoding($moreInfo, 'UTF-8', 'UTF-8');
+        
+        // Insert into ticket_events table
+        $stmt = $pdo->prepare("
+            INSERT INTO ticket_events (
+                event_id, user_id, user_name, event_name, 
+                event_start_date, event_end_date, event_start_time, event_end_time,
+                address, province, city, event_type, more_info, event_image,
+                general_price, general_quantity, earlybird_price, earlybird_quantity,
+                vip_price, vip_quantity,
+                created_at, updated_at
+            ) VALUES (
+                :event_id, :user_id, :user_name, :event_name,
+                :event_start_date, :event_end_date, :event_start_time, :event_end_time,
+                :address, :province, :city_town, :event_type, :more_info, :event_image,
+                :general_price, :general_quantity, :earlybird_price, :earlybird_quantity,
+                :vip_price, :vip_quantity,
+                :created_at, :updated_at
+            )
+        ");
+        
+        $result = $stmt->execute([
+            ':event_id' => $eventID,
+            ':user_id' => $userID,
+            ':user_name' => $userName,
+            ':event_name' => $eventName,
+            ':event_start_date' => $eventStartDate,
+            ':event_end_date' => $eventEndDate,
+            ':event_start_time' => $eventStartTime,
+            ':event_end_time' => $eventEndTime,
+            ':address' => $address,
+            ':province' => $province,
+            ':city_town' => $cityTown,
+            ':event_type' => $eventType,
+            ':more_info' => $moreInfo,
+            ':event_image' => $eventImageToSave,
+            ':general_price' => $generalPrice,
+            ':general_quantity' => $generalQuantity,
+            ':earlybird_price' => $earlybirdPrice,
+            ':earlybird_quantity' => $earlybirdQuantity,
+            ':vip_price' => $vipPrice,
+            ':vip_quantity' => $vipQuantity,
+            ':created_at' => $createdAt,
+            ':updated_at' => $createdAt,
+        ]);
+        
+        if ($result) {
+            echo json_encode([
+                "success" => true, 
+                "message" => "Ticket event created successfully!", 
+                "event_id" => $eventID
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false,
+                "message" => "Failed to insert event into database"
+            ]);
+        }
+        
+    } catch (PDOException $e) {
+        error_log("saveNewTicketEvent PDO Exception: " . $e->getMessage());
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    } catch (Exception $e) {
+        error_log("saveNewTicketEvent Exception: " . $e->getMessage());
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+function saveTicketEventImage($base64Image, $eventID) {
+    try {
+        $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'ticket_events';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Extract base64 data
+        if (preg_match('/^data:image\/(\w+);base64,(.+)$/', $base64Image, $matches)) {
+            $imageType = $matches[1];
+            $base64data = $matches[2];
+        } else {
+            $base64data = $base64Image;
+            $imageType = 'png';
+        }
+        
+        // Validate image type
+        $allowedTypes = ['png', 'jpeg', 'jpg', 'gif', 'webp'];
+        if (!in_array(strtolower($imageType), $allowedTypes)) {
+            $imageType = 'png';
+        }
+        
+        $filename = $eventID . '_' . time() . '.' . $imageType;
+        $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+        
+        $decoded = base64_decode($base64data);
+        if ($decoded === false) {
+            error_log("saveTicketEventImage - Failed to decode base64 data");
+            return '';
+        }
+        
+        if (file_put_contents($filePath, $decoded) === false) {
+            error_log("saveTicketEventImage - Failed to write file: " . $filePath);
+            return '';
+        }
+        
+        // Generate URL for the image
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+        $fileUrl = rtrim($protocol . '://' . $host . $scriptDir, '/') . '/uploads/ticket_events/' . $filename;
+        
+        return $fileUrl;
+        
+    } catch (Exception $e) {
+        error_log("saveTicketEventImage Exception: " . $e->getMessage());
+        return '';
+    }
+}
+
 if ($fun === "getusercount") {
 
     try {
@@ -1208,9 +1346,8 @@ if ($fun === "getEventTickets") {
         $stmt = $pdo->prepare("
             SELECT 
                 event_id,
-                has_tickets,
                 event_info,
-                early_bird_price,
+                earlybird_price,
                 early_bird_quantity,
                 general_price,
                 general_quantity,
@@ -1220,7 +1357,7 @@ if ($fun === "getEventTickets") {
                 vvip_quantity,
                 ticket_config,
                 guest_limit
-            FROM events 
+            FROM ticket_events 
             WHERE event_id = :event_id
         ");
         
@@ -1248,10 +1385,10 @@ if ($fun === "getEventTickets") {
         $tickets = [];
         
         // Early Bird Ticket
-        if (!empty($event['early_bird_price']) && $event['early_bird_quantity'] > 0) {
+        if (!empty($event['earlybird_price']) && $event['early_bird_quantity'] > 0) {
             $tickets[] = [
                 'ticket_type' => 'Early Bird',
-                'price' => floatval($event['early_bird_price']),
+                'price' => floatval($event['earlybird_price']),
                 'quantity_available' => intval($event['early_bird_quantity']),
                 'description' => 'Limited early bird tickets',
                 'type_key' => 'earlyBird'
@@ -1343,7 +1480,7 @@ if ($fun === "saveTicketConfiguration") {
     $event_info = $_POST['event_info'] ?? '';
     
     // Individual ticket fields
-    $early_bird_price = isset($_POST['early_bird_price']) ? floatval($_POST['early_bird_price']) : 0.00;
+    $earlybird_price = isset($_POST['earlybird_price']) ? floatval($_POST['earlybird_price']) : 0.00;
     $early_bird_quantity = isset($_POST['early_bird_quantity']) ? intval($_POST['early_bird_quantity']) : 0;
     $general_price = isset($_POST['general_price']) ? floatval($_POST['general_price']) : 0.00;
     $general_quantity = isset($_POST['general_quantity']) ? intval($_POST['general_quantity']) : 0;
@@ -1368,7 +1505,7 @@ if ($fun === "saveTicketConfiguration") {
             UPDATE events SET
                 has_tickets = :has_tickets,
                 event_info = :event_info,
-                early_bird_price = :early_bird_price,
+                earlybird_price = :earlybird_price,
                 early_bird_quantity = :early_bird_quantity,
                 general_price = :general_price,
                 general_quantity = :general_quantity,
@@ -1384,7 +1521,7 @@ if ($fun === "saveTicketConfiguration") {
         $stmt->execute([
             ':has_tickets' => $has_tickets,
             ':event_info' => $event_info,
-            ':early_bird_price' => $early_bird_price,
+            ':earlybird_price' => $earlybird_price,
             ':early_bird_quantity' => $early_bird_quantity,
             ':general_price' => $general_price,
             ':general_quantity' => $general_quantity,
@@ -1431,46 +1568,316 @@ if ($fun === "geteventcount") {
     exit;
 }
 
-if ($fun === "updateEvent") {
+if ($fun === 'cancelEvent') {
     $event_id = $_POST['event_id'] ?? '';
-    $event_name = $_POST['event_name'] ?? '';
-    $event_start_date = $_POST['event_start_date'] ?? '';
-    $event_start_time = $_POST['event_start_time'] ?? '';
-    $event_end_date = $_POST['event_end_date'] ?? '';
-    $event_end_time = $_POST['event_end_time'] ?? '';
-    $updated_at = date('Y-m-d H:i:s');
+    $user_id = $_POST['user_id'] ?? '';
 
-    if (empty($event_id) || empty($event_name) || empty($event_start_date)) {
-        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+    if (empty($event_id)) {
+        echo json_encode(["success" => false, "message" => "Missing event ID"]);
+        exit;
+    }
+
+    try {
+        // First check if this is a ticket event or regular event
+        $checkTicketStmt = $pdo->prepare("SELECT event_id, event_name FROM ticket_events WHERE event_id = ? AND user_id = ?");
+        $checkTicketStmt->execute([$event_id, $user_id]);
+        $ticketEvent = $checkTicketStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($ticketEvent) {
+            // This is a ticket event - update ticket_events table
+            $stmt = $pdo->prepare("UPDATE ticket_events SET status = 'cancelled', updated_at = NOW() WHERE event_id = ?");
+            $stmt->execute([$event_id]);
+            $eventName = $ticketEvent['event_name'];
+        } else {
+            // Check regular events table
+            $verifyStmt = $pdo->prepare("SELECT event_id, event_name FROM events WHERE event_id = ? AND user_id = ?");
+            $verifyStmt->execute([$event_id, $user_id]);
+            $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$event) {
+                echo json_encode(["success" => false, "message" => "Event not found or you don't have permission to cancel it"]);
+                exit;
+            }
+
+            // Update regular events table
+            $stmt = $pdo->prepare("UPDATE events SET status = 'cancelled', updated_at = NOW() WHERE event_id = ?");
+            $stmt->execute([$event_id]);
+            $eventName = $event['event_name'];
+        }
+
+        if ($stmt->rowCount() > 0) {
+            // Log the activity
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id' => $user_id,
+                ':action' => 'Event Cancelled',
+                ':description' => "Event '{$eventName}' was cancelled at " . date('Y-m-d H:i:s'),
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Event cancelled successfully",
+                "event_name" => $eventName
+            ]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Event not found or already cancelled"]);
+        }
+
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === 'reactivateEvent') {
+    $event_id = $_POST['event_id'] ?? '';
+    $user_id = $_POST['user_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode(["success" => false, "message" => "Missing event ID"]);
+        exit;
+    }
+
+    try {
+        // First check if this is a ticket event or regular event
+        $checkTicketStmt = $pdo->prepare("SELECT event_id, event_name FROM ticket_events WHERE event_id = ? AND user_id = ?");
+        $checkTicketStmt->execute([$event_id, $user_id]);
+        $ticketEvent = $checkTicketStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($ticketEvent) {
+            // This is a ticket event - reactivate in ticket_events table
+            // For ticket events, set status back to 'published'
+            $stmt = $pdo->prepare("UPDATE ticket_events SET status = 'published', updated_at = NOW() WHERE event_id = ?");
+            $stmt->execute([$event_id]);
+            $eventName = $ticketEvent['event_name'];
+        } else {
+            // Check regular events table
+            $verifyStmt = $pdo->prepare("SELECT event_id, event_name, published FROM events WHERE event_id = ? AND user_id = ?");
+            $verifyStmt->execute([$event_id, $user_id]);
+            $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$event) {
+                echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
+                exit;
+            }
+
+            // Reactivate regular event - set status based on published state
+            $stmt = $pdo->prepare("UPDATE events SET status = CASE WHEN published = 1 THEN 'published' ELSE 'draft' END, updated_at = NOW() WHERE event_id = ?");
+            $stmt->execute([$event_id]);
+            $eventName = $event['event_name'];
+        }
+
+        if ($stmt->rowCount() > 0) {
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id' => $user_id,
+                ':action' => 'Event Reactivated',
+                ':description' => "Event '{$eventName}' was reactivated at " . date('Y-m-d H:i:s'),
+            ]);
+
+            echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Event not found or already active"]);
+        }
+
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === 'deleteEvent') {
+    $event_id = $_POST['event_id'] ?? '';
+    $user_id = $_POST['user_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode(["success" => false, "message" => "Missing event ID"]);
+        exit;
+    }
+
+    try {
+        // First check if this is a ticket event or regular event
+        $checkTicketStmt = $pdo->prepare("SELECT event_id, event_name FROM ticket_events WHERE event_id = ? AND user_id = ?");
+        $checkTicketStmt->execute([$event_id, $user_id]);
+        $ticketEvent = $checkTicketStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($ticketEvent) {
+            // This is a ticket event - delete from ticket_events table
+            $stmt = $pdo->prepare("DELETE FROM ticket_events WHERE event_id = ? AND user_id = ?");
+            $stmt->execute([$event_id, $user_id]);
+            $eventName = $ticketEvent['event_name'];
+        } else {
+            // Check regular events table
+            $verifyStmt = $pdo->prepare("SELECT event_id, event_name FROM events WHERE event_id = ? AND user_id = ?");
+            $verifyStmt->execute([$event_id, $user_id]);
+            $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$event) {
+                echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
+                exit;
+            }
+
+            // Delete from regular events table
+            $stmt = $pdo->prepare("DELETE FROM events WHERE event_id = ? AND user_id = ?");
+            $stmt->execute([$event_id, $user_id]);
+            $eventName = $event['event_name'];
+        }
+
+        if ($stmt->rowCount() > 0) {
+            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+            $logStmt->execute([
+                ':user_id' => $user_id,
+                ':action' => 'Event Deleted',
+                ':description' => "Event '{$eventName}' was permanently deleted at " . date('Y-m-d H:i:s'),
+            ]);
+
+            echo json_encode(["success" => true, "message" => "Event deleted successfully"]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Event not found"]);
+        }
+
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "getTicketSalesStats") {
+    $event_id = $_POST['event_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode(["success" => false, "message" => "Event ID required"]);
         exit;
     }
 
     try {
         $stmt = $pdo->prepare("
-            UPDATE events SET
-                event_name       = :event_name,
-                event_start_date = :event_start_date,
-                event_start_time = :event_start_time,
-                event_end_date   = :event_end_date,
-                event_end_time   = :event_end_time,
-                updated_at       = :updated_at
+            SELECT 
+                ticket_type_label,
+                SUM(quantity) as tickets_sold,
+                SUM(total_amount) as total_revenue
+            FROM bookings 
+            WHERE event_id = :event_id 
+            AND payment_status = 'completed'
+            GROUP BY ticket_type_label
+            ORDER BY ticket_type_label
+        ");
+
+        $stmt->execute([':event_id' => $event_id]);
+        $stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Also get total tickets available from ticket_events
+        $totalStmt = $pdo->prepare("
+            SELECT 
+                earlybird_quantity,
+                general_quantity,
+                vip_quantity
+            FROM ticket_events 
             WHERE event_id = :event_id
         ");
+        
+        $totalStmt->execute([':event_id' => $event_id]);
+        $quantities = $totalStmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "ticket_stats" => $stats,
+            "total_available" => $quantities ? [
+                'earlybird' => (int)($quantities['earlybird_quantity'] ?? 0),
+                'general' => (int)($quantities['general_quantity'] ?? 0),
+                'vip' => (int)($quantities['vip_quantity'] ?? 0)
+            ] : null
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "updateEvent") {
+    $event_id = $_POST['event_id'] ?? '';
+    $user_id = $_POST['user_id'] ?? '';
+    $event_name = $_POST['event_name'] ?? '';
+    $event_location = $_POST['event_location'] ?? '';
+    $event_start_date = $_POST['event_start_date'] ?? '';
+    $event_start_time = $_POST['event_start_time'] ?? '';
+    $event_end_date = $_POST['event_end_date'] ?? '';
+    $event_end_time = $_POST['event_end_time'] ?? '';
+
+    if (!$event_id || !$user_id) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing required fields"
+        ]);
+        exit;
+    }
+
+    try {
+        // First check if this is a ticket event or regular event
+        $checkTicketStmt = $pdo->prepare("SELECT event_id FROM ticket_events WHERE event_id = ? AND user_id = ?");
+        $checkTicketStmt->execute([$event_id, $user_id]);
+        $isTicketEvent = $checkTicketStmt->fetch() ? true : false;
+
+        if ($isTicketEvent) {
+            // Update ticket_events table
+            $stmt = $pdo->prepare("
+                UPDATE ticket_events SET
+                    event_name = :event_name,
+                    address = :event_location,
+                    event_start_date = :event_start_date,
+                    event_start_time = :event_start_time,
+                    event_end_date = :event_end_date,
+                    event_end_time = :event_end_time,
+                    updated_at = NOW()
+                WHERE event_id = :event_id AND user_id = :user_id
+            ");
+        } else {
+            // Update regular events table
+            $stmt = $pdo->prepare("
+                UPDATE events SET
+                    event_name = :event_name,
+                    event_location = :event_location,
+                    event_start_date = :event_start_date,
+                    event_start_time = :event_start_time,
+                    event_end_date = :event_end_date,
+                    event_end_time = :event_end_time,
+                    updated_at = NOW()
+                WHERE event_id = :event_id AND user_id = :user_id
+            ");
+        }
 
         $stmt->execute([
             ':event_name' => $event_name,
+            ':event_location' => $event_location,
             ':event_start_date' => $event_start_date,
             ':event_start_time' => $event_start_time,
             ':event_end_date' => $event_end_date,
             ':event_end_time' => $event_end_time,
-            ':updated_at' => $updated_at,
-            ':event_id' => $event_id, // This was missing
+            ':event_id' => $event_id,
+            ':user_id' => $user_id
         ]);
 
-        echo json_encode(["success" => true, "message" => "Event updated successfully"]);
+        // Log the activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
+        $logStmt->execute([
+            ':user_id' => $user_id,
+            ':action' => 'Event Updated',
+            ':description' => "Event '{$event_name}' was updated at " . date('Y-m-d H:i:s'),
+        ]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Event updated successfully!"
+        ]);
 
     } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
     }
     exit;
 }
@@ -1572,6 +1979,154 @@ if ($fun === "getEventById") {
         $stmt = $pdo->prepare("SELECT * FROM events WHERE event_id = :event_id");
         $stmt->execute([":event_id" => $event_id]);
         $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "events" => $events,
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getUserTicketEvents") {
+    $userID = $_POST['userID'] ?? '';
+
+    if (!$userID) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing user ID",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                e.*,
+                u.name AS organizer_name,
+                u.email AS organizer_email,
+                1 AS has_tickets,
+                'ticket' AS event_type_category
+            FROM ticket_events e
+            LEFT JOIN users u ON e.user_id = u.user_id COLLATE utf8mb4_unicode_ci
+            WHERE e.user_id = :user_id
+            ORDER BY COALESCE(e.event_start_date, e.created_at) DESC
+        ");
+        
+        $stmt->execute([':user_id' => $userID]);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Process events
+        foreach ($events as &$event) {
+            $event['has_tickets'] = 1;
+            $event['earlybird_price'] = (float) ($event['earlybird_price'] ?? 0);
+            $event['general_price'] = (float) ($event['general_price'] ?? 0);
+            $event['vip_price'] = (float) ($event['vip_price'] ?? 0);
+            
+            $event['earlybird_quantity'] = (int) ($event['earlybird_quantity'] ?? 0);
+            $event['general_quantity'] = (int) ($event['general_quantity'] ?? 0);
+            $event['vip_quantity'] = (int) ($event['vip_quantity'] ?? 0);
+            
+            $event['status'] = strtolower($event['status'] ?? 'published');
+            $event['event_start_date'] = $event['event_start_date'] ?? null;
+            $event['event_end_date'] = $event['event_end_date'] ?? null;
+            $event['event_start_time'] = $event['event_start_time'] ?? null;
+            $event['event_end_time'] = $event['event_end_time'] ?? null;
+            $event['event_location'] = $event['address'] ?? null;
+            $event['event_name'] = $event['event_name'] ?? 'Untitled Event';
+            $event['event_image'] = $event['event_image'] ?? '/images/default-event.jpg';
+        }
+
+        echo json_encode([
+            "success" => true,
+            "events" => $events,
+            "count" => count($events)
+        ]);
+        
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getTicketEventById") {
+    $event_id = $_POST['event_id'] ?? '';
+
+    if (!$event_id) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing event ID",
+        ]);
+        exit;
+    }
+
+    try {
+        // Query the ticket_events table with the correct column names
+        $stmt = $pdo->prepare("
+            SELECT 
+                e.*,
+                u.name AS organizer_name,
+                u.email AS organizer_email
+            FROM ticket_events e
+            LEFT JOIN users u ON e.user_id = u.user_id COLLATE utf8mb4_unicode_ci
+            WHERE e.event_id = :event_id
+        ");
+
+        $stmt->execute([":event_id" => $event_id]);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Process the event data with correct column names
+        if (!empty($events)) {
+            foreach ($events as &$event) {
+                // Handle price fields with correct column names
+                $event['earlybird_price'] = (float) ($event['earlybird_price'] ?? 0);
+                $event['general_price'] = (float) ($event['general_price'] ?? 0);
+                $event['vip_price'] = (float) ($event['vip_price'] ?? 0);
+                
+                // Handle quantities
+                $event['earlybird_quantity'] = (int) ($event['earlybird_quantity'] ?? 0);
+                $event['general_quantity'] = (int) ($event['general_quantity'] ?? 0);
+                $event['vip_quantity'] = (int) ($event['vip_quantity'] ?? 0);
+                
+                // Handle status (if it exists, otherwise default)
+                $event['status'] = strtolower($event['status'] ?? 'published');
+                
+                // Handle has_tickets (check if any tickets are available)
+                $hasTickets = (
+                    ($event['general_quantity'] > 0 && $event['general_price'] > 0) ||
+                    ($event['earlybird_quantity'] > 0 && $event['earlybird_price'] > 0) ||
+                    ($event['vip_quantity'] > 0 && $event['vip_price'] > 0)
+                );
+                $event['has_tickets'] = $hasTickets ? 1 : 0;
+                
+                // Handle event name
+                $event['event_name'] = $event['event_name'] ?? 'Untitled Event';
+                
+                // Handle event image
+                $event['event_image'] = $event['event_image'] ?? '/images/default-event.jpg';
+                
+                // Handle dates
+                $event['event_start_date'] = $event['event_start_date'] ?? null;
+                $event['event_start_time'] = $event['event_start_time'] ?? null;
+                $event['event_end_time'] = $event['event_end_time'] ?? null;
+                
+                // Handle location
+                $event['event_location'] = $event['address'] ?? null;
+                $event['province'] = $event['province'] ?? null;
+                $event['city'] = $event['city'] ?? null;
+                
+                // Handle description
+                $event['event_info'] = $event['more_info'] ?? 'No event description available.';
+            }
+        }
 
         echo json_encode([
             "success" => true,
@@ -1814,26 +2369,6 @@ if ($fun === "getInvitationStats") {
             "success" => false,
             "message" => "Database error: " . $e->getMessage(),
         ]);
-    }
-    exit;
-}
-
-if ($fun === "deleteEvent") {
-    $event_id = $_POST['event_id'] ?? '';
-    $user_id = $_POST['user_id'] ?? '';
-
-    if (!$event_id) {
-        echo json_encode(["success" => false, "message" => "Missing event ID"]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("UPDATE events SET is_deleted = 1 WHERE event_id = :event_id");
-        $stmt->execute([":event_id" => $event_id]);
-
-        echo json_encode(["success" => true]);
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
 }
@@ -3753,96 +4288,6 @@ if ($fun === "updateEventGuestLimit") {
     exit;
 }
 
-if ($fun === 'cancelEvent') {
-    $event_id = $_POST['event_id'] ?? '';
-    $user_id = $_POST['user_id'] ?? '';
-
-    if (empty($event_id)) {
-        echo json_encode(["success" => false, "message" => "Missing event ID"]);
-        exit;
-    }
-
-    try {
-        // First verify the event exists and belongs to the user
-        $verifyStmt = $pdo->prepare("SELECT event_id, event_name FROM events WHERE event_id = ? AND user_id = ?");
-        $verifyStmt->execute([$event_id, $user_id]);
-        $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$event) {
-            echo json_encode(["success" => false, "message" => "Event not found or you don't have permission to cancel it"]);
-            exit;
-        }
-
-        // Update event status to 'cancelled'
-        $stmt = $pdo->prepare("UPDATE events SET status = 'cancelled', updated_at = NOW() WHERE event_id = ?");
-        $stmt->execute([$event_id]);
-
-        if ($stmt->rowCount() > 0) {
-            // ✅ CORRECTED: Log as Event Cancelled
-            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-            $logStmt->execute([
-                ':user_id' => $user_id,
-                ':action' => 'Event Cancelled',  // ← CORRECTED
-                ':description' => "Event '{$event['event_name']}' was cancelled at " . date('Y-m-d H:i:s'),  // ← CORRECTED
-            ]);
-
-            echo json_encode([
-                "success" => true,
-                "message" => "Event cancelled successfully",
-                "event_name" => $event['event_name']
-            ]);
-        } else {
-            echo json_encode(["success" => false, "message" => "Event not found or already cancelled"]);
-        }
-
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-if ($fun === 'reactivateEvent') {
-    $event_id = $_POST['event_id'] ?? '';
-    $user_id = $_POST['user_id'] ?? '';
-
-    if (empty($event_id)) {
-        echo json_encode(["success" => false, "message" => "Missing event ID"]);
-        exit;
-    }
-
-    try {
-        // Verify event exists and belongs to user
-        $verifyStmt = $pdo->prepare("SELECT event_id, event_name FROM events WHERE event_id = ? AND user_id = ?");
-        $verifyStmt->execute([$event_id, $user_id]);
-        $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$event) {
-            echo json_encode(["success" => false, "message" => "Event not found or unauthorized"]);
-            exit;
-        }
-
-        // Reactivate event - set status based on previous published state
-        $stmt = $pdo->prepare("UPDATE events SET status = CASE WHEN published = 1 THEN 'published' ELSE 'draft' END WHERE event_id = ?");
-        $stmt->execute([$event_id]);
-
-        if ($stmt->rowCount() > 0) {
-            $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (:user_id, :action, :description)");
-            $logStmt->execute([
-                ':user_id' => $user_id,
-                ':action' => 'Event Reactivated',
-                ':description' => "Event '{$event['event_name']}' was reactivated at " . date('Y-m-d H:i:s'),
-            ]);
-
-            echo json_encode(["success" => true, "message" => "Event reactivated successfully"]);
-        } else {
-            echo json_encode(["success" => false, "message" => "Event not found or already active"]);
-        }
-
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
 
 if ($fun === "removeGuests") {
     $guest_ids = $_POST['guest_ids'] ?? '';
@@ -5931,16 +6376,14 @@ if ($fun === "updateBusinessEventCount") {
 // ticket functions
 
 if ($fun === "getTicketEvents") {
-
     try {
         $stmt = $pdo->prepare("
             SELECT 
                 e.*,
                 u.name AS organizer_name,
                 u.email AS organizer_email
-            FROM events e
-            LEFT JOIN users u ON e.user_id = u.user_id
-            WHERE e.has_tickets = 1
+            FROM ticket_events e
+            LEFT JOIN users u ON e.user_id = u.user_id COLLATE utf8mb4_unicode_ci
             ORDER BY COALESCE(e.event_start_date, e.created_at) ASC, e.created_at DESC
         ");
 
@@ -5948,20 +6391,43 @@ if ($fun === "getTicketEvents") {
         $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($events as &$event) {
-            $event['has_tickets'] = (int) $event['has_tickets'];
-            $event['early_bird_price'] = (float) $event['early_bird_price'];
-            $event['general_price'] = (float) $event['general_price'];
-            $event['vip_price'] = (float) $event['vip_price'];
-            $event['vvip_price'] = (float) $event['vvip_price'];
-            // Ensure status is lowercase for consistent checking
-            $event['status'] = strtolower($event['status'] ?? 'draft');
+            // Use correct column names from your table
+            $event['earlybird_price'] = (float) ($event['earlybird_price'] ?? 0);
+            $event['general_price'] = (float) ($event['general_price'] ?? 0);
+            $event['vip_price'] = (float) ($event['vip_price'] ?? 0);
+            $event['vvip_price'] = 0; // VVIP doesn't exist in your table
+            
+            // Handle quantities
+            $event['earlybird_quantity'] = (int) ($event['earlybird_quantity'] ?? 0);
+            $event['general_quantity'] = (int) ($event['general_quantity'] ?? 0);
+            $event['vip_quantity'] = (int) ($event['vip_quantity'] ?? 0);
+            
+            // Calculate if event has tickets available
+            $hasTickets = (
+                (($event['general_quantity'] ?? 0) > 0 && ($event['general_price'] ?? 0) > 0) ||
+                (($event['earlybird_quantity'] ?? 0) > 0 && ($event['earlybird_price'] ?? 0) > 0) ||
+                (($event['vip_quantity'] ?? 0) > 0 && ($event['vip_price'] ?? 0) > 0)
+            );
+            $event['has_tickets'] = $hasTickets ? 1 : 0;
+            
+            // Ensure status is lowercase (if status column exists, otherwise default)
+            $event['status'] = strtolower($event['status'] ?? 'published');
+            
+            // Keep original field names for frontend
+            $event['event_start_date'] = $event['event_start_date'] ?? null;
+            $event['event_end_date'] = $event['event_end_date'] ?? null;
+            $event['event_start_time'] = $event['event_start_time'] ?? null;
+            $event['event_end_time'] = $event['event_end_time'] ?? null;
+            $event['event_location'] = $event['address'] ?? null;
+            $event['event_info'] = $event['more_info'] ?? 'No event description available.';
+            $event['event_name'] = $event['event_name'] ?? 'Untitled Event';
+            $event['event_image'] = $event['event_image'] ?? '/images/default-event.jpg';
         }
 
         echo json_encode([
             "success" => true,
             "events" => $events,
-            "count" => count($events),
-            "debug" => "Query executed successfully"
+            "count" => count($events)
         ]);
     } catch (PDOException $e) {
         echo json_encode([
@@ -6136,41 +6602,6 @@ if ($fun === "processTicketPayment") {
     exit;
 }
 
-if ($fun === "getTicketSalesStats") {
-    $event_id = $_POST['event_id'] ?? '';
-
-    if (empty($event_id)) {
-        echo json_encode(["success" => false, "message" => "Event ID required"]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("
-                SELECT 
-                    ticket_type_label,
-                    SUM(quantity) as tickets_sold
-                FROM bookings 
-                WHERE event_id = :event_id 
-                AND payment_status = 'completed'
-                GROUP BY ticket_type_label
-                ORDER BY ticket_type_label
-            ");
-
-        $stmt->execute([':event_id' => $event_id]);
-        $stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "ticket_stats" => $stats
-        ]);
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage()
-        ]);
-    }
-    exit;
-}
 
 if ($fun === "getBookingDetails") {
     $event_id = $_POST['event_id'] ?? '';
@@ -6188,7 +6619,7 @@ if ($fun === "getBookingDetails") {
         $stmt->execute([":event_id" => $event_id]);
         $bookingDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $eventStmt = $pdo->prepare("SELECT event_id, event_name, event_start_date, event_location, has_tickets FROM events WHERE event_id = :event_id");
+        $eventStmt = $pdo->prepare("SELECT event_id, event_name, event_start_date, address FROM ticket_events WHERE event_id = :event_id");
         $eventStmt->execute([":event_id" => $event_id]);
         $eventData = $eventStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -6208,7 +6639,8 @@ if ($fun === "getBookingDetails") {
 
 if ($fun === "getTrendingEvents") {
     try {
-        // First try to get events that have sold tickets
+        
+        // Get events that have sold tickets from ticket_events
         $stmt = $pdo->prepare("
             SELECT 
                 e.*,
@@ -6217,10 +6649,11 @@ if ($fun === "getTrendingEvents") {
                 COALESCE(SUM(b.quantity), 0) AS total_tickets_sold,
                 COALESCE(SUM(b.total_amount), 0) AS total_revenue,
                 COUNT(DISTINCT b.bookingId) AS total_bookings
-            FROM events e
-            LEFT JOIN users u ON e.user_id = u.user_id
-            LEFT JOIN bookings b ON e.event_id = b.event_id
-            WHERE e.has_tickets = 1 
+            FROM ticket_events e
+            LEFT JOIN users u ON e.user_id = u.user_id COLLATE utf8mb4_unicode_ci
+            LEFT JOIN bookings b ON e.event_id = b.event_id COLLATE utf8mb4_unicode_ci
+            WHERE e.status = 'published' 
+              AND (e.status IS NOT NULL AND e.status != 'cancelled' AND e.status != 'canceled')
             GROUP BY e.event_id
             HAVING total_tickets_sold > 0
             ORDER BY total_tickets_sold DESC
@@ -6230,7 +6663,7 @@ if ($fun === "getTrendingEvents") {
         $stmt->execute();
         $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // If no events with sales, get recent events
+        // If no events with sales, get recent published events from ticket_events
         if (empty($events)) {
             $stmt = $pdo->prepare("
                 SELECT 
@@ -6240,9 +6673,10 @@ if ($fun === "getTrendingEvents") {
                     0 AS total_tickets_sold,
                     0 AS total_revenue,
                     0 AS total_bookings
-                FROM events e
-                LEFT JOIN users u ON e.user_id = u.user_id
-                WHERE e.has_tickets = 1 
+                FROM ticket_events e
+                LEFT JOIN users u ON e.user_id = u.user_id COLLATE utf8mb4_unicode_ci
+                WHERE e.status = 'published' 
+                  AND (e.status IS NOT NULL AND e.status != 'cancelled' AND e.status != 'canceled')
                 ORDER BY e.created_at DESC
                 LIMIT 10
             ");
@@ -6250,12 +6684,31 @@ if ($fun === "getTrendingEvents") {
             $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
-        // Format the events - REMOVED (int) casting for event_id
+        // Format the events
         foreach ($events as &$event) {
-            // Don't cast to int - keep as string for UUID
-            $event['event_id'] = $event['event_id']; // Keep as original UUID string
-            $event['has_tickets'] = (int) $event['has_tickets'];
+            // Keep event_id as string
+            $event['event_id'] = $event['event_id'];
+            
+            // Calculate total available tickets
+            $totalAvailable = (
+                (int)($event['general_quantity'] ?? 0) +
+                (int)($event['earlybird_quantity'] ?? 0) +
+                (int)($event['vip_quantity'] ?? 0)
+            );
+            
+            // Determine if event has tickets available
+            $event['has_tickets'] = $totalAvailable > 0 ? 1 : 0;
+            
+            // Handle quantities
             $event['total_tickets_sold'] = (int) ($event['total_tickets_sold'] ?? 0);
+            $event['general_quantity'] = (int) ($event['general_quantity'] ?? 0);
+            $event['earlybird_quantity'] = (int) ($event['earlybird_quantity'] ?? 0);
+            $event['vip_quantity'] = (int) ($event['vip_quantity'] ?? 0);
+            
+            // Handle prices
+            $event['earlybird_price'] = (float) ($event['earlybird_price'] ?? 0);
+            $event['general_price'] = (float) ($event['general_price'] ?? 0);
+            $event['vip_price'] = (float) ($event['vip_price'] ?? 0);
             
             // Format dates
             if (isset($event['event_start_date']) && $event['event_start_date']) {
@@ -6264,12 +6717,25 @@ if ($fun === "getTrendingEvents") {
                 $event['formatted_date'] = date('F j, Y', strtotime($event['created_at']));
             }
             
+            // Handle location
+            $event['location'] = $event['city'] ?? ($event['province'] ?? 'Location TBD');
+            $event['city'] = $event['city'] ?? null;
+            $event['province'] = $event['province'] ?? null;
+            
             // Handle image
             if (!empty($event['event_image'])) {
-                $event['event_image_url'] = '/uploads/events/' . $event['event_image'];
+                // Check if it's a full URL or just filename
+                if (strpos($event['event_image'], 'http') === 0) {
+                    $event['event_image_url'] = $event['event_image'];
+                } else {
+                    $event['event_image_url'] = '/uploads/events/' . $event['event_image'];
+                }
             } else {
                 $event['event_image_url'] = '/images/default-event.jpg';
             }
+            
+            // Keep original event_image for fallback
+            $event['event_image'] = $event['event_image'] ?? null;
         }
 
         echo json_encode([
@@ -6286,7 +6752,6 @@ if ($fun === "getTrendingEvents") {
     }
     exit;
 }
-
 
 if ($fun === "submitCustomPlanRequest") {
     // Verify user is logged in
@@ -7024,5 +7489,44 @@ if ($fun === "getCustomPlanRequests") {
     exit;
 }
 
+if ($fun === "getEventBookings") {
+    $event_id = $_POST['event_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode(["success" => false, "message" => "Event ID required"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                bookingId,
+                customer_email,
+                CONCAT(customer_first_name, ' ', customer_last_name) as customer_name,
+                ticket_type_label,
+                quantity,
+                total_amount
+            FROM bookings 
+            WHERE event_id = :event_id 
+            AND payment_status = 'completed'
+            ORDER BY created_at DESC
+        ");
+
+        $stmt->execute([':event_id' => $event_id]);
+        $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "bookings" => $bookings,
+            "count" => count($bookings)
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage()
+        ]);
+    }
+    exit;
+}
 
 ?>

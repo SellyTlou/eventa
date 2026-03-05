@@ -3013,7 +3013,7 @@ Homepage styling
 }
 
 .pricing-page .navBtn .btn {
-  width: 60px;
+       width: 180px;
   height: 60px;
   border-radius: 10px;
   font-weight: 600;
@@ -3480,7 +3480,7 @@ text-transform: capitalize !important;
 }
 
 .pricing-page .contact-card .features-list i {
-  color: #0dcaf0;
+  color: #0dcaf0 !important;
 }
 
 .pricing-page .contact-card .features-list::-webkit-scrollbar-thumb {
@@ -3655,36 +3655,11 @@ text-transform: capitalize !important;
 }
 
 /* ───────────────── MODAL STYLES ───────────────── */
-.pricing-page .modal-overlay-new {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease;
-  backdrop-filter: blur(5px);
-}
+
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.pricing-page .modal-content-new {
-  background: #fff;
-  border-radius: 28px;
-  width: 90%;
-  max-width: 550px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: slideUp 0.3s ease;
-  border: 2px solid #6a0dad;
-  position: relative;
 }
 
 @keyframes slideUp {
@@ -3888,10 +3863,7 @@ text-transform: capitalize !important;
     font-size: 1.6rem;
   }
   
-  .pricing-page .modal-content-new {
-    width: 95%;
-  }
-  
+
   .pricing-page .pricing-card-wrapper {
     min-width: 260px;
   }
@@ -3941,6 +3913,7 @@ text-transform: capitalize !important;
 .pricing-page .border-purple { border-color: #6a0dad; }
 .pricing-page .border-blue { border-color: #3182ce; }
 .pricing-page .border-yellow { border-color: #0dcaf0; }
+
 
 /******************************
 About Page Styling
@@ -6886,22 +6859,6 @@ createEvent Styling
   }
 }
 
-/* Completely New Modal Design */
-.modal-overlay-new {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: 20px;
-}
-
 .modal-content-new {
   background: linear-gradient(135deg, #0056b3 0%, #764ba2 100%);
   border-radius: 20px;
@@ -6925,15 +6882,7 @@ createEvent Styling
   }
 }
 
-.modal-header-new {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
+
 
 .user-avatar-section {
   display: flex;
@@ -7271,13 +7220,6 @@ createEvent Styling
 
   .modal-actions {
     flex-direction: column;
-  }
-
-  .modal-header-new {
-    padding: 20px;
-    flex-direction: column;
-    gap: 15px;
-    text-align: center;
   }
 
   .user-avatar-section {
@@ -7872,21 +7814,6 @@ createEvent Styling
   }
 }
 
-/* Payment Details Modal - Matching User View Style */
-.modal-overlay-new {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-}
 
 .modal-content-new {
   background: linear-gradient(135deg, #0056b3 0%, #764ba2 100%);
@@ -7916,15 +7843,6 @@ createEvent Styling
   }
 }
 
-.modal-header-new {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
 
 .payment-title-section {
   display: flex;
@@ -8226,13 +8144,6 @@ createEvent Styling
 
   .payment-details-grid-new {
     grid-template-columns: 1fr;
-  }
-
-  .modal-header-new {
-    padding: 20px;
-    flex-direction: column;
-    gap: 15px;
-    text-align: center;
   }
 
   .payment-title-section {
@@ -8603,46 +8514,6 @@ createEvent Styling
   transform: none !important;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .modal-content-new {
-    width: 95%;
-    margin: 10px;
-  }
-
-  .modal-header-new {
-    padding: 20px;
-    flex-direction: column;
-    gap: 15px;
-    text-align: center;
-  }
-
-  .modal-title-section {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .modal-actions-new {
-    flex-direction: column;
-  }
-
-  .action-btn-new {
-    justify-content: center;
-  }
-
-  .info-card-new {
-    padding: 16px;
-  }
-
-  .modal-icon-large {
-    width: 60px;
-    height: 60px;
-  }
-
-  .modal-icon-large i {
-    font-size: 1.5rem;
-  }
-}
 
 /* Enhanced Invitations Tab Styles */
 .charts-section {
@@ -9157,11 +9028,6 @@ createEvent Styling
   }
 }
 
-.amount {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #10b981 !important;
-}
 
 /* Maintenance Modal Styles */
 .maintenance-message {
@@ -11188,28 +11054,30 @@ justify-content: end;
 /* Price Tag */
 .homePricing .price-tag {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 4px;
 }
 
 .homePricing .price-tag .currency {
-    font-size: 1.5rem;
+    font-size: 30px;
     font-weight: 600;
     background-color: #592693;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     align-self: flex-start;
-    margin-top: 5px;
 }
 
 .homePricing .price-tag .amount {
-    font-size: 3.5rem;
+    font-size: 30px;
     font-weight: 800;
     line-height: 1;
-    color: inherit;
+    color: #000;
 }
 
+.homePricing .pricing-card.popular .price-tag .amount {
+    color: #ffffff;
+}
 .homePricing .price-tag .period {
     font-size: 1rem;
     color: #999999;
@@ -11361,7 +11229,7 @@ justify-content: end;
     }
     
     .homePricing .price-tag .amount {
-        font-size: 3rem;
+        font-size: 28px;
     }
 }
 
@@ -11403,7 +11271,7 @@ justify-content: end;
     }
     
     .homePricing .price-tag .amount {
-        font-size: 2.8rem;
+        font-size: 25px;
     }
 }
 
@@ -11417,7 +11285,7 @@ justify-content: end;
     }
     
     .homePricing .price-tag .amount {
-        font-size: 2.5rem;
+        font-size: 25px;
     }
     
     .homePricing .features-list li {
@@ -11523,4 +11391,435 @@ justify-content: end;
 
 .toggle-switch.annual .toggle-knob {
     transform: translateX(20px);
+}
+
+
+/********
+pricing model styling
+*********************/
+
+/* Custom Plan Modal Styles */
+.pricing-custom-plan-modal {
+    max-width: 700px !important;
+}
+
+.pricing-custom-plan-modal .form-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 30px 0;
+    position: relative;
+    padding: 0 20px;
+}
+
+.pricing-custom-plan-modal .form-progress::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 60px;
+    right: 60px;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 1;
+}
+
+.pricing-custom-plan-modal .progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 2;
+    background: white;
+    padding: 0 10px;
+}
+
+.pricing-custom-plan-modal .progress-step .step-number {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.pricing-custom-plan-modal .progress-step.completed .step-number {
+    background: #10b981;
+    color: white;
+}
+
+.pricing-custom-plan-modal .progress-step.active .step-number {
+    background: #667eea;
+    color: white;
+    box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.5);
+}
+
+.pricing-custom-plan-modal .progress-step .step-label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.pricing-custom-plan-modal .progress-step.active .step-label {
+    color: #667eea;
+    font-weight: 600;
+}
+
+.pricing-custom-plan-modal .form-step {
+    animation: pricingFadeIn 0.3s ease;
+}
+
+@keyframes pricingFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pricing-custom-plan-modal .step-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.pricing-custom-plan-modal .step-description {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+}
+
+.pricing-custom-plan-modal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.pricing-custom-plan-modal .form-group {
+    margin-bottom: 20px;
+}
+
+.pricing-custom-plan-modal .form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.pricing-custom-plan-modal .form-group .required {
+    color: #e74c3c;
+    margin-left: 2px;
+}
+
+.pricing-custom-plan-modal .form-group input,
+.pricing-custom-plan-modal .form-group select,
+.pricing-custom-plan-modal .form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.pricing-custom-plan-modal .form-group input:focus,
+.pricing-custom-plan-modal .form-group select:focus,
+.pricing-custom-plan-modal .form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.pricing-custom-plan-modal .form-group input.error,
+.pricing-custom-plan-modal .form-group select.error,
+.pricing-custom-plan-modal .form-group textarea.error {
+    border-color: #e74c3c;
+}
+
+.pricing-custom-plan-modal .error-message {
+    display: block;
+    color: #e74c3c;
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+/* Features Grid */
+.pricing-custom-plan-modal .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.pricing-custom-plan-modal .feature-checkbox {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 5px;
+    transition: all 0.3s ease;
+}
+
+.pricing-custom-plan-modal .feature-checkbox:hover {
+    background: #f0f3ff;
+    transform: translateY(-2px);
+}
+
+.pricing-custom-plan-modal .feature-checkbox label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.pricing-custom-plan-modal .feature-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 3px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.pricing-custom-plan-modal .feature-info {
+    flex: 1;
+}
+
+.pricing-custom-plan-modal .feature-info strong {
+    display: block;
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.pricing-custom-plan-modal .feature-info span {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Form Navigation */
+.pricing-custom-plan-modal .form-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.pricing-custom-plan-modal .btn-primary,
+.pricing-custom-plan-modal .btn-secondary {
+    padding: 12px 30px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.pricing-custom-plan-modal .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+}
+
+.pricing-custom-plan-modal .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px -5px rgba(102, 126, 234, 0.6);
+}
+
+.pricing-custom-plan-modal .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.pricing-custom-plan-modal .btn-secondary {
+    background: white;
+    color: #666;
+    border: 2px solid #e0e0e0;
+}
+
+.pricing-custom-plan-modal .btn-secondary:hover {
+    background: #f8f9fa;
+    border-color: #999;
+}
+
+.pricing-custom-plan-modal .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: pricingSpin 1s linear infinite;
+}
+
+@keyframes pricingSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .pricing-custom-plan-modal .form-progress {
+        padding: 0;
+    }
+    
+    .pricing-custom-plan-modal .form-progress::before {
+        left: 40px;
+        right: 40px;
+    }
+    
+    .pricing-custom-plan-modal .progress-step .step-number {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .pricing-custom-plan-modal .progress-step .step-label {
+        font-size: 0.75rem;
+    }
+    
+    .pricing-custom-plan-modal .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .pricing-custom-plan-modal .features-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pricing-custom-plan-modal .form-navigation {
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+    
+    .pricing-custom-plan-modal .btn-primary,
+    .pricing-custom-plan-modal .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+/*******************
+create ticket popup
+*********************/
+/* Overlay */
+.createticket-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: createticket-fadeIn 0.2s ease-in-out;
+}
+
+/* Modal Box */
+.createticket-modal {
+    background: #ffffff;
+    width: 95%;
+    max-width: 500px;
+    padding: 35px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    animation: createticket-scaleIn 0.2s ease-in-out;
+}
+
+/* Step Container */
+.createticket-modal .ticket-option-step h3 {
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 22px;
+}
+
+.createticket-modal .ticket-option-step p {
+    margin-bottom: 25px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Options Wrapper */
+.createticket-modal .ticket-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Option Buttons */
+.createticket-modal .ticket-option-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid #e5e5e5;
+    background: #f9f9f9;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.createticket-modal .ticket-option-btn:hover {
+    background: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Yes Button */
+.createticket-modal .ticket-option-yes {
+    border-left: 5px solid #007bff;
+}
+
+/* No Button */
+.createticket-modal .ticket-option-no {
+    border-left: 5px solid #28a745;
+}
+
+/* Icon */
+.createticket-modal .option-icon {
+    font-size: 28px;
+}
+
+/* Text Content */
+.createticket-modal .option-content h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.createticket-modal .option-content p {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: #777;
+}
+
+/* Animations */
+@keyframes createticket-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes createticket-scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
