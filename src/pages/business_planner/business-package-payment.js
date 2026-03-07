@@ -124,7 +124,40 @@ const BusinessPackagePayment = () => {
                     return;
                 }
 
-                await getBusinessPackageById(packageId);
+                // custom plans: fetch the request info from backend
+                if (packageId.startsWith('CUSTOM-')) {
+                    try {
+                        const reqId = packageId.substring(7);
+                        const formData = new FormData();
+                        formData.append("function", "getCustomPlanForPayment");
+                        formData.append("request_id", reqId);
+                        const response = await fetch(`${API_BASE_URL}/query.php`, {
+                            method: "POST",
+                            body: formData
+                        });
+                        const data = await response.json();
+                        if (data.success && data.request) {
+                            const r = data.request;
+                            setSelectedPackage({
+                                id: packageId,                     // needed by recordBusinessPayment/assignBusinessPackage
+                                package_id: packageId,
+                                package_type: 'Custom Plan',
+                                price: r.final_price || r.proposed_price || 0,
+                                max_events: r.approved_events || r.requested_events || 0,
+                                max_guests: r.approved_guests || r.requested_guests || 0
+                            });
+                        } else {
+                            throw new Error(data.message || 'Request not found');
+                        }
+                    } catch (err) {
+                        console.error('Failed to load custom request:', err);
+                        printAlert('Unable to load custom request details', 'error');
+                        navigate("/upgrade_business_package");
+                        return;
+                    }
+                } else {
+                    await getBusinessPackageById(packageId);
+                }
             } catch (error) {
                 console.error("Initialization error:", error);
                 setError("Failed to initialize page");
@@ -165,13 +198,15 @@ const BusinessPackagePayment = () => {
             formData.append("business_package_id", selectedPackage?.id);
             formData.append("amount", paymentDetails?.totalAmount);
             formData.append("payment_method", selectedPaymentMethod);
-            formData.append("transaction_id", `BP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+            const txId = `BP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            formData.append("transaction_id", txId);
             
             console.log("Recording business payment with data:", {
                 user_id: user?.user_id,
                 business_package_id: selectedPackage?.id,
                 amount: paymentDetails?.totalAmount,
                 payment_method: selectedPaymentMethod,
+                transaction_id: txId
             });
             
             const response = await fetch(`${API_BASE_URL}/query.php`, {
@@ -199,20 +234,23 @@ const BusinessPackagePayment = () => {
             }
 
             console.log("✅ Business payment recorded successfully:", result);
-            return true;
+            return { success: true, transaction_id: txId };
 
         } catch (error) {
             console.error("Error recording business payment:", error);
-            return false;
+            return { success: false };
         }
     };
 
-    const assignBusinessPackage = async () => {
+    const assignBusinessPackage = async (transaction_id = null) => {
         try {
             const formData = new FormData();
             formData.append("function", "assignBusinessPackage");
             formData.append("user_id", user?.user_id);
             formData.append("business_package_id", selectedPackage?.id);
+            if (transaction_id) {
+                formData.append("transaction_id", transaction_id);
+            }
 
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: "POST",
@@ -259,16 +297,17 @@ const BusinessPackagePayment = () => {
             // Simulate payment processing (replace with actual payment gateway)
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            const paymentSuccess = await recordBusinessPayment();
+            const paymentResult = await recordBusinessPayment();
 
-            console.log("Business payment success status:", paymentSuccess);
-            if (paymentSuccess) {
-                const assignSuccess = await assignBusinessPackage();
+            console.log("Business payment success status:", paymentResult);
+            if (paymentResult.success) {
+                const assignSuccess = await assignBusinessPackage(paymentResult.transaction_id);
 
                 if (assignSuccess) {
                     // Clear localStorage items
                     localStorage.removeItem("selectedPackageId");
                     localStorage.removeItem("selectedPackageType");
+                    localStorage.removeItem("selectedPackage");
                     localStorage.removeItem("selectedBusinessPackage");
                     
                     printAlert("Payment successful! Your business package has been activated.", "success");

@@ -113,7 +113,7 @@ const CustomPlanRequestsTab = ({
                         <div className="requests-table">
                             <div className="table-header" style={{
                                 display: 'grid',
-                                gridTemplateColumns: '120px 1.5fr 1.5fr 1.5fr 100px 100px 80px',
+                                gridTemplateColumns: '120px 1.5fr 1.5fr 1.5fr 100px 100px 100px 80px',
                                 padding: '15px 20px',
                                 background: '#f8f9fa',
                                 fontWeight: '600',
@@ -126,6 +126,7 @@ const CustomPlanRequestsTab = ({
                                 <span>Event</span>
                                 <span>Attendees</span>
                                 <span>Status</span>
+                                <span>Payment</span>
                                 <span>Actions</span>
                             </div>
 
@@ -177,6 +178,20 @@ const CustomPlanRequestsTab = ({
                                                 ...(request.status === 'completed' && { background: '#d1e7dd', color: '#0f5132' })
                                             }}>
                                                 {request.status}
+                                            </span>
+                                        </span>
+                                        
+                                        <span>
+                                            <span className="payment-status" style={{
+                                                padding: '4px 12px',
+                                                borderRadius: '20px',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                textTransform: 'capitalize',
+                                                background: request.payment_status === 'completed' ? '#d4edda' : (request.payment_status === 'pending' ? '#fff3cd' : '#f8d7da'),
+                                                color: request.payment_status === 'completed' ? '#155724' : (request.payment_status === 'pending' ? '#856404' : '#721c24')
+                                            }}>
+                                                {request.payment_status || 'N/A'}
                                             </span>
                                         </span>
                                         

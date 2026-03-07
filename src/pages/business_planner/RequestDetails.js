@@ -41,8 +41,19 @@ const RequestDetails = () => {
 
         setUser(userData);
         fetchRequestDetails(userData.user_id, requestId);
-        fetchRequestMessages(requestId);
+        fetchRequestMessages(requestId, true); // initial load also refresh details
     }, [navigate, requestId]);
+
+    // poll for updates in case admin responds while business is viewing
+    useEffect(() => {
+        if (user) {
+            const interval = setInterval(() => {
+                fetchRequestDetails(user.user_id, requestId);
+                fetchRequestMessages(requestId);
+            }, 5000); // poll every 5 seconds for a more responsive experience
+            return () => clearInterval(interval);
+        }
+    }, [user, requestId]);
 
     const fetchRequestDetails = async (userId, reqId) => {
         setLoading(true);
@@ -72,7 +83,7 @@ const RequestDetails = () => {
         }
     };
 
-    const fetchRequestMessages = async (reqId) => {
+    const fetchRequestMessages = async (reqId, refreshRequest = false) => {
     try {
         const formData = new FormData();
         formData.append('function', 'getRequestMessages');
@@ -88,6 +99,10 @@ const RequestDetails = () => {
         if (data.success) {
             setMessages(data.messages || []);
             setUnreadCount(data.unread_count || 0);
+            // always refresh request details when we get new messages (helps show counter-offer)
+            if (user) {
+                fetchRequestDetails(user.user_id, reqId);
+            }
         }
     } catch (error) {
         console.error('Error fetching messages:', error);
@@ -153,10 +168,15 @@ const RequestDetails = () => {
 
             const data = await response.json();
             if (data.success) {
-                showAlert('Offer accepted! Your custom plan is now active.', 'success');
+                showAlert('Offer accepted! Redirecting you to payment...', 'success');
                 setShowAcceptModal(false);
-                // Refresh request details
-                fetchRequestDetails(user.user_id, request.request_id);
+                // store only the request id and type; payment page will fetch details from server
+                localStorage.setItem('selectedPackageId', `CUSTOM-${request.request_id}`);
+                localStorage.setItem('selectedPackageType', 'business');
+                // navigate to payment
+                setTimeout(() => {
+                    navigate('/business-package-payment');
+                }, 500);
             } else {
                 showAlert(data.message || 'Failed to accept offer', 'error');
             }
@@ -218,7 +238,7 @@ const RequestDetails = () => {
             if (data.success) {
                 showAlert('Message sent', 'success');
                 setMessage('');
-                fetchRequestMessages(request.request_id);
+                fetchRequestMessages(request.request_id, true);
                 
                 // Add message to local state for immediate display
                 const newMessage = {
@@ -450,6 +470,22 @@ const RequestDetails = () => {
                                                 </div>
                                             </div>
                                         )}
+                                        {/* show pay button for approved requests */}
+                                        {request.status === 'approved' && (
+                                            <div className="payment-action">
+                                                <button
+                                                    className="btn-pay btn-event btn-event-primary"
+                                                    onClick={() => {
+                                                        localStorage.setItem('selectedPackageId', `CUSTOM-${request.request_id}`);
+                                                        localStorage.setItem('selectedPackageType', 'business');
+                                                        navigate('/business-package-payment');
+                                                    }}
+                                                >
+                                                    <i className="bi bi-credit-card"></i>
+                                                    Pay Now
+                                                </button>
+                                            </div>
+                                        )}
 
                                         <div className="action-buttons">
                                             <button 
@@ -474,12 +510,17 @@ const RequestDetails = () => {
                                     <div className="status-message approved">
                                         <i className="bi bi-check-circle"></i>
                                         <h4>Your custom plan has been approved!</h4>
-                                        <p>Your new package is now active. You can view it in your dashboard.</p>
+                                        <p>Please complete payment to activate your plan.</p>
                                         <button 
-                                            className="btn-view-package"
-                                            onClick={() => navigate('/businessdashboard')}
+                                            className="btn-pay btn-event btn-event-primary"
+                                            onClick={() => {
+                                                localStorage.setItem('selectedPackageId', `CUSTOM-${request.request_id}`);
+                                                localStorage.setItem('selectedPackageType', 'business');
+                                                navigate('/business-package-payment');
+                                            }}
                                         >
-                                            View My Dashboard
+                                            <i className="bi bi-credit-card"></i>
+                                            Pay Now
                                         </button>
                                     </div>
                                 )}

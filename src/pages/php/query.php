@@ -3905,25 +3905,45 @@ if ($fun === 'recordPayment') {
     try {
         $pdo->beginTransaction();
 
-        // Validate package
-        $pkgStmt = $pdo->prepare("
-            SELECT package_type, max_events, max_guests, price
-            FROM packagetb
-            WHERE package_id = ?
-        ");
-        $pkgStmt->execute([$package_id]);
-        $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+        // Determine if this is a custom-plan payment
+        $isCustom = false;
+        if (strpos($package_id, 'CUSTOM-') === 0) {
+            $isCustom = true;
+            $package_type = 'Custom Plan';
+            $max_events = 0;
+            $max_guests = 0;
+            $price = $amount; // amount should equal agreed custom price
 
-        if (!$package) {
-            $pdo->rollBack();
-            echo json_encode(["success" => false, "message" => "Invalid package_id"]);
-            exit;
+            // verify custom request exists for this user
+            $request_id = substr($package_id, 7);
+            $checkReq = $pdo->prepare("SELECT request_id FROM custom_plan_requests WHERE request_id = ? AND user_id = ?");
+            $checkReq->execute([$request_id, $user_id]);
+            if (!$checkReq->fetch(PDO::FETCH_ASSOC)) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Invalid custom plan request"]);
+                exit;
+            }
+        } else {
+            // Validate regular package
+            $pkgStmt = $pdo->prepare("
+                SELECT package_type, max_events, max_guests, price
+                FROM packagetb
+                WHERE package_id = ?
+            ");
+            $pkgStmt->execute([$package_id]);
+            $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$package) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Invalid package_id"]);
+                exit;
+            }
+
+            $package_type = $package['package_type'];
+            $max_events = $package['max_events'];
+            $max_guests = $package['max_guests'];
+            $price = $package['price'];
         }
-
-        $package_type = $package['package_type'];
-        $max_events = $package['max_events'];
-        $max_guests = $package['max_guests'];
-        $price = $package['price'];
 
         // Generate payment ID for paid packages
         $payment_id = null;
@@ -3993,8 +4013,8 @@ if ($fun === 'recordPayment') {
             }
         }
 
-        // Create or update user_packages (only if payment is completed)
-        if ($payment_status === 'completed') {
+        // Create or update user_packages (only if payment is completed and not a custom plan)
+        if (!$isCustom && $payment_status === 'completed') {
             $checkPkg = $pdo->prepare("SELECT COUNT(*) FROM user_packages WHERE user_id = ?");
             $checkPkg->execute([$user_id]);
             $exists = (int) $checkPkg->fetchColumn();
@@ -4024,6 +4044,42 @@ if ($fun === 'recordPayment') {
                 WHERE user_id = ?
             ");
             $updateEvents->execute([$package_id, $user_id]);
+        }
+
+        // Custom plan finalization: provision business package and update request
+        if ($isCustom && $payment_status === 'completed') {
+            $request_id = substr($package_id, 7);
+            $reqStmt = $pdo->prepare("SELECT * FROM custom_plan_requests WHERE request_id = ? AND user_id = ?");
+            $reqStmt->execute([$request_id, $user_id]);
+            $request = $reqStmt->fetch(PDO::FETCH_ASSOC);
+            if ($request) {
+                // expire existing active business packages
+                $expireStmt = $pdo->prepare("UPDATE user_business_packages SET status = 'expired' WHERE user_id = ? AND status = 'active'");
+                $expireStmt->execute([$user_id]);
+
+                $customLimits = [
+                    'guests' => $request['approved_guests'] ?? $request['requested_guests'],
+                    'events' => $request['approved_events'] ?? $request['requested_events'],
+                    'price' => $request['final_price'] ?? $request['proposed_price'],
+                    'features' => $request['desired_features'] ? explode(',', $request['desired_features']) : []
+                ];
+                $expiry_date = date('Y-m-d H:i:s', strtotime('+1 month'));
+                $insertStmt = $pdo->prepare("\
+                    INSERT INTO user_business_packages 
+                    (user_id, business_package_id, is_custom, custom_limits, approved_request_id, event_limit, status, expiry_date) 
+                    VALUES (?, 4, 1, ?, ?, ?, 'active', ?)
+                ");
+                $insertStmt->execute([
+                    $user_id,
+                    json_encode($customLimits),
+                    $request_id,
+                    $customLimits['events'],
+                    $expiry_date
+                ]);
+
+                $updateReq = $pdo->prepare("UPDATE custom_plan_requests SET status = 'completed', payment_status = 'completed', payment_id = ? WHERE request_id = ?");
+                $updateReq->execute([$payment_id, $request_id]);
+            }
         }
 
         // Log activity
@@ -4690,8 +4746,10 @@ if ($fun === "getPaymentHistory") {
                 bpt.transaction_id AS payment_id,
                 bpt.user_id,
                 u.name AS user_name,
-                bp.id AS package_id,
-                bp.name AS package_type,
+                /* if this is a custom plan request, keep its id string, otherwise use the business package id */
+                CASE WHEN bpt.business_package_id LIKE 'CUSTOM-%' THEN bpt.business_package_id ELSE bp.id END AS package_id,
+                /* show 'Custom Plan' label for custom requests */
+                CASE WHEN bpt.business_package_id LIKE 'CUSTOM-%' THEN 'Custom Plan' ELSE bp.name END AS package_type,
                 bpt.amount,
                 CASE WHEN bpt.status = 'success' THEN 'completed' ELSE bpt.status END AS payment_status,
                 bpt.created_at AS payment_date,
@@ -6108,6 +6166,7 @@ if ($fun === "getBusinessPackageById") {
 if ($fun === "assignBusinessPackage") {
     $user_id = $_POST['user_id'] ?? '';
     $business_package_id = $_POST['business_package_id'] ?? '';
+    $transaction_id = $_POST['transaction_id'] ?? null;
     
     if (empty($user_id) || empty($business_package_id)) {
         echo json_encode(["success" => false, "message" => "User ID and Package ID required"]);
@@ -6117,12 +6176,56 @@ if ($fun === "assignBusinessPackage") {
     try {
         $pdo->beginTransaction();
         
-        // First, expire any existing active package
+        // expire any existing active package
         $stmt = $pdo->prepare("UPDATE user_business_packages SET status = 'expired' 
                                WHERE user_id = :user_id AND status = 'active'");
         $stmt->execute([':user_id' => $user_id]);
+
+        if (strpos($business_package_id, 'CUSTOM-') === 0) {
+            // handle custom plan request
+            $request_id = substr($business_package_id, 7);
+            $reqStmt = $pdo->prepare("SELECT * FROM custom_plan_requests WHERE request_id = ? AND user_id = ?");
+            $reqStmt->execute([$request_id, $user_id]);
+            $request = $reqStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$request) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Custom plan request not found"]);
+                exit;
+            }
+
+            $customLimits = [
+                'guests' => $request['approved_guests'] ?? $request['requested_guests'],
+                'events' => $request['approved_events'] ?? $request['requested_events'],
+                'price' => $request['final_price'] ?? $request['proposed_price'],
+                'features' => $request['desired_features'] ? explode(',', $request['desired_features']) : []
+            ];
+            $expiry_date = date('Y-m-d H:i:s', strtotime('+1 month'));
+            $insertStmt = $pdo->prepare("INSERT INTO user_business_packages 
+                                       (user_id, business_package_id, is_custom, custom_limits, approved_request_id, event_limit, status, expiry_date) 
+                                       VALUES (?, 4, 1, ?, ?, ?, 'active', ?)");
+            $insertStmt->execute([
+                $user_id,
+                json_encode($customLimits),
+                $request_id,
+                $customLimits['events'],
+                $expiry_date
+            ]);
+
+            // update request status and record payment identifier
+            if ($transaction_id) {
+                $updateReq = $pdo->prepare("UPDATE custom_plan_requests SET status = 'completed', payment_status = 'completed', payment_id = ? WHERE request_id = ?");
+                $updateReq->execute([$transaction_id, $request_id]);
+            } else {
+                $updateReq = $pdo->prepare("UPDATE custom_plan_requests SET status = 'completed', payment_status = 'completed' WHERE request_id = ?");
+                $updateReq->execute([$request_id]);
+            }
+
+            $pdo->commit();
+            echo json_encode(["success" => true, "message" => "Custom business package assigned and request closed"]);
+            exit;
+        }
         
-        // Get package details to set event_limit
+        // regular business package flow
         $stmt = $pdo->prepare("SELECT max_events FROM business_packages WHERE id = :package_id");
         $stmt->execute([':package_id' => $business_package_id]);
         $package = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -6916,6 +7019,8 @@ if ($fun === "getCustomPlanRequestById") {
                 special_requirements,
                 additional_notes,
                 status,
+                payment_status,
+                payment_id,
                 admin_notes,
                 created_at,
                 reviewed_at,
@@ -6938,20 +7043,74 @@ if ($fun === "getCustomPlanRequestById") {
     exit;
 }
 
-// Get messages for a request
+// Endpoint used by payment page to fetch price/details for a custom request
+if ($fun === "getCustomPlanForPayment") {
+    $request_id = $_POST['request_id'] ?? '';
+    if (empty($request_id)) {
+        echo json_encode(["success" => false, "message" => "Missing request ID"]);
+        exit;
+    }
+    try {
+        $stmt = $pdo->prepare("SELECT request_id, final_price, proposed_price, approved_events, requested_events, approved_guests, requested_guests, status, payment_status FROM custom_plan_requests WHERE request_id = ?");
+        $stmt->execute([$request_id]);
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($req) {
+            echo json_encode(["success" => true, "request" => $req]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Request not found"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+// Get messages for a request (supports admin/business view and unread count)
 if ($fun === "getRequestMessages") {
     $request_id = $_POST['request_id'] ?? '';
-    
+    $admin_view = filter_var($_POST['admin_view'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
     if (empty($request_id)) {
         echo json_encode(["success" => false, "message" => "Request ID required"]);
         exit;
     }
-    
+
     try {
-        // You'll need to create a messages table for this
-        // For now, return empty array
-        echo json_encode(["success" => true, "messages" => []]);
+        // mark business messages as read when admin is viewing
+        if ($admin_view) {
+            $updateStmt = $pdo->prepare(
+                "UPDATE request_messages 
+                 SET is_read = 1 
+                 WHERE request_id = ? AND sender_type = 'business'"
+            );
+            $updateStmt->execute([$request_id]);
+        }
+
+        // fetch all messages
+        $stmt = $pdo->prepare(
+            "SELECT * FROM request_messages 
+             WHERE request_id = ? 
+             ORDER BY created_at ASC"
+        );
+        $stmt->execute([$request_id]);
+        $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // count unread business messages
+        $unreadStmt = $pdo->prepare(
+            "SELECT COUNT(*) as unread_count 
+             FROM request_messages 
+             WHERE request_id = ? AND sender_type = 'business' AND is_read = 0"
+        );
+        $unreadStmt->execute([$request_id]);
+        $unreadCount = $unreadStmt->fetch(PDO::FETCH_ASSOC)['unread_count'];
+
+        echo json_encode([
+            "success" => true,
+            "messages" => $messages,
+            "unread_count" => $unreadCount
+        ]);
     } catch (PDOException $e) {
+        error_log("Get messages error: " . $e->getMessage());
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
@@ -6962,6 +7121,20 @@ if ($fun === "acceptCustomPlanOffer") {
     $user_id = $_POST['user_id'] ?? '';
     $request_id = $_POST['request_id'] ?? '';
     
+    // new logic: mark request approved and pending payment, then return immediately
+    if (!empty($user_id) && !empty($request_id)) {
+        try {
+            $updateStmt = $pdo->prepare("UPDATE custom_plan_requests SET status = 'approved', payment_status = 'pending', reviewed_at = NOW() WHERE request_id = ? AND user_id = ?");
+            $updateStmt->execute([$request_id, $user_id]);
+            if ($updateStmt->rowCount() > 0) {
+                echo json_encode(["success" => true, "message" => "Offer accepted. Please proceed to payment."]);
+                exit;
+            }
+        } catch (PDOException $e) {
+            // fall through to original logic if something goes wrong
+        }
+    }
+
     if (empty($user_id) || empty($request_id)) {
         echo json_encode(["success" => false, "message" => "Missing required fields"]);
         exit;
@@ -7050,7 +7223,103 @@ if ($fun === "declineCustomPlanOffer") {
     exit;
 }
 
+// Generic update endpoint for custom plan requests (used for reject/cancel/etc.)
+if ($fun === "updateCustomPlanRequest") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $request_id = $_POST['request_id'] ?? '';
+    $status = $_POST['status'] ?? '';
+    $admin_notes = $_POST['admin_notes'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized: Admin access required"]);
+        exit;
+    }
+
+    if (empty($request_id) || empty($status)) {
+        echo json_encode(["success" => false, "message" => "Missing required fields"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE custom_plan_requests
+            SET status = :status,
+                admin_notes = CONCAT(IFNULL(admin_notes, ''), '\n', :admin_notes),
+                reviewed_at = NOW(),
+                reviewed_by = :reviewed_by
+            WHERE request_id = :request_id");
+        $stmt->execute([
+            ':status' => $status,
+            ':admin_notes' => $admin_notes,
+            ':reviewed_by' => $adminUserId,
+            ':request_id' => $request_id
+        ]);
+
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([$adminUserId, 'Custom Plan Request Updated', "Set status to {$status} for request {$request_id}"]);
+
+        echo json_encode(["success" => true, "message" => "Request updated"]);
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
 // Send a message for a custom plan request
+
+// Admin approves a custom plan request without assigning package (payment required by business)
+if ($fun === "approveCustomPlanRequest") {
+    $adminUserId = $_POST['admin_user_id'] ?? '';
+    $request_id = $_POST['request_id'] ?? '';
+    $approved_guests = $_POST['approved_guests'] ?? null;
+    $approved_events = $_POST['approved_events'] ?? null;
+    $final_price = $_POST['final_price'] ?? null;
+    $admin_notes = $_POST['admin_notes'] ?? '';
+    $custom_features = $_POST['custom_features'] ?? '';
+
+    if (!verifyAdminAccess($pdo, $adminUserId)) {
+        echo json_encode(["success" => false, "message" => "Unauthorized"]);
+        exit;
+    }
+
+    if (empty($request_id)) {
+        echo json_encode(["success" => false, "message" => "Missing request ID"]);
+        exit;
+    }
+
+    try {
+        // update request with approval details
+        $stmt = $pdo->prepare("UPDATE custom_plan_requests
+            SET status = 'approved',
+                approved_guests = COALESCE(:approved_guests, approved_guests),
+                approved_events = COALESCE(:approved_events, approved_events),
+                final_price = COALESCE(:final_price, final_price),
+                custom_features = COALESCE(:custom_features, custom_features),
+                admin_notes = CONCAT(IFNULL(admin_notes,''), '\n', :admin_notes),
+                reviewed_at = NOW(),
+                reviewed_by = :reviewed_by,
+                payment_status = 'pending'
+            WHERE request_id = :request_id");
+        $stmt->execute([
+            ':approved_guests' => $approved_guests,
+            ':approved_events' => $approved_events,
+            ':final_price' => $final_price,
+            ':custom_features' => $custom_features,
+            ':admin_notes' => $admin_notes,
+            ':reviewed_by' => $adminUserId,
+            ':request_id' => $request_id
+        ]);
+
+        // log activity
+        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
+        $logStmt->execute([$adminUserId, 'Custom Plan Approved', "Approved custom plan request {$request_id}"]);
+
+        echo json_encode(["success" => true, "message" => "Request approved; business will be prompted to pay."]);
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($fun === "sendRequestMessage") {
     $request_id = $_POST['request_id'] ?? '';
     $sender_id = $_POST['sender_id'] ?? '';
@@ -7093,7 +7362,7 @@ if ($fun === "sendRequestMessage") {
     exit;
 }
 
-// Get messages for a custom plan request
+/* // Get messages for a custom plan request
 if ($fun === "getRequestMessages") {
     $request_id = $_POST['request_id'] ?? '';
     $admin_view = $_POST['admin_view'] ?? false; // Whether this is admin viewing
@@ -7143,7 +7412,7 @@ if ($fun === "getRequestMessages") {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
-}
+}*/
 
 // Get unread message count for admin
 if ($fun === "getUnreadMessageCount") {
