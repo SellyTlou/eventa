@@ -564,7 +564,7 @@ function Index() {
                             <div className="col-lg-6 mid-category-card">
                                 <div className="category-card">
                                     <div className="category-overlay"></div>
-                                    <img src="/images/bafana.jpg" alt="Sports" className="img-fluid category-image" />
+                                    <img src="/images/sports.jpg" alt="Sports" className="img-fluid category-image" />
                                     <div className="category-border">
                                         <div className="category-content">
                                             <h5>Sports</h5>
