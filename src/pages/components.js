@@ -494,7 +494,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <button onClick={goToDashboard}>Dashboard</button>
-                                            <button onClick={createEventClicked}>New Event</button>
+                                        
                                             <button onClick={goToProfile}>Profile</button>
                                             <button onClick={logOut}>Logout</button>
                                         </div>
@@ -658,12 +658,6 @@ export function LoginNav() {
         setIsMobileMenuOpen(false);
     };
 
-    const createEventClicked = (e) => {
-        if (e) e.stopPropagation();
-        navigate("/activeEventDetails");
-        setDropdownOpen(false);
-        setIsMobileMenuOpen(false);
-    };
 
     const goToProfile = (e) => {
         if (e) e.stopPropagation();
@@ -794,9 +788,7 @@ export function LoginNav() {
                                 <button className="btn dashboard-btn me-2" onClick={goToDashboard}>
                                     <i className="bi bi-grid-fill me-1"></i> Dashboard
                                 </button>
-                                <button className="btn signup-btn me-2" onClick={createEventClicked}>
-                                    <i className="bi bi-plus-circle me-1"></i> New Event
-                                </button>
+                              
                                 <div
                                     ref={dropdownRef}
                                     className={`profile-container ${dropdownOpen ? "open" : ""}`}
@@ -811,9 +803,7 @@ export function LoginNav() {
                                             <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
                                                 <i className="bi bi-grid-fill me-2"></i> Dashboard
                                             </button>
-                                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
-                                                <i className="bi bi-plus-circle me-2"></i> New Event
-                                            </button>
+                                          
                                             <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
                                                 <i className="bi bi-person me-2"></i> Profile
                                             </button>
@@ -886,11 +876,6 @@ export function LoginNav() {
                             <button className="mobile-menu-item" onClick={goToDashboard}>
                                 <i className="bi bi-grid-fill"></i>
                                 <span>Dashboard</span>
-                            </button>
-
-                            <button className="mobile-menu-item" onClick={createEventClicked}>
-                                <i className="bi bi-plus-circle"></i>
-                                <span>New Event</span>
                             </button>
 
                             <button className="mobile-menu-item" onClick={goToProfile}>

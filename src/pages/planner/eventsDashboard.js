@@ -4,7 +4,7 @@ import PriorityQueue from "js-priority-queue";
 import "./main.css";
 import "../../responce.css"
 import "../../alert.css";
-import { LoginNav } from "../components";
+import { LoginNav, NewEventPopupBtn } from "../components";
 
 const EventsDashboard = () => {
     const [events, setEvents] = useState([]);
@@ -13,6 +13,7 @@ const EventsDashboard = () => {
     const [filteredEvents, setFilteredEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
+    const [activeTab, setActiveTab] = useState('all');
     const [filters, setFilters] = useState({
         dateRange: "all",
         eventType: "all",
@@ -146,11 +147,6 @@ const EventsDashboard = () => {
         setShowReserveModal(false);
         setReserveEvent(null);
         setReserveStats({ ticketStats: [], rsvpStats: { yes: 0, no: 0, maybe: 0 }, hasBoth: false });
-    };
-
-    // Navbar functions
-    const craeteEventClicked = () => {
-        navigate("/activeEventDetails");
     };
 
     const goToProfile = () => {
@@ -419,59 +415,66 @@ const EventsDashboard = () => {
         setRsvpStats(stats);
     };
     
-const fetchTicketStatsForEvents = async (eventsArray) => {
-    const stats = {};
-    await Promise.all(
-        eventsArray.map(async (event) => {
-            try {
-                const API_URL = process.env.REACT_APP_API_URL;
-                const formData = new FormData();
-                formData.append("function", "getTicketSalesStats");
-                formData.append("event_id", event.event_id);
+    const fetchTicketStatsForEvents = async (eventsArray) => {
+        const stats = {};
+        await Promise.all(
+            eventsArray.map(async (event) => {
+                try {
+                    const API_URL = process.env.REACT_APP_API_URL;
+                    const formData = new FormData();
+                    formData.append("function", "getTicketSalesStats");
+                    formData.append("event_id", event.event_id);
 
-                const response = await fetch(`${API_URL}/query.php`, {
-                    method: "POST",
-                    body: formData
-                });
+                    const response = await fetch(`${API_URL}/query.php`, {
+                        method: "POST",
+                        body: formData
+                    });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        stats[event.event_id] = data.ticket_stats || [];
-                        
-                        // Also fetch booking IDs for messaging
-                        const bookingFormData = new FormData();
-                        bookingFormData.append("function", "getEventBookings");
-                        bookingFormData.append("event_id", event.event_id);
-                        
-                        const bookingResponse = await fetch(`${API_URL}/query.php`, {
-                            method: "POST",
-                            body: bookingFormData
-                        });
-                        
-                        if (bookingResponse.ok) {
-                            const bookingData = await bookingResponse.json();
-                            if (bookingData.success && bookingData.bookings) {
-                                stats[event.event_id] = stats[event.event_id].map(stat => ({
-                                    ...stat,
-                                    bookingId: bookingData.bookings.find(b => b.ticket_type_label === stat.ticket_type_label)?.bookingId
-                                }));
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            stats[event.event_id] = data.ticket_stats || [];
+                            
+                            // Also fetch booking IDs for messaging
+                            const bookingFormData = new FormData();
+                            bookingFormData.append("function", "getEventBookings");
+                            bookingFormData.append("event_id", event.event_id);
+                            
+                            const bookingResponse = await fetch(`${API_URL}/query.php`, {
+                                method: "POST",
+                                body: bookingFormData
+                            });
+                            
+                            if (bookingResponse.ok) {
+                                const bookingData = await bookingResponse.json();
+                                if (bookingData.success && bookingData.bookings) {
+                                    stats[event.event_id] = stats[event.event_id].map(stat => ({
+                                        ...stat,
+                                        bookingId: bookingData.bookings.find(b => b.ticket_type_label === stat.ticket_type_label)?.bookingId
+                                    }));
+                                }
                             }
                         }
                     }
+                } catch (err) {
+                    console.error(`Error fetching ticket stats for event ${event.event_id}:`, err);
+                    stats[event.event_id] = [];
                 }
-            } catch (err) {
-                console.error(`Error fetching ticket stats for event ${event.event_id}:`, err);
-                stats[event.event_id] = [];
-            }
-        })
-    );
-    setTicketStats(stats);
-};
+            })
+        );
+        setTicketStats(stats);
+    };
 
     // Filter and sort logic
     useEffect(() => {
         let result = [...allEvents];
+
+        // Tab filter
+        if (activeTab === 'rsvp') {
+            result = result.filter(e => !e.has_tickets || e.has_tickets === 0);
+        } else if (activeTab === 'ticket') {
+            result = result.filter(e => e.has_tickets === 1);
+        }
 
         // Search filter
         if (filters.searchQuery.trim() !== "") {
@@ -479,8 +482,8 @@ const fetchTicketStatsForEvents = async (eventsArray) => {
             result = result.filter((e) => e.event_name.toLowerCase().includes(q));
         }
 
-        // Ticket type filter
-        if (filters.ticketType !== "all") {
+        // Ticket type filter (if not already filtered by tab)
+        if (filters.ticketType !== "all" && activeTab === 'all') {
             result = result.filter((e) => {
                 switch (filters.ticketType) {
                     case "ticket-events":
@@ -527,7 +530,7 @@ const fetchTicketStatsForEvents = async (eventsArray) => {
         const sortedFiltered = sortEventsWithMinHeap(result);
         setFilteredEvents(sortedFiltered);
         setCurrentPage(1);
-    }, [filters, allEvents]);
+    }, [filters, allEvents, activeTab]);
 
     /* -------------------------------------------------------------
        CANCEL EVENT PROCESS
@@ -558,65 +561,65 @@ const fetchTicketStatsForEvents = async (eventsArray) => {
         }
     };
 
-const performCancelWithMessage = async () => {
-    if (!cancelMessage.trim()) {
-        printAlert("Please enter a message", "warning");
-        return;
-    }
-
-    setSendingMessage(true);
-
-    try {
-        const API_URL = process.env.REACT_APP_API_URL;
-        const formData = new FormData();
-        formData.append("function", "sendGuestMessage");
-        formData.append("message", cancelMessage);
-        formData.append("API_URL", API_URL);
-        formData.append("event_id", cancelEventId);
-        formData.append("user_id", user?.user_id || '');
-
-        // Check if it's a ticket event
-        const event = allEvents.find(e => e.event_id === cancelEventId);
-        const isTicketEvent = event?.has_tickets === 1;
-        
-        if (isTicketEvent) {
-            // For ticket events, get booking IDs from ticketStats
-            const bookingIds = ticketStats[cancelEventId]?.map(stat => stat.bookingId) || [];
-            const guestIds = bookingIds.join(',');
-            formData.append("guest_ids", guestIds);
-        } else {
-            // For RSVP events, use affectedGuests
-            const guestIds = affectedGuests.map(g => g.guest_id).join(",");
-            formData.append("guest_ids", guestIds);
+    const performCancelWithMessage = async () => {
+        if (!cancelMessage.trim()) {
+            printAlert("Please enter a message", "warning");
+            return;
         }
 
-        const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
-            method: "POST",
-            body: formData
-        });
+        setSendingMessage(true);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "sendGuestMessage");
+            formData.append("message", cancelMessage);
+            formData.append("API_URL", API_URL);
+            formData.append("event_id", cancelEventId);
+            formData.append("user_id", user?.user_id || '');
 
-        const data = await response.json();
+            // Check if it's a ticket event
+            const event = allEvents.find(e => e.event_id === cancelEventId);
+            const isTicketEvent = event?.has_tickets === 1;
+            
+            if (isTicketEvent) {
+                // For ticket events, get booking IDs from ticketStats
+                const bookingIds = ticketStats[cancelEventId]?.map(stat => stat.bookingId) || [];
+                const guestIds = bookingIds.join(',');
+                formData.append("guest_ids", guestIds);
+            } else {
+                // For RSVP events, use affectedGuests
+                const guestIds = affectedGuests.map(g => g.guest_id).join(",");
+                formData.append("guest_ids", guestIds);
+            }
 
-        if (data.success) {
-            const recipientCount = isTicketEvent ? 
-                (ticketStats[cancelEventId]?.length || 0) : 
-                affectedGuests.length;
-            printAlert(`Cancellation message sent to ${recipientCount} recipient(s)`, "success");
-            await performCancel();
-        } else {
-            printAlert("Failed to send cancellation message: " + data.message, "error");
+            const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                const recipientCount = isTicketEvent ? 
+                    (ticketStats[cancelEventId]?.length || 0) : 
+                    affectedGuests.length;
+                printAlert(`Cancellation message sent to ${recipientCount} recipient(s)`, "success");
+                await performCancel();
+            } else {
+                printAlert("Failed to send cancellation message: " + data.message, "error");
+                setSendingMessage(false);
+            }
+        } catch (error) {
+            console.error("Error sending cancellation message:", error);
+            printAlert("Error sending cancellation message", "error");
             setSendingMessage(false);
         }
-    } catch (error) {
-        console.error("Error sending cancellation message:", error);
-        printAlert("Error sending cancellation message", "error");
-        setSendingMessage(false);
-    }
-};
+    };
 
     const performCancel = async () => {
         try {
@@ -711,65 +714,65 @@ const performCancelWithMessage = async () => {
         }
     };
 
-const performDeleteWithMessage = async () => {
-    if (!deleteMessage.trim()) {
-        printAlert("Please enter a message", "warning");
-        return;
-    }
-
-    setSendingDeleteMessage(true);
-
-    try {
-        const API_URL = process.env.REACT_APP_API_URL;
-        const formData = new FormData();
-        formData.append("function", "sendGuestMessage");
-        formData.append("message", deleteMessage);
-        formData.append("API_URL", API_URL);
-        formData.append("event_id", deleteEventId);
-        formData.append("user_id", user?.user_id || '');
-
-        // Check if it's a ticket event
-        const event = allEvents.find(e => e.event_id === deleteEventId);
-        const isTicketEvent = event?.has_tickets === 1;
-        
-        if (isTicketEvent) {
-            // For ticket events, get booking IDs from ticketStats
-            const bookingIds = ticketStats[deleteEventId]?.map(stat => stat.bookingId) || [];
-            const guestIds = bookingIds.join(',');
-            formData.append("guest_ids", guestIds);
-        } else {
-            // For RSVP events, use affectedDeleteGuests
-            const guestIds = affectedDeleteGuests.map(g => g.guest_id).join(",");
-            formData.append("guest_ids", guestIds);
+    const performDeleteWithMessage = async () => {
+        if (!deleteMessage.trim()) {
+            printAlert("Please enter a message", "warning");
+            return;
         }
 
-        const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
-            method: "POST",
-            body: formData
-        });
+        setSendingDeleteMessage(true);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "sendGuestMessage");
+            formData.append("message", deleteMessage);
+            formData.append("API_URL", API_URL);
+            formData.append("event_id", deleteEventId);
+            formData.append("user_id", user?.user_id || '');
 
-        const data = await response.json();
+            // Check if it's a ticket event
+            const event = allEvents.find(e => e.event_id === deleteEventId);
+            const isTicketEvent = event?.has_tickets === 1;
+            
+            if (isTicketEvent) {
+                // For ticket events, get booking IDs from ticketStats
+                const bookingIds = ticketStats[deleteEventId]?.map(stat => stat.bookingId) || [];
+                const guestIds = bookingIds.join(',');
+                formData.append("guest_ids", guestIds);
+            } else {
+                // For RSVP events, use affectedDeleteGuests
+                const guestIds = affectedDeleteGuests.map(g => g.guest_id).join(",");
+                formData.append("guest_ids", guestIds);
+            }
 
-        if (data.success) {
-            const cnt = isTicketEvent ? 
-                (ticketStats[deleteEventId]?.length || 0) : 
-                affectedDeleteGuests.length;
-            printAlert(`Deletion message sent to ${cnt} recipient(s)`, "success");
-            await performDelete();
-        } else {
-            printAlert("Failed to send deletion message: " + data.message, "error");
+            const response = await fetch(`${API_URL}/send_message_to_guest.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                const cnt = isTicketEvent ? 
+                    (ticketStats[deleteEventId]?.length || 0) : 
+                    affectedDeleteGuests.length;
+                printAlert(`Deletion message sent to ${cnt} recipient(s)`, "success");
+                await performDelete();
+            } else {
+                printAlert("Failed to send deletion message: " + data.message, "error");
+                setSendingDeleteMessage(false);
+            }
+        } catch (err) {
+            console.error("Error sending deletion message:", err);
+            printAlert("Error sending deletion message", "error");
             setSendingDeleteMessage(false);
         }
-    } catch (err) {
-        console.error("Error sending deletion message:", err);
-        printAlert("Error sending deletion message", "error");
-        setSendingDeleteMessage(false);
-    }
-};
+    };
 
     const performDelete = async () => {
         setDeletingEventId(deleteEventId);
@@ -908,96 +911,96 @@ const performDeleteWithMessage = async () => {
         setShowMenuId(null);
     };
 
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
+    const handleSaveEdit = async (e) => {
+        e.preventDefault();
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(editedEvent.event_start_date);
-    const endDate = editedEvent.event_end_date ? new Date(editedEvent.event_end_date) : null;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const startDate = new Date(editedEvent.event_start_date);
+        const endDate = editedEvent.event_end_date ? new Date(editedEvent.event_end_date) : null;
 
-    if (startDate < today) {
-        printAlert("Event start date cannot be in the past", "error");
-        return;
-    }
-    if (endDate && endDate < today) {
-        printAlert("Event end date cannot be in the past", "error");
-        return;
-    }
-    if (endDate && endDate < startDate) {
-        printAlert("Event end date cannot be before start date", "error");
-        return;
-    }
-
-    try {
-        const API_URL = process.env.REACT_APP_API_URL;
-        const formData = new FormData();
-        formData.append("function", "updateEvent");
-        formData.append("event_id", selectedEvent.event_id);
-        formData.append("user_id", user?.user_id || '');
-        formData.append("event_name", editedEvent.event_name || "");
-        formData.append("event_location", editedEvent.event_location || "");
-        formData.append("event_start_date", editedEvent.event_start_date || "");
-        formData.append("event_start_time", editedEvent.event_start_time || "");
-        formData.append("event_end_date", editedEvent.event_end_date || "");
-        formData.append("event_end_time", editedEvent.event_end_time || "");
-
-        // Log what we're sending
-        console.log("Sending update data:", {
-            event_id: selectedEvent.event_id,
-            user_id: user?.user_id,
-            event_name: editedEvent.event_name,
-            event_location: editedEvent.event_location,
-            event_start_date: editedEvent.event_start_date,
-            event_start_time: editedEvent.event_start_time,
-            event_end_date: editedEvent.event_end_date,
-            event_end_time: editedEvent.event_end_time
-        });
-
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (startDate < today) {
+            printAlert("Event start date cannot be in the past", "error");
+            return;
+        }
+        if (endDate && endDate < today) {
+            printAlert("Event end date cannot be in the past", "error");
+            return;
+        }
+        if (endDate && endDate < startDate) {
+            printAlert("Event end date cannot be before start date", "error");
+            return;
         }
 
-        const data = await response.json();
-        console.log("Update event response:", data);
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "updateEvent");
+            formData.append("event_id", selectedEvent.event_id);
+            formData.append("user_id", user?.user_id || '');
+            formData.append("event_name", editedEvent.event_name || "");
+            formData.append("event_location", editedEvent.event_location || "");
+            formData.append("event_start_date", editedEvent.event_start_date || "");
+            formData.append("event_start_time", editedEvent.event_start_time || "");
+            formData.append("event_end_date", editedEvent.event_end_date || "");
+            formData.append("event_end_time", editedEvent.event_end_time || "");
 
-        if (data.success) {
-            printAlert("Event updated successfully!", "success");
-            
-            // Update local state
-            const updateEventInArray = (event) => 
-                event.event_id === selectedEvent.event_id ? { ...event, ...editedEvent } : event;
-            
-            const updatedAll = allEvents.map(updateEventInArray);
-            const updatedRegular = events.map(updateEventInArray);
-            const updatedTicket = ticketEvents.map(updateEventInArray);
-            
-            setAllEvents(updatedAll);
-            setEvents(updatedRegular);
-            setTicketEvents(updatedTicket);
-            setFilteredEvents(sortEventsWithMinHeap(updatedAll));
-            
-            setSoonestEvent(
-                updatedAll.filter(
-                    (e) =>
-                        !isEventCancelled(e) &&
-                        new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
-                )[0] || null
-            );
-            setShowEditModal(false);
-        } else {
-            printAlert(`Failed: ${data.message}`, "error");
+            // Log what we're sending
+            console.log("Sending update data:", {
+                event_id: selectedEvent.event_id,
+                user_id: user?.user_id,
+                event_name: editedEvent.event_name,
+                event_location: editedEvent.event_location,
+                event_start_date: editedEvent.event_start_date,
+                event_start_time: editedEvent.event_start_time,
+                event_end_date: editedEvent.event_end_date,
+                event_end_time: editedEvent.event_end_time
+            });
+
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Update event response:", data);
+
+            if (data.success) {
+                printAlert("Event updated successfully!", "success");
+                
+                // Update local state
+                const updateEventInArray = (event) => 
+                    event.event_id === selectedEvent.event_id ? { ...event, ...editedEvent } : event;
+                
+                const updatedAll = allEvents.map(updateEventInArray);
+                const updatedRegular = events.map(updateEventInArray);
+                const updatedTicket = ticketEvents.map(updateEventInArray);
+                
+                setAllEvents(updatedAll);
+                setEvents(updatedRegular);
+                setTicketEvents(updatedTicket);
+                setFilteredEvents(sortEventsWithMinHeap(updatedAll));
+                
+                setSoonestEvent(
+                    updatedAll.filter(
+                        (e) =>
+                            !isEventCancelled(e) &&
+                            new Date(e.event_start_date || e.created_at) >= new Date().setHours(0, 0, 0, 0)
+                    )[0] || null
+                );
+                setShowEditModal(false);
+            } else {
+                printAlert(`Failed: ${data.message}`, "error");
+            }
+        } catch (error) {
+            console.error("Error updating event:", error);
+            printAlert(`Error updating: ${error.message}`, "error");
         }
-    } catch (error) {
-        console.error("Error updating event:", error);
-        printAlert(`Error updating: ${error.message}`, "error");
-    }
-};
+    };
 
     const handleEventClick = (eventId) => {
         const event = allEvents.find((e) => e.event_id === eventId);
@@ -1023,7 +1026,6 @@ const performDeleteWithMessage = async () => {
     const loadMoreEvents = () => setCurrentPage((p) => p + 1);
     const handleFilterChange = (type, value) =>
         setFilters((prev) => ({ ...prev, [type]: value }));
-    const createEvent = () => navigate("/activeEventDetails");
 
     const formatDateTime = (date, time) => {
         if (!date) return "TBD";
@@ -1084,11 +1086,13 @@ const performDeleteWithMessage = async () => {
                     <span>{alert.message}</span>
                 </div>
             )}
-
+            
+<NewEventPopupBtn/>
             <section className="eventsDashboard">
                 <LoginNav />
+                
                 <div className="container">
-                    {/* HEADER */}
+                    {/* HEADER
                     <div className="dashboard-header">
                         <div className="header-content">
                             <h1 className="dashboard-title">Events Dashboard</h1>
@@ -1097,10 +1101,35 @@ const performDeleteWithMessage = async () => {
                         <button className="create-event-btn-main" onClick={createEvent}>
                             <i className="bi bi-plus-lg"></i> New Event
                         </button>
+                    </div> */}
+
+                    {/* Tabs Navigation */}
+                    <div className="events-tabs">
+                        <button 
+                            className={`tab-btn all-tab ${activeTab === 'all' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('all')}
+                        >
+                            <i className="bi bi-grid-3x3-gap-fill"></i>
+                            All Events ({allEvents.length})
+                        </button>
+                        <button 
+                            className={`tab-btn rsvp-tab ${activeTab === 'rsvp' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('rsvp')}
+                        >
+                            <i className="bi bi-envelope-paper"></i>
+                            RSVP Events ({events.length})
+                        </button>
+                        <button 
+                            className={`tab-btn ticket-tab ${activeTab === 'ticket' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('ticket')}
+                        >
+                            <i className="bi bi-ticket-perforated"></i>
+                            Ticket Events ({ticketEvents.length})
+                        </button>
                     </div>
 
                     {/* NEXT EVENT CARD */}
-                    {soonestEvent && !isEventCancelled(soonestEvent) && (
+                    {soonestEvent && !isEventCancelled(soonestEvent) && activeTab === 'all' && (
                         <div className="next-event-card">
                             <div className="next-event-icon">
                                 <i className="bi bi-clock"></i>
@@ -1155,6 +1184,7 @@ const performDeleteWithMessage = async () => {
                                     value={filters.ticketType}
                                     onChange={(e) => handleFilterChange("ticketType", e.target.value)}
                                     className="filter-select"
+                                    disabled={activeTab !== 'all'}
                                 >
                                     <option value="all">All Event Types</option>
                                     <option value="ticket-events">Ticket Events</option>
@@ -1336,7 +1366,10 @@ const performDeleteWithMessage = async () => {
                                                 </div>
 
                                                 {/* Location */}
-                                                <div className="detail-horizontal">
+                                                <div className="detail-horizontal location">
+                                                    <div className="detail-icon">
+                                                        <i className="bi bi-geo-alt"></i>
+                                                    </div>
                                                     <div className="detail-content">
                                                         <div className="detail-value">
                                                             {event.event_location || 'Location TBD'}
@@ -1403,10 +1436,14 @@ const performDeleteWithMessage = async () => {
                                     <i className="bi bi-calendar-x"></i>
                                 </div>
                                 <h3>No Events Found</h3>
-                                <p>Create your first event or adjust your filters to view existing events.</p>
-                                <button className="cta-button" onClick={createEvent}>
-                                    <i className="bi bi-plus-circle"></i> Create Event
-                                </button>
+                                <p>
+                                    {activeTab === 'rsvp' 
+                                        ? "You don't have any RSVP events yet." 
+                                        : activeTab === 'ticket'
+                                        ? "You don't have any ticket events yet."
+                                        : "Create your first event or adjust your filters to view existing events."}
+                                </p>
+                               
                             </div>
                         )}
                     </div>
