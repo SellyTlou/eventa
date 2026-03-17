@@ -11823,3 +11823,217 @@ create ticket popup
         transform: scale(1);
     }
 }
+
+/* Auth Dropdown Styles */
+.dropdown-container {
+  position: relative;
+}
+
+.auth-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 4px;
+  min-width: 200px;
+}
+
+.auth-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.auth-dropdown-menu .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.auth-dropdown-menu .dropdown-item i {
+  margin-right: 8px;
+  font-size: 16px;
+  color: #666;
+}
+
+.auth-dropdown-menu .dropdown-item:first-child i {
+  color: #007bff;
+}
+
+.auth-dropdown-menu .dropdown-item:last-child i {
+  color: #28a745;
+}
+
+/* Mobile Auth Dropdown */
+.mobile-auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-dropdown-container {
+  position: relative;
+}
+
+.mobile-auth-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.mobile-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.mobile-dropdown-item i {
+  margin-right: 8px;
+  font-size: 16px;
+  color: #666;
+}
+
+.mobile-dropdown-item:first-child i {
+  color: #007bff;
+}
+
+.mobile-dropdown-item:last-child i {
+  color: #28a745;
+}
+
+/* Auth Dropdown Styles */
+.dropdown-container {
+  position: relative;
+}
+
+.auth-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 4px;
+  min-width: 200px;
+}
+
+.auth-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.auth-dropdown-menu .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.auth-dropdown-menu .dropdown-item i {
+  margin-right: 8px;
+  font-size: 16px;
+  color: #666;
+}
+
+.auth-dropdown-menu .dropdown-item:first-child i {
+  color: #007bff;
+}
+
+.auth-dropdown-menu .dropdown-item:last-child i {
+  color: #28a745;
+}
+
+/* Mobile Auth Dropdown */
+.mobile-auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-dropdown-container {
+  position: relative;
+}
+
+.mobile-auth-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.mobile-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.mobile-dropdown-item i {
+  margin-right: 8px;
+  font-size: 16px;
+  color: #666;
+}
+
+.mobile-dropdown-item:first-child i {
+  color: #007bff;
+}
+
+.mobile-dropdown-item:last-child i {
+  color: #28a745;
+}

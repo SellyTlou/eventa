@@ -293,9 +293,11 @@ export function Navbar({ onLoginClick, onSignupClick }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [user, setUser] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [signupDropdownOpen, setSignupDropdownOpen] = useState(false);
 
     const desktopDropdownRef = useRef(null);
     const mobileDropdownRef = useRef(null);
+    const signupDropdownRef = useRef(null);
 
     const navigate = useNavigate();
 
@@ -337,9 +339,12 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                 desktopDropdownRef.current &&
                 !desktopDropdownRef.current.contains(event.target) &&
                 mobileDropdownRef.current &&
-                !mobileDropdownRef.current.contains(event.target)
+                !mobileDropdownRef.current.contains(event.target) &&
+                signupDropdownRef.current &&
+                !signupDropdownRef.current.contains(event.target)
             ) {
                 setDropdownOpen(false);
+                setSignupDropdownOpen(false);
             }
         };
 
@@ -386,11 +391,28 @@ export function Navbar({ onLoginClick, onSignupClick }) {
     const closeAllMenus = () => {
         setDropdownOpen(false);
         setIsMobileMenuOpen(false);
+        setSignupDropdownOpen(false);
     };
 
     const handleDropdownItemClick = (handler, e) => {
         if (e) e.stopPropagation();
         handler(e);
+    };
+
+    const handleSigninClick = (e) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        onLoginClick();
+    };
+
+    const handleSignupClick = (accountType, e) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        setSignupDropdownOpen(false);
+        onSignupClick(accountType);
+    };
+
+    const toggleSignupDropdown = (e) => {
+        e.stopPropagation();
+        setSignupDropdownOpen(!signupDropdownOpen);
     };
 
     return (
@@ -460,12 +482,30 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                 </div>
                             ) : (
                                 <div className='d-flex'>
-                                    <button className="btn signin-btn" onClick={onLoginClick}>
+                                    <button className="btn signin-btn me-2" onClick={() => handleSigninClick('personal')}>
                                         Sign In
                                     </button>
-                                    <button className="btn signup-btn" onClick={onSignupClick}>
-                                        Sign Up
-                                    </button>
+                                    <div ref={signupDropdownRef} className="dropdown-container">
+                                        <button className="btn signup-btn" onClick={toggleSignupDropdown}>
+                                            Sign Up <i className="bi bi-chevron-down ms-1"></i>
+                                        </button>
+                                        {signupDropdownOpen && (
+                                            <div className="auth-dropdown-menu">
+                                                <button 
+                                                    className="dropdown-item" 
+                                                    onClick={(e) => handleSignupClick('personal', e)}
+                                                >
+                                                    <i className="bi bi-person me-2"></i> Personal Account
+                                                </button>
+                                                <button 
+                                                    className="dropdown-item" 
+                                                    onClick={(e) => handleSignupClick('business', e)}
+                                                >
+                                                    <i className="bi bi-building me-2"></i> Business Account
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -532,19 +572,45 @@ export function Navbar({ onLoginClick, onSignupClick }) {
 
                         {!user && (
                             <li className="mobile-nav-item">
-                                <div className="mobile-buttons">
-                                    <button className="btn mobile-signin-btn" onClick={() => {
-                                        onLoginClick();
-                                        closeAllMenus();
-                                    }}>
+                                <div className="mobile-auth-buttons">
+                                    <button
+                                        className="btn mobile-signin-btn me-2"
+                                        onClick={() => {
+                                            handleSigninClick('personal');
+                                            closeAllMenus();
+                                        }}
+                                    >
                                         Sign In
                                     </button>
-                                    <button className="btn mobile-signup-btn" onClick={() => {
-                                        onSignupClick();
-                                        closeAllMenus();
-                                    }}>
-                                        Sign Up
-                                    </button>
+                                    <div className="mobile-dropdown-container">
+                                        <button className="btn mobile-signup-btn" onClick={() => {
+                                            setSignupDropdownOpen(!signupDropdownOpen);
+                                        }}>
+                                            Sign Up <i className="bi bi-chevron-down ms-1"></i>
+                                        </button>
+                                        {signupDropdownOpen && (
+                                            <div className="mobile-auth-dropdown">
+                                                <button 
+                                                    className="mobile-dropdown-item" 
+                                                    onClick={() => {
+                                                        handleSignupClick('personal');
+                                                        closeAllMenus();
+                                                    }}
+                                                >
+                                                    <i className="bi bi-person me-2"></i> Personal
+                                                </button>
+                                                <button 
+                                                    className="mobile-dropdown-item" 
+                                                    onClick={() => {
+                                                        handleSignupClick('business');
+                                                        closeAllMenus();
+                                                    }}
+                                                >
+                                                    <i className="bi bi-building me-2"></i> Business
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </li>
                         )}
@@ -912,9 +978,9 @@ export function LoginNav() {
     );
 }
 
-export function Login({ isOpen, onClose, defaultMode = "login" }) {
+export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountType = "personal" }) {
     const [isLogin, setIsLogin] = useState(defaultMode === "login");
-    const [accountType, setAccountType] = useState("personal"); // "personal" or "business"
+    const [accountType, setAccountType] = useState(defaultAccountType || "personal"); // "personal" or "business"
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -940,7 +1006,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
     useEffect(() => {
         if (isOpen) {
             setIsLogin(defaultMode === "login");
-            setAccountType("personal");
+            setAccountType(defaultAccountType || "personal");
             setFormData({
                 name: '',
                 email: '',
@@ -956,7 +1022,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
             setUnverifiedEmail('');
             setSecurityAnswers(null);
         }
-    }, [isOpen, defaultMode]);
+    }, [isOpen, defaultMode, defaultAccountType]);
 
     if (!isOpen) return null;
 
@@ -1307,7 +1373,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
 
     const switchMode = () => {
         setIsLogin(!isLogin);
-        setAccountType("personal");
+        setAccountType(defaultAccountType || "personal");
         setFormData({
             name: '',
             email: '',
@@ -1387,40 +1453,6 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                     <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
                     <p>{isLogin ? 'Sign in to your Evendi account' : 'Join Evendi to start planning your events'}</p>
                 </div>
-
-                {!isLogin && (
-                    <div className="account-type-selector">
-                        <div className="account-type-options">
-                            <button
-                                type="button"
-                                className={`account-type-btn ${accountType === 'personal' ? 'active' : ''}`}
-                                onClick={() => handleAccountTypeChange('personal')}
-                            >
-                                <i className="bi bi-person-fill"></i>
-                                Personal Account
-                            </button>
-                            <button
-                                type="button"
-                                className={`account-type-btn ${accountType === 'business' ? 'active' : ''}`}
-                                onClick={() => handleAccountTypeChange('business')}
-                            >
-                                <i className="bi bi-building"></i>
-                                Business Account
-                            </button>
-                        </div>
-                        <p className="account-type-description">
-                            {accountType === 'personal'
-                                ? 'For individuals planning personal events'
-                                : 'For companies and organizations managing business events'}
-                        </p>
-                        {accountType === 'business' && (
-                            <div className="business-features-notice">
-                                <i className="bi bi-info-circle"></i>
-                                Business accounts include business packages with higher guest limits and advanced features.
-                            </div>
-                        )}
-                    </div>
-                )}
 
                 <form onSubmit={handleSubmit} className="login-form">
                     {!isLogin && accountType === "personal" && (
@@ -1534,7 +1566,7 @@ export function Login({ isOpen, onClose, defaultMode = "login" }) {
                         <div className="password-input-wrapper">
                             <input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="Enter new password"
+                                placeholder={isLogin ? "Enter your password" : "Enter new password"}
                                 id="password"
                                 name="password"
                                 value={formData.password}

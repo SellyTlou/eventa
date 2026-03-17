@@ -6,14 +6,17 @@ import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 function About() {
     const [isLoginOpen, setIsLoginOpen] = React.useState(false);
     const [loginMode, setLoginMode] = React.useState("login");
+    const [loginAccountType, setLoginAccountType] = React.useState("personal");
 
-    const handleLoginClick = () => {
+    const handleLoginClick = (accountType = "personal") => {
         setLoginMode("login");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
-    const handleSignupClick = () => {
+    const handleSignupClick = (accountType = "personal") => {
         setLoginMode("signup");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     }
 
@@ -27,6 +30,7 @@ function About() {
                 isOpen={isLoginOpen}
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
+                defaultAccountType={loginAccountType}
             />
                   <NewEventPopupBtn />
             

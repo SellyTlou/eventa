@@ -25,6 +25,7 @@ function CreateEvent() {
   const [error, setError] = useState("");
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [loginMode, setLoginMode] = useState("login");
+  const [loginAccountType, setLoginAccountType] = useState("personal");
   const [fieldErrors, setFieldErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [user, setUser] = useState(null);
@@ -324,13 +325,15 @@ function CreateEvent() {
     setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
-  const handleLoginClick = () => {
+  const handleLoginClick = (accountType = "personal") => {
     setLoginMode("login");
+    setLoginAccountType(accountType);
     setShowLoginPopup(true);
   };
 
-  const handleSignupClick = () => {
+  const handleSignupClick = (accountType = "personal") => {
     setLoginMode("signup");
+    setLoginAccountType(accountType);
     setShowLoginPopup(true);
   };
 
@@ -463,6 +466,7 @@ function CreateEvent() {
           isOpen={showLoginPopup}
           onClose={() => setShowLoginPopup(false)}
           defaultMode={loginMode}
+          defaultAccountType={loginAccountType}
           onLoginSuccess={handleLoginSuccess}
           onSignupSuccess={handleSignupSuccess}
         />

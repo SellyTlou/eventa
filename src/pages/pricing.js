@@ -27,6 +27,7 @@ function Pricing() {
 
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
+    const [loginAccountType, setLoginAccountType] = useState("personal");
     const [showTicketMaintenance, setShowTicketMaintenance] = useState(false);
     const [showContactSalesModal, setShowContactSalesModal] = useState(false);
 
@@ -345,13 +346,15 @@ function Pricing() {
         return `R ${annualPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
     };
 
-    const handleLoginClick = () => {
+    const handleLoginClick = (accountType = "personal") => {
         setLoginMode("login");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
-    const handleSignupClick = () => {
+    const handleSignupClick = (accountType = "personal") => {
         setLoginMode("signup");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
@@ -561,7 +564,7 @@ function Pricing() {
     return (
         <>
             <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
-            <Login isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} defaultMode={loginMode} />
+            <Login isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} defaultMode={loginMode} defaultAccountType={loginAccountType} />
 
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
