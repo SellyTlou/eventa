@@ -452,7 +452,7 @@ function Index() {
                 <section className="homeHeader">
                     <div className="hero-carousel">
                         {/* SLIDE 1 */}
-                        <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`} style={{ backgroundImage: "url('/images/home1.png')" }}>
+                        <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`} style={{ backgroundImage: "url('/images/home_2.jpg')" }}>
                             <div className="overlay"></div>
                             <div className="container">
                                 <div className="row">
@@ -568,7 +568,7 @@ function Index() {
                             <div className="col-lg-6 mid-category-card">
                                 <div className="category-card">
                                     <div className="category-overlay"></div>
-                                    <img src="/images/bafana.jpg" alt="Sports" className="img-fluid category-image" />
+                                    <img src="/images/sport2.jpg" alt="Sports" className="img-fluid category-image" />
                                     <div className="category-border">
                                         <div className="category-content">
                                             <h5>Sports</h5>
@@ -592,7 +592,7 @@ function Index() {
                             <div className="col-lg-3">
                                 <div className="category-card">
                                     <div className="category-overlay"></div>
-                                    <img src="/images/parties.jpg" alt="Party" className="img-fluid category-image" />
+                                    <img src="/images/party_2.jpg" alt="Party" className="img-fluid category-image" />
                                     <div className="category-border">
                                         <div className="category-content">
                                             <h5>Parties</h5>
