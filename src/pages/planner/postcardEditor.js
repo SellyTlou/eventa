@@ -2173,7 +2173,11 @@ export default function PostcardEditor() {
         }
     };
 
-    const downloadImage = async () => {
+    const goToEventChecklist = () => {
+    navigate('/event-checklist');
+};
+
+const downloadImage = async () => {
     setSelectedId(null);
     setSelectedType(null);
 
@@ -2193,7 +2197,7 @@ export default function PostcardEditor() {
             const success = await saveEventToDatabase(uri);
 
             if (success) {
-                goToEventDashboard(); // Now this will go to the correct dashboard
+                goToEventChecklist(); // Now this function exists
             }
         } catch (error) {
             console.error("Error processing image:", error);
@@ -2202,12 +2206,6 @@ export default function PostcardEditor() {
     }, 100);
 };
 
-    const goToEventDashboard = () => {
-    const storedUser = localStorage.getItem('user');
-    const user = storedUser ? JSON.parse(storedUser) : null;
-    const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
-    navigate(dashPath);
-};
 
     const handleCanvasClick = (e) => {
         const clickedOnEmpty = e.target === e.target.getStage();

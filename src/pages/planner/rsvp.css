@@ -581,3 +581,47 @@ body {
         height: 150px;
     }
 }
+
+/* Custom Questions Section */
+.custom-questions-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.required-star {
+    color: #e53e3e;
+    margin-left: 4px;
+}
+
+/* Custom Radio Group for Questions */
+.custom-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.custom-radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #4a5568;
+}
+
+.custom-radio-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.custom-radio-option span {
+    cursor: pointer;
+}
+
+.custom-radio-option:hover {
+    color: #2d3748;
+}

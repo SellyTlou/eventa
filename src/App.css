@@ -3341,6 +3341,8 @@ text-transform: capitalize !important;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  
+  
 }
 
 /* Price Tag */
@@ -12036,4 +12038,46 @@ create ticket popup
 
 .mobile-dropdown-item:last-child i {
   color: #28a745;
+}
+
+/* Make the sidebar sticky/fixed when scrolling */
+.dashboard-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    /* Your existing sidebar styles remain */
+}
+
+/* Ensure the main content area has proper spacing */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.event-checklist-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+/* For the main content area to scroll independently */
+.dashboard-content,
+.event-checklist-content,
+.manage-my-event-content,
+.guest-insights-content,
+.invitation-content {
+    flex: 1;
+    overflow-y: auto;
+    height: 100vh;
+}
+
+/* Fix for header positioning */
+.dashboard-header-with-menu {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
 }

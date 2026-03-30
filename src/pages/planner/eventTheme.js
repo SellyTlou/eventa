@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "./main.css";
 import { templates } from "./templates.js";
 import { LoginNav } from "../components";
+import { populateTemplateWithEventData } from "../utils/templateUtils";
 
 // Storage helper functions
 const saveEventDataToStorage = (eventData) => {
@@ -46,6 +47,8 @@ export default function EventTheme() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [eventData, setEventData] = useState(null);
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load existing event data on component mount
   useEffect(() => {
@@ -97,6 +100,26 @@ export default function EventTheme() {
     navigateToEditor(templateId, category, template);
   };
 
+  // Handle template preview on hover/click
+  const handlePreviewTemplate = (template) => {
+    if (!eventData) {
+      // Show preview without event data if no event exists
+      setPreviewTemplate(template);
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const populated = populateTemplateWithEventData(template, eventData);
+      setPreviewTemplate(populated);
+    } catch (error) {
+      console.error('Error populating template:', error);
+      setPreviewTemplate(template);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleBack = () => {
     if (eventData?.eventName) {
       navigate("/createEvent");
@@ -106,10 +129,20 @@ export default function EventTheme() {
   };
 
   const navigateToEditor = (templateId, category, template) => {
+    // Populate template with event data before sending to editor
+    let finalTemplate = template;
+    if (eventData) {
+      try {
+        finalTemplate = populateTemplateWithEventData(template, eventData);
+      } catch (error) {
+        console.error('Error populating template for editor:', error);
+      }
+    }
+    
     navigate(`/postcardEditor?template=${templateId}&category=${category}`, {
       state: {
         eventData: eventData,
-        template: template
+        template: finalTemplate
       }
     });
   };
@@ -149,16 +182,26 @@ export default function EventTheme() {
               <h1>Select a Template</h1>
               {eventData?.eventName && (
                 <div className="event-name-banner">
-                  Creating: <strong>{eventData.eventName}</strong>
-                  {eventData.eventStartDate && (
-                    <span className="event-date">
-                      on {new Date(eventData.eventStartDate).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  )}
+                  <div className="event-info">
+                    <div className="event-icon">🎉</div>
+                    <div className="event-details">
+                      <strong>{eventData.eventName}</strong>
+                      {eventData.eventStartDate && (
+                        <span className="event-date">
+                          on {new Date(eventData.eventStartDate).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                          {eventData.eventStartTime && ` at ${new Date(`2000-01-01T${eventData.eventStartTime}`).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -169,11 +212,12 @@ export default function EventTheme() {
                     className={`filter-btn ${activeFilter === filter ? "active" : ""}`}
                     onClick={() => handleFilterClick(filter)}
                   >
-                    {filter === "All" ? "All" : filter.replace(/([A-Z])/g, " $1").trim()}
+                    {filter === "All" ? "All Templates" : filter.replace(/([A-Z])/g, " $1").trim()}
                   </button>
                 ))}
               </div>
 
+              {/* Template Grid */}
               <div className="template-grid">
                 {currentTemplates.length > 0 ? (
                   currentTemplates.map(template => (
@@ -181,6 +225,8 @@ export default function EventTheme() {
                       key={template.id}
                       className="template-card"
                       onClick={() => handleTemplateSelect(template.id)}
+                      onMouseEnter={() => handlePreviewTemplate(template)}
+                      onMouseLeave={() => setPreviewTemplate(null)}
                     >
                       <div className="template-image">
                         <img
@@ -191,10 +237,25 @@ export default function EventTheme() {
                             e.target.src = "https://via.placeholder.com/300x400/F5F5F5/999?text=Preview+Not+Found";
                           }}
                         />
+                        {/* Preview badge for templates with placeholders */}
+                        {template.placeholders && Object.keys(template.placeholders).length > 0 && (
+                          <div className="dynamic-badge">
+                            <span>✨ Dynamic</span>
+                          </div>
+                        )}
                       </div>
                       <div className="template-info">
                         <h3>{template.title}</h3>
                         <p>{template.description || "Beautiful customizable template"}</p>
+                        {template.placeholders && (
+                          <div className="template-placeholders">
+                            <small>
+                              Auto-fills: {Object.keys(template.placeholders).map(p => 
+                                p.replace(/([A-Z])/g, " $1").toLowerCase()
+                              ).join(", ")}
+                            </small>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
@@ -204,10 +265,167 @@ export default function EventTheme() {
                   </p>
                 )}
               </div>
+
+              {/* Preview Modal */}
+              {previewTemplate && (
+                <div className="template-preview-modal" onClick={() => setPreviewTemplate(null)}>
+                  <div className="preview-content" onClick={(e) => e.stopPropagation()}>
+                    <button className="close-preview" onClick={() => setPreviewTemplate(null)}>×</button>
+                    <h3>Preview: {previewTemplate.title}</h3>
+                    {isLoading ? (
+                      <div className="preview-loading">Loading preview...</div>
+                    ) : (
+                      <div className="preview-canvas">
+                        <TemplateMiniPreview template={previewTemplate} eventData={eventData} />
+                      </div>
+                    )}
+                    <div className="preview-actions">
+                      <button 
+                        className="btn-use-template"
+                        onClick={() => handleTemplateSelect(previewTemplate.id)}
+                      >
+                        Use This Template
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         </div>
       </section>
     </>
+  );
+}
+
+// Mini Preview Component for Templates
+// Mini Preview Component for Templates
+function TemplateMiniPreview({ template, eventData }) {
+  const [populatedTemplate, setPopulatedTemplate] = useState(template);
+
+  useEffect(() => {
+    if (eventData && template.placeholders) {
+      try {
+        const populated = populateTemplateWithEventData(template, eventData);
+        setPopulatedTemplate(populated);
+      } catch (error) {
+        console.error('Error populating preview:', error);
+      }
+    }
+  }, [template, eventData]);
+
+  const { data } = populatedTemplate;
+
+  // Sort elements by zIndex to ensure proper layering
+  const sortedShapes = useMemo(() => {
+    return [...(data.shapes || [])].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [data.shapes]);
+
+  const sortedImages = useMemo(() => {
+    return [...(data.images || [])].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [data.images]);
+
+  const sortedTexts = useMemo(() => {
+    return [...(data.texts || [])].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [data.texts]);
+
+  // Combine all elements and sort by zIndex for overall layering
+  const allElements = useMemo(() => {
+    const elements = [
+      ...sortedShapes.map(el => ({ ...el, elementType: 'shape' })),
+      ...sortedImages.map(el => ({ ...el, elementType: 'image' })),
+      ...sortedTexts.map(el => ({ ...el, elementType: 'text' }))
+    ];
+    return elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [sortedShapes, sortedImages, sortedTexts]);
+
+  return (
+    <div 
+      className="mini-preview-canvas"
+      style={{
+        width: `${data.design?.properties?.size?.width || 500}px`,
+        height: `${data.design?.properties?.size?.height || 400}px`,
+        position: "relative",
+        backgroundColor: data.bgConfig?.type === "color" ? data.bgConfig.value : "transparent",
+        backgroundImage: data.bgConfig?.type === "image" ? `url(${data.bgConfig.value})` : "none",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        overflow: "hidden",
+        borderRadius: "12px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+      }}
+    >
+      {/* Render all elements in sorted order */}
+      {allElements.map(element => {
+        if (element.elementType === 'shape') {
+          return (
+            <div
+              key={element.id}
+              style={{
+                position: "absolute",
+                left: element.x,
+                top: element.y,
+                width: element.width,
+                height: element.height,
+                backgroundColor: element.fill !== "transparent" ? element.fill : undefined,
+                borderRadius: element.shapeType === "circle" ? "50%" : 
+                             element.shapeType === "ellipse" ? "50%" : undefined,
+                transform: `rotate(${element.rotation}deg)`,
+                opacity: element.opacity,
+                border: element.stroke ? `${element.strokeWidth}px solid ${element.stroke}` : "none"
+              }}
+            />
+          );
+        } else if (element.elementType === 'image') {
+          return (
+            <img
+              key={element.id}
+              src={element.src}
+              alt=""
+              style={{
+                position: "absolute",
+                left: element.x,
+                top: element.y,
+                width: element.width,
+                height: element.height,
+                transform: `rotate(${element.rotation}deg)`,
+                opacity: element.opacity,
+                objectFit: "contain"
+              }}
+            />
+          );
+        } else if (element.elementType === 'text') {
+          return (
+            <div
+              key={element.id}
+              style={{
+                position: "absolute",
+                left: element.x,
+                top: element.y,
+                width: element.width,
+                fontSize: element.fontSize,
+                fontFamily: element.fontFamily,
+                fontWeight: element.fontWeight,
+                color: element.fill,
+                textAlign: element.align,
+                transform: `rotate(${element.rotation}deg)`,
+                opacity: element.opacity,
+                whiteSpace: element.wrap === "none" ? "nowrap" : "normal",
+                lineHeight: element.lineHeight,
+                wordBreak: "break-word"
+              }}
+            >
+              {element.text.split('\n').map((line, i) => (
+                <React.Fragment key={i}>
+                  {line}
+                  {i < element.text.split('\n').length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </div>
+          );
+        }
+        return null;
+      })}
+    </div>
   );
 }

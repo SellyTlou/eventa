@@ -48,6 +48,9 @@ import PaymentSuccess from './planner/PaymentSuccess';
 import MyRequests from '../pages/business_planner/MyRequests';
 import RequestDetails from '../pages/business_planner/RequestDetails';
 import CreateTicketEvent from '../pages/createTicketEvent';
+import EventChecklist from './planner/EventChecklist';
+import FormBuilder from './planner/FormBuilder';
+
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -234,6 +237,9 @@ export function SessionHandler() {
                 <Route path="/paymentCancel" element={<PaymentCancel />} />
                 <Route path="/paymentSuccess" element={<PaymentSuccess />} />
                 <Route path="/createTicketEvent" element={<CreateTicketEvent />} />
+                <Route path="/event-checklist" element={<EventChecklist />} />
+                <Route path="/form-builder" element={<FormBuilder />} />
+
             </Routes>
 
             <SessionWarningModal
@@ -1858,6 +1864,10 @@ export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/guest_insights");
         onClose?.();
     };
+    const goToChecklist = () => {
+        navigate("/event-checklist");
+        onClose?.();
+    };
 
     const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : true;
 
@@ -1866,6 +1876,7 @@ export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
             section: 'Event Planning',
             items: [
                 { path: homePath, icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
+                { path: '/event-checklist', icon: 'bi-check2-square', label: 'Event Checklist', onClick: goToChecklist },
                 { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
                 { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
                 { path: '/eventManagement', icon: 'bi-list-check', label: 'RSVP Responses', onClick: goToEventManagement }
@@ -1889,7 +1900,7 @@ export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
                 <div className="sidebar-overlay" onClick={onClose} />
             )}
 
-            {/* Sidebar — THIS LINE IS THE FIX */}
+            {/* Sidebar */}
             <div className={`dashboard-sidebar ${isMobileOpen ? "mobile-open" : ""}`}>
                 <div className="sidebar-header">
                     <h3>Event Management</h3>
@@ -1938,7 +1949,6 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/invitationPage");
         onClose?.();
     };
-
     const goToAttendanceStats = () => {
         navigate("/attendance_stats");
         onClose?.();
@@ -1951,6 +1961,10 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/event_ticket_manage");
         onClose?.();
     };
+    const goToChecklist = () => {
+        navigate("/event-checklist");
+        onClose?.();
+    };
 
     const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : true;
 
@@ -1959,10 +1973,10 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
             section: 'Event Planning',
             items: [
                 { path: '/eventsDashboard', icon: 'bi-house', label: 'Dashboard', onClick: goToHome },
+                { path: '/event-checklist', icon: 'bi-check2-square', label: 'Event Checklist', onClick: goToChecklist },
                 { path: '/manage_my_event', icon: 'bi-megaphone', label: 'Publish Event', onClick: goToManage },
                 { path: '/invitationPage', icon: 'bi-send', label: 'Send Invitations', onClick: goToInvitations },
                 { path: '/event_ticket_manage', icon: 'bi-book', label: 'Bookings', onClick: goToBookings }
-
             ]
         },
         {
@@ -1983,7 +1997,7 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
                 <div className="sidebar-overlay" onClick={onClose} />
             )}
 
-            {/* Sidebar — THIS LINE IS THE FIX */}
+            {/* Sidebar */}
             <div className={`dashboard-sidebar ${isMobileOpen ? "mobile-open" : ""}`}>
                 <div className="sidebar-header">
                     <h3>Event Management</h3>
