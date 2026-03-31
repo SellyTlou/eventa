@@ -1,4 +1,6 @@
 <?php
+
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
@@ -3900,7 +3902,7 @@ if ($fun === 'recordPayment') {
     $payment_method = $_POST['payment_method'] ?? '';
     $payment_status = $_POST['payment_status'] ?? 'pending';
     $transaction_id = $_POST['transaction_id'] ?? '';
-    $pf_payment_id = $_POST['pf_payment_id'] ?? '';
+    $pf_payment_id = $_POST['pf_payment_id'] ?? ''; // Keep this for updates from ITN
 
     try {
         $pdo->beginTransaction();
@@ -3912,9 +3914,8 @@ if ($fun === 'recordPayment') {
             $package_type = 'Custom Plan';
             $max_events = 0;
             $max_guests = 0;
-            $price = $amount; // amount should equal agreed custom price
+            $price = $amount;
 
-            // verify custom request exists for this user
             $request_id = substr($package_id, 7);
             $checkReq = $pdo->prepare("SELECT request_id FROM custom_plan_requests WHERE request_id = ? AND user_id = ?");
             $checkReq->execute([$request_id, $user_id]);
@@ -3945,60 +3946,51 @@ if ($fun === 'recordPayment') {
             $price = $package['price'];
         }
 
-        // Generate payment ID for paid packages
+        // Handle payment recording
         $payment_id = null;
-        if ($price > 0) {
-            // Check if we already have this transaction
-            if (!empty($transaction_id)) {
-                $checkStmt = $pdo->prepare("SELECT payment_id FROM payment_history WHERE transaction_id = ?");
-                $checkStmt->execute([$transaction_id]);
-                $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($existing) {
-                    // Update existing payment
+        
+        // If we have transaction_id, check if it exists
+        if (!empty($transaction_id)) {
+            $checkStmt = $pdo->prepare("SELECT payment_id FROM payment_history WHERE transaction_id = ?");
+            $checkStmt->execute([$transaction_id]);
+            $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existing) {
+                // Update existing payment (e.g., from pending to completed)
+                if (!empty($pf_payment_id)) {
+                    // If pf_payment_id is provided (from ITN), update it
                     $updateStmt = $pdo->prepare("
                         UPDATE payment_history 
-                        SET payment_status = ?, payment_method = ?, payment_date = NOW()
+                        SET payment_status = ?, 
+                            payment_method = ?, 
+                            pf_payment_id = ?,
+                            payment_date = NOW()
+                        WHERE transaction_id = ?
+                    ");
+                    $updateStmt->execute([$payment_status, $payment_method, $pf_payment_id, $transaction_id]);
+                } else {
+                    // Regular update without pf_payment_id
+                    $updateStmt = $pdo->prepare("
+                        UPDATE payment_history 
+                        SET payment_status = ?, 
+                            payment_method = ?, 
+                            payment_date = NOW()
                         WHERE transaction_id = ?
                     ");
                     $updateStmt->execute([$payment_status, $payment_method, $transaction_id]);
-                    $payment_id = $existing['payment_id'];
-                } else {
-                    // Generate new payment ID
-                    $payment_id = generateSimpleTransactionId($pdo);
-                    
-                    // Insert new payment
-                    $insertPayment = $pdo->prepare("
-                        INSERT INTO payment_history (
-                            payment_id, user_id, user_name,
-                            package_id, package_name,
-                            amount, payment_status, payment_method, payment_date,
-                            transaction_id, pf_payment_id
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)
-                    ");
-                    $insertPayment->execute([
-                        $payment_id,
-                        $user_id,
-                        $user_name,
-                        $package_id,
-                        $package_type,
-                        $amount,
-                        $payment_status,
-                        $payment_method,
-                        $transaction_id,
-                        $pf_payment_id
-                    ]);
                 }
+                $payment_id = $existing['payment_id'];
             } else {
-                // No transaction ID, create new payment
+                // Create new payment record
                 $payment_id = generateSimpleTransactionId($pdo);
                 
                 $insertPayment = $pdo->prepare("
                     INSERT INTO payment_history (
                         payment_id, user_id, user_name,
                         package_id, package_name,
-                        amount, payment_status, payment_method, payment_date
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                        amount, payment_status, payment_method, payment_date,
+                        transaction_id, pf_payment_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)
                 ");
                 $insertPayment->execute([
                     $payment_id,
@@ -4008,9 +4000,32 @@ if ($fun === 'recordPayment') {
                     $package_type,
                     $amount,
                     $payment_status,
-                    $payment_method
+                    $payment_method,
+                    $transaction_id,
+                    $pf_payment_id
                 ]);
             }
+        } else {
+            // No transaction ID, create new payment (shouldn't happen for PayFast)
+            $payment_id = generateSimpleTransactionId($pdo);
+            
+            $insertPayment = $pdo->prepare("
+                INSERT INTO payment_history (
+                    payment_id, user_id, user_name,
+                    package_id, package_name,
+                    amount, payment_status, payment_method, payment_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
+            $insertPayment->execute([
+                $payment_id,
+                $user_id,
+                $user_name,
+                $package_id,
+                $package_type,
+                $amount,
+                $payment_status,
+                $payment_method
+            ]);
         }
 
         // Create or update user_packages (only if payment is completed and not a custom plan)
@@ -4046,14 +4061,13 @@ if ($fun === 'recordPayment') {
             $updateEvents->execute([$package_id, $user_id]);
         }
 
-        // Custom plan finalization: provision business package and update request
+        // Custom plan finalization
         if ($isCustom && $payment_status === 'completed') {
             $request_id = substr($package_id, 7);
             $reqStmt = $pdo->prepare("SELECT * FROM custom_plan_requests WHERE request_id = ? AND user_id = ?");
             $reqStmt->execute([$request_id, $user_id]);
             $request = $reqStmt->fetch(PDO::FETCH_ASSOC);
             if ($request) {
-                // expire existing active business packages
                 $expireStmt = $pdo->prepare("UPDATE user_business_packages SET status = 'expired' WHERE user_id = ? AND status = 'active'");
                 $expireStmt->execute([$user_id]);
 
@@ -4064,7 +4078,7 @@ if ($fun === 'recordPayment') {
                     'features' => $request['desired_features'] ? explode(',', $request['desired_features']) : []
                 ];
                 $expiry_date = date('Y-m-d H:i:s', strtotime('+1 month'));
-                $insertStmt = $pdo->prepare("\
+                $insertStmt = $pdo->prepare("
                     INSERT INTO user_business_packages 
                     (user_id, business_package_id, is_custom, custom_limits, approved_request_id, event_limit, status, expiry_date) 
                     VALUES (?, 4, 1, ?, ?, ?, 'active', ?)
@@ -4112,6 +4126,97 @@ if ($fun === 'recordPayment') {
     }
     exit;
 }
+
+
+if ($fun === 'checkPaymentStatus') {
+    $transaction_id = $_POST['transaction_id'] ?? '';
+    
+    if (empty($transaction_id)) {
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Transaction ID is required'
+        ]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                payment_status,
+                transaction_id,
+                amount,
+                payment_method,
+                created_at,
+                payment_date
+            FROM payment_history 
+            WHERE transaction_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+        ");
+        
+        $stmt->execute([$transaction_id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($payment) {
+            echo json_encode([
+                'success' => true,
+                'status' => $payment['payment_status'],
+                'transaction_id' => $payment['transaction_id'],
+                'amount' => $payment['amount'],
+                'payment_method' => $payment['payment_method'],
+                'created_at' => $payment['created_at'],
+                'payment_date' => $payment['payment_date']
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Transaction not found',
+                'status' => 'not_found'
+            ]);
+        }
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Database error: ' . $e->getMessage(),
+            'status' => 'error'
+        ]);
+    }
+    exit;
+}
+
+if ($fun === 'getPaymentByTransactionId') {
+    $transaction_id = $_POST['transaction_id'] ?? '';
+    
+    if (empty($transaction_id)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Transaction ID required'
+        ]);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT * FROM payment_history WHERE transaction_id = ?
+        ");
+        $stmt->execute([$transaction_id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'success' => true,
+            'payment' => $payment
+        ]);
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
 
 if ($fun === 'sendPaymentReceipt') {
     $email = $_POST['email'] ?? '';
@@ -7528,5 +7633,6 @@ if ($fun === "getEventBookings") {
     }
     exit;
 }
+
 
 ?>

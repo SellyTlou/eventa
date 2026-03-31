@@ -5,6 +5,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut } from "../components"; 
 import crypto from "crypto-js";
 
+// API URL Configuration
+const API_URL = process.env.REACT_APP_API_URL;
+
 const PackagePayment = () => {
     const dropdownRef = useRef(null);
     const [user, setUser] = useState(null);
@@ -26,24 +29,36 @@ const PackagePayment = () => {
     const vatRate = 0.15;
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
+    // Get current tunnel URL for local testing
+    const getCurrentBaseUrl = () => {
+ 
+        if (process.env.NODE_ENV === 'development') {
+          
+         //   const ngrokUrl = localStorage.getItem('') || window.location.origin;
+              return 'https://b578-102-253-67-0.ngrok-free.app';
+        }
+        return window.location.origin;
+    };
+
     // ============ PAYFAST CONFIGURATION ============
     const PAYFAST_CONFIG = {
-        MERCHANT_ID: "10046113",
-        MERCHANT_KEY: "0kdmnse8055gx",
-        PASS_PHRASE: "",
-        ITN_URL: "https://evenditest.evendi.co.za/api/payFastInt.php",
+        MERCHANT_ID: "10046113",//33426571
+        MERCHANT_KEY: "0kdmnse8055gx",//lkqoiy0ftb9yc
+        PASS_PHRASE: "", // Add if you have one in PayFast settings
         
+        // For local testing, update this to your ngrok URL
+ITN_URL: "https://c84f-102-253-67-0.ngrok-free.app/eventa/src/pages/php/payFastInt.php",    
+        // Use sandbox for testing
         PAYFAST_URL: process.env.NODE_ENV === 'production' 
             ? "https://www.payfast.co.za/eng/process"
             : "https://sandbox.payfast.co.za/eng/process",
         
-        RETURN_URL: `${window.location.origin}/payment-success`,
-        CANCEL_URL: `${window.location.origin}/payment-cancel`,
+         RETURN_URL: "https://b578-102-253-67-0.ngrok-free.app/paymentSuccess",
+    CANCEL_URL: "https://b578-102-253-67-0.ngrok-free.app/paymentCancel",
         
         EMAIL_CONFIRMATION: true,
-        CONFIRMATION_EMAIL: user?.email || "",
+        CONFIRMATION_EMAIL: "",
         PAYMENT_METHOD: "cc",
-        SUBSCRIPTION_TYPE: undefined,
     };
 
     const printAlert = (message, type = "info") => {
@@ -93,15 +108,6 @@ const PackagePayment = () => {
     // ============ EMAIL FUNCTIONS ============
     const sendPaymentReceiptEmail = async (email, name, transactionId, amount, packageName) => {
         try {
-            let apiUrl = process.env.REACT_APP_API_URL;
-            if (!apiUrl) {
-                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
-            }
-
-            if (apiUrl === "/api") {
-                apiUrl = "https://evenditest.evendi.co.za/api";
-            }
-
             const formDataToSend = new FormData();
             formDataToSend.append("function", "sendPaymentReceipt");
             formDataToSend.append("email", email);
@@ -110,10 +116,10 @@ const PackagePayment = () => {
             formDataToSend.append("amount", amount);
             formDataToSend.append("package_name", packageName);
             formDataToSend.append("payment_date", new Date().toISOString());
-            formDataToSend.append("API_URL", apiUrl);
+            formDataToSend.append("API_URL", API_URL);
             formDataToSend.append("user_email", email);
 
-            const url = `${apiUrl}/query.php`;
+            const url = `${API_URL}/query.php`;
             console.log("Sending payment receipt request to:", url);
 
             const response = await fetchWithTimeout(url, {
@@ -136,66 +142,91 @@ const PackagePayment = () => {
         return `PF-${timestamp}-${random}`;
     };
 
-    const generatePayFastSignature = (data) => {
-        const sortedParams = Object.keys(data).sort();
-        let parameterString = "";
-        
-        sortedParams.forEach(key => {
+   const generatePayFastSignature = (data) => {
+    let pfOutput = "";
+    Object.keys(data)
+        .sort()
+        .forEach(key => {
+            // Skip empty values and signature field
             if (data[key] !== "" && key !== 'signature') {
-                parameterString += `${key}=${encodeURIComponent(data[key]).replace(/%20/g, '+')}&`;
+                // Convert value to string if it's not already
+                let value = data[key];
+                
+                // Handle different data types
+                if (value === null || value === undefined) {
+                    value = "";
+                } else if (typeof value === 'object') {
+                    value = JSON.stringify(value);
+                } else {
+                    value = String(value);
+                }
+                
+                // Only apply trim if value is a string and not empty
+                const trimmedValue = value.trim ? value.trim() : value;
+                
+                if (trimmedValue !== "") {
+                    pfOutput += `${key}=${encodeURIComponent(trimmedValue).replace(/%20/g, '+')}&`;
+                }
             }
         });
-        
-        parameterString = parameterString.slice(0, -1);
-        
-        if (PAYFAST_CONFIG.PASS_PHRASE) {
-            parameterString += `&passphrase=${encodeURIComponent(PAYFAST_CONFIG.PASS_PHRASE)}`;
-        }
-        
-        const signature = crypto.MD5(parameterString).toString();
-        return signature;
-    };
+    
+    // Remove last &
+    pfOutput = pfOutput.slice(0, -1);
+    
+    // Add passphrase if exists
+    if (PAYFAST_CONFIG.PASS_PHRASE) {
+        pfOutput += `&passphrase=${encodeURIComponent(PAYFAST_CONFIG.PASS_PHRASE).replace(/%20/g, '+')}`;
+    }
+    
+    return crypto.MD5(pfOutput).toString();
+};
 
-const preparePayFastData = () => {
+   const preparePayFastData = () => {
     const mPaymentId = generateTransactionId();
     setTransactionId(mPaymentId);
     
+    const userData = JSON.parse(localStorage.getItem("user") || "{}");
+    
     const paymentData = {
-        merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
-        merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
-        return_url: PAYFAST_CONFIG.RETURN_URL,
-        cancel_url: PAYFAST_CONFIG.CANCEL_URL,
-        notify_url: PAYFAST_CONFIG.ITN_URL,
+        merchant_id: String(PAYFAST_CONFIG.MERCHANT_ID),
+        merchant_key: String(PAYFAST_CONFIG.MERCHANT_KEY),
+        return_url: String(PAYFAST_CONFIG.RETURN_URL),
+        cancel_url: String(PAYFAST_CONFIG.CANCEL_URL),
+        notify_url: String(PAYFAST_CONFIG.ITN_URL),
         
-        name_first: user?.name?.split(' ')[0] || '',
-        name_last: user?.name?.split(' ').slice(1).join(' ') || '',
-        email_address: user?.email || PAYFAST_CONFIG.CONFIRMATION_EMAIL,
-        cell_number: user?.phone || '',
+        name_first: String(userData?.name?.split(' ')[0] || user?.name?.split(' ')[0] || ''),
+        name_last: String(userData?.name?.split(' ').slice(1).join(' ') || user?.name?.split(' ').slice(1).join(' ') || ''),
+        email_address: String(userData?.email || user?.email || ''),
+        cell_number: String(userData?.phone || user?.phone || ''),
         
-        m_payment_id: mPaymentId,
-        amount: paymentDetails?.totalAmount || "0.00",
-        item_name: `${selectedPackage?.package_type} Package - Evenda`,
-        item_description: `Max Events: ${selectedPackage?.max_events}, Max Guests: ${selectedPackage?.max_guests}`,
+        m_payment_id: String(mPaymentId),
+        amount: String(paymentDetails?.totalAmount || "0.00"),
+        item_name: String(`${selectedPackage?.package_type} Package - Evenda`),
+        item_description: String(`Max Events: ${selectedPackage?.max_events}, Max Guests: ${selectedPackage?.max_guests}`),
         
-        custom_str1: user?.user_id || '',
-        custom_str2: selectedPackage?.package_id || '',
-        custom_str3: selectedPackage?.package_type || '',
+        custom_str1: String(userData?.user_id || user?.user_id || ''),
+        custom_str2: String(selectedPackage?.package_id || ''),
+        custom_str3: String(selectedPackage?.package_type || ''),
         custom_str4: 'PayFast',
-        custom_int1: selectedPackage?.max_events || 0,
-        custom_int2: selectedPackage?.max_guests || 0,
-        custom_int3: Math.round(parseFloat(paymentDetails?.totalAmount || 0) * 100),
+        custom_int1: String(parseInt(selectedPackage?.max_events) || 0),
+        custom_int2: String(parseInt(selectedPackage?.max_guests) || 0),
         
-        payment_method: PAYFAST_CONFIG.PAYMENT_METHOD,
-        email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? 1 : 0,
-        confirmation_address: PAYFAST_CONFIG.CONFIRMATION_EMAIL,
+        payment_method: String(PAYFAST_CONFIG.PAYMENT_METHOD),
+        email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? "1" : "0", // Convert to string
     };
 
-    // Only add subscription_type if it's defined and not empty
-    if (PAYFAST_CONFIG.SUBSCRIPTION_TYPE !== undefined && PAYFAST_CONFIG.SUBSCRIPTION_TYPE !== '') {
-        paymentData.subscription_type = PAYFAST_CONFIG.SUBSCRIPTION_TYPE;
+    // Add confirmation email if exists
+    if (userData?.email || user?.email) {
+        paymentData.confirmation_address = String(userData?.email || user?.email);
     }
 
     paymentData.signature = generatePayFastSignature(paymentData);
+    
+    console.log("PayFast Data prepared:", {
+        ...paymentData,
+        signature: "***HIDDEN***"
+    });
+    
     return paymentData;
 };
 
@@ -205,7 +236,6 @@ const preparePayFastData = () => {
             const formData = new FormData();
             formData.append("function", "getPackageById");
             formData.append("package_id", packageId);
-            const API_URL = process.env.REACT_APP_API_URL;
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -232,7 +262,6 @@ const preparePayFastData = () => {
 
     const recordPayment = async (paymentInfo = {}) => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
 
             formData.append("function", "recordPayment");
@@ -244,8 +273,8 @@ const preparePayFastData = () => {
             formData.append("payment_method", paymentInfo.payment_method || selectedPaymentMethod);
             formData.append("payment_status", paymentInfo.payment_status || "pending");
             
-            if (transactionId) {
-                formData.append("transaction_id", transactionId);
+            if (transactionId || paymentInfo.transaction_id) {
+                formData.append("transaction_id", paymentInfo.transaction_id || transactionId);
             }
 
             console.log("Recording payment with data:", {
@@ -294,47 +323,59 @@ const preparePayFastData = () => {
         }
     };
 
-    const initiatePayFastPayment = async () => {
-        setProcessingPayment(true);
-        setPaymentStarted(true);
+   const initiatePayFastPayment = async () => {
+    setProcessingPayment(true);
+    setPaymentStarted(true);
+    
+    try {
+        const paymentData = preparePayFastData();
+
+        localStorage.setItem("lastTransactionId", paymentData.m_payment_id);
         
-        try {
-            const paymentData = preparePayFastData();
-            
-            const paymentRecorded = await recordPayment({
-                payment_method: 'payfast',
-                payment_status: 'pending',
-                transaction_id: paymentData.m_payment_id
-            });
+        // Record initial payment with pending status
+        const paymentRecorded = await recordPayment({
+            payment_method: 'payfast',
+            payment_status: 'pending',
+            transaction_id: paymentData.m_payment_id
+            // DO NOT send pf_payment_id here - it doesn't exist yet
+        });
 
-            if (!paymentRecorded) {
-                throw new Error("Failed to record payment");
-            }
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = PAYFAST_CONFIG.PAYFAST_URL;
-            form.style.display = 'none';
-            
-            Object.keys(paymentData).forEach(key => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = paymentData[key];
-                form.appendChild(input);
-            });
-            
-            document.body.appendChild(form);
-            form.submit();
-            
-        } catch (error) {
-            console.error("PayFast payment error:", error);
-            setError("Failed to initiate payment. Please try again.");
-            printAlert("Payment initiation failed. Please try again.", "error");
-            setProcessingPayment(false);
-            setPaymentStarted(false);
+        if (!paymentRecorded) {
+            throw new Error("Failed to record payment");
         }
-    };
+
+        // Create and submit the form to PayFast
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = PAYFAST_CONFIG.PAYFAST_URL;
+        form.target = '_blank';
+        form.style.display = 'none';
+        
+        Object.keys(paymentData).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = paymentData[key];
+            form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        console.log("Submitting to PayFast:", PAYFAST_CONFIG.PAYFAST_URL);
+        form.submit();
+        
+        setTimeout(() => {
+            setShowPaymentPopup(false);
+            setProcessingPayment(false);
+        }, 1000);
+        
+    } catch (error) {
+        console.error("PayFast payment error:", error);
+        setError("Failed to initiate payment. Please try again.");
+        printAlert("Payment initiation failed. Please try again.", "error");
+        setProcessingPayment(false);
+        setPaymentStarted(false);
+    }
+};
 
     const generatePaymentProof = (paymentId) => {
         const proof = {
@@ -542,6 +583,11 @@ const preparePayFastData = () => {
                     <i className="bi bi-shield-check"></i>
                     <small>Secured by PayFast | PCI DSS Level 1 Compliant</small>
                 </div>
+                <div className="payfast-test-info">
+                    <small className="text-muted">
+                        Test Mode: Use card 4111111111111111, any expiry, CVV 123
+                    </small>
+                </div>
             </div>
         );
     };
@@ -682,12 +728,20 @@ const preparePayFastData = () => {
     };
 
     const StripeForm = ({ onSubmit }) => {
+        const [loading, setLoading] = useState(false);
+
         const handleSubmit = (e) => {
             e.preventDefault();
-            onSubmit({
-                paymentMethod: 'stripe',
-                provider: 'Stripe'
-            });
+            setLoading(true);
+            
+            setTimeout(() => {
+                setLoading(false);
+                onSubmit({
+                    paymentMethod: 'stripe',
+                    provider: 'Stripe',
+                    status: 'completed'
+                });
+            }, 2500);
         };
 
         return (
@@ -712,9 +766,9 @@ const preparePayFastData = () => {
                 <button
                     onClick={handleSubmit}
                     className="submit-payment-btn stripe-btn"
-                    disabled={processingPayment}
+                    disabled={loading || processingPayment}
                 >
-                    {processingPayment ? (
+                    {loading ? (
                         <>
                             <div className="spinner-border spinner-border-sm" role="status"></div>
                             Processing with Stripe...
@@ -813,6 +867,15 @@ const preparePayFastData = () => {
                 }
 
                 await getPackageById(packageId);
+                
+                // Log current configuration for debugging
+                console.log("PayFast Configuration:", {
+                    environment: process.env.NODE_ENV,
+                    payfast_url: PAYFAST_CONFIG.PAYFAST_URL,
+                    itn_url: PAYFAST_CONFIG.ITN_URL,
+                    return_url: PAYFAST_CONFIG.RETURN_URL,
+                    cancel_url: PAYFAST_CONFIG.CANCEL_URL
+                });
             } catch (error) {
                 console.error("Initialization error:", error);
                 setError("Failed to initialize page");
@@ -826,7 +889,7 @@ const preparePayFastData = () => {
     }, [searchParams, navigate]);
 
     useEffect(() => {
-        const id = localStorage.getItem("selectedEventId")
+        const id = localStorage.getItem("selectedEventId");
         fetchEventStatusByID(id);
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -839,7 +902,6 @@ const preparePayFastData = () => {
 
     const fetchEventStatusByID = async (eventId) => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
             formData.append("function", "getEventStatusByID");
             formData.append("event_id", eventId);
