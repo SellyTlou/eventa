@@ -103,14 +103,17 @@ function Features() {
 
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
+    const [loginAccountType, setLoginAccountType] = useState("personal");
 
-    const handleLoginClick = () => {
+    const handleLoginClick = (accountType = "personal") => {
         setLoginMode("login");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
-    const handleSignupClick = () => {
+    const handleSignupClick = (accountType = "personal") => {
         setLoginMode("signup");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     }
 
@@ -180,6 +183,7 @@ function Features() {
                 isOpen={isLoginOpen}
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
+                defaultAccountType={loginAccountType}
             />
       <NewEventPopupBtn />
 

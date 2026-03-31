@@ -7,15 +7,18 @@ import { useNavigate } from "react-router-dom";
 function Sales() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
+    const [loginAccountType, setLoginAccountType] = useState("personal");
     const navigate = useNavigate();
 
-    const handleLoginClick = () => {
+    const handleLoginClick = (accountType = "personal") => {
         setLoginMode("login");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
-    const handleSignupClick = () => {
+    const handleSignupClick = (accountType = "personal") => {
         setLoginMode("signup");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
@@ -34,6 +37,7 @@ function Sales() {
                 isOpen={isLoginOpen}
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
+                defaultAccountType={loginAccountType}
             />
                   <NewEventPopupBtn />
             

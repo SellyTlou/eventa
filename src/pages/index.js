@@ -356,14 +356,17 @@ function Index() {
 
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
+    const [loginAccountType, setLoginAccountType] = useState("personal");
 
-    const handleLoginClick = () => {
+    const handleLoginClick = (accountType = "personal") => {
         setLoginMode("login");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
-    const handleSignupClick = () => {
+    const handleSignupClick = (accountType = "personal") => {
         setLoginMode("signup");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     }
 
@@ -440,6 +443,7 @@ function Index() {
                 isOpen={isLoginOpen}
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
+                defaultAccountType={loginAccountType}
             />
             <NewEventPopupBtn />
 
@@ -448,7 +452,7 @@ function Index() {
                 <section className="homeHeader">
                     <div className="hero-carousel">
                         {/* SLIDE 1 */}
-                        <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`} style={{ backgroundImage: "url('/images/home1.png')" }}>
+                        <section className={`hero-slide ${currentSlide === 0 ? 'active' : ''}`} style={{ backgroundImage: "url('/images/home_2.jpg')" }}>
                             <div className="overlay"></div>
                             <div className="container">
                                 <div className="row">
@@ -551,7 +555,7 @@ function Index() {
                             <div className="col-lg-3">
                                 <div className="category-card">
                                     <div className="category-overlay"></div>
-                                    <img src="/images/corporate.avif" alt="Corporate" className="img-fluid category-image" />
+                                    <img src="/images/corporate.jpg" alt="Corporate" className="img-fluid category-image" />
                                     <div className="category-border">
                                         <div className="category-content">
                                             <h5>Corporate</h5>
@@ -588,7 +592,7 @@ function Index() {
                             <div className="col-lg-3">
                                 <div className="category-card">
                                     <div className="category-overlay"></div>
-                                    <img src="/images/parties.jpg" alt="Party" className="img-fluid category-image" />
+                                    <img src="/images/party_2.jpg" alt="Party" className="img-fluid category-image" />
                                     <div className="category-border">
                                         <div className="category-content">
                                             <h5>Parties</h5>

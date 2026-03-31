@@ -8,18 +8,21 @@ import { useNavigate } from "react-router-dom";
 function Support() {
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
+    const [loginAccountType, setLoginAccountType] = useState("personal");
     const [showMaintenance, setShowMaintenance] = useState(false);
     const [showContactModal, setShowContactModal] = useState(false);
     const [activeFaq, setActiveFaq] = useState(null);
     const navigate = useNavigate();
 
-    const handleLoginClick = () => {
+    const handleLoginClick = (accountType = "personal") => {
         setLoginMode("login");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
-    const handleSignupClick = () => {
+    const handleSignupClick = (accountType = "personal") => {
         setLoginMode("signup");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
@@ -49,6 +52,7 @@ function Support() {
                 isOpen={isLoginOpen}
                 onClose={() => setIsLoginOpen(false)}
                 defaultMode={loginMode}
+                defaultAccountType={loginAccountType}
             />
             <NewEventPopupBtn />
 

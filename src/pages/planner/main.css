@@ -9476,3 +9476,157 @@ Package Payment Page
         margin-bottom: 10px;
     }
 }
+
+/* Event Name Banner */
+.event-name-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 30px;
+  color: white;
+}
+
+.event-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.event-icon {
+  font-size: 32px;
+}
+
+.event-details {
+  flex: 1;
+}
+
+.event-details strong {
+  font-size: 18px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.event-date {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* Dynamic Badge */
+.dynamic-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(102, 126, 234, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  z-index: 2;
+}
+
+.template-placeholders {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.template-placeholders small {
+  color: #667eea;
+  font-size: 11px;
+}
+
+/* Preview Modal */
+.template-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.preview-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 20px;
+  position: relative;
+  animation: slideUp 0.3s ease;
+}
+
+.close-preview {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-preview:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.preview-canvas {
+  margin: 20px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.preview-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.btn-use-template {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-use-template:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.mini-preview-canvas {
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  overflow: hidden;
+  border-radius: 12px;
+}

@@ -11,6 +11,7 @@ const RsvpForm = () => {
         attending: "yes",
         guestCount: 0,
         message: "",
+        customAnswers: {}  // Store answers to custom questions
     });
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,9 +22,9 @@ const RsvpForm = () => {
     const [totalRplyGuestCount, setTotalRplyGuestCount] = useState(0);
     const [totalEventLimit, setTotalEventLimit] = useState(0);
     const [event_id, setEventId] = useState("");
+    const [customQuestions, setCustomQuestions] = useState([]); // New state for custom questions
     const navigate = useNavigate();
-    // Event status
-    const [eventStatus, setEventStatus] = useState(null); // 'active' | 'not_found' | 'canceled' | 'past'
+    const [eventStatus, setEventStatus] = useState(null);
 
     // Custom alert
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
@@ -32,43 +33,49 @@ const RsvpForm = () => {
         setTimeout(() => setAlert({ show: false, message: "", type: "" }), 5000);
     };
 
-    // Updated phone handler for 065 875 1979 format
-const handlePhoneChange = (e) => {
-    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
-    
-    // Ensure it starts with 0
-    if (value.length > 0 && value[0] !== '0') {
-        value = '0' + value;
-    }
-    
-    // Allow up to 10 digits (0 + 9 digits = 10 total)
-    if (value.length > 10) {
-        value = value.slice(0, 10);
-    }
-    
-    // Format the number as 065 875 1979 (3-3-4 pattern)
-    if (value.length > 1) {
-        if (value.length <= 3) {
-            
-            value = value.replace(/(\d{3})/, '$1');
-        } else if (value.length <= 6) {
-            value = value.replace(/(\d{3})(\d{0,})/, '$1 $2');
-        } else {
-            
-            value = value.replace(/(\d{3})(\d{3})(\d{0,})/, '$1 $2 $3');
+    // Phone handler
+    const handlePhoneChange = (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        
+        if (value.length > 0 && value[0] !== '0') {
+            value = '0' + value;
         }
-    }
-    
-    setFormData(prev => ({
-        ...prev,
-        phone: value
-    }));
-};
+        
+        if (value.length > 10) {
+            value = value.slice(0, 10);
+        }
+        
+        if (value.length > 1) {
+            if (value.length <= 3) {
+                value = value.replace(/(\d{3})/, '$1');
+            } else if (value.length <= 6) {
+                value = value.replace(/(\d{3})(\d{0,})/, '$1 $2');
+            } else {
+                value = value.replace(/(\d{3})(\d{3})(\d{0,})/, '$1 $2 $3');
+            }
+        }
+        
+        setFormData(prev => ({
+            ...prev,
+            phone: value
+        }));
+    };
 
-    // General form change handler (excluding phone)
+    // Handle custom question answer change
+    const handleCustomAnswerChange = (questionId, value) => {
+        setFormData(prev => ({
+            ...prev,
+            customAnswers: {
+                ...prev.customAnswers,
+                [questionId]: value
+            }
+        }));
+    };
+
+    // General form change handler
     const handleChange = (e) => {
         const { name, value } = e.target;
-        if (name !== 'phone') { // Exclude phone from general handler
+        if (name !== 'phone') {
             setFormData(prev => ({
                 ...prev,
                 [name]: value,
@@ -82,6 +89,7 @@ const handlePhoneChange = (e) => {
         if (id) {
             setEventId(id);
             fetchEventData(id);
+            fetchCustomQuestions(id); // Load custom questions
             setUser(searchParams.get("user_email") || "");
         }
     }, [searchParams]);
@@ -91,7 +99,6 @@ const handlePhoneChange = (e) => {
             setLoadingEvent(true);
             setEventStatus(null);
 
-            // Step 1: Fetch event first
             const event = await fetchEvent(eventId);
             if (!event) {
                 setEventStatus('not_found');
@@ -99,7 +106,6 @@ const handlePhoneChange = (e) => {
                 return;
             }
 
-            // Step 2: Check if canceled
             const isCanceled = event.status === 'cancelled' || event.status === 'Cancelled';
             if (isCanceled) {
                 setEventStatus('canceled');
@@ -107,7 +113,6 @@ const handlePhoneChange = (e) => {
                 return;
             }
 
-            // Step 3: Check if date passed
             const eventDateTime = new Date(`${event.event_start_date}T${event.event_start_time || '00:00'}`);
             const now = new Date();
             if (eventDateTime < now) {
@@ -116,7 +121,6 @@ const handlePhoneChange = (e) => {
                 return;
             }
 
-            // Step 4: Event is active → load RSVP data
             setEventStatus('active');
             setEventData(event);
 
@@ -130,6 +134,28 @@ const handlePhoneChange = (e) => {
             printAlert("Failed to load event details", "error");
         } finally {
             setLoadingEvent(false);
+        }
+    };
+
+    // Fetch custom questions from database
+    const fetchCustomQuestions = async (eventId) => {
+        try {
+            const formData = new FormData();
+            formData.append("function", "getEventCustomQuestions");
+            formData.append("event_id", eventId);
+
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (data.success && data.questions) {
+                setCustomQuestions(data.questions);
+                console.log("Loaded custom questions:", data.questions);
+            }
+        } catch (err) {
+            console.error("Error fetching custom questions:", err);
         }
     };
 
@@ -215,6 +241,96 @@ const handlePhoneChange = (e) => {
         }));
     };
 
+    // Render a question based on its type
+    const renderQuestion = (question) => {
+        const answer = formData.customAnswers[question.id] || '';
+        
+        switch (question.question_type) {
+            case 'text':
+                return (
+                    <input
+                        type="text"
+                        value={answer}
+                        onChange={(e) => handleCustomAnswerChange(question.id, e.target.value)}
+                        className="rsvp_form__input"
+                        placeholder="Your answer..."
+                    />
+                );
+            
+            case 'textarea':
+                return (
+                    <textarea
+                        value={answer}
+                        onChange={(e) => handleCustomAnswerChange(question.id, e.target.value)}
+                        className="rsvp_form__textarea"
+                        rows="3"
+                        placeholder="Your answer..."
+                    />
+                );
+            
+            case 'select':
+                return (
+                    <select
+                        value={answer}
+                        onChange={(e) => handleCustomAnswerChange(question.id, e.target.value)}
+                        className="rsvp_form__input"
+                    >
+                        <option value="">Select an option...</option>
+                        <option value="Option 1">Option 1</option>
+                        <option value="Option 2">Option 2</option>
+                        <option value="Option 3">Option 3</option>
+                    </select>
+                );
+            
+            case 'radio':
+                return (
+                    <div className="custom-radio-group">
+                        <label className="custom-radio-option">
+                            <input
+                                type="radio"
+                                name={`question_${question.id}`}
+                                value="Option 1"
+                                checked={answer === "Option 1"}
+                                onChange={(e) => handleCustomAnswerChange(question.id, e.target.value)}
+                            />
+                            <span>Option 1</span>
+                        </label>
+                        <label className="custom-radio-option">
+                            <input
+                                type="radio"
+                                name={`question_${question.id}`}
+                                value="Option 2"
+                                checked={answer === "Option 2"}
+                                onChange={(e) => handleCustomAnswerChange(question.id, e.target.value)}
+                            />
+                            <span>Option 2</span>
+                        </label>
+                        <label className="custom-radio-option">
+                            <input
+                                type="radio"
+                                name={`question_${question.id}`}
+                                value="Option 3"
+                                checked={answer === "Option 3"}
+                                onChange={(e) => handleCustomAnswerChange(question.id, e.target.value)}
+                            />
+                            <span>Option 3</span>
+                        </label>
+                    </div>
+                );
+            
+            default:
+                return (
+                    <input
+                        type="text"
+                        value={answer}
+                        onChange={(e) => handleCustomAnswerChange(question.id, e.target.value)}
+                        className="rsvp_form__input"
+                        placeholder="Your answer..."
+                    />
+                );
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -226,6 +342,13 @@ const handlePhoneChange = (e) => {
             return;
         }
 
+        // Validate required custom questions
+        const missingRequired = customQuestions.filter(q => q.is_required === 1 && !formData.customAnswers[q.id]);
+        if (missingRequired.length > 0) {
+            printAlert(`Please answer: ${missingRequired.map(q => q.question_text).join(", ")}`, "warning");
+            return;
+        }
+
         setError(null);
         setIsSubmitting(true);
 
@@ -234,12 +357,13 @@ const handlePhoneChange = (e) => {
         formDataToSend.append("event_id", event_id);
         formDataToSend.append("name", formData.name);
         formDataToSend.append("email", formData.email);
-        formDataToSend.append("phone", formData.phone); // Add phone to form data
+        formDataToSend.append("phone", formData.phone);
         formDataToSend.append("attending", formData.attending);
         formDataToSend.append("message", formData.message);
         formDataToSend.append("guestCount", formData.guestCount);
         formDataToSend.append("totalRplyGuestCount", totalRplyGuestCount);
         formDataToSend.append("totalEventLimit", totalEventLimit);
+        formDataToSend.append("customAnswers", JSON.stringify(formData.customAnswers)); // Send custom answers
 
         try {
             const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
@@ -254,7 +378,7 @@ const handlePhoneChange = (e) => {
             if (result.success) {
                 printAlert(result.message || "RSVP submitted successfully!", "success");
                 setFormData({
-                    name: "", email: "", phone: "", attending: "yes", guestCount: 0, message: ""
+                    name: "", email: "", phone: "", attending: "yes", guestCount: 0, message: "", customAnswers: {}
                 });
                 await fetchEventData(event_id);
                 setTimeout(() => {
@@ -420,7 +544,7 @@ const handlePhoneChange = (e) => {
 
                             <div className="form-row">
                                 <div className="rsvp_form__group">
-                                    <label className="rsvp_form__label">Your Full Name</label>
+                                    <label className="rsvp_form__label">Your Full Name *</label>
                                     <input
                                         type="text"
                                         name="name"
@@ -433,7 +557,7 @@ const handlePhoneChange = (e) => {
                                 </div>
 
                                 <div className="rsvp_form__group">
-                                    <label className="rsvp_form__label">Your Email</label>
+                                    <label className="rsvp_form__label">Your Email *</label>
                                     <input
                                         type="email"
                                         name="email"
@@ -467,7 +591,7 @@ const handlePhoneChange = (e) => {
                             </div>
 
                             <div className="rsvp_form__group--radio">
-                                <label className="rsvp_form__label">Will you be attending?</label>
+                                <label className="rsvp_form__label">Will you be attending? *</label>
                                 <div className="rsvp_form__radio_options">
                                     <label className={`radio-option ${formData.attending === "yes" ? "selected" : ""}`}>
                                         <input
@@ -539,6 +663,24 @@ const handlePhoneChange = (e) => {
                                             >+</button>
                                         </div>
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Custom Questions Section - NEW */}
+                            {customQuestions.length > 0 && (
+                                <div className="custom-questions-section">
+                                    <h3 className="rsvp_form__guests_title">
+                                        <i className="fas fa-question-circle"></i> Additional Information
+                                    </h3>
+                                    {customQuestions.map((question) => (
+                                        <div key={question.id} className="rsvp_form__group">
+                                            <label className="rsvp_form__label">
+                                                {question.question_text}
+                                                {question.is_required === 1 && <span className="required-star"> *</span>}
+                                            </label>
+                                            {renderQuestion(question)}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
 

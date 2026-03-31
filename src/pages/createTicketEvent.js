@@ -10,6 +10,7 @@ function CreateTicketEvent() {
     
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
+    const [loginAccountType, setLoginAccountType] = useState("personal");
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const [alert, setAlert] = useState({
@@ -104,13 +105,15 @@ function CreateTicketEvent() {
         setTimeout(() => setAlert({ show: false, message: "", type: "" }), 6000);
     };
 
-    const handleLoginClick = () => {
+    const handleLoginClick = (accountType = "personal") => {
         setLoginMode("login");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
-    const handleSignupClick = () => {
+    const handleSignupClick = (accountType = "personal") => {
         setLoginMode("signup");
+        setLoginAccountType(accountType);
         setIsLoginOpen(true);
     };
 
@@ -385,6 +388,7 @@ function CreateTicketEvent() {
                 onClose={() => setIsLoginOpen(false)}
                 onLoginSuccess={handleLoginSuccess}
                 defaultMode={loginMode}
+                defaultAccountType={loginAccountType}
             />
             <NewEventPopupBtn />
 

@@ -12,6 +12,7 @@ function Ticket_Sale() {
 
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState("login");
+  const [loginAccountType, setLoginAccountType] = useState("personal");
   const [alert, setAlert] = useState({
     show: false,
     message: "",
@@ -178,12 +179,14 @@ function Ticket_Sale() {
     }
   };
 
-  const handleLoginClick = () => {
+  const handleLoginClick = (accountType = "personal") => {
+    setLoginAccountType(accountType);
     setLoginMode("login");
     setIsLoginOpen(true);
   };
 
-  const handleSignupClick = () => {
+  const handleSignupClick = (accountType = "personal") => {
+    setLoginAccountType(accountType);
     setLoginMode("signup");
     setIsLoginOpen(true);
   };
@@ -299,7 +302,7 @@ function Ticket_Sale() {
   return (
     <div className="ticket-sale">
       <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
-      <Login isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} defaultMode={loginMode} />
+      <Login isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} defaultMode={loginMode} defaultAccountType={loginAccountType} />
       <NewEventPopupBtn />
 
       {alert.show && (

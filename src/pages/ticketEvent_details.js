@@ -12,6 +12,7 @@ function TicketEvent_details() {
   const navigate = useNavigate();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState("login");
+  const [loginAccountType, setLoginAccountType] = useState("personal");
 
   const queryParams = new URLSearchParams(location.search);
   const id = queryParams.get('id');
@@ -25,13 +26,15 @@ function TicketEvent_details() {
     }
   }, [id]);
 
-  const handleLoginClick = () => {
+  const handleLoginClick = (accountType = "personal") => {
     setLoginMode("login");
+    setLoginAccountType(accountType);
     setIsLoginOpen(true);
   };
 
-  const handleSignupClick = () => {
+  const handleSignupClick = (accountType = "personal") => {
     setLoginMode("signup");
+    setLoginAccountType(accountType);
     setIsLoginOpen(true);
   };
 
@@ -187,6 +190,7 @@ function TicketEvent_details() {
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
         defaultMode={loginMode}
+        defaultAccountType={loginAccountType}
       />
 
       <div className="event-details-container">

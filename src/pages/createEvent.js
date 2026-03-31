@@ -22,15 +22,24 @@ function CreateEvent() {
   const [eventProvince, setEventProvince] = useState("");
   const [eventCategory, setEventCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
+  
+  // NEW: Event Type State
+  const [eventType, setEventType] = useState(""); // "ticket" or "rsvp"
+  const [ticketPrice, setTicketPrice] = useState("");
+  const [ticketQuantity, setTicketQuantity] = useState("");
+  const [rsvpLimit, setRsvpLimit] = useState("");
+  const [requireApproval, setRequireApproval] = useState(false);
+  
   const [error, setError] = useState("");
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [loginMode, setLoginMode] = useState("login");
+  const [loginAccountType, setLoginAccountType] = useState("personal");
   const [fieldErrors, setFieldErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [user, setUser] = useState(null);
 
-  const { saveStep1Data, saveStep2Data, getEventDetails } = useEventCreation();
-  const totalSteps = 3;
+  const { saveStep1Data, saveStep2Data, getEventDetails, saveEventTypeData } = useEventCreation();
+  const totalSteps = 4; // Changed from 3 to 4 (added event type step)
 
   // Event categories
   const eventCategories = [
@@ -59,7 +68,7 @@ function CreateEvent() {
       setUser(JSON.parse(storedUser));
       setCurrentStep(1);
     } else {
-      setCurrentStep(3);
+      setCurrentStep(4); // Changed from 3 to 4 (login step is now step 4)
     }
   }, []);
 
@@ -85,6 +94,12 @@ function CreateEvent() {
                 setCustomCategory(savedData.customCategory);
               }
             }
+            // Load event type data
+            if (savedData.eventType) setEventType(savedData.eventType);
+            if (savedData.ticketPrice) setTicketPrice(savedData.ticketPrice);
+            if (savedData.ticketQuantity) setTicketQuantity(savedData.ticketQuantity);
+            if (savedData.rsvpLimit) setRsvpLimit(savedData.rsvpLimit);
+            if (savedData.requireApproval) setRequireApproval(savedData.requireApproval);
           }
         } catch (error) {
           console.error("Error loading saved data:", error);
@@ -148,6 +163,26 @@ function CreateEvent() {
       required: false,
       maxLength: 50,
       message: "Custom category cannot exceed 50 characters"
+    },
+    // NEW: Event Type Validation
+    eventType: {
+      required: true,
+      message: "Please select an event type"
+    },
+    ticketPrice: {
+      required: (values) => values.eventType === "ticket",
+      min: 0,
+      message: "Please enter a valid ticket price"
+    },
+    ticketQuantity: {
+      required: (values) => values.eventType === "ticket",
+      min: 1,
+      message: "Please enter the number of tickets available"
+    },
+    rsvpLimit: {
+      required: false,
+      min: 1,
+      message: "Please enter a valid RSVP limit"
     }
   };
 
@@ -188,8 +223,15 @@ function CreateEvent() {
     const rules = validationRules[name];
     if (!rules) return "";
 
-    if (rules.required && (!value || value.trim() === "")) {
-      return "This field is required";
+    // Handle conditional required fields
+    if (rules.required) {
+      const isRequired = typeof rules.required === 'function' 
+        ? rules.required(allValues) 
+        : rules.required;
+      
+      if (isRequired && (!value || value.trim() === "")) {
+        return "This field is required";
+      }
     }
 
     if (rules.minLength && value && value.length < rules.minLength) {
@@ -242,6 +284,11 @@ function CreateEvent() {
       if (endDateTime <= startDateTime) {
         return "End time must be after start time";
       }
+    }
+
+    // Numeric validations
+    if (rules.min !== undefined && value && parseFloat(value) < rules.min) {
+      return `Value must be at least ${rules.min}`;
     }
 
     return "";
@@ -299,6 +346,27 @@ function CreateEvent() {
       }
     }
 
+    // NEW: Validate Event Type Step
+    if (step === 3) {
+      const allValues = { eventType, ticketPrice, ticketQuantity, rsvpLimit };
+      
+      const eventTypeError = validateField("eventType", eventType);
+      if (eventTypeError) newErrors.eventType = eventTypeError;
+      
+      if (eventType === "ticket") {
+        const ticketPriceError = validateField("ticketPrice", ticketPrice, allValues);
+        if (ticketPriceError) newErrors.ticketPrice = ticketPriceError;
+        
+        const ticketQuantityError = validateField("ticketQuantity", ticketQuantity, allValues);
+        if (ticketQuantityError) newErrors.ticketQuantity = ticketQuantityError;
+      }
+      
+      if (eventType === "rsvp" && rsvpLimit) {
+        const rsvpLimitError = validateField("rsvpLimit", rsvpLimit, allValues);
+        if (rsvpLimitError) newErrors.rsvpLimit = rsvpLimitError;
+      }
+    }
+
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -317,20 +385,26 @@ function CreateEvent() {
       eventProvince,
       timezone,
       eventCategory,
-      customCategory
+      customCategory,
+      eventType,
+      ticketPrice,
+      ticketQuantity,
+      rsvpLimit
     };
 
     const error = validateField(fieldName, allValues[fieldName], allValues);
     setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
-  const handleLoginClick = () => {
+  const handleLoginClick = (accountType = "personal") => {
     setLoginMode("login");
+    setLoginAccountType(accountType);
     setShowLoginPopup(true);
   };
 
-  const handleSignupClick = () => {
+  const handleSignupClick = (accountType = "personal") => {
     setLoginMode("signup");
+    setLoginAccountType(accountType);
     setShowLoginPopup(true);
   };
 
@@ -357,6 +431,15 @@ function CreateEvent() {
         if (eventCategory === "other") {
           newTouched.customCategory = true;
         }
+      }
+    } else if (currentStep === 3) {
+      newTouched.eventType = true;
+      if (eventType === "ticket") {
+        newTouched.ticketPrice = true;
+        newTouched.ticketQuantity = true;
+      }
+      if (eventType === "rsvp" && rsvpLimit) {
+        newTouched.rsvpLimit = true;
       }
     }
     setTouched(newTouched);
@@ -403,14 +486,31 @@ function CreateEvent() {
       }
     }
 
-    // If user is logged in and completed step 2, go to event theme
-    if (user && currentStep === 2 && step2SubStep === 3) {
+    // NEW: Step 3 - Save Event Type
+    if (currentStep === 3) {
+      const eventTypeData = {
+        eventType,
+        ticketPrice: eventType === "ticket" ? ticketPrice : null,
+        ticketQuantity: eventType === "ticket" ? ticketQuantity : null,
+        rsvpLimit: eventType === "rsvp" && rsvpLimit ? rsvpLimit : null,
+        requireApproval: eventType === "rsvp" ? requireApproval : false
+      };
+      
+      const success = saveEventTypeData(eventTypeData);
+      if (!success) {
+        setError("Failed to save event type. Please try again.");
+        return;
+      }
+    }
+
+    // If user is logged in and completed step 3, go to event theme
+    if (user && currentStep === 3) {
       navigate("/eventTheme");
       return;
     }
 
-    // If user is not logged in and reached step 3, show login/signup
-    if (!user && currentStep === 3) {
+    // If user is not logged in and reached step 4, show login/signup
+    if (!user && currentStep === 4) {
       handleLoginClick();
       return;
     }
@@ -447,6 +547,21 @@ function CreateEvent() {
     setFieldErrors(prev => ({ ...prev, eventCategory: "" }));
   };
 
+  // NEW: Handle Event Type Selection
+  const handleEventTypeSelect = (type) => {
+    setEventType(type);
+    // Reset related fields
+    if (type === "ticket") {
+      setRsvpLimit("");
+      setRequireApproval(false);
+    } else if (type === "rsvp") {
+      setTicketPrice("");
+      setTicketQuantity("");
+    }
+    setTouched(prev => ({ ...prev, eventType: true }));
+    setFieldErrors(prev => ({ ...prev, eventType: "" }));
+  };
+
   // Get selected category details
   const getSelectedCategory = () => {
     if (eventCategory === "other") {
@@ -463,6 +578,7 @@ function CreateEvent() {
           isOpen={showLoginPopup}
           onClose={() => setShowLoginPopup(false)}
           defaultMode={loginMode}
+          defaultAccountType={loginAccountType}
           onLoginSuccess={handleLoginSuccess}
           onSignupSuccess={handleSignupSuccess}
         />
@@ -484,14 +600,14 @@ function CreateEvent() {
         </button>
       </div>
 
-      {/* Show progress bar only if user is logged in and on step 1 or 2 */}
-      {user && currentStep !== 3 && (
+      {/* Show progress bar only if user is logged in and on steps 1-3 */}
+      {user && currentStep !== 4 && (
         <EventProgressBar currentStep={currentStep} totalSteps={totalSteps} />
       )}
 
       <div className="create-event-container" id="createEventPage">
         <div className="create-event-body">
-          {/* Step 1: Event Name (only shown if user is logged in) */}
+          {/* Step 1: Event Name */}
           {user && currentStep === 1 && (
             <div className="event-step">
               {error && <div className="form-error">{error}</div>}
@@ -517,7 +633,7 @@ function CreateEvent() {
             </div>
           )}
 
-          {/* Step 2: Event Details (only shown if user is logged in) */}
+          {/* Step 2: Event Details */}
           {user && currentStep === 2 && (
             <div className="event-step">
               {error && <div className="form-error">{error}</div>}
@@ -703,7 +819,6 @@ function CreateEvent() {
                 </>
               )}
 
-              {/* Step 2.3: Event Category */}
               {step2SubStep === 3 && (
                 <>
                   <h2 className="step-title">Event Category</h2>
@@ -730,7 +845,6 @@ function CreateEvent() {
                       </div>
                     )}
 
-                    {/* Custom category input for "Other" */}
                     {eventCategory === "other" && (
                       <div className="custom-category-input-container">
                         <label htmlFor="customCategory">Specify event type</label>
@@ -771,8 +885,149 @@ function CreateEvent() {
             </div>
           )}
 
-          {/* Step 3: Login/Signup Prompt (only shown if user is NOT logged in) */}
-          {!user && currentStep === 3 && (
+          {/* NEW: Step 3: Event Type (Ticket vs RSVP) */}
+          {user && currentStep === 3 && (
+            <div className="event-step">
+              {error && <div className="form-error">{error}</div>}
+              <h2 className="step-title">How will people attend?</h2>
+              <p className="step-subtitle">Choose how you want to manage attendance</p>
+
+              <div className="event-type-selector">
+                {/* Ticket Event Option */}
+                <div 
+                  className={`event-type-card ${eventType === "ticket" ? "selected" : ""}`}
+                  onClick={() => handleEventTypeSelect("ticket")}
+                >
+                  <div className="event-type-icon">🎟️</div>
+                  <h3>Ticket Event</h3>
+                  <p>Sell tickets to your event. Perfect for concerts, workshops, conferences, and paid events.</p>
+                  <div className="event-type-features">
+                    <span>✓ Set ticket prices</span>
+                    <span>✓ Limit ticket quantity</span>
+                    <span>✓ Track sales</span>
+                  </div>
+                </div>
+
+                {/* RSVP Event Option */}
+                <div 
+                  className={`event-type-card ${eventType === "rsvp" ? "selected" : ""}`}
+                  onClick={() => handleEventTypeSelect("rsvp")}
+                >
+                  <div className="event-type-icon">📝</div>
+                  <h3>RSVP Event</h3>
+                  <p>Free event where guests confirm attendance. Great for parties, weddings, and social gatherings.</p>
+                  <div className="event-type-features">
+                    <span>✓ Free attendance</span>
+                    <span>✓ Track guest count</span>
+                    <span>✓ Optional approval</span>
+                  </div>
+                </div>
+              </div>
+
+              {shouldShowError('eventType') && (
+                <div className="field-error">
+                  <span className="error-icon">⚠</span>
+                  {fieldErrors.eventType}
+                </div>
+              )}
+
+              {/* Ticket Event Details */}
+              {eventType === "ticket" && (
+                <div className="event-type-details">
+                  <h3>Ticket Details</h3>
+                  
+                  <div className="form-group-event">
+                    <label htmlFor="ticketPrice">Ticket Price (ZAR)</label>
+                    <input
+                      type="number"
+                      id="ticketPrice"
+                      className={`form-control-event ${shouldShowError('ticketPrice') ? 'error' : ''}`}
+                      placeholder="e.g., 150"
+                      value={ticketPrice}
+                      onChange={(e) => setTicketPrice(e.target.value)}
+                      onBlur={() => handleBlur('ticketPrice')}
+                      min="0"
+                      step="0.01"
+                    />
+                    {shouldShowError('ticketPrice') && (
+                      <div className="field-error">
+                        <span className="error-icon">⚠</span>
+                        {fieldErrors.ticketPrice}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="form-group-event">
+                    <label htmlFor="ticketQuantity">Number of Tickets Available</label>
+                    <input
+                      type="number"
+                      id="ticketQuantity"
+                      className={`form-control-event ${shouldShowError('ticketQuantity') ? 'error' : ''}`}
+                      placeholder="e.g., 100"
+                      value={ticketQuantity}
+                      onChange={(e) => setTicketQuantity(e.target.value)}
+                      onBlur={() => handleBlur('ticketQuantity')}
+                      min="1"
+                    />
+                    {shouldShowError('ticketQuantity') && (
+                      <div className="field-error">
+                        <span className="error-icon">⚠</span>
+                        {fieldErrors.ticketQuantity}
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-muted small">
+                    You can add multiple ticket types (VIP, Early Bird, etc.) after creating the event.
+                  </p>
+                </div>
+              )}
+
+              {/* RSVP Event Details */}
+              {eventType === "rsvp" && (
+                <div className="event-type-details">
+                  <h3>RSVP Settings</h3>
+                  
+                  <div className="form-group-event">
+                    <label htmlFor="rsvpLimit">RSVP Limit (Optional)</label>
+                    <input
+                      type="number"
+                      id="rsvpLimit"
+                      className={`form-control-event ${shouldShowError('rsvpLimit') ? 'error' : ''}`}
+                      placeholder="Leave empty for unlimited"
+                      value={rsvpLimit}
+                      onChange={(e) => setRsvpLimit(e.target.value)}
+                      onBlur={() => handleBlur('rsvpLimit')}
+                      min="1"
+                    />
+                    {shouldShowError('rsvpLimit') && (
+                      <div className="field-error">
+                        <span className="error-icon">⚠</span>
+                        {fieldErrors.rsvpLimit}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={requireApproval}
+                        onChange={(e) => setRequireApproval(e.target.checked)}
+                      />
+                      <span>Require approval for RSVPs</span>
+                    </label>
+                    <p className="text-muted small">
+                      If enabled, you'll need to manually approve each RSVP request.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4: Login/Signup Prompt */}
+          {!user && currentStep === 4 && (
             <div className="event-step">
               <h2 className="step-title">Account Required</h2>
               <p className="step-subtitle">To create and manage your event, you need an account</p>
@@ -783,7 +1038,7 @@ function CreateEvent() {
                   <p>Log in to continue creating your event</p>
                   <button
                     className="btn-event btn-event-primary"
-                    onClick={handleLoginClick}
+                    onClick={() => handleLoginClick()}
                   >
                     Log In
                   </button>
@@ -794,7 +1049,7 @@ function CreateEvent() {
                   <p>Create an account to start managing your events</p>
                   <button
                     className="btn-event btn-event-secondary"
-                    onClick={handleSignupClick}
+                    onClick={() => handleSignupClick()}
                   >
                     Sign Up
                   </button>
@@ -823,7 +1078,8 @@ function CreateEvent() {
                 {currentStep === 1 && "NEXT: EVENT DETAILS"}
                 {currentStep === 2 && step2SubStep === 1 && "NEXT: LOCATION"}
                 {currentStep === 2 && step2SubStep === 2 && "NEXT: EVENT CATEGORY"}
-                {currentStep === 2 && step2SubStep === 3 && "NEXT: EVENT THEME"}
+                {currentStep === 2 && step2SubStep === 3 && "NEXT: EVENT TYPE"}
+                {currentStep === 3 && "NEXT: EVENT THEME"}
               </button>
             ) : (
               <button className="btn-event btn-event-next" onClick={handleNext}>
@@ -833,6 +1089,105 @@ function CreateEvent() {
           </div>
         </div>
       </div>
+
+      <style>{`
+        .event-type-selector {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin: 30px 0;
+        }
+
+        .event-type-card {
+          background: white;
+          border: 2px solid #e0e0e0;
+          border-radius: 16px;
+          padding: 24px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .event-type-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .event-type-card.selected {
+          border-color: #667eea;
+          background: linear-gradient(135deg, rgba(102,126,234,0.05) 0%, rgba(118,75,162,0.05) 100%);
+        }
+
+        .event-type-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+
+        .event-type-card h3 {
+          font-size: 20px;
+          margin-bottom: 12px;
+          color: #333;
+        }
+
+        .event-type-card p {
+          color: #666;
+          margin-bottom: 16px;
+          line-height: 1.5;
+        }
+
+        .event-type-features {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          font-size: 13px;
+          color: #667eea;
+        }
+
+        .event-type-features span {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .event-type-details {
+          margin-top: 30px;
+          padding: 24px;
+          background: #f8f9fa;
+          border-radius: 12px;
+        }
+
+        .event-type-details h3 {
+          margin-bottom: 20px;
+          color: #333;
+        }
+
+        .checkbox-group {
+          margin-top: 16px;
+        }
+
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+        }
+
+        .checkbox-label input {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+        }
+
+        .checkbox-label span {
+          font-size: 14px;
+          color: #333;
+        }
+
+        @media (max-width: 768px) {
+          .event-type-selector {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }
