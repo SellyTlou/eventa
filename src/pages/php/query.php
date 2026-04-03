@@ -475,7 +475,7 @@ if ($fun === "updateUserBusinessPackage") {
         $stmt->execute([':user_id' => $user_id]);
         
         // Get package details to set event_limit
-        $stmt = $pdo->prepare("SELECT max_events FROM business_packages WHERE id = :package_id");
+        $stmt = $pdo->prepare("SELECT max_events FROM business_packages WHERE package_id = :package_id");
         $stmt->execute([':package_id' => $business_package_id]);
         $package = $stmt->fetch(PDO::FETCH_ASSOC);
         error_log("updateUserBusinessPackage package details: " . json_encode($package));
@@ -6245,7 +6245,7 @@ if ($fun === "getBusinessPackageById") {
     }
     
     try {
-        $stmt = $pdo->prepare("SELECT * FROM business_packages WHERE id = :package_id LIMIT 1");
+        $stmt = $pdo->prepare("SELECT * FROM business_packages WHERE package_id = :package_id LIMIT 1");
         $stmt->execute([":package_id" => $package_id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
         error_log("getBusinessPackageById called: package_id={$package_id}");
@@ -6327,7 +6327,7 @@ if ($fun === "assignBusinessPackage") {
         }
         
         // regular business package flow
-        $stmt = $pdo->prepare("SELECT max_events FROM business_packages WHERE id = :package_id");
+        $stmt = $pdo->prepare("SELECT max_events FROM business_packages WHERE package_id = :package_id");
         $stmt->execute([':package_id' => $business_package_id]);
         $package = $stmt->fetch(PDO::FETCH_ASSOC);
         

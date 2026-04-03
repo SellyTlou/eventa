@@ -247,7 +247,7 @@ const UpgradeBusinessPackage = () => {
 
         const user = JSON.parse(storedUser);
 
-        if (currentPackage && currentPackage.business_package_id === pkg.id) {
+        if (currentPackage && currentPackage.business_package_id === pkg.package_id) {
             printAlert("You are already on this package.", "warning");
             return;
         }
@@ -256,14 +256,15 @@ const UpgradeBusinessPackage = () => {
         setSelectedPackage(pkg);
 
         try {
-            localStorage.setItem("selectedPackageId", pkg.id);
-            localStorage.setItem("selectedPackage", JSON.stringify(pkg));
+             localStorage.setItem("selectedPackageId", pkg.package_id);
+                localStorage.setItem("selectedPackageType", "business");
+                localStorage.setItem("selectedBusinessPackage", JSON.stringify(pkg));
+                
+                printAlert(`Selected ${pkg.name} business package. Redirecting to payment...`, "success");
 
-            printAlert(`Selected ${getPackageName(pkg)} package. Redirecting to payment...`, "success");
-
-            setTimeout(() => {
-                navigate("/business-package-payment");
-            }, 100);
+                setTimeout(() => {
+                    navigate("/business-package-payment");
+                }, 100);
 
         } catch (error) {
             console.error("Package selection error:", error);
@@ -283,7 +284,7 @@ const UpgradeBusinessPackage = () => {
     };
 
     const isCurrentPackage = (pkg) => {
-        return currentPackage && pkg && currentPackage.business_package_id === pkg.id;
+        return currentPackage && pkg && currentPackage.business_package_id === pkg.package_id;
     };
 
     const canUpgradeTo = (pkg) => {
@@ -356,7 +357,7 @@ const UpgradeBusinessPackage = () => {
 
                             return (
                                 <div
-                                    key={pkg.id}
+                                    key={pkg.package_id}
                                     className={`package-card ${isCurrent ? 'current' : ''} ${isPopular ? 'popular' : ''}`}
                                 >
                                     {isPopular && (
@@ -425,7 +426,7 @@ const UpgradeBusinessPackage = () => {
                                                     onClick={() => handleChoosePackage(pkg)}
                                                     disabled={processing}
                                                 >
-                                                    {processing && selectedPackage?.id === pkg.id ? (
+                                                    {processing && selectedPackage?.id === pkg.package_id ? (
                                                         <>
                                                             <div className="spinner-border spinner-border-sm" role="status"></div>
                                                             Processing...
@@ -462,7 +463,7 @@ const UpgradeBusinessPackage = () => {
                                     <tr>
                                         <th>Feature</th>
                                         {packages.map(pkg => (
-                                            <th key={pkg.id}>
+                                            <th key={pkg.package_id}>
                                                 {getPackageName(pkg)}
                                             </th>
                                         ))}
@@ -472,13 +473,13 @@ const UpgradeBusinessPackage = () => {
                                     <tr>
                                         <td>Max Guests per Event</td>
                                         {packages.map(pkg => (
-                                            <td key={pkg.id}>{isCustomPackage(pkg) ? '' : pkg.max_guests || 0}</td>
+                                            <td key={pkg.package_id}>{isCustomPackage(pkg) ? '' : pkg.max_guests || 0}</td>
                                         ))}
                                     </tr>
                                     <tr>
                                         <td>Monthly Price</td>
                                         {packages.map(pkg => (
-                                            <td key={pkg.id}>{isCustomPackage(pkg) ? '' : (pkg.price === 0 ? 'Custom Quote' : `R${getPackagePrice(pkg)}`)}</td>
+                                            <td key={pkg.package_id}>{isCustomPackage(pkg) ? '' : (pkg.price === 0 ? 'Custom Quote' : `R${getPackagePrice(pkg)}`)}</td>
                                         ))}
                                     </tr>
                                     {/* Dynamic features from database */}
@@ -486,7 +487,7 @@ const UpgradeBusinessPackage = () => {
                                         <tr key={index}>
                                             <td>{feature}</td>
                                             {packages.map(pkg => (
-                                                <td key={pkg.id}>
+                                                <td key={pkg.package_id}>
                                                     <i className={`bi ${hasFeature(pkg, feature) ? 'bi-check-circle text-success' : 'bi-x-circle text-muted'}`}></i>
                                                 </td>
                                             ))}

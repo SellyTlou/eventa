@@ -685,6 +685,12 @@ const BusinessPackagePayment = () => {
                 const packageType = localStorage.getItem("selectedPackageType");
                 const storedUser = localStorage.getItem("user");
 
+                console.log("Initializing Business Package Payment Page with:", {
+                    packageId,
+                    packageType,
+                    storedUser: storedUser ? "Found" : "Not Found"
+                });
+
                 if (!storedUser) {
                     printAlert("Session expired. Please log in again.", "error");
                     navigate("/");
