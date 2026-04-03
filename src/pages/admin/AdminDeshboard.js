@@ -6,6 +6,8 @@ import "../../alert.css"
 import activityQueue from "../activityQueue";
 import AdminTicket from "../AdminTicket";
 import CustomPlanRequestsTab from './CustomPlanRequestsTab';
+import { logOut } from "../components";
+
 
 // ==================== PRODUCTION-READY TREE SET ====================
 class ActivityTreeSet {
@@ -1928,7 +1930,7 @@ function AdminDashboard() {
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
-        });
+        }); 
     };
 
     // Profile dropdown component
@@ -1954,7 +1956,7 @@ function AdminDashboard() {
                 localStorage.removeItem('adminUser');
                 localStorage.removeItem('adminData');
                 sessionStorage.clear();
-
+                logOut();
                 window.location.href = '/';
             }
         };

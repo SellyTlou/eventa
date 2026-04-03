@@ -84,7 +84,6 @@ export async function logOut() {
         });
 
         const result = await response.json();
-        console.log("Logout response:", result);
 
         if (result.success) {
 
@@ -127,7 +126,6 @@ export const useSessionTimeout = (timeoutMinutes = 10, warningSeconds = 10) => {
             timeLeft -= 1;
             setCountdown(timeLeft);
             if (timeLeft <= 0) logout();
-            console.log(timeLeft);
         }, 1000);
     };
 
@@ -1042,7 +1040,6 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             formDataToSend.append("API_URL", apiUrl);
 
             const url = `${apiUrl}/send_verification.php`;
-            console.log("Sending verification request to:", url);
 
             const response = await fetchWithTimeout(url, {
                 method: "POST",
@@ -1058,8 +1055,6 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
     };
 
     const saveSecurityQuestions = async (userId, answers) => {
-        console.log("Saving security questions for user:", userId, "Answers:", answers);
-
         try {
             let apiUrl = process.env.REACT_APP_API_URL;
             if (!apiUrl) {
@@ -1078,7 +1073,6 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             formData.append("answer3", answers.answer3);
 
             const url = `${apiUrl}/query.php`;
-            console.log("Sending security questions to:", url);
 
             const response = await fetchWithTimeout(url, {
                 method: "POST",
@@ -1090,14 +1084,12 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             }
 
             const responseText = await response.text();
-            console.log("Raw security questions response:", responseText);
 
             if (!responseText.trim()) {
                 throw new Error("Empty response from server for security questions");
             }
 
             const result = JSON.parse(responseText);
-            console.log("Security questions save response:", result);
 
             return result;
         } catch (err) {
@@ -1145,7 +1137,6 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
                 }
             }
 
-            console.log("Sending request to:", API_URL);
             const url = `${API_URL}/query.php`;
 
             // quick pre-check so we can fail fast with a helpful message (avoids a long timeout)
@@ -1166,7 +1157,6 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             }
 
             const responseText = await response.text();
-            console.log("Raw API response:", responseText);
 
             // Check if response is empty
             if (!responseText.trim()) {
@@ -1181,8 +1171,6 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
                 console.error("Raw response that failed to parse:", responseText);
                 throw new Error("Invalid JSON response from server");
             }
-
-            console.log("Parsed API Response:", result);
 
             if (result.success) {
                 if (isLogin) {
@@ -1263,7 +1251,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
 
             // Provide a clearer message when the request timed out or when the API can't be reached
             if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('timed out')) {
-                printAlert(`Request timed out when contacting the API. Make sure your PHP server (Apache/XAMPP) is running and that REACT_APP_API_URL points to the correct address. API: ${process.env.REACT_APP_API_URL}`, 'error');
+                printAlert(`Request timed out when contacting the API.`, 'error');
             } else if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('unable to reach api')) {
                 printAlert(`${error.message}. Make sure your backend is running and accessible from your browser.`, 'error');
             } else {

@@ -250,7 +250,6 @@ function Pricing() {
             const data = await response.json();
 
             if (data.success && data.packages) {
-                console.log("success fetching business plans:", data.packages);
 
                 // Format money values properly
                 const formatMoney = (price) => {
@@ -303,7 +302,6 @@ function Pricing() {
                     return rankA - rankB;
                 });
 
-                console.log("Sorted business plans:", sortedBusinessPlans.map(p => p.name));
 
                 // Ensure CUSTOM PLAN is last (additional safety)
                 const finalSortedPlans = sortedBusinessPlans.sort((a, b) => {

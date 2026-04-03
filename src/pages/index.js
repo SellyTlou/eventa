@@ -40,7 +40,6 @@ function Index() {
             if (!response.ok) throw new Error("Network response was not ok");
 
             const data = await response.json();
-            console.log("Pricing plans data:", data);
 
             if (data.success && data.packages) {
                 const formattedPlans = data.packages.map(pkg => {
@@ -87,12 +86,10 @@ function Index() {
             if (!response.ok) throw new Error("Network response was not ok");
 
             const data = await response.json();
-            console.log("Trending events data:", data);
 
             if (data.success && Array.isArray(data.events)) {
                 // Ensure each event has an event_id
                 const validEvents = data.events.filter(event => event.event_id != null);
-                console.log("Valid events with IDs:", validEvents.length);
                 setTrendingEvents(validEvents);
             } else {
                 console.error("Failed to fetch trending events:", data.message);
@@ -108,7 +105,6 @@ function Index() {
 
     // Handle click on event
     const handleEventClick = (event) => {
-        console.log("Event clicked:", event);
 
         // Get the event ID - could be in different formats
         const eventId = event?.event_id;
@@ -193,7 +189,6 @@ function Index() {
 
     // Log trending events when they change
     useEffect(() => {
-        console.log("Current trending events:", trendingEvents);
     }, [trendingEvents]);
 
     // Fallback function for features

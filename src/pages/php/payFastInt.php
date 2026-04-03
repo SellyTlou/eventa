@@ -25,10 +25,10 @@ class PayFastITN {
     private $pdo;
     private $BREVO_API_KEY = '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';
     
-    private $PAYFAST_MERCHANT_ID = '10046113';
-    private $PAYFAST_MERCHANT_KEY = '0kdmnse8055gx';
+    // 🔥 LIVE PayFast credentials
+    private $PAYFAST_MERCHANT_ID = '33426571';
+    private $PAYFAST_MERCHANT_KEY = 'lkqoiy0ftb9yc';
     private $PAYFAST_PASSPHRASE = '';
-    private $PAYFAST_SANDBOX = true;
     
     public function __construct($pdo) {
         $this->pdo = $pdo;
@@ -36,7 +36,7 @@ class PayFastITN {
     
     public function handleITN() {
         try {
-            $this->logData('=== ITN HANDLER STARTED ===', [
+            $this->logData('=== ITN HANDLER STARTED (LIVE MODE) ===', [
                 'timestamp' => date('Y-m-d H:i:s'),
                 'post_data' => $_POST,
                 'server' => [
@@ -61,13 +61,12 @@ class PayFastITN {
                 'pf_payment_id' => $paymentData['pf_payment_id'] ?? 'NOT SET'
             ]);
             
-            // Validate with PayFast
+            // Validate with PayFast LIVE
             $isValid = $this->validatePayFastData($paymentData);
             $this->logData('Validation Result', ['is_valid' => $isValid]);
             
             if (!$isValid) {
                 $this->logData('Validation failed - skipping processing', $paymentData);
-                // According to PayFast spec, return "INVALID" for failed validation
                 echo "INVALID";
                 return;
             }
@@ -120,11 +119,10 @@ class PayFastITN {
         // Generate query string
         $queryString = http_build_query($dataToValidate);
         
-        $validationUrl = $this->PAYFAST_SANDBOX 
-            ? 'https://sandbox.payfast.co.za/eng/query/validate'
-            : 'https://www.payfast.co.za/eng/query/validate';
+        // 🔥 LIVE validation URL
+        $validationUrl = 'https://www.payfast.co.za/eng/query/validate';
         
-        $this->logData('Validation Request', [
+        $this->logData('Validation Request (LIVE)', [
             'url' => $validationUrl,
             'query_string' => $queryString
         ]);
@@ -133,10 +131,10 @@ class PayFastITN {
         curl_setopt_array($ch, [
             CURLOPT_URL => $validationUrl,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => true, // Changed to true to see full response
+            CURLOPT_HEADER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $queryString,
-            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYPEER => true, // Enable SSL verification for LIVE
             CURLOPT_TIMEOUT => 30,
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/x-www-form-urlencoded',
@@ -149,7 +147,7 @@ class PayFastITN {
         $curlError = curl_error($ch);
         curl_close($ch);
         
-        $this->logData('Validation Response', [
+        $this->logData('Validation Response (LIVE)', [
             'http_code' => $httpCode,
             'response' => $response,
             'curl_error' => $curlError
@@ -159,132 +157,132 @@ class PayFastITN {
         return ($httpCode == 200 && strpos($response, 'VALID') !== false);
     }
     
-  private function processSuccessfulPayment($data) {
-    try {
-        $m_payment_id = $data['m_payment_id'] ?? '';
-        $pf_payment_id = $data['pf_payment_id'] ?? '';
-        
-        if (empty($m_payment_id)) {
-            throw new Exception("Missing m_payment_id");
-        }
-
-        // Check if payment exists
-        $checkStmt = $this->pdo->prepare("SELECT * FROM payment_history WHERE transaction_id = ?");
-        $checkStmt->execute([$m_payment_id]);
-        $existingPayment = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$existingPayment) {
-            $this->logData("No payment found with transaction_id: $m_payment_id", []);
-            return false;
-        }
-
-        // If already completed, skip
-        if ($existingPayment['payment_status'] === 'completed') {
-            $this->logData("Payment already completed for transaction: $m_payment_id", []);
-            return true;
-        }
-
-        $this->pdo->beginTransaction();
-
-        // Update payment status to completed
-        $updateStmt = $this->pdo->prepare("
-            UPDATE payment_history 
-            SET payment_status = 'completed',
-                pf_payment_id = ?,
-                payment_date = NOW(),
-                updated_at = NOW()
-            WHERE transaction_id = ?
-        ");
-        $updateStmt->execute([$pf_payment_id, $m_payment_id]);
-        if ($updateStmt->rowCount() === 0) {
-            $this->pdo->rollBack();
-            $this->logData("No rows updated for transaction_id: $m_payment_id", []);
-            return false;
-        }
-
-        $user_id = $existingPayment['user_id'];
-        $package_id = $existingPayment['package_id'] ?? ($data['custom_str2'] ?? null);
-
-        // Fetch package details
-        $pkgStmt = $this->pdo->prepare("SELECT package_type, max_events, max_guests FROM packagetb WHERE package_id = ?");
-        $pkgStmt->execute([$package_id]);
-        $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($package) {
-            // Check if user already has a package
-            $checkPkg = $this->pdo->prepare("SELECT * FROM user_packages WHERE user_id = ?");
-            $checkPkg->execute([$user_id]);
-            $existingPackage = $checkPkg->fetch(PDO::FETCH_ASSOC);
-
-            if (!$existingPackage) {
-                // Insert new package
-                $user_package_id = "PKG-" . strtoupper(substr(md5(uniqid()), 0, 8)) . "-" . time();
-                $insertPkg = $this->pdo->prepare("
-                    INSERT INTO user_packages 
-                    (user_package_id, user_id, package_id, event_limit, event_used, created_at)
-                    VALUES (?, ?, ?, ?, 0, NOW())
-                ");
-                $insertPkg->execute([
-                    $user_package_id,
-                    $user_id,
-                    $package_id,
-                    $package['max_events']
-                ]);
-                $this->logData("Inserted new user package", [
-                    'user_package_id' => $user_package_id,
-                    'user_id' => $user_id,
-                    'package_id' => $package_id
-                ]);
-            } else {
-                // Update existing package
-                $updatePkg = $this->pdo->prepare("
-                    UPDATE user_packages 
-                    SET package_id = ?, 
-                        event_limit = ?, 
-                        updated_at = NOW()
-                    WHERE user_id = ?
-                ");
-                $updatePkg->execute([
-                    $package_id,
-                    $package['max_events'],
-                    $user_id
-                ]);
-                $this->logData("Updated existing user package", [
-                    'user_id' => $user_id,
-                    'package_id' => $package_id
-                ]);
+    private function processSuccessfulPayment($data) {
+        try {
+            $m_payment_id = $data['m_payment_id'] ?? '';
+            $pf_payment_id = $data['pf_payment_id'] ?? '';
+            
+            if (empty($m_payment_id)) {
+                throw new Exception("Missing m_payment_id");
             }
+
+            // Check if payment exists
+            $checkStmt = $this->pdo->prepare("SELECT * FROM payment_history WHERE transaction_id = ?");
+            $checkStmt->execute([$m_payment_id]);
+            $existingPayment = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$existingPayment) {
+                $this->logData("No payment found with transaction_id: $m_payment_id", []);
+                return false;
+            }
+
+            // If already completed, skip
+            if ($existingPayment['payment_status'] === 'completed') {
+                $this->logData("Payment already completed for transaction: $m_payment_id", []);
+                return true;
+            }
+
+            $this->pdo->beginTransaction();
+
+            // Update payment status to completed
+            $updateStmt = $this->pdo->prepare("
+                UPDATE payment_history 
+                SET payment_status = 'completed',
+                    pf_payment_id = ?,
+                    payment_date = NOW(),
+                    updated_at = NOW()
+                WHERE transaction_id = ?
+            ");
+            $updateStmt->execute([$pf_payment_id, $m_payment_id]);
+            if ($updateStmt->rowCount() === 0) {
+                $this->pdo->rollBack();
+                $this->logData("No rows updated for transaction_id: $m_payment_id", []);
+                return false;
+            }
+
+            $user_id = $existingPayment['user_id'];
+            $package_id = $existingPayment['package_id'] ?? ($data['custom_str2'] ?? null);
+
+            // Fetch package details
+            $pkgStmt = $this->pdo->prepare("SELECT package_type, max_events, max_guests FROM packagetb WHERE package_id = ?");
+            $pkgStmt->execute([$package_id]);
+            $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($package) {
+                // Check if user already has a package
+                $checkPkg = $this->pdo->prepare("SELECT * FROM user_packages WHERE user_id = ?");
+                $checkPkg->execute([$user_id]);
+                $existingPackage = $checkPkg->fetch(PDO::FETCH_ASSOC);
+
+                if (!$existingPackage) {
+                    // Insert new package
+                    $user_package_id = "PKG-" . strtoupper(substr(md5(uniqid()), 0, 8)) . "-" . time();
+                    $insertPkg = $this->pdo->prepare("
+                        INSERT INTO user_packages 
+                        (user_package_id, user_id, package_id, event_limit, event_used, created_at)
+                        VALUES (?, ?, ?, ?, 0, NOW())
+                    ");
+                    $insertPkg->execute([
+                        $user_package_id,
+                        $user_id,
+                        $package_id,
+                        $package['max_events']
+                    ]);
+                    $this->logData("Inserted new user package", [
+                        'user_package_id' => $user_package_id,
+                        'user_id' => $user_id,
+                        'package_id' => $package_id
+                    ]);
+                } else {
+                    // Update existing package
+                    $updatePkg = $this->pdo->prepare("
+                        UPDATE user_packages 
+                        SET package_id = ?, 
+                            event_limit = ?, 
+                            updated_at = NOW()
+                        WHERE user_id = ?
+                    ");
+                    $updatePkg->execute([
+                        $package_id,
+                        $package['max_events'],
+                        $user_id
+                    ]);
+                    $this->logData("Updated existing user package", [
+                        'user_id' => $user_id,
+                        'package_id' => $package_id
+                    ]);
+                }
+            }
+
+            $this->pdo->commit();
+
+            $this->logData("✅ PAYMENT COMPLETED (LIVE) ✅", [
+                "transaction_id" => $m_payment_id,
+                "pf_payment_id" => $pf_payment_id,
+                "user_id" => $user_id,
+                "package_id" => $package_id
+            ]);
+
+            // Send email
+            $this->sendPaymentConfirmationEmail($user_id, $package, $data);
+
+            return true;
+
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->logData("❌ ITN processing error", [
+                "error" => $e->getMessage(),
+                "trace" => $e->getTraceAsString()
+            ]);
+            return false;
         }
-
-        $this->pdo->commit();
-
-        $this->logData("✅ PAYMENT COMPLETED ✅", [
-            "transaction_id" => $m_payment_id,
-            "pf_payment_id" => $pf_payment_id,
-            "user_id" => $user_id,
-            "package_id" => $package_id
-        ]);
-
-        // Send email
-        $this->sendPaymentConfirmationEmail($user_id, $package, $data);
-
-        return true;
-
-    } catch (Exception $e) {
-        if ($this->pdo->inTransaction()) {
-            $this->pdo->rollBack();
-        }
-        $this->logData("❌ ITN processing error", [
-            "error" => $e->getMessage(),
-            "trace" => $e->getTraceAsString()
-        ]);
-        return false;
     }
-}
     
     private function sendPaymentConfirmationEmail($user_id, $package, $paymentData) {
         try {
-            // Get user details
+            // 1. Get user details
             $userStmt = $this->pdo->prepare("
                 SELECT name, email FROM users WHERE user_id = ?
             ");
@@ -292,20 +290,138 @@ class PayFastITN {
             $user = $userStmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$user || empty($user['email'])) {
-                $this->logData("Cannot send email - user not found", ['user_id' => $user_id]);
+                $this->logData("❌ Cannot send email - user not found", ['user_id' => $user_id]);
                 return;
             }
-            
-            // Use your existing email function or Brevo API
-            $this->logData("Would send email to: " . $user['email'], [
-                'package' => $package,
-                'amount' => $paymentData['amount_gross'] ?? 'Unknown'
+
+            // 2. Extract payment data
+            $transaction_id = $paymentData['m_payment_id'] ?? '';
+            $amount = $paymentData['amount_gross'] ?? $paymentData['amount'] ?? '0.00';
+            $package_name = $package['package_type'] ?? 'Package';
+            $payment_date = date('Y-m-d H:i:s');
+
+            $formattedDate = date('F j, Y H:i:s', strtotime($payment_date));
+
+            // 🔥 Your LIVE domain
+            $APP_URL = "https://evenditest.evendi.co.za";
+
+            // 3. Brevo API Key
+            $BREVO_API_KEY = $this->BREVO_API_KEY;
+
+            // 4. Email HTML
+            $htmlContent = "
+            <html>
+            <body style='font-family:Arial;background:#f9f9f9;padding:20px'>
+                <div style='max-width:600px;margin:auto;background:white;padding:30px;border-radius:12px;'>
+                    <div style='text-align:center;margin-bottom:30px'>
+                        <h2 style='color:#8b6a35'>Payment Receipt</h2>
+                    </div>
+                    
+                    <p>Dear <strong>{$user['name']}</strong>,</p>
+                    
+                    <p>Thank you for your payment. Your transaction has been completed successfully.</p>
+                    
+                    <div style='background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0'>
+                        <h3 style='margin-top:0;color:#333'>Payment Details</h3>
+                        <table style='width:100%'>
+                             <tr>
+                                 <td><strong>Transaction ID:</strong></td>
+                                 <td>{$transaction_id}</td>
+                             </tr>
+                             <tr>
+                                 <td><strong>Amount:</strong></td>
+                                 <td>R{$amount}</td>
+                             </tr>
+                             <tr>
+                                 <td><strong>Package:</strong></td>
+                                 <td>{$package_name}</td>
+                             </tr>
+                             <tr>
+                                 <td><strong>Date:</strong></td>
+                                 <td>{$formattedDate}</td>
+                             </tr>
+                         </table>
+                    </div>
+                    
+                    <p>Your package has been successfully upgraded 🎉</p>
+                    
+                    <div style='text-align:center;margin:30px 0'>
+                        <a href='{$APP_URL}/eventsDashboard' 
+                           style='background:#8b6a35;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold'>
+                            Go to Dashboard
+                        </a>
+                    </div>
+                    
+                    <p style='font-size:12px;color:#888;text-align:center'>
+                        &copy; " . date('Y') . " Eventa. All rights reserved.
+                    </p>
+                </div>
+            </body>
+            </html>
+            ";
+
+            // 5. Text version
+            $textContent = "Dear {$user['name']},\n\n" .
+                           "Your payment was successful.\n\n" .
+                           "Transaction ID: {$transaction_id}\n" .
+                           "Amount: R{$amount}\n" .
+                           "Package: {$package_name}\n" .
+                           "Date: {$formattedDate}\n\n" .
+                           "Visit your dashboard: {$APP_URL}/eventsDashboard\n\n" .
+                           "— Eventa Team";
+
+            // 6. Brevo payload
+            $payload = [
+                "sender" => [
+                    "email" => "ananiasndou0@gmail.com",
+                    "name" => "Eventa Support"
+                ],
+                "to" => [
+                    [
+                        "email" => $user['email'],
+                        "name" => $user['name']
+                    ]
+                ],
+                "subject" => "Payment Confirmation - Eventa",
+                "htmlContent" => $htmlContent,
+                "textContent" => $textContent
+            ];
+
+            // 7. Send request
+            $ch = curl_init("https://api.brevo.com/v3/smtp/email");
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => [
+                    "api-key: $BREVO_API_KEY",
+                    "Content-Type: application/json",
+                    "Accept: application/json",
+                ],
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 30,
             ]);
-            
-            // You can implement your email sending logic here
-            
+
+            $response = curl_exec($ch);
+            $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            // 8. Logging
+            if ($status === 201) {
+                $this->logData("✅ Email sent successfully", [
+                    "email" => $user['email'],
+                    "transaction_id" => $transaction_id
+                ]);
+            } else {
+                $this->logData("❌ Email failed", [
+                    "status" => $status,
+                    "response" => $response
+                ]);
+            }
+
         } catch (Exception $e) {
-            $this->logData("Error sending confirmation email", ['error' => $e->getMessage()]);
+            $this->logData("❌ Email error", [
+                "error" => $e->getMessage()
+            ]);
         }
     }
     

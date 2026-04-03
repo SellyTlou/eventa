@@ -35,31 +35,52 @@ const PackagePayment = () => {
         if (process.env.NODE_ENV === 'development') {
           
          //   const ngrokUrl = localStorage.getItem('') || window.location.origin;
-              return 'https://b578-102-253-67-0.ngrok-free.app';
+              return 'https://c16f-102-254-38-23.ngrok-free.app';
         }
         return window.location.origin;
     };
 
-    // ============ PAYFAST CONFIGURATION ============
-    const PAYFAST_CONFIG = {
-        MERCHANT_ID: "10046113",//33426571
-        MERCHANT_KEY: "0kdmnse8055gx",//lkqoiy0ftb9yc
-        PASS_PHRASE: "", // Add if you have one in PayFast settings
+    // ============ PAYFAST CONFIGURATION for testing============
+//     const PAYFAST_CONFIG = {
+//         MERCHANT_ID: "33426571",//33426571
+//         MERCHANT_KEY: "lkqoiy0ftb9yc",//lkqoiy0ftb9yc
+//         PASS_PHRASE: "", // Add if you have one in PayFast settings
         
-        // For local testing, update this to your ngrok URL
-ITN_URL: "https://c84f-102-253-67-0.ngrok-free.app/eventa/src/pages/php/payFastInt.php",    
-        // Use sandbox for testing
-        PAYFAST_URL: process.env.NODE_ENV === 'production' 
-            ? "https://www.payfast.co.za/eng/process"
-            : "https://sandbox.payfast.co.za/eng/process",
+//         // For local testing, update this to your ngrok URL
+// ITN_URL: "https://0260-102-254-38-23.ngrok-free.app/src/pages/php/payFastInt.php",    
+//         // Use sandbox for testing
+//         PAYFAST_URL: process.env.NODE_ENV === 'production' 
+//             ? "https://www.payfast.co.za/eng/process"
+//             : "https://sandbox.payfast.co.za/eng/process",
         
-         RETURN_URL: "https://b578-102-253-67-0.ngrok-free.app/paymentSuccess",
-    CANCEL_URL: "https://b578-102-253-67-0.ngrok-free.app/paymentCancel",
+//          RETURN_URL: "https://c16f-102-254-38-23.ngrok-free.app/paymentSuccess",
+//     CANCEL_URL: "https://c16f-102-254-38-23.ngrok-free.app/paymentCancel",
         
-        EMAIL_CONFIRMATION: true,
-        CONFIRMATION_EMAIL: "",
-        PAYMENT_METHOD: "cc",
-    };
+//         EMAIL_CONFIRMATION: true,
+//         CONFIRMATION_EMAIL: "",
+//         PAYMENT_METHOD: "cc",
+//     };
+
+// ============ PAYFAST CONFIGURATION for LIVE ============
+
+const PAYFAST_CONFIG = {
+    MERCHANT_ID: "33426571",  // Your LIVE merchant ID
+    MERCHANT_KEY: "lkqoiy0ftb9yc",  // Your LIVE merchant key
+    PASS_PHRASE: "", // Add if you have one in PayFast settings
+    
+    // LIVE ITN URL
+    ITN_URL: "https://evenditest.evendi.co.za/src/pages/php/payFastInt.php",    
+    
+    // LIVE PayFast URL
+    PAYFAST_URL: "https://www.payfast.co.za/eng/process",
+    
+    // Your LIVE return URLs
+    RETURN_URL: "https://evenditest.evendi.co.za/paymentSuccess",
+    CANCEL_URL: "https://evenditest.evendi.co.za/paymentCancel",
+    
+    EMAIL_CONFIRMATION: true,
+    PAYMENT_METHOD: "",
+};
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
@@ -211,7 +232,7 @@ ITN_URL: "https://c84f-102-253-67-0.ngrok-free.app/eventa/src/pages/php/payFastI
         custom_int1: String(parseInt(selectedPackage?.max_events) || 0),
         custom_int2: String(parseInt(selectedPackage?.max_guests) || 0),
         
-        payment_method: String(PAYFAST_CONFIG.PAYMENT_METHOD),
+        //payment_method: String(PAYFAST_CONFIG.PAYMENT_METHOD),
         email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? "1" : "0", // Convert to string
     };
 
@@ -583,11 +604,11 @@ ITN_URL: "https://c84f-102-253-67-0.ngrok-free.app/eventa/src/pages/php/payFastI
                     <i className="bi bi-shield-check"></i>
                     <small>Secured by PayFast | PCI DSS Level 1 Compliant</small>
                 </div>
-                <div className="payfast-test-info">
+                {/* {<div className="payfast-test-info">
                     <small className="text-muted">
                         Test Mode: Use card 4111111111111111, any expiry, CVV 123
                     </small>
-                </div>
+                </div>} */}
             </div>
         );
     };
@@ -1076,7 +1097,7 @@ ITN_URL: "https://c84f-102-253-67-0.ngrok-free.app/eventa/src/pages/php/payFastI
                     <h3 className="paymentTitle">Choose Payment Method</h3>
 
                     <div className="payment-method">
-                        <button
+                        {/* <button
                             className={`paymentOption ${selectedPaymentMethod === 'credit-card' ? 'active' : ''}`}
                             onClick={() => handlePaymentMethodSelect('credit-card')}
                         >
@@ -1099,7 +1120,7 @@ ITN_URL: "https://c84f-102-253-67-0.ngrok-free.app/eventa/src/pages/php/payFastI
                             <i className="bi bi-shield-check"></i>
                             <span>Stripe</span>
                             <small>Secure payments</small>
-                        </button>
+                        </button> */}
                         <button
                             className={`paymentOption ${selectedPaymentMethod === 'payfast' ? 'active' : ''}`}
                             onClick={() => handlePaymentMethodSelect('payfast')}
