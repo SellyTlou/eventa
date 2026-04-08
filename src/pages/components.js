@@ -50,6 +50,8 @@ import RequestDetails from '../pages/business_planner/RequestDetails';
 import CreateTicketEvent from '../pages/createTicketEvent';
 import EventChecklist from './planner/EventChecklist';
 import FormBuilder from './planner/FormBuilder';
+import TicketCancel from './ticketCancel';
+import TicketSuccess from './ticketSuccess';
 
 
 const clearAllLocalStorage = () => {
@@ -237,6 +239,8 @@ export function SessionHandler() {
                 <Route path="/createTicketEvent" element={<CreateTicketEvent />} />
                 <Route path="/event-checklist" element={<EventChecklist />} />
                 <Route path="/form-builder" element={<FormBuilder />} />
+                <Route path="/ticketCancel" element={<TicketCancel />} />
+                <Route path="/ticketSuccess" element={<TicketSuccess />} />
 
             </Routes>
 

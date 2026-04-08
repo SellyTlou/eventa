@@ -1,0 +1,144 @@
+2026-04-07 15:08:33 - payFastIntTickets.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => TKT-1775567302248-ivql5qkf3
+    [pf_payment_id] => 3091274
+    [payment_status] => COMPLETE
+    [item_name] => The Grand  - VIP Tickets
+    [item_description] => 3 x VIP ticket(s)
+    [amount_gross] => 615.00
+    [amount_fee] => -14.15
+    [amount_net] => 600.85
+    [custom_str1] => TKT1775501209556
+    [custom_str2] => vip
+    [custom_str3] => 3
+    [custom_str4] => {"firstName":"Selly","lastName":"Tlou","email":"Ananiasndou0@gmail.com","phone":"0736933987","event_id":"TKT1775501209556","ticket_type":"vip","quantity":"3"}
+    [custom_str5] => 
+    [custom_int1] => 
+    [custom_int2] => 
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Selly
+    [name_last] => Tlou
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => e0162813e7b242f122ef3c5ec6f81599
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-04-07 15:12:45 - payFastIntTickets.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => TKT-1775567548238-0vpp06gsq
+    [pf_payment_id] => 3091281
+    [payment_status] => COMPLETE
+    [item_name] => The Grand  - General Admission Tickets
+    [item_description] => 1 x General Admission ticket(s)
+    [amount_gross] => 85.00
+    [amount_fee] => -2.30
+    [amount_net] => 82.70
+    [custom_str1] => TKT1775304811940
+    [custom_str2] => general
+    [custom_str3] => 1
+    [custom_str4] => {"firstName":"ANisto","lastName":"Ndou","email":"Ananiasndou0@gmail.com","phone":"0736933987","event_id":"TKT1775304811940","ticket_type":"general","quantity":1}
+    [custom_str5] => 
+    [custom_int1] => 
+    [custom_int2] => 
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => ANisto
+    [name_last] => Ndou
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => c72d32ee942aa2a18e8d6cda9bba2c34
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-04-07 15:30:17 - payFastIntTickets.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => TKT-1775568559126-3nkfgpxqo
+    [pf_payment_id] => 3091332
+    [payment_status] => COMPLETE
+    [item_name] => The Grand  - VIP Tickets
+    [item_description] => 10 x VIP ticket(s)
+    [amount_gross] => 2015.00
+    [amount_fee] => -46.35
+    [amount_net] => 1968.65
+    [custom_str1] => TKT1775501209556
+    [custom_str2] => vip
+    [custom_str3] => 10
+    [custom_str4] => {"firstName":"Ananias","lastName":"Ndou","email":"Ananiasndou0@gmail.com","phone":"0736933987","event_id":"TKT1775501209556","ticket_type":"vip","quantity":"10"}
+    [custom_str5] => 
+    [custom_int1] => 
+    [custom_int2] => 
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => Ndou
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => 76a3caf5c26b0a8a94c40490f5af9850
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-04-07 22:40:57 - payFastIntTickets.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => TKT-1775594442970-d0iqz7zpw
+    [pf_payment_id] => 3091909
+    [payment_status] => COMPLETE
+    [item_name] => The Grand  - General Admission Tickets
+    [item_description] => 4 x General Admission ticket(s)
+    [amount_gross] => 295.00
+    [amount_fee] => -6.79
+    [amount_net] => 288.21
+    [custom_str1] => TKT1775501209556
+    [custom_str2] => general
+    [custom_str3] => 4
+    [custom_str4] => {"firstName":"Selly","lastName":"Tlou","email":"Ananiasndou0@gmail.com","phone":"0736933987","event_id":"TKT1775501209556","ticket_type":"general","quantity":"4"}
+    [custom_str5] => 
+    [custom_int1] => 
+    [custom_int2] => 
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Selly
+    [name_last] => Tlou
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => c9d55a4cfadf661e48163020adf5f83a
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+

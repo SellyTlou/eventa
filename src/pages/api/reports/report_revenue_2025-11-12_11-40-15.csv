@@ -1,0 +1,2 @@
+payment_id,user_id,user_name,package_id,package_name,amount,payment_method,payment_status,payment_date,created_at,billing_cycle,transaction_id,user_email,package_type,package_price
+PYE48T0A2-1762901768,USER-NTKJ1I-1762900661,Mfanafuthi,PCK-BASIC-001,basic,465.00,paypal,completed,"2025-11-12 00:56:08","2025-11-12 00:56:08",monthly,,mfanafuthimagcaba366@gmail.com,basic,400.00

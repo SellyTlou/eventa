@@ -1,0 +1,157 @@
+2026-03-31 02:14:49 - payFastInt.php accessed
+REQUEST_METHOD: GET
+REMOTE_ADDR: ::1
+POST data: Array
+(
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-03-31 02:18:03 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1774916271569-jecyxwwsy
+    [pf_payment_id] => 3081154
+    [payment_status] => COMPLETE
+    [item_name] => advanced Package - Evenda
+    [item_description] => Max Events: 150, Max Guests: 100
+    [amount_gross] => 637.50
+    [amount_fee] => -14.66
+    [amount_net] => 622.84
+    [custom_str1] => USER-2B1V7H-1769468759
+    [custom_str2] => PCK-ENTERPRISE-003
+    [custom_str3] => advanced
+    [custom_str4] => PayFast
+    [custom_str5] => 
+    [custom_int1] => 150
+    [custom_int2] => 100
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => SD
+    [name_last] => Creatives
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => 57bc80989b499111cf60efe2da0d0755
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-03-31 02:36:20 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1774917367881-b6cwjcj9j
+    [pf_payment_id] => 3081155
+    [payment_status] => COMPLETE
+    [item_name] => advanced Package - Evenda
+    [item_description] => Max Events: 150, Max Guests: 100
+    [amount_gross] => 637.50
+    [amount_fee] => -14.66
+    [amount_net] => 622.84
+    [custom_str1] => USER-2B1V7H-1769468759
+    [custom_str2] => PCK-ENTERPRISE-003
+    [custom_str3] => advanced
+    [custom_str4] => PayFast
+    [custom_str5] => 
+    [custom_int1] => 150
+    [custom_int2] => 100
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => SD
+    [name_last] => Creatives
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => 4b026c4537adec1d13f8063677be1334
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-03-31 02:39:50 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1774917576789-y6hrqtr9g
+    [pf_payment_id] => 3081156
+    [payment_status] => COMPLETE
+    [item_name] => basic Package - Evenda
+    [item_description] => Max Events: 6, Max Guests: 51
+    [amount_gross] => 235.00
+    [amount_fee] => -5.41
+    [amount_net] => 229.59
+    [custom_str1] => USER-2B1V7H-1769468759
+    [custom_str2] => PCK-BASIC-001
+    [custom_str3] => basic
+    [custom_str4] => PayFast
+    [custom_str5] => 
+    [custom_int1] => 6
+    [custom_int2] => 51
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => SD
+    [name_last] => Creatives
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => 39e0f6f8340d58102f81684f2864bc3a
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-03-31 02:58:38 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1774918706302-uhygr2uwk
+    [pf_payment_id] => 3081158
+    [payment_status] => COMPLETE
+    [item_name] => advanced Package - Evenda
+    [item_description] => Max Events: 150, Max Guests: 100
+    [amount_gross] => 637.50
+    [amount_fee] => -14.66
+    [amount_net] => 622.84
+    [custom_str1] => USER-2B1V7H-1769468759
+    [custom_str2] => PCK-ENTERPRISE-003
+    [custom_str3] => advanced
+    [custom_str4] => PayFast
+    [custom_str5] => 
+    [custom_int1] => 150
+    [custom_int2] => 100
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => SD
+    [name_last] => Creatives
+    [email_address] => Ananiasndou0@gmail.com
+    [merchant_id] => 10046113
+    [signature] => 3eb4b72cdb2af6724bd32ac4f16b93a8
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+

@@ -40,6 +40,9 @@ const PackagePayment = () => {
         return window.location.origin;
     };
 
+const API_URL = process.env.REACT_APP_API_URL;
+const BASE_URL = API_URL.replace('/api', '');
+
     // ============ PAYFAST CONFIGURATION for testing============
 //     const PAYFAST_CONFIG = {
 //         MERCHANT_ID: "33426571",//33426571
@@ -64,20 +67,14 @@ const PackagePayment = () => {
 // ============ PAYFAST CONFIGURATION for LIVE ============
 
 const PAYFAST_CONFIG = {
-    MERCHANT_ID: "33426571",  // Your LIVE merchant ID
-    MERCHANT_KEY: "lkqoiy0ftb9yc",  // Your LIVE merchant key
-    PASS_PHRASE: "", // Add if you have one in PayFast settings
+    MERCHANT_ID: "33426571", 
+    MERCHANT_KEY: "lkqoiy0ftb9yc",  
+    PASS_PHRASE: "",
     
-    // LIVE ITN URL
-    ITN_URL: "https://evenditest.evendi.co.za/src/pages/php/payFastInt.php",    
-    
-    // LIVE PayFast URL
+    ITN_URL: `${API_URL}/payFastInt.php`,    
     PAYFAST_URL: "https://www.payfast.co.za/eng/process",
-    
-    // Your LIVE return URLs
-    RETURN_URL: "https://evenditest.evendi.co.za/paymentSuccess",
-    CANCEL_URL: "https://evenditest.evendi.co.za/paymentCancel",
-    
+    RETURN_URL: `${BASE_URL}/paymentSuccess`,
+    CANCEL_URL: `${BASE_URL}/paymentCancel`,
     EMAIL_CONFIRMATION: true,
     PAYMENT_METHOD: "",
 };
