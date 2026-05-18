@@ -10,6 +10,8 @@ function AdminTicket({ printAlert }) {
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
   // === CRITICAL: Check if user is admin ===
@@ -133,6 +135,12 @@ function AdminTicket({ printAlert }) {
       case 'low': return 'priority-low';
       default: return 'priority-medium';
     }
+  };
+
+  // View ticket details
+  const viewTicketDetails = (ticket) => {
+    setSelectedTicket(ticket);
+    setShowModal(true);
   };
 
   if (loading) {
@@ -262,7 +270,7 @@ function AdminTicket({ printAlert }) {
                       <button 
                         className="btn-icon view-btn"
                         title="View Details"
-                        onClick={() => {/* Add view details modal later */}}
+                        onClick={() => viewTicketDetails(ticket)}
                       >
                         <i className="bi bi-eye"></i>
                       </button>
@@ -275,6 +283,59 @@ function AdminTicket({ printAlert }) {
         </div>
       </div>
     </section>
+
+    {/* Ticket Details Modal */}
+    {showModal && selectedTicket && (
+      <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-content ticket-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>Ticket Details</h3>
+            <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+          </div>
+          <div className="modal-body">
+            <div className="ticket-detail-grid">
+              <div className="detail-row">
+                <label>Ticket ID:</label>
+                <span>#{selectedTicket.id}</span>
+              </div>
+              <div className="detail-row">
+                <label>Subject:</label>
+                <span>{selectedTicket.subject}</span>
+              </div>
+              <div className="detail-row">
+                <label>User:</label>
+                <span>{selectedTicket.name || 'Guest'} ({selectedTicket.email})</span>
+              </div>
+              <div className="detail-row">
+                <label>Department:</label>
+                <span>{selectedTicket.department}</span>
+              </div>
+              <div className="detail-row">
+                <label>Priority:</label>
+                <span className={`priority-badge ${getPriorityClass(selectedTicket.priority)}`}>{selectedTicket.priority}</span>
+              </div>
+              <div className="detail-row">
+                <label>Status:</label>
+                <span className={`status-badge status-${selectedTicket.status?.toLowerCase().replace(' ', '-')}`}>{selectedTicket.status}</span>
+              </div>
+              <div className="detail-row">
+                <label>Created:</label>
+                <span>{formatDate(selectedTicket.created_at)}</span>
+              </div>
+              <div className="detail-row full-width">
+                <label>Message:</label>
+                <div className="ticket-message">
+                  {selectedTicket.message || 'No message content available'}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Close</button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
  

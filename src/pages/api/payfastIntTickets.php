@@ -353,6 +353,8 @@ private function processSuccessfulPayment($data)
             ]
         ]);
 
+
+        
         $this->sendTicketConfirmationEmail($booking, $data);
 
         return true;
@@ -500,7 +502,7 @@ private function deductQty($eventID, $ticketType, $qty)
                 'event_id' => $booking['event_id'],
                 'ticket_type' => $booking['ticket_type'],
                 'quantity' => $quantity
-            ]));
+            ])); 
             
             $customData = json_decode($paymentData['custom_str4'] ?? '{}', true);
          $APP_URL = $customData['base_url'] ?? '';

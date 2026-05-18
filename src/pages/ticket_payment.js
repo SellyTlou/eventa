@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./ticket_payment.css";
-import crypto from "crypto-js";
 import { tr } from "framer-motion/client";
 
 function Ticket_payment() {
@@ -18,6 +17,7 @@ function Ticket_payment() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [bookingData, setBookingData] = useState(null);
   const [printInvoice, setPrintInvoice] = useState(false);
+  const [alert, setAlert] = useState({ show: false, message: "", type: "" });
   const [ticketData, setTicketData] = useState({
     email: "",
     firstName: "",
@@ -36,6 +36,10 @@ const BASE_URL = API_URL.replace('/api', '');
     }
   }, [event, navigate]);
 
+  const printAlert = (msg, type = "info") => {
+    setAlert({ show: true, message: msg, type });
+    setTimeout(() => setAlert({ show: false, message: "", type: "" }), 6000);
+  };
   
 // ============ PAYFAST CONFIGURATION for LIVE ============
 
@@ -44,7 +48,7 @@ const PAYFAST_CONFIG = {
   MERCHANT_KEY: "lkqoiy0ftb9yc",
   PASS_PHRASE: "",
   
-  ITN_URL: `${APP_URL}/payFastIntTickets.php`,
+  ITN_URL: `${API_URL}/payFastIntTickets.php`,
   PAYFAST_URL: "https://www.payfast.co.za/eng/process",
   RETURN_URL: `${BASE_URL}/ticketSuccess`,
   CANCEL_URL: `${BASE_URL}/ticketCancel`,
@@ -59,51 +63,21 @@ const PAYFAST_CONFIG = {
     return `TKT-${timestamp}-${random}`;
   };
 
-  const generatePayFastSignature = (data) => {
-  // 1️⃣ Copy only non-empty fields, excluding signature
-  const pfData = {};
-  Object.keys(data)
-    .sort()
-    .forEach((key) => {
-      const value = data[key];
-      if (value !== null && value !== undefined && value !== "" && key !== "signature") {
-        pfData[key] = typeof value === "object" ? JSON.stringify(value) : String(value);
-      }
+  const getSignature = async (data) => {
+    const res = await fetch(`${API_URL}/generateSignature.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
     });
 
-  // 2️⃣ URL encode each key/value exactly like PHP urlencode
-  const encode = (str) => {
-    return encodeURIComponent(str)
-      .replace(/%20/g, "+")
-      .replace(/!/g, "%21")
-      .replace(/'/g, "%27")
-      .replace(/\(/g, "%28")
-      .replace(/\)/g, "%29")
-      .replace(/\*/g, "%2A");
+    const result = await res.json();
+    if (!result.success) {
+      throw new Error(result.message || "Failed to generate PayFast signature");
+    }
+    return result.signature;
   };
-
-  // 3️⃣ Build query string in alphabetical order
-  let pfOutput = "";
-  Object.keys(pfData)
-    .sort()
-    .forEach((key) => {
-      pfOutput += `${key}=${encode(pfData[key])}&`;
-    });
-
-  if (PAYFAST_CONFIG.PASS_PHRASE && PAYFAST_CONFIG.PASS_PHRASE.trim() !== "") {
-    pfOutput += `passphrase=${encode(PAYFAST_CONFIG.PASS_PHRASE.trim())}`;
-  } else {
-    pfOutput = pfOutput.slice(0, -1);
-  }
-
-  console.log("🔑 String for signature:", pfOutput);
-
-  const signature = crypto.MD5(pfOutput).toString();
-
-  console.log("✅ Generated signature:", signature);
-
-  return signature;
-};
 
   const preparePayFastData = (transactionId) => {
     const totalWithFee = (parseFloat(calculateTotal()) + 15).toFixed(2);
@@ -148,9 +122,6 @@ const PAYFAST_CONFIG = {
     if (ticketData.email) {
       paymentData.confirmation_address = ticketData.email;
     }
-
-    // Generate signature
-    paymentData.signature = generatePayFastSignature(paymentData);
 
     console.log("PayFast Data prepared:", paymentData);
 
@@ -218,9 +189,37 @@ const PAYFAST_CONFIG = {
     });
   };
 
+  const validateForm = () => {
+    const errors = [];
+    
+    if (!ticketData.firstName.trim()) {
+      errors.push("First name is required");
+    }
+    if (!ticketData.lastName.trim()) {
+      errors.push("Last name is required");
+    }
+    if (!ticketData.email.trim()) {
+      errors.push("Email address is required");
+    } else if (!/\S+@\S+\.\S+/.test(ticketData.email)) {
+      errors.push("Please enter a valid email address");
+    }
+    if (!ticketData.agreeToTerms) {
+      errors.push("You must agree to the terms and conditions");
+    }
+
+    if (errors.length > 0) {
+      printAlert(errors.join(". "), "error");
+      return false;
+    }
+    
+    return true;
+  };
+
   const handlePaymentMethodSelect = () => {
-    setSelectedPaymentMethod('payFast');
-    setShowPaymentPopup(true);
+    if (validateForm()) {
+      setSelectedPaymentMethod('payFast');
+      setShowPaymentPopup(true);
+    }
   };
 
 const initiatePayFastPayment = async () => {
@@ -233,9 +232,8 @@ const initiatePayFastPayment = async () => {
 
     console.log("FINAL TRANSACTION ID:", id);
 
-    await recordPayment("pending", id);
-
     const paymentData = preparePayFastData(id);
+    paymentData.signature = await getSignature(paymentData);
 
     localStorage.setItem("lastTransactionId", id);
 
@@ -264,7 +262,7 @@ const initiatePayFastPayment = async () => {
 
   } catch (error) {
     console.error("PayFast payment error:", error);
-    setError("Failed to initiate payment.");
+    printAlert("Failed to initiate payment. Please try again.", "error");
     setProcessingPayment(false);
     setPaymentStarted(false);
   }
@@ -356,11 +354,8 @@ const initiatePayFastPayment = async () => {
   const processPayment = async () => {
     if (processingPayment || paymentStarted) {
       console.log("Payment already in progress — ignoring");
-
-      setError("Payment is already being processed. Please wait...");
-
-      alert("Payment is already being processed. The page will refresh to reset the payment state.");
-
+      printAlert("Payment is already being processed. Please wait...", "warning");
+      
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -640,6 +635,19 @@ const initiatePayFastPayment = async () => {
 
   return (
     <div className="ticket-payment-page">
+      {alert.show && (
+        <div className={`custom-alert ${alert.type}`}>
+          <i
+            className={`fas ${
+              alert.type === "error" ? "fa-times-circle" :
+              alert.type === "success" ? "fa-check-circle" :
+              alert.type === "warning" ? "fa-exclamation-triangle" : "fa-info-circle"
+            }`}
+          />
+          <span>{alert.message}</span>
+        </div>
+      )}
+      
       <div className="payment-container">
         <div className="event-summary">
           <div className="event-header">
@@ -695,7 +703,7 @@ const initiatePayFastPayment = async () => {
             </div>
           )}
 
-          <form>
+          <form onSubmit={(e) => e.preventDefault()}>
             <div className="form-section">
               <h3>Personal Information</h3>
               <div className="form-row">
@@ -749,11 +757,12 @@ const initiatePayFastPayment = async () => {
               <h3>Ticket Details</h3>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Ticket Type</label>
+                  <label>Ticket Type *</label>
                   <select
                     name="ticketType"
                     value={ticketData.ticketType}
                     onChange={handleInputChange}
+                    required
                   >
                     {parseFloat(event.earlybird_price) > 0 && (
                       <option
@@ -778,11 +787,12 @@ const initiatePayFastPayment = async () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Quantity</label>
+                  <label>Quantity *</label>
                   <select
                     name="quantity"
                     value={ticketData.quantity}
                     onChange={handleInputChange}
+                    required
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                       <option key={num} value={num}>{num}</option>
@@ -803,7 +813,7 @@ const initiatePayFastPayment = async () => {
                   required
                 />
                 <label htmlFor="agreeToTerms">
-                  I agree to the terms and conditions and understand that tickets are non-refundable
+                  I agree to the terms and conditions and understand that tickets are non-refundable *
                 </label>
               </div>
 

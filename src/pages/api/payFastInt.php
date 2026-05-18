@@ -61,7 +61,7 @@ class PayFastITN {
                 'pf_payment_id' => $paymentData['pf_payment_id'] ?? 'NOT SET'
             ]);
             
-            // Validate with PayFast LIVE
+          
             $isValid = $this->validatePayFastData($paymentData);
             $this->logData('Validation Result', ['is_valid' => $isValid]);
             
@@ -109,54 +109,31 @@ class PayFastITN {
         }
     }
     
-    private function validatePayFastData($data) {
-        // Remove the signature from the data to validate
-        $dataToValidate = $data;
-        if (isset($dataToValidate['signature'])) {
-            unset($dataToValidate['signature']);
-        }
-        
-        // Generate query string
-        $queryString = http_build_query($dataToValidate);
-        
-        // 🔥 LIVE validation URL
-        $validationUrl = 'https://www.payfast.co.za/eng/query/validate';
-        
-        $this->logData('Validation Request (LIVE)', [
-            'url' => $validationUrl,
-            'query_string' => $queryString
-        ]);
-        
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $validationUrl,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $queryString,
-            CURLOPT_SSL_VERIFYPEER => true, // Enable SSL verification for LIVE
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/x-www-form-urlencoded',
-                'Content-Length: ' . strlen($queryString)
-            ]
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-        
-        $this->logData('Validation Response (LIVE)', [
-            'http_code' => $httpCode,
-            'response' => $response,
-            'curl_error' => $curlError
-        ]);
-        
-        // PayFast returns "VALID" or "INVALID" in the response body
-        return ($httpCode == 200 && strpos($response, 'VALID') !== false);
+private function validatePayFastData($data) {
+    $receivedSignature = $data['signature'] ?? '';
+
+    // Remove signature from data
+    unset($data['signature']);
+
+    // IMPORTANT: Do NOT trim or modify values
+    $pfOutput = '';
+    foreach ($data as $key => $val) {
+        $pfOutput .= $key . '=' . urlencode($val) . '&';
     }
-    
+
+    $pfOutput = rtrim($pfOutput, '&');
+
+    // No passphrase since you don't use one
+    $generatedSignature = md5($pfOutput);
+
+    $this->logData('Correct ITN Signature Debug', [
+        'received' => $receivedSignature,
+        'generated' => $generatedSignature,
+        'string' => $pfOutput
+    ]);
+
+    return ($generatedSignature === $receivedSignature);
+}
     private function processSuccessfulPayment($data) {
         try {
             $m_payment_id = $data['m_payment_id'] ?? '';
@@ -302,9 +279,9 @@ class PayFastITN {
 
             $formattedDate = date('F j, Y H:i:s', strtotime($payment_date));
 
-            // 🔥 Your LIVE domain
-            $APP_URL = "https://evenditest.evendi.co.za";
+            $APP_URL = $paymentData['custom_str5'] ?? 'https://evenditest.evendi.co.za';
 
+           
             // 3. Brevo API Key
             $BREVO_API_KEY = $this->BREVO_API_KEY;
 
@@ -437,7 +414,6 @@ class PayFastITN {
     }
 }
 
-// Initialize and handle
 try {
     $db = new Database();
     $pdo = $db->getConnection();

@@ -4890,7 +4890,7 @@ if ($fun === "getPaymentHistory") {
         $package = $_POST['package'] ?? 'all';
         $dateFilter = $_POST['date_filter'] ?? 'all';
 
-        // UNION query to get both personal and business payments
+        // Query to get all payments from payment_history
         $query = "
             SELECT
                 ph.payment_id,
@@ -4906,33 +4906,11 @@ if ($fun === "getPaymentHistory") {
                 u.account_type,
                 p.max_events,
                 p.max_guests,
-                'personal' AS payment_type
+                CASE WHEN u.account_type = 'business' THEN 'business' ELSE 'personal' END AS payment_type
             FROM payment_history AS ph
             LEFT JOIN users AS u ON ph.user_id = u.user_id
-            LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
-            
-            UNION ALL
-            
-            SELECT
-                bpt.transaction_id AS payment_id,
-                bpt.user_id,
-                u.name AS user_name,
-                /* if this is a custom plan request, keep its id string, otherwise use the business package id */
-                CASE WHEN bpt.business_package_id LIKE 'CUSTOM-%' THEN bpt.business_package_id ELSE bp.id END AS package_id,
-                /* show 'Custom Plan' label for custom requests */
-                CASE WHEN bpt.business_package_id LIKE 'CUSTOM-%' THEN 'Custom Plan' ELSE bp.name END AS package_type,
-                bpt.amount,
-                CASE WHEN bpt.status = 'success' THEN 'completed' ELSE bpt.status END AS payment_status,
-                bpt.created_at AS payment_date,
-                bpt.payment_method,
-                u.email AS user_email,
-                u.account_type,
-                bp.max_events,
-                bp.max_guests,
-                'business' AS payment_type
-            FROM business_package_transactions AS bpt
-            LEFT JOIN users AS u ON bpt.user_id = u.user_id
-            LEFT JOIN business_packages AS bp ON bpt.business_package_id = bp.id
+            LEFT JOIN packagetb AS p ON ph.package_id = p.package_id AND u.account_type = 'personal'
+            LEFT JOIN business_packages AS bp ON ph.package_id = bp.id AND u.account_type = 'business'
         ";
 
         $params = [];

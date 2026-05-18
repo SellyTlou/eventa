@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./main.css"; // Verify this path is correct
 import "../../alert.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { logOut } from "../components"; 
+import { logOut } from "../components";
 import crypto from "crypto-js";
 
 // API URL Configuration
@@ -31,53 +31,52 @@ const PackagePayment = () => {
 
     // Get current tunnel URL for local testing
     const getCurrentBaseUrl = () => {
- 
+
         if (process.env.NODE_ENV === 'development') {
-          
-         //   const ngrokUrl = localStorage.getItem('') || window.location.origin;
-              return 'https://c16f-102-254-38-23.ngrok-free.app';
+
+            return 'https://c16f-102-254-38-23.ngrok-free.app';
         }
         return window.location.origin;
     };
 
-const API_URL = process.env.REACT_APP_API_URL;
-const BASE_URL = API_URL.replace('/api', '');
+    const API_URL = process.env.REACT_APP_API_URL;
+    const BASE_URL = API_URL.replace('/api', '');
 
     // ============ PAYFAST CONFIGURATION for testing============
-//     const PAYFAST_CONFIG = {
-//         MERCHANT_ID: "33426571",//33426571
-//         MERCHANT_KEY: "lkqoiy0ftb9yc",//lkqoiy0ftb9yc
-//         PASS_PHRASE: "", // Add if you have one in PayFast settings
-        
-//         // For local testing, update this to your ngrok URL
-// ITN_URL: "https://0260-102-254-38-23.ngrok-free.app/src/pages/php/payFastInt.php",    
-//         // Use sandbox for testing
-//         PAYFAST_URL: process.env.NODE_ENV === 'production' 
-//             ? "https://www.payfast.co.za/eng/process"
-//             : "https://sandbox.payfast.co.za/eng/process",
-        
-//          RETURN_URL: "https://c16f-102-254-38-23.ngrok-free.app/paymentSuccess",
-//     CANCEL_URL: "https://c16f-102-254-38-23.ngrok-free.app/paymentCancel",
-        
-//         EMAIL_CONFIRMATION: true,
-//         CONFIRMATION_EMAIL: "",
-//         PAYMENT_METHOD: "cc",
-//     };
+    //     const PAYFAST_CONFIG = {
+    //         MERCHANT_ID: "33426571",//33426571
+    //         MERCHANT_KEY: "lkqoiy0ftb9yc",//lkqoiy0ftb9yc
+    //         PASS_PHRASE: "", // Add if you have one in PayFast settings
 
-// ============ PAYFAST CONFIGURATION for LIVE ============
+    //         // For local testing, update this to your ngrok URL
+    // ITN_URL: "https://0260-102-254-38-23.ngrok-free.app/src/pages/php/payFastInt.php",    
+    //         // Use sandbox for testing
+    //         PAYFAST_URL: process.env.NODE_ENV === 'production' 
+    //             ? "https://www.payfast.co.za/eng/process"
+    //             : "https://sandbox.payfast.co.za/eng/process",
 
-const PAYFAST_CONFIG = {
-    MERCHANT_ID: "33426571", 
-    MERCHANT_KEY: "lkqoiy0ftb9yc",  
-    PASS_PHRASE: "",
-    
-    ITN_URL: `${API_URL}/payFastInt.php`,    
-    PAYFAST_URL: "https://www.payfast.co.za/eng/process",
-    RETURN_URL: `${BASE_URL}/paymentSuccess`,
-    CANCEL_URL: `${BASE_URL}/paymentCancel`,
-    EMAIL_CONFIRMATION: true,
-    PAYMENT_METHOD: "",
-};
+    //          RETURN_URL: "https://c16f-102-254-38-23.ngrok-free.app/paymentSuccess",
+    //     CANCEL_URL: "https://c16f-102-254-38-23.ngrok-free.app/paymentCancel",
+
+    //         EMAIL_CONFIRMATION: true,
+    //         CONFIRMATION_EMAIL: "",
+    //         PAYMENT_METHOD: "cc",
+    //     };
+
+    // ============ PAYFAST CONFIGURATION for LIVE ============
+
+    const PAYFAST_CONFIG = {
+        MERCHANT_ID: "33426571",
+        MERCHANT_KEY: "lkqoiy0ftb9yc",
+        PASS_PHRASE: "",
+
+        ITN_URL: `${API_URL}/payFastInt.php`,
+        PAYFAST_URL: "https://www.payfast.co.za/eng/process",
+        RETURN_URL: `${BASE_URL}/paymentSuccess`,
+        CANCEL_URL: `${BASE_URL}/paymentCancel`,
+        EMAIL_CONFIRMATION: true,
+        PAYMENT_METHOD: "",
+    };
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
@@ -109,7 +108,7 @@ const PAYFAST_CONFIG = {
     const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
-        
+
         try {
             const response = await fetch(url, {
                 ...options,
@@ -160,95 +159,195 @@ const PAYFAST_CONFIG = {
         return `PF-${timestamp}-${random}`;
     };
 
-   const generatePayFastSignature = (data) => {
-    let pfOutput = "";
-    Object.keys(data)
-        .sort()
-        .forEach(key => {
-            // Skip empty values and signature field
-            if (data[key] !== "" && key !== 'signature') {
-                // Convert value to string if it's not already
-                let value = data[key];
-                
-                // Handle different data types
-                if (value === null || value === undefined) {
-                    value = "";
-                } else if (typeof value === 'object') {
-                    value = JSON.stringify(value);
-                } else {
-                    value = String(value);
-                }
-                
-                // Only apply trim if value is a string and not empty
-                const trimmedValue = value.trim ? value.trim() : value;
-                
-                if (trimmedValue !== "") {
-                    pfOutput += `${key}=${encodeURIComponent(trimmedValue).replace(/%20/g, '+')}&`;
-                }
-            }
-        });
-    
-    // Remove last &
-    pfOutput = pfOutput.slice(0, -1);
-    
-    // Add passphrase if exists
-    if (PAYFAST_CONFIG.PASS_PHRASE) {
-        pfOutput += `&passphrase=${encodeURIComponent(PAYFAST_CONFIG.PASS_PHRASE).replace(/%20/g, '+')}`;
-    }
-    
-    return crypto.MD5(pfOutput).toString();
-};
 
-   const preparePayFastData = () => {
+    const getSignature = async (data) => {
+        const res = await fetch(`${API_URL}/generateSignature.php`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            throw new Error("Signature generation failed");
+        }
+
+        return result.signature;
+    };
+    
+const preparePayFastData = () => {
     const mPaymentId = generateTransactionId();
     setTransactionId(mPaymentId);
-    
+
     const userData = JSON.parse(localStorage.getItem("user") || "{}");
+    const fullName = (userData?.name || "").trim();
+    const firstName = fullName.split(" ")[0] || "";
+    const lastName = fullName.split(" ").slice(1).join(" ") || "";
     
-    const paymentData = {
-        merchant_id: String(PAYFAST_CONFIG.MERCHANT_ID),
-        merchant_key: String(PAYFAST_CONFIG.MERCHANT_KEY),
-        return_url: String(PAYFAST_CONFIG.RETURN_URL),
-        cancel_url: String(PAYFAST_CONFIG.CANCEL_URL),
-        notify_url: String(PAYFAST_CONFIG.ITN_URL),
-        
-        name_first: String(userData?.name?.split(' ')[0] || user?.name?.split(' ')[0] || ''),
-        name_last: String(userData?.name?.split(' ').slice(1).join(' ') || user?.name?.split(' ').slice(1).join(' ') || ''),
-        email_address: String(userData?.email || user?.email || ''),
-        cell_number: String(userData?.phone || user?.phone || ''),
-        
-        m_payment_id: String(mPaymentId),
-        amount: String(paymentDetails?.totalAmount || "0.00"),
-        item_name: String(`${selectedPackage?.package_type} Package - Evenda`),
-        item_description: String(`Max Events: ${selectedPackage?.max_events}, Max Guests: ${selectedPackage?.max_guests}`),
-        
-        custom_str1: String(userData?.user_id || user?.user_id || ''),
-        custom_str2: String(selectedPackage?.package_id || ''),
-        custom_str3: String(selectedPackage?.package_type || ''),
-        custom_str4: 'PayFast',
+    // Format amount EXACTLY as 2 decimal places
+    const amount = Number(paymentDetails?.totalAmount || 0).toFixed(2);
+    
+    const data = {
+        merchant_id: "33426571",
+        merchant_key: "lkqoiy0ftb9yc",
+        return_url: `${BASE_URL}/paymentSuccess`,
+        cancel_url: `${BASE_URL}/paymentCancel`,
+        notify_url: `${API_URL}/payFastInt.php`,
+        name_first: firstName,
+        name_last: lastName,
+        email_address: userData?.email || "",
+        m_payment_id: mPaymentId,
+        amount: amount,  // ← This becomes amount_gross on PayFast's side
+        item_name: `${selectedPackage?.package_type || "Event"} Package`,
+        item_description: `Max Events: ${selectedPackage?.max_events || 0}, Max Guests: ${selectedPackage?.max_guests || 0}`,
+        email_confirmation: "1",
+        confirmation_address: userData?.email || "",
+        custom_str1: String(userData?.user_id || ""),
+        custom_str2: String(selectedPackage?.package_id || ""),
+        custom_str3: String(selectedPackage?.package_type || ""),
+        custom_str4: "payfast",
+        custom_str5: BASE_URL,
         custom_int1: String(parseInt(selectedPackage?.max_events) || 0),
         custom_int2: String(parseInt(selectedPackage?.max_guests) || 0),
-        
-        //payment_method: String(PAYFAST_CONFIG.PAYMENT_METHOD),
-        email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? "1" : "0", // Convert to string
+        custom_int3: "",
+        custom_int4: "",
+        custom_int5: "",
     };
+    
+    // Don't delete any fields
+    return data;
+};
+   
+  const initiatePayFastPayment = async () => {
+    setProcessingPayment(true);
+    setPaymentStarted(true);
 
-    // Add confirmation email if exists
-    if (userData?.email || user?.email) {
-        paymentData.confirmation_address = String(userData?.email || user?.email);
+    try {
+        const paymentDataRaw = preparePayFastData();
+
+        const signature = await getSignature(paymentDataRaw);
+
+        const paymentData = {
+            ...paymentDataRaw,
+            signature: signature
+        };
+
+        console.log("Submitting to PayFast:", {
+            url: PAYFAST_CONFIG.PAYFAST_URL,
+            data: { ...paymentData, signature: "HIDDEN" }
+        });
+
+        // Record payment (pending)
+        const paymentRecorded = await recordPayment({
+            payment_method: 'payfast',
+            payment_status: 'pending',
+            transaction_id: paymentData.m_payment_id
+        });
+
+        if (!paymentRecorded) {
+            throw new Error("Failed to record payment");
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = PAYFAST_CONFIG.PAYFAST_URL;
+        form.target = '_blank';
+        form.style.display = 'none';
+
+        Object.keys(paymentData).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = String(paymentData[key]); // Convert to string
+            form.appendChild(input);
+            console.log(`Adding field: ${key}=${paymentData[key]}`);
+        });
+
+        document.body.appendChild(form);
+        setShowPaymentPopup(false);
+        form.submit();
+
+    } catch (error) {
+        console.error("PayFast payment error:", error);
+        printAlert("Payment initiation failed: " + error.message, "error");
+        setProcessingPayment(false);
+        setPaymentStarted(false);
     }
-
-    paymentData.signature = generatePayFastSignature(paymentData);
-    
-    console.log("PayFast Data prepared:", {
-        ...paymentData,
-        signature: "***HIDDEN***"
-    });
-    
-    return paymentData;
 };
 
-    // ============ PAYMENT FUNCTIONS ============
+    const generatePaymentProof = (paymentId) => {
+        const proof = {
+            transactionId: paymentId || transactionId || `EVENDA-${Date.now()}`,
+            date: new Date().toISOString(),
+            merchant: "Evenda Events",
+            customer: user?.name || "",
+            email: user?.email || "",
+            package: selectedPackage?.package_type || "",
+            amount: paymentDetails?.totalAmount || "0.00",
+            vat: paymentDetails?.vatAmount?.toFixed(2) || "0.00",
+            serviceFee: paymentDetails?.serviceFee?.toFixed(2) || "0.00",
+            total: paymentDetails?.totalAmount || "0.00",
+            status: "Completed",
+            reference: `EVENDA-${Date.now()}`,
+            terms: "Thank you for your payment. This is your proof of payment."
+        };
+
+        setPaymentProof(proof);
+        return proof;
+    };
+
+    const downloadPaymentProof = () => {
+        if (!paymentProof) return;
+
+        const proofText = `
+        =====================================
+                  PAYMENT RECEIPT
+        =====================================
+        Transaction ID: ${paymentProof.transactionId}
+        Date: ${new Date(paymentProof.date).toLocaleString()}
+        
+        Merchant: ${paymentProof.merchant}
+        
+        Customer Details:
+        Name: ${paymentProof.customer}
+        Email: ${paymentProof.email}
+        
+        Package Details:
+        Package: ${paymentProof.package}
+        
+        Payment Breakdown:
+        Package Cost: R ${(parseFloat(paymentProof.amount) - parseFloat(paymentProof.vat) - parseFloat(paymentProof.serviceFee)).toFixed(2)}
+        VAT (15%): R ${paymentProof.vat}
+        Service Fee: R ${paymentProof.serviceFee}
+        -------------------------------------
+        TOTAL: R ${paymentProof.total}
+        
+        Payment Status: ${paymentProof.status}
+        Reference: ${paymentProof.reference}
+        
+        ${paymentProof.terms}
+        =====================================
+        Generated by Evenda Event Management
+        =====================================
+        `;
+
+        const blob = new Blob([proofText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Evenda-Payment-${paymentProof.transactionId}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        printAlert("Payment proof downloaded successfully!", "success");
+    };
+
+ // ============ PAYMENT FUNCTIONS ============
     const getPackageById = async (packageId) => {
         try {
             const formData = new FormData();
@@ -290,7 +389,7 @@ const PAYFAST_CONFIG = {
             formData.append("amount", paymentDetails?.totalAmount || "0.00");
             formData.append("payment_method", paymentInfo.payment_method || selectedPaymentMethod);
             formData.append("payment_status", paymentInfo.payment_status || "pending");
-            
+
             if (transactionId || paymentInfo.transaction_id) {
                 formData.append("transaction_id", paymentInfo.transaction_id || transactionId);
             }
@@ -326,12 +425,12 @@ const PAYFAST_CONFIG = {
             }
 
             console.log("✅ Payment recorded successfully:", result);
-            
+
             if (paymentInfo.payment_status === 'completed' || result.payment_id) {
                 generatePaymentProof(result.payment_id || transactionId);
                 setShowProofOptions(true);
             }
-            
+
             return true;
 
         } catch (error) {
@@ -341,138 +440,15 @@ const PAYFAST_CONFIG = {
         }
     };
 
-   const initiatePayFastPayment = async () => {
-    setProcessingPayment(true);
-    setPaymentStarted(true);
-    
-    try {
-        const paymentData = preparePayFastData();
-
-        localStorage.setItem("lastTransactionId", paymentData.m_payment_id);
-        
-        // Record initial payment with pending status
-        const paymentRecorded = await recordPayment({
-            payment_method: 'payfast',
-            payment_status: 'pending',
-            transaction_id: paymentData.m_payment_id
-            // DO NOT send pf_payment_id here - it doesn't exist yet
-        });
-
-        if (!paymentRecorded) {
-            throw new Error("Failed to record payment");
-        }
-
-        // Create and submit the form to PayFast
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = PAYFAST_CONFIG.PAYFAST_URL;
-        form.target = '_blank';
-        form.style.display = 'none';
-        
-        Object.keys(paymentData).forEach(key => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = paymentData[key];
-            form.appendChild(input);
-        });
-        
-        document.body.appendChild(form);
-        console.log("Submitting to PayFast:", PAYFAST_CONFIG.PAYFAST_URL);
-        form.submit();
-        
-        setTimeout(() => {
-            setShowPaymentPopup(false);
-            setProcessingPayment(false);
-        }, 1000);
-        
-    } catch (error) {
-        console.error("PayFast payment error:", error);
-        setError("Failed to initiate payment. Please try again.");
-        printAlert("Payment initiation failed. Please try again.", "error");
-        setProcessingPayment(false);
-        setPaymentStarted(false);
-    }
-};
-
-    const generatePaymentProof = (paymentId) => {
-        const proof = {
-            transactionId: paymentId || transactionId || `EVENDA-${Date.now()}`,
-            date: new Date().toISOString(),
-            merchant: "Evenda Events",
-            customer: user?.name || "",
-            email: user?.email || "",
-            package: selectedPackage?.package_type || "",
-            amount: paymentDetails?.totalAmount || "0.00",
-            vat: paymentDetails?.vatAmount?.toFixed(2) || "0.00",
-            serviceFee: paymentDetails?.serviceFee?.toFixed(2) || "0.00",
-            total: paymentDetails?.totalAmount || "0.00",
-            status: "Completed",
-            reference: `EVENDA-${Date.now()}`,
-            terms: "Thank you for your payment. This is your proof of payment."
-        };
-        
-        setPaymentProof(proof);
-        return proof;
-    };
-
-    const downloadPaymentProof = () => {
-        if (!paymentProof) return;
-        
-        const proofText = `
-        =====================================
-                  PAYMENT RECEIPT
-        =====================================
-        Transaction ID: ${paymentProof.transactionId}
-        Date: ${new Date(paymentProof.date).toLocaleString()}
-        
-        Merchant: ${paymentProof.merchant}
-        
-        Customer Details:
-        Name: ${paymentProof.customer}
-        Email: ${paymentProof.email}
-        
-        Package Details:
-        Package: ${paymentProof.package}
-        
-        Payment Breakdown:
-        Package Cost: R ${(parseFloat(paymentProof.amount) - parseFloat(paymentProof.vat) - parseFloat(paymentProof.serviceFee)).toFixed(2)}
-        VAT (15%): R ${paymentProof.vat}
-        Service Fee: R ${paymentProof.serviceFee}
-        -------------------------------------
-        TOTAL: R ${paymentProof.total}
-        
-        Payment Status: ${paymentProof.status}
-        Reference: ${paymentProof.reference}
-        
-        ${paymentProof.terms}
-        =====================================
-        Generated by Evenda Event Management
-        =====================================
-        `;
-        
-        const blob = new Blob([proofText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Evenda-Payment-${paymentProof.transactionId}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        printAlert("Payment proof downloaded successfully!", "success");
-    };
-
     const handleSendEmailReceipt = async () => {
         if (!paymentProof || !user?.email) {
             printAlert("Unable to send email. Missing payment proof or email address.", "error");
             return;
         }
-        
+
         try {
             setProcessingPayment(true);
-            
+
             const result = await sendPaymentReceiptEmail(
                 user.email,
                 user.name,
@@ -480,13 +456,13 @@ const PAYFAST_CONFIG = {
                 paymentProof.total,
                 selectedPackage.package_type
             );
-            
+
             if (result.success) {
                 printAlert("Payment receipt sent to your email!", "success");
             } else {
                 throw new Error(result.message || "Failed to send email");
             }
-            
+
         } catch (error) {
             console.error("Email sending error:", error);
             printAlert("Failed to send email receipt. You can download the proof instead.", "error");
@@ -510,7 +486,7 @@ const PAYFAST_CONFIG = {
                 await initiatePayFastPayment();
                 return;
             }
-            
+
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             const paymentSuccess = await recordPayment({
@@ -520,7 +496,7 @@ const PAYFAST_CONFIG = {
 
             if (paymentSuccess) {
                 printAlert("Payment successful! Your package has been upgraded.", "success");
-                
+
                 if (selectedPaymentMethod !== 'payfast') {
                     setTimeout(() => {
                         localStorage.removeItem("selectedPackageId");
@@ -751,7 +727,7 @@ const PAYFAST_CONFIG = {
         const handleSubmit = (e) => {
             e.preventDefault();
             setLoading(true);
-            
+
             setTimeout(() => {
                 setLoading(false);
                 onSubmit({
@@ -820,7 +796,7 @@ const PAYFAST_CONFIG = {
                 <button className="close-modal" onClick={() => setShowProofOptions(false)}>×</button>
                 <h3>Payment Successful! 🎉</h3>
                 <p>Your payment of <strong>R{paymentDetails?.totalAmount}</strong> has been processed successfully.</p>
-                
+
                 {paymentProof && (
                     <div className="proof-details">
                         <p><strong>Transaction ID:</strong> {paymentProof.transactionId}</p>
@@ -828,24 +804,24 @@ const PAYFAST_CONFIG = {
                         <p><strong>Date:</strong> {new Date(paymentProof.date).toLocaleString()}</p>
                     </div>
                 )}
-                
+
                 <div className="proof-actions">
-                    <button 
-                        className="btn-event" 
+                    <button
+                        className="btn-event"
                         onClick={downloadPaymentProof}
                         disabled={processingPayment}
                     >
                         <i className="bi bi-download"></i> Download Proof
                     </button>
-                    <button 
-                        className="btn-event btn-event-success" 
+                    <button
+                        className="btn-event btn-event-success"
                         onClick={handleSendEmailReceipt}
                         disabled={processingPayment}
                     >
                         <i className="bi bi-envelope"></i> Email Receipt
                     </button>
-                    <button 
-                        className="btn-event btn-event-secondary" 
+                    <button
+                        className="btn-event btn-event-secondary"
                         onClick={() => {
                             setShowProofOptions(false);
                             localStorage.removeItem("selectedPackageId");
@@ -885,7 +861,7 @@ const PAYFAST_CONFIG = {
                 }
 
                 await getPackageById(packageId);
-                
+
                 // Log current configuration for debugging
                 console.log("PayFast Configuration:", {
                     environment: process.env.NODE_ENV,
@@ -992,11 +968,10 @@ const PAYFAST_CONFIG = {
         <div className="dashboard-container">
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
-                    <i className={`fas ${
-                        alert.type === "error" ? "fa-times-circle" :
+                    <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
                         alert.type === "success" ? "fa-check-circle" :
-                        alert.type === "warning" ? "fa-exclamation-triangle" : "fa-info-circle"
-                    }`}></i>
+                            alert.type === "warning" ? "fa-exclamation-triangle" : "fa-info-circle"
+                        }`}></i>
                     <span>{alert.message}</span>
                 </div>
             )}
