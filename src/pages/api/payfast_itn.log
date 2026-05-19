@@ -1,0 +1,252 @@
+[2026-05-19 16:04:33] === ITN HANDLER STARTED ===
+Array
+(
+    [timestamp] => 2026-05-19 16:04:33
+    [post_data] => Array
+        (
+            [m_payment_id] => PF-1779199461941-hhl9yv0be
+            [pf_payment_id] => 3165543
+            [payment_status] => COMPLETE
+            [item_name] => premium Package
+            [item_description] => Max Events: 20, Max Guests: 200
+            [amount_gross] => 352.00
+            [amount_fee] => -8.10
+            [amount_net] => 343.90
+            [custom_str1] => USER-RPLG39-1768465852
+            [custom_str2] => PCK-PREMIUM-002
+            [custom_str3] => premium
+            [custom_str4] => payfast
+            [custom_str5] => 
+            [custom_int1] => 20
+            [custom_int2] => 200
+            [custom_int3] => 
+            [custom_int4] => 
+            [custom_int5] => 
+            [name_first] => Ananias
+            [name_last] => 
+            [email_address] => sellytlou@gmail.com
+            [merchant_id] => 10039229
+            [signature] => 1b4f14dbcedb3626832b6e72337e1872
+        )
+
+    [server] => Array
+        (
+            [remote_addr] => ::1
+            [request_uri] => /eventa/src/pages/api/payFastInt.php
+            [http_user_agent] => Mozilla/5.0 (Windows NT 10.0; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0
+        )
+
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] Payment Status Check
+Array
+(
+    [payment_status] => COMPLETE
+    [m_payment_id] => PF-1779199461941-hhl9yv0be
+    [pf_payment_id] => 3165543
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] ITN Signature String
+Array
+(
+    [string] => m_payment_id=PF-1779199461941-hhl9yv0be&pf_payment_id=3165543&payment_status=COMPLETE&item_name=premium+Package&item_description=Max+Events%3A+20%2C+Max+Guests%3A+200&amount_gross=352.00&amount_fee=-8.10&amount_net=343.90&custom_str1=USER-RPLG39-1768465852&custom_str2=PCK-PREMIUM-002&custom_str3=premium&custom_str4=payfast&custom_str5=&custom_int1=20&custom_int2=200&custom_int3=&custom_int4=&custom_int5=&name_first=Ananias&name_last=&email_address=sellytlou%40gmail.com&merchant_id=10039229
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] Signature Validation
+Array
+(
+    [generated] => 1b4f14dbcedb3626832b6e72337e1872
+    [received] => 1b4f14dbcedb3626832b6e72337e1872
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] Validation Result
+Array
+(
+    [is_valid] => 1
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] Processing COMPLETE payment
+Array
+(
+    [m_payment_id] => PF-1779199461941-hhl9yv0be
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] ✅ NEW PAYMENT RECORD INSERTED ✅
+Array
+(
+    [transaction_id] => PF-1779199461941-hhl9yv0be
+    [user_id] => USER-RPLG39-1768465852
+    [amount] => 352.00
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] Updated existing user package
+Array
+(
+    [user_id] => USER-RPLG39-1768465852
+    [package_id] => PCK-PREMIUM-002
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:33] ✅✅✅ PAYMENT COMPLETED AND RECORDED SUCCESSFULLY ✅✅✅
+Array
+(
+    [transaction_id] => PF-1779199461941-hhl9yv0be
+    [pf_payment_id] => 3165543
+    [user_id] => USER-RPLG39-1768465852
+    [package_id] => PCK-PREMIUM-002
+    [amount] => 352.00
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:04:35] ✅ Email sent successfully
+Array
+(
+    [email] => sellytlou@gmail.com
+    [transaction_id] => PF-1779199461941-hhl9yv0be
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] === ITN HANDLER STARTED ===
+Array
+(
+    [timestamp] => 2026-05-19 16:14:59
+    [post_data] => Array
+        (
+            [m_payment_id] => PF-1779200075990-6u482qspx
+            [pf_payment_id] => 3165584
+            [payment_status] => COMPLETE
+            [item_name] => basic Package
+            [item_description] => Max Events: 6, Max Guests: 51
+            [amount_gross] => 7.00
+            [amount_fee] => -2.30
+            [amount_net] => 4.70
+            [custom_str1] => USER-RPLG39-1768465852
+            [custom_str2] => PCK-BASIC-001
+            [custom_str3] => basic
+            [custom_str4] => payfast
+            [custom_str5] => 
+            [custom_int1] => 6
+            [custom_int2] => 51
+            [custom_int3] => 
+            [custom_int4] => 
+            [custom_int5] => 
+            [name_first] => Ananias
+            [name_last] => 
+            [email_address] => sellytlou@gmail.com
+            [merchant_id] => 10039229
+            [signature] => 4056a21c53cfb647c866d48626871666
+        )
+
+    [server] => Array
+        (
+            [remote_addr] => ::1
+            [request_uri] => /eventa/src/pages/api/payFastInt.php
+            [http_user_agent] => Mozilla/5.0 (Windows NT 10.0; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0
+        )
+
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] Payment Status Check
+Array
+(
+    [payment_status] => COMPLETE
+    [m_payment_id] => PF-1779200075990-6u482qspx
+    [pf_payment_id] => 3165584
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] ITN Signature String
+Array
+(
+    [string] => m_payment_id=PF-1779200075990-6u482qspx&pf_payment_id=3165584&payment_status=COMPLETE&item_name=basic+Package&item_description=Max+Events%3A+6%2C+Max+Guests%3A+51&amount_gross=7.00&amount_fee=-2.30&amount_net=4.70&custom_str1=USER-RPLG39-1768465852&custom_str2=PCK-BASIC-001&custom_str3=basic&custom_str4=payfast&custom_str5=&custom_int1=6&custom_int2=51&custom_int3=&custom_int4=&custom_int5=&name_first=Ananias&name_last=&email_address=sellytlou%40gmail.com&merchant_id=10039229
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] Signature Validation
+Array
+(
+    [generated] => 4056a21c53cfb647c866d48626871666
+    [received] => 4056a21c53cfb647c866d48626871666
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] Validation Result
+Array
+(
+    [is_valid] => 1
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] Processing COMPLETE payment
+Array
+(
+    [m_payment_id] => PF-1779200075990-6u482qspx
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] ✅ NEW PAYMENT INSERTED
+Array
+(
+    [payment_id] => PAY-1779200099-5499
+    [m_payment_id] => PF-1779200075990-6u482qspx
+    [pf_payment_id] => 3165584
+    [payment_provider] => payfast
+    [amount] => 7.00
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] Updated user package
+Array
+(
+    [user_id] => USER-RPLG39-1768465852
+    [package_id] => PCK-BASIC-001
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:14:59] ✅ PAYMENT SUCCESSFULLY PROCESSED
+Array
+(
+    [m_payment_id] => PF-1779200075990-6u482qspx
+    [pf_payment_id] => 3165584
+    [user_id] => USER-RPLG39-1768465852
+    [package_id] => PCK-BASIC-001
+    [amount] => 7.00
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-19 16:15:01] ✅ Email sent successfully
+Array
+(
+    [email] => sellytlou@gmail.com
+    [transaction_id] => PF-1779200075990-6u482qspx
+)
+
+--------------------------------------------------------------------------------
+

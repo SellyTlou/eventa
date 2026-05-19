@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./ticket_payment.css";
+import { tr } from "framer-motion/client";
 
 function Ticket_payment() {
   const location = useLocation();
@@ -16,7 +17,7 @@ function Ticket_payment() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [bookingData, setBookingData] = useState(null);
   const [printInvoice, setPrintInvoice] = useState(false);
-
+  const [alert, setAlert] = useState({ show: false, message: "", type: "" });
   const [ticketData, setTicketData] = useState({
     email: "",
     firstName: "",
@@ -24,19 +25,177 @@ function Ticket_payment() {
     phone: "",
     ticketType: "general",
     quantity: 1,
-    cardNumber: "",
-    cardExpiry: "",
-    cardCVC: "",
-    cardName: "",
     agreeToTerms: false,
   });
+  const API_URL = process.env.REACT_APP_API_URL;
+  const BASE_URL = API_URL.replace('/api', '');
 
-  // If no event data, redirect back
   useEffect(() => {
     if (!event) {
       navigate("/ticket_sales");
     }
   }, [event, navigate]);
+
+  const printAlert = (msg, type = "info") => {
+    setAlert({ show: true, message: msg, type });
+    setTimeout(() => setAlert({ show: false, message: "", type: "" }), 6000);
+  };
+
+  // ============ PAYFAST CONFIGURATION for testing ============
+    const PAYFAST_CONFIG = {
+        MERCHANT_ID: "10039229",
+        MERCHANT_KEY: "1ogl07vai6oig",
+        ITN_URL: "https://dc86-197-185-137-11.ngrok-free.app/eventa/src/pages/api/payfastIntTickets.php",
+        PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
+        RETURN_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentSuccess",
+        CANCEL_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentCancel",
+        EMAIL_CONFIRMATION: true,
+        CONFIRMATION_EMAIL: "",
+        PAYMENT_METHOD: "cc",
+    };
+
+  const generateTransactionId = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substr(2, 9);
+    return `TKT-${timestamp}-${random}`;
+  };
+
+  const generatePayFastSignature = async (data) => {
+
+    try {
+      const formData = new FormData();
+
+      Object.entries(data).forEach(([key, value]) => {
+
+        if (
+          value !== '' &&
+          value !== null &&
+          value !== undefined
+        ) {
+          formData.append(key, value);
+        }
+      });
+
+      const response = await fetch(`${API_URL}/generateSignature.php`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const text = await response.text();
+
+      console.log("RAW RESPONSE:", text);
+
+      const result = JSON.parse(text);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Signature generation failed');
+      }
+
+      return result.signature;
+
+    } catch (error) {
+
+      console.error('Signature generation error:', error);
+      throw error;
+    }
+  };
+
+  const preparePayFastData = (transactionId) => {
+    const totalWithFee = (parseFloat(calculateTotal()) + 15).toFixed(2);
+
+    const customData = {
+      firstName: ticketData.firstName,
+      lastName: ticketData.lastName,
+      email: ticketData.email,
+      phone: ticketData.phone,
+      event_id: event.event_id,
+      ticket_type: ticketData.ticketType,
+      quantity: ticketData.quantity,
+      base_url: BASE_URL,
+    };
+
+    const paymentData = {
+      merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
+      merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
+      return_url: PAYFAST_CONFIG.RETURN_URL,
+      cancel_url: PAYFAST_CONFIG.CANCEL_URL,
+      notify_url: PAYFAST_CONFIG.ITN_URL,
+      name_first: ticketData.firstName || "Test",
+      name_last: ticketData.lastName || "User",
+      email_address: ticketData.email || "test@example.com",
+      cell_number: ticketData.phone || "0123456789",
+
+      m_payment_id: transactionId,
+
+      amount: totalWithFee,
+      item_name: `${event.event_name} - ${getTicketTypeLabel(ticketData.ticketType)} Tickets`,
+      item_description: `${ticketData.quantity} x ${getTicketTypeLabel(ticketData.ticketType)} ticket(s)`,
+
+      custom_str1: String(event.event_id || ""),
+      custom_str2: String(ticketData.ticketType || ""),
+      custom_str3: String(ticketData.quantity || "1"),
+      custom_str4: JSON.stringify(customData),
+
+      payment_method: PAYFAST_CONFIG.PAYMENT_METHOD,
+      email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? "1" : "0",
+    };
+
+    if (ticketData.email) {
+      paymentData.confirmation_address = ticketData.email;
+    }
+
+    console.log("PayFast Data prepared:", paymentData);
+
+    return paymentData;
+  };
+
+  const initiatePayFastPayment = async () => {
+    setProcessingPayment(true);
+    setPaymentStarted(true);
+
+    try {
+
+      const id = generateTransactionId();
+
+      console.log("FINAL TRANSACTION ID:", id);
+
+      const paymentData = preparePayFastData(id);
+      paymentData.signature = await generatePayFastSignature(paymentData);
+
+      localStorage.setItem("lastTransactionId", id);
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = PAYFAST_CONFIG.PAYFAST_URL;
+      form.target = "_blank";
+      form.style.display = "none";
+
+      Object.keys(paymentData).forEach((key) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = paymentData[key];
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+
+      form.submit();
+
+      setTimeout(() => {
+        setShowPaymentPopup(false);
+        setProcessingPayment(false);
+      }, 1000);
+
+    } catch (error) {
+      console.error("PayFast payment error:", error);
+      printAlert("Failed to initiate payment. Please try again.", "error");
+      setProcessingPayment(false);
+      setPaymentStarted(false);
+    }
+  };
+
+
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -99,148 +258,37 @@ function Ticket_payment() {
     });
   };
 
-  const handlePaymentMethodSelect = (method) => {
-    setSelectedPaymentMethod(method);
-    setShowPaymentPopup(true);
-  };
+  const validateForm = () => {
+    const errors = [];
 
-  const sendBookingPDF = async (booking) => {
-    if (!booking || !event) {
-      setError("No booking data available to send PDF");
+    if (!ticketData.firstName.trim()) {
+      errors.push("First name is required");
+    }
+    if (!ticketData.lastName.trim()) {
+      errors.push("Last name is required");
+    }
+    if (!ticketData.email.trim()) {
+      errors.push("Email address is required");
+    } else if (!/\S+@\S+\.\S+/.test(ticketData.email)) {
+      errors.push("Please enter a valid email address");
+    }
+    if (!ticketData.agreeToTerms) {
+      errors.push("You must agree to the terms and conditions");
+    }
+
+    if (errors.length > 0) {
+      printAlert(errors.join(". "), "error");
       return false;
     }
 
-    try {
-      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
-      const formData = new FormData();
-
-      const pdfData = {
-        function: "sendPDF",
-        event_name: event.event_name,
-        event_image: event.event_image || "",
-        event_date: event.event_start_date || "",
-        event_time: event.event_start_time || "",
-        event_location: event.event_location || "",
-        event_id: event.event_id,
-        customer_email: booking.customer_email,
-        customer_first_name: ticketData.firstName,
-        customer_last_name: ticketData.lastName,
-        customer_phone: ticketData.phone || "",
-        ticket_type: ticketData.ticketType,
-        ticket_type_label: getTicketTypeLabel(ticketData.ticketType),
-        quantity: ticketData.quantity.toString(),
-        unit_price: getTicketPrice(),
-        total_amount: calculateTotal(),
-        payment_method: booking.payment_method,
-        payment_status: "completed",
-        transaction_id: booking.transaction_id,
-        booking_id: booking.booking_id || booking.transaction_id,
-        booking_date: new Date().toISOString().split('T')[0]
-      };
-
-      Object.entries(pdfData).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-
-      const response = await fetch(`${API_URL}/sendBookingPDF.php`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
-      }
-
-      const text = await response.text();
-      if (!text.trim()) {
-        throw new Error("Empty response from PDF endpoint");
-      }
-
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error("Invalid JSON from PDF endpoint");
-      }
-
-      if (data.success) {
-        console.log("PDF sent successfully");
-        return true;
-      } else {
-        throw new Error(data.message || "PDF sending failed");
-      }
-    } catch (err) {
-      console.error("PDF sending error:", err);
-      setError("Payment succeeded but could not send confirmation email: " + err.message);
-      return false;
-    }
+    return true;
   };
 
-  const recordPayment = async () => {
-    if (!event) {
-      throw new Error("No event data available");
+  const handlePaymentMethodSelect = () => {
+    if (validateForm()) {
+      setSelectedPaymentMethod('payFast');
+      setShowPaymentPopup(true);
     }
-
-    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
-
-    // Generate transaction ID
-    const transactionId = "TXN_" + Date.now() + Math.random().toString(36).substr(2, 9);
-
-    const bookingPayload = {
-      function: "processTicketPayment",
-      event_id: event.event_id,
-      customer_email: ticketData.email,
-      customer_first_name: ticketData.firstName,
-      customer_last_name: ticketData.lastName,
-      customer_phone: ticketData.phone,
-      ticket_type: ticketData.ticketType,
-      ticket_type_label: getTicketTypeLabel(ticketData.ticketType),
-      quantity: ticketData.quantity.toString(),
-      unit_price: getTicketPrice(),
-      total_amount: calculateTotal(),
-      payment_method: selectedPaymentMethod,
-      payment_status: "completed",
-      transaction_id: transactionId,
-    };
-
-    const formData = new FormData();
-    Object.entries(bookingPayload).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-
-    const res = await fetch(`${API_URL}/query.php`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}`);
-    }
-
-    const text = await res.text();
-    if (!text.trim()) {
-      throw new Error("Empty response from server");
-    }
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error("Invalid JSON response from server");
-    }
-
-    if (!data.success) {
-      throw new Error(data.message || "Failed to record booking");
-    }
-
-    return {
-      ...bookingPayload,
-      booking_id: data.bookingId || transactionId,
-      bookingId: data.bookingId,
-      transaction_id: transactionId,
-      customer_email: ticketData.email,
-      payment_method: selectedPaymentMethod,
-    };
   };
 
   const getTicketPrice = () => {
@@ -260,35 +308,21 @@ function Ticket_payment() {
     }
   };
 
-  const processPayment = async (paymentData) => {
+  const processPayment = async () => {
     if (processingPayment || paymentStarted) {
       console.log("Payment already in progress — ignoring");
+      printAlert("Payment is already being processed. Please wait...", "warning");
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
       return;
     }
 
-    setPaymentStarted(true);
-    setProcessingPayment(true);
-    setError("");
-
-    try {
-      // Simulate processing delay (remove or replace with real gateway in production)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const newBooking = await recordPayment();
-
-      setBookingData(newBooking);
-
-      // Send PDF **right after** successful DB insert
-      await sendBookingPDF(newBooking);
-
-      setPaymentSuccess(true);
-    } catch (err) {
-      console.error("Payment flow error:", err);
-      setError("An error occurred. Please try again.");
-    } finally {
-      setProcessingPayment(false);
-      setPaymentStarted(false);
-      setShowPaymentPopup(false);
+    if (selectedPaymentMethod === 'payFast') {
+      await initiatePayFastPayment();
+      return;
     }
   };
 
@@ -300,205 +334,80 @@ function Ticket_payment() {
 
   const handlePrintInvoice = () => {
     setPrintInvoice(true);
-    // Use setTimeout to ensure the invoice container is rendered before printing
     setTimeout(() => {
       window.print();
       setPrintInvoice(false);
     }, 100);
   };
 
-  const CreditCardForm = ({ onSubmit }) => {
-    const [cardData, setCardData] = useState({
-      cardNumber: "",
-      expiryDate: "",
-      cvv: "",
-      cardholderName: ""
-    });
+  const PayFastForm = () => {
     const [formLoading, setFormLoading] = useState(false);
 
     const handleSubmit = (e) => {
       e.preventDefault();
       setFormLoading(true);
-
-      setTimeout(() => {
-        setFormLoading(false);
-        onSubmit({
-          paymentMethod: "credit_card",
-          provider: "Visa/MasterCard",
-          status: "completed"
-        });
-      }, 2500);
+      processPayment();
     };
 
     return (
-      <form onSubmit={handleSubmit} className="payment-form">
-        <div className="form-group">
-          <label>Cardholder Name</label>
-          <input
-            type="text"
-            value={cardData.cardholderName}
-            onChange={(e) => setCardData({ ...cardData, cardholderName: e.target.value })}
-            placeholder="John Doe"
-            required
-          />
+      <div className="payfast-container">
+        <div className="payfast-header">
+          <i className="bi bi-shield-lock"></i>
+          <h4>Pay with PayFast</h4>
         </div>
-        <div className="form-group">
-          <label>Card Number</label>
-          <input
-            type="text"
-            value={cardData.cardNumber}
-            onChange={(e) =>
-              setCardData({ ...cardData, cardNumber: e.target.value.replace(/\D/g, '').slice(0, 16) })
-            }
-            placeholder="1234 5678 9012 3456"
-            required
-          />
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Expiry Date</label>
-            <input
-              type="text"
-              value={cardData.expiryDate}
-              onChange={(e) =>
-                setCardData({ ...cardData, expiryDate: e.target.value.replace(/[^0-9/]/g, '').slice(0, 5) })
-              }
-              placeholder="MM/YY"
-              required
-            />
+        <div className="payfast-features">
+          <div className="feature-item">
+            <i className="bi bi-credit-card"></i>
+            <span>Credit/Debit Cards</span>
           </div>
-          <div className="form-group">
-            <label>CVV</label>
-            <input
-              type="text"
-              value={cardData.cvv}
-              onChange={(e) =>
-                setCardData({ ...cardData, cvv: e.target.value.replace(/\D/g, '').slice(0, 3) })
-              }
-              placeholder="123"
-              required
-            />
+          <div className="feature-item">
+            <i className="bi bi-bank"></i>
+            <span>EFT & Instant EFT</span>
           </div>
-        </div>
-
-        <button type="submit" className="submit-payment-btn" disabled={formLoading}>
-          {formLoading ? (
-            <>
-              <div className="spinner-border spinner-border-sm" role="status"></div>
-              Processing Secure Payment...
-            </>
-          ) : (
-            `Pay Securely R${(parseFloat(calculateTotal()) + 15).toFixed(2)}`
-          )}
-        </button>
-      </form>
-    );
-  };
-
-  const PayPalForm = ({ onSubmit }) => {
-    const [formLoading, setFormLoading] = useState(false);
-
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      setFormLoading(true);
-
-      setTimeout(() => {
-        setFormLoading(false);
-        onSubmit({
-          paymentMethod: "paypal",
-          provider: "PayPal",
-          status: "completed"
-        });
-      }, 2500);
-    };
-
-    return (
-      <div className="paypal-container">
-        <div className="paypal-header">
-          <i className="bi bi-paypal"></i>
-          <h4>Pay with PayPal</h4>
+          <div className="feature-item">
+            <i className="bi bi-phone"></i>
+            <span>Mobile Wallets</span>
+          </div>
         </div>
         <p className="payment-info">
-          This is a demo simulation — no real payment will be processed.
+          You will be securely redirected to PayFast to complete your payment.
         </p>
-        <div className="paypal-amount">
+        <div className="payfast-amount">
           <strong>Amount: R{(parseFloat(calculateTotal()) + 15).toFixed(2)}</strong>
         </div>
         <button
           onClick={handleSubmit}
-          className="submit-payment-btn paypal-btn"
-          disabled={formLoading}
+          className="submit-payment-btn payfast-btn"
+          disabled={formLoading || processingPayment}
         >
-          {formLoading ? (
+          {formLoading || processingPayment ? (
             <>
               <div className="spinner-border spinner-border-sm" role="status"></div>
-              Processing PayPal Payment...
+              &nbsp;Redirecting to PayFast...
             </>
           ) : (
-            "Confirm Payment"
+            "Proceed to PayFast"
           )}
         </button>
-      </div>
-    );
-  };
-
-  const StripeForm = ({ onSubmit }) => {
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      onSubmit({
-        paymentMethod: 'stripe',
-        provider: 'Stripe'
-      });
-    };
-
-    return (
-      <div className="stripe-container">
-        <div className="stripe-header">
-          <i className="bi bi-credit-card"></i>
-          <h4>Pay with Stripe</h4>
+        <div className="payfast-security">
+          <i className="bi bi-shield-check"></i>
+          <small>Secured by PayFast | PCI DSS Level 1 Compliant</small>
         </div>
-        <p className="payment-info">
-          Secure payment processed by Stripe. Your card details are encrypted and safe.
-        </p>
-        <div className="stripe-features">
-          <div className="feature-item">
-            <i className="bi bi-shield-check"></i>
-            <span>PCI DSS compliant</span>
-          </div>
-          <div className="feature-item">
-            <i className="bi bi-lock"></i>
-            <span>256-bit encryption</span>
-          </div>
-        </div>
-        <button
-          onClick={handleSubmit}
-          className="submit-payment-btn stripe-btn"
-          disabled={processingPayment}
-        >
-          {processingPayment ? (
-            <>
-              <div className="spinner-border spinner-border-sm" role="status"></div>
-              Processing with Stripe...
-            </>
-          ) : (
-            `Pay R${(parseFloat(calculateTotal()) + 15).toFixed(2)} with Stripe`
-          )}
-        </button>
+
+        {/* {<div className="payfast-test-info">
+                    <small className="text-muted">
+                        Test Mode: Use card 4111111111111111, any expiry, CVV 123
+                    </small>
+                </div>} */}
       </div>
     );
   };
 
   const renderPaymentForm = () => {
-    switch (selectedPaymentMethod) {
-      case 'credit-card':
-        return <CreditCardForm onSubmit={processPayment} />;
-      case 'paypal':
-        return <PayPalForm onSubmit={processPayment} />;
-      case 'stripe':
-        return <StripeForm onSubmit={processPayment} />;
-      default:
-        return null;
+    if (selectedPaymentMethod === 'payFast') {
+      return <PayFastForm />;
     }
+    return null;
   };
 
   if (!event) {
@@ -519,7 +428,7 @@ function Ticket_payment() {
             {bookingData && (
               <div className="success-details">
                 <p><strong>Booking ID:</strong> {bookingData.booking_id || bookingData.transaction_id}</p>
-                <p><strong>Payment Method:</strong> {bookingData.payment_method}</p>
+                <p><strong>Payment Method:</strong> PayFast</p>
                 <p><strong>Email sent to:</strong> {bookingData.customer_email}</p>
               </div>
             )}
@@ -550,7 +459,7 @@ function Ticket_payment() {
               <p><strong>Event:</strong> {event.event_name}</p>
               <p><strong>Date:</strong> {formatDate(event.event_start_date)}</p>
               <p><strong>Tickets:</strong> {ticketData.quantity} × {getTicketTypeLabel(ticketData.ticketType)}</p>
-              <p><strong>Total Paid:</strong> R {calculateTotal()}</p>
+              <p><strong>Total Paid:</strong> R {(parseFloat(calculateTotal()) + 15).toFixed(2)}</p>
               <p><strong>Confirmation Email:</strong> {ticketData.email}</p>
             </div>
           </div>
@@ -558,13 +467,11 @@ function Ticket_payment() {
 
         {printInvoice && (
           <div className="invoice-print-container">
-            {/* Header */}
             <div className="invoice-header">
               <h1>🎟️ TICKET CONFIRMATION</h1>
               <p className="invoice-subtitle">Event Ticket & Booking Receipt</p>
             </div>
 
-            {/* Event & Booking Details in two columns */}
             <div className="invoice-details-grid">
               <div className="invoice-column">
                 <div className="invoice-section">
@@ -619,7 +526,7 @@ function Ticket_payment() {
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Payment Method:</span>
-                    <span className="detail-value">{selectedPaymentMethod.replace('-', ' ').toUpperCase()}</span>
+                    <span className="detail-value">PAYFAST</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Status:</span>
@@ -647,7 +554,6 @@ function Ticket_payment() {
               </div>
             </div>
 
-            {/* Pricing Summary - Compact */}
             <div className="pricing-summary">
               <h3><i className="fas fa-calculator"></i> PAYMENT SUMMARY</h3>
               <div className="price-row">
@@ -664,7 +570,6 @@ function Ticket_payment() {
               </div>
             </div>
 
-            {/* Important Notes */}
             <div className="important-notes">
               <h4><i className="fas fa-exclamation-circle"></i> IMPORTANT NOTES</h4>
               <ul>
@@ -674,7 +579,6 @@ function Ticket_payment() {
               </ul>
             </div>
 
-            {/* Footer - Minimal */}
             <div className="invoice-footer">
               <div className="footer-line">Thank you for your booking!</div>
               <div className="footer-line">Eventa Tickets • support@eventa.com</div>
@@ -688,8 +592,19 @@ function Ticket_payment() {
 
   return (
     <div className="ticket-payment-page">
+      {alert.show && (
+        <div className={`custom-alert ${alert.type}`}>
+          <i
+            className={`fas ${alert.type === "error" ? "fa-times-circle" :
+                alert.type === "success" ? "fa-check-circle" :
+                  alert.type === "warning" ? "fa-exclamation-triangle" : "fa-info-circle"
+              }`}
+          />
+          <span>{alert.message}</span>
+        </div>
+      )}
+
       <div className="payment-container">
-        {/* Left Column: Event Details - BLACK BACKGROUND */}
         <div className="event-summary">
           <div className="event-header">
             <h2>Event Details</h2>
@@ -735,7 +650,6 @@ function Ticket_payment() {
           </div>
         </div>
 
-        {/* Right Column: Personal Info Form */}
         <div className="payment-form-container">
           <h2>Complete Your Booking</h2>
 
@@ -745,8 +659,7 @@ function Ticket_payment() {
             </div>
           )}
 
-          <form>
-            {/* Personal Information */}
+          <form onSubmit={(e) => e.preventDefault()}>
             <div className="form-section">
               <h3>Personal Information</h3>
               <div className="form-row">
@@ -796,16 +709,16 @@ function Ticket_payment() {
               </div>
             </div>
 
-            {/* Ticket Selection */}
             <div className="form-section">
               <h3>Ticket Details</h3>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Ticket Type</label>
+                  <label>Ticket Type *</label>
                   <select
                     name="ticketType"
                     value={ticketData.ticketType}
                     onChange={handleInputChange}
+                    required
                   >
                     {parseFloat(event.earlybird_price) > 0 && (
                       <option
@@ -830,11 +743,12 @@ function Ticket_payment() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Quantity</label>
+                  <label>Quantity *</label>
                   <select
                     name="quantity"
                     value={ticketData.quantity}
                     onChange={handleInputChange}
+                    required
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                       <option key={num} value={num}>{num}</option>
@@ -844,7 +758,6 @@ function Ticket_payment() {
               </div>
             </div>
 
-            {/* Terms and Total */}
             <div className="form-section">
               <div className="terms-agreement">
                 <input
@@ -856,7 +769,7 @@ function Ticket_payment() {
                   required
                 />
                 <label htmlFor="agreeToTerms">
-                  I agree to the terms and conditions and understand that tickets are non-refundable
+                  I agree to the terms and conditions and understand that tickets are non-refundable *
                 </label>
               </div>
 
@@ -880,30 +793,12 @@ function Ticket_payment() {
               <div className="payment-methods">
                 <button
                   type="button"
-                  className={`payment-option ${selectedPaymentMethod === 'credit-card' ? 'active' : ''}`}
-                  onClick={() => handlePaymentMethodSelect('credit-card')}
-                >
-                  <i className="bi bi-credit-card-2-front"></i>
-                  <span>Credit/Debit Card</span>
-                  <small>Visa, Mastercard, Amex</small>
-                </button>
-                <button
-                  type="button"
-                  className={`payment-option ${selectedPaymentMethod === 'paypal' ? 'active' : ''}`}
-                  onClick={() => handlePaymentMethodSelect('paypal')}
-                >
-                  <i className="bi bi-paypal"></i>
-                  <span>PayPal</span>
-                  <small>Fast & secure</small>
-                </button>
-                <button
-                  type="button"
-                  className={`payment-option ${selectedPaymentMethod === 'stripe' ? 'active' : ''}`}
-                  onClick={() => handlePaymentMethodSelect('stripe')}
+                  className={`payment-option ${selectedPaymentMethod === 'payFast' ? 'active' : ''}`}
+                  onClick={handlePaymentMethodSelect}
                 >
                   <i className="bi bi-shield-check"></i>
-                  <span>Stripe</span>
-                  <small>Secure payments</small>
+                  <span>PayFast</span>
+                  <small>Secure SA Payments</small>
                 </button>
               </div>
 
@@ -915,7 +810,6 @@ function Ticket_payment() {
         </div>
       </div>
 
-      {/* Payment Method Popup */}
       {showPaymentPopup && (
         <div className="payment-popup-overlay">
           <div className="payment-popup">

@@ -51,6 +51,8 @@ import CreateTicketEvent from '../pages/createTicketEvent';
 import EventChecklist from './planner/EventChecklist';
 import EventCheckin from './planner/EventCheckin';
 import FormBuilder from './planner/FormBuilder';
+import TicketCancel from './ticketCancel';
+import TicketSuccess from './ticketSuccess';
 
 
 const clearAllLocalStorage = () => {
@@ -264,6 +266,25 @@ export function SessionHandler() {
                 <Route path="/guestMessageView" element={<PrivateRoute><GuestMessageView /></PrivateRoute>} />
                 <Route path="/report-event" element={<ReportEvent />} />
                 <Route path="/security-questions" element={<SecurityQuestionsModal />} />
+                <Route path="/admin-ticket" element={<AdminTicket />} />
+                <Route path="/ticket-selection" element={<TicketSelection />} />
+                <Route path="/support-ticket" element={<SupportTicket />} />
+                <Route path="/ticket_sales" element={<Ticket_Sale />} />
+                <Route path="/ticketEvent_details" element={<TicketEvent_details />} />
+                <Route path="/ticket_payment" element={<Ticket_payment />} />
+                <Route path="/businessdashboard" element={<BusinessDashboard />} />
+                <Route path="/event_ticket_manage" element={<TicketEventManage />} />
+                <Route path="/my-requests" element={<MyRequests />} />
+                <Route path="/request-details/:requestId" element={<RequestDetails />} />
+                <Route path="/custom-plan-request" element={<CustomPlanRequestPage />} />
+                <Route path="/request/:requestId" element={<RequestDetails />} />
+                <Route path="/paymentCancel" element={<PaymentCancel />} />
+                <Route path="/paymentSuccess" element={<PaymentSuccess />} />
+                <Route path="/createTicketEvent" element={<CreateTicketEvent />} />
+                <Route path="/event-checklist" element={<EventChecklist />} />
+                <Route path="/form-builder" element={<FormBuilder />} />
+                <Route path="/ticketCancel" element={<TicketCancel />} />
+                <Route path="/ticketSuccess" element={<TicketSuccess />} />
                 <Route path="/admin-ticket" element={<PrivateRoute adminOnly={true}><AdminTicket /></PrivateRoute>} />
                 <Route path="/ticket-selection" element={<PrivateRoute><TicketSelection /></PrivateRoute>} />
                 <Route path="/support-ticket" element={<PrivateRoute><SupportTicket /></PrivateRoute>} />

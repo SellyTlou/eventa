@@ -353,7 +353,7 @@ function CreateTicketEvent() {
             if (data.success) {
                 printAlert("Ticket event created successfully!", "success");
                 setTimeout(() => {
-                    navigate(`/ticket-event/${data.event_id}`);
+                    navigate(`/eventsDashboard`);
                 }, 2000);
             } else {
                 printAlert(data.message || "Failed to create event", "error");

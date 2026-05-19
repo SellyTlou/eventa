@@ -1,4 +1,0 @@
-Payment ID,Date,User,Amount,Status,Package
-"PAY-001","2024-01-15","John Doe","99.99","completed","premium"
-"PAY-002","2024-01-20","Jane Smith","149.99","completed","enterprise"
-"PAY-003","2024-02-01","Bob Wilson","49.99","pending","basic"

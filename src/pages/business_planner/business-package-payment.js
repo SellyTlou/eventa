@@ -3,7 +3,6 @@ import "../planner/main.css";
 import "../../alert.css";
 import { useNavigate } from "react-router-dom";
 import { LoginNav, Footer } from "../components";
-import crypto from "crypto-js";
 
 const BusinessPackagePayment = () => {
     const dropdownRef = useRef(null);
@@ -124,37 +123,21 @@ const BusinessPackagePayment = () => {
         return `BP-${timestamp}-${random}`;
     };
 
-    const generatePayFastSignature = (data) => {
-        let pfOutput = "";
-        Object.keys(data)
-            .sort()
-            .forEach(key => {
-                if (data[key] !== "" && key !== 'signature') {
-                    let value = data[key];
-                    
-                    if (value === null || value === undefined) {
-                        value = "";
-                    } else if (typeof value === 'object') {
-                        value = JSON.stringify(value);
-                    } else {
-                        value = String(value);
-                    }
-                    
-                    const trimmedValue = value.trim ? value.trim() : value;
-                    
-                    if (trimmedValue !== "") {
-                        pfOutput += `${key}=${encodeURIComponent(trimmedValue).replace(/%20/g, '+')}&`;
-                    }
-                }
-            });
-        
-        pfOutput = pfOutput.slice(0, -1);
-        
-        if (PAYFAST_CONFIG.PASS_PHRASE) {
-            pfOutput += `&passphrase=${encodeURIComponent(PAYFAST_CONFIG.PASS_PHRASE).replace(/%20/g, '+')}`;
+    const getSignature = async (data) => {
+        const res = await fetch(`${API_BASE_URL}/generateSignature.php`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        if (!result.success) {
+            throw new Error(result.message || "Failed to generate PayFast signature");
         }
-        
-        return crypto.MD5(pfOutput).toString();
+
+        return result.signature;
     };
 
     const preparePayFastData = () => {
@@ -193,8 +176,6 @@ const BusinessPackagePayment = () => {
         if (userData?.email) {
             paymentData.confirmation_address = String(userData.email);
         }
-
-        paymentData.signature = generatePayFastSignature(paymentData);
         
         console.log("PayFast Data prepared for Business Package:", {
             ...paymentData,
@@ -357,6 +338,7 @@ const BusinessPackagePayment = () => {
         
         try {
             const paymentData = preparePayFastData();
+            paymentData.signature = await getSignature(paymentData);
 
             localStorage.setItem("lastBusinessTransactionId", paymentData.m_payment_id);
             localStorage.setItem("selectedBusinessPackageId", selectedPackage?.id);

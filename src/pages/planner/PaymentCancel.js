@@ -6,7 +6,6 @@ const PaymentCancel = () => {
     const navigate = useNavigate();
     
     useEffect(() => {
-        // Optional: Clean up any pending payment state
         console.log('Payment cancelled');
     }, []);
     
@@ -33,11 +32,11 @@ const PaymentCancel = () => {
                     </button>
                     
                     <button 
-                        onClick={() => navigate('/eventsDashboard')} 
+                        onClick={() => navigate('/profile')} 
                         className="btn-event btn-event-secondary"
                     >
                         <i className="bi bi-house"></i>
-                        Go to Dashboard
+                        Go to Profile
                     </button>
                 </div>
             </div>

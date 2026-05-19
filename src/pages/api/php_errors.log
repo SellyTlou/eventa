@@ -1,0 +1,720 @@
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:53:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 21:54:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:01:27 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-27.sql" 2>&1
+[20-Oct-2025 22:01:27 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:27 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:34 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-34.sql" 2>&1
+[20-Oct-2025 22:01:34 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:34 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:36 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-36.sql" 2>&1
+[20-Oct-2025 22:01:36 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:36 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:37 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-37.sql" 2>&1
+[20-Oct-2025 22:01:37 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:37 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:38 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-38.sql" 2>&1
+[20-Oct-2025 22:01:38 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:38 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:38 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-38.sql" 2>&1
+[20-Oct-2025 22:01:39 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:39 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:01:40 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-01-40.sql" 2>&1
+[20-Oct-2025 22:01:40 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:01:40 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:02:08 Europe/Berlin] Backup command: mysqldump --host=localhost --user=root eventa > "C:\xampp\htdocs\eventa\src\pages\php/backups/backup_eventa_2025-10-20_22-02-08.sql" 2>&1
+[20-Oct-2025 22:02:08 Europe/Berlin] mysqldump failed with code 1: 
+[20-Oct-2025 22:02:08 Europe/Berlin] Backup error: mysqldump failed: 
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[20-Oct-2025 22:55:40 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function verifyAdminAccessWithPermission() in C:\xampp\htdocs\eventa\src\pages\php\query.php:592
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 592
+[23-Oct-2025 01:02:58 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: Unsupported operand types: string + int in C:\xampp\htdocs\eventa\src\pages\php\query.php:441
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 441
+[23-Oct-2025 01:03:55 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: Unsupported operand types: string + int in C:\xampp\htdocs\eventa\src\pages\php\query.php:441
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 441
+[23-Oct-2025 01:04:52 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: Unsupported operand types: string + int in C:\xampp\htdocs\eventa\src\pages\php\query.php:441
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 441
+[25-Oct-2025 09:03:37 Europe/Berlin] PHP Warning:  require_once(helpers.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2296
+[25-Oct-2025 09:03:37 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'helpers.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:2296
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2296
+[25-Oct-2025 09:10:23 Europe/Berlin] PHP Warning:  require_once(helpers.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2296
+[25-Oct-2025 09:10:23 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'helpers.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:2296
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2296
+[25-Oct-2025 09:10:28 Europe/Berlin] PHP Warning:  require_once(helpers.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2296
+[25-Oct-2025 09:10:28 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'helpers.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:2296
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2296
+[25-Oct-2025 09:21:36 Europe/Berlin] PHP Warning:  Undefined variable $provider in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2310
+[25-Oct-2025 09:21:36 Europe/Berlin] PHP Warning:  Undefined variable $gateway_id in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 2311
+[27-Oct-2025 15:55:40 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 15:55:40 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288
+[27-Oct-2025 15:56:40 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 15:56:40 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288
+[27-Oct-2025 15:57:40 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 15:57:40 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288
+[27-Oct-2025 16:06:19 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:246
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(246): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 246
+[27-Oct-2025 16:06:19 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 275
+[27-Oct-2025 16:08:03 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction in C:\xampp\htdocs\eventa\src\pages\php\query.php:246
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(246): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 246
+[27-Oct-2025 16:08:03 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 275
+[27-Oct-2025 16:08:36 Europe/Berlin] PHP Warning:  Uncaught PDOException: SQLSTATE[HY000]: General error: 2006 MySQL server has gone away in C:\xampp\htdocs\eventa\src\pages\php\query.php:285
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(285): PDOStatement->execute(Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 285
+[27-Oct-2025 16:08:36 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 288
+[26-Oct-2025 21:06:04 Europe/Berlin] recordPayment called: user_id=USER-P3STK2-1761409327, package_id=PCK-BASIC-001, amount=465
+[26-Oct-2025 21:06:04 Europe/Berlin] Payment recorded: {"success":true,"message":"Payment recorded successfully","payment_id":"PYEC67Q1D-1761509164"}
+[27-Oct-2025 00:07:02 Europe/Berlin] recordPayment called: user_id=USER-P3STK2-1761409327, package_id=PCK-ENTERPRISE-003, amount=867.5
+[27-Oct-2025 00:07:02 Europe/Berlin] Payment recorded: {"success":true,"message":"Payment recorded successfully","payment_id":"PYEAG3TU1-1761520022"}
+[27-Oct-2025 01:03:25 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function generatePDFReport() in C:\xampp\htdocs\eventa\src\pages\php\query.php:1854
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 1854
+[27-Oct-2025 01:03:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function generatePDFReport() in C:\xampp\htdocs\eventa\src\pages\php\query.php:1854
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 1854
+[27-Oct-2025 01:04:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function generatePDFReport() in C:\xampp\htdocs\eventa\src\pages\php\query.php:1854
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 1854
+[27-Oct-2025 01:05:06 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function generatePDFReport() in C:\xampp\htdocs\eventa\src\pages\php\query.php:1854
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 1854
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:07 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:09 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:09 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:09 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:09 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:11 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:11 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:18 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:21 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:21 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:21 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:17:21 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:37 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:37 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:37 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:37 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:18:48 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:30 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:30 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:30 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:30 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:33 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:33 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:35 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:35 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:36 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:37 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:37 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:40 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:40 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:42 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:42 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:47 Europe/Berlin] PHP Warning:  require_once(tcpdf/tcpdf.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 01:19:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'tcpdf/tcpdf.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\eventa\src\pages\php\query.php:13
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 13
+[27-Oct-2025 09:11:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function generatePDFReport() in C:\xampp\htdocs\eventa\src\pages\php\query.php:1852
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 1852
+[27-Oct-2025 10:44:51 Europe/Berlin] recordPayment called: user_id=USER-5JBCKR-1761506801, package_id=PCK-BASIC-001, amount=465
+[27-Oct-2025 10:44:51 Europe/Berlin] Payment recorded: {"success":true,"message":"Payment recorded successfully","payment_id":"PYE35GFC7-1761558291"}
+[27-Oct-2025 22:07:53 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: Too few arguments to function generateUserID(), 0 passed in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 332 and exactly 1 expected in C:\xampp\htdocs\eventa\src\pages\php\query.php:37
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(332): generateUserID()
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 37
+[27-Oct-2025 22:12:03 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: Too few arguments to function generateUserID(), 0 passed in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 332 and exactly 1 expected in C:\xampp\htdocs\eventa\src\pages\php\query.php:37
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(332): generateUserID()
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 37
+[27-Oct-2025 22:24:50 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: Too few arguments to function generateUserID(), 0 passed in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 332 and exactly 1 expected in C:\xampp\htdocs\eventa\src\pages\php\query.php:37
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(332): generateUserID()
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 37
+[27-Oct-2025 22:35:33 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: Too few arguments to function generateUserID(), 0 passed in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 332 and exactly 1 expected in C:\xampp\htdocs\eventa\src\pages\php\query.php:37
+Stack trace:
+#0 C:\xampp\htdocs\eventa\src\pages\php\query.php(332): generateUserID()
+#1 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 37
+[28-Oct-2025 11:44:50 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function generatePDFReport() in C:\xampp\htdocs\eventa\src\pages\php\query.php:1979
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\eventa\src\pages\php\query.php on line 1979
+[28-Oct-2025 18:22:17 Europe/Berlin] recordPayment called: user_id=USER-KHCWVN-1761601330, package_id=PCK-PREMIUM-002, amount=120
+[28-Oct-2025 18:22:17 Europe/Berlin] Payment recorded: {"success":true,"message":"Payment recorded successfully","payment_id":"PYEW2P96J-1761672137"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775478959544-04tq7spue","pf_payment_id":"3089777","payment_status":"COMPLETE","item_name":"The Grand  - General Admission Tickets","item_description":"2 x General Admission ticket(s)","amount_gross":"155.00","amount_fee":"-3.57","amount_net":"151.43","custom_str1":"TKT1775304811940","custom_str2":"general","custom_str3":"2","custom_str4":"{\"firstName\":\"lifa\",\"lastName\":\"Ndou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"general\",\"quantity\":\"2\"}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"lifa","name_last":"Ndou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"de2d907656fd29ef148da6515acad28e"}}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775478959544-04tq7spue","pf_payment_id":"3089777","payment_status_raw":"COMPLETE","payment_status_db":"complete"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 🔐 Signature validation result: {"is_valid":true}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775478959544-04tq7spue"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775478959544-04tq7spue"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 💰 Processing payment for booking: {"bookingId":"TKT-1775478959544-04tq7spue"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 📝 Updated booking status: {"bookingId":"TKT-1775478959544-04tq7spue","rows_affected":1,"new_status":"completed"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 📧 Booking details for email: {"bookingId":"TKT-1775478959544-04tq7spue","has_booking":"YES","customer_email":"Ananiasndou0@gmail.com"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - ✅ TICKET PAYMENT COMPLETED ✅: {"booking_id":"TKT-1775478959544-04tq7spue","pf_payment_id":"3089777","amount":"155.00"}
+[06-Apr-2026 14:36:32 Europe/Berlin] PayFast ITN - 📧 Preparing email: {"to":"Ananiasndou0@gmail.com","bookingId":"TKT-1775478959544-04tq7spue","eventName":"Event"}
+[06-Apr-2026 14:36:35 Europe/Berlin] PayFast ITN - ✅ Email sent successfully: {"email":"Ananiasndou0@gmail.com","status":201}
+[06-Apr-2026 14:54:03 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775479970653-6dqtzoda6","pf_payment_id":"3089802","payment_status":"COMPLETE","item_name":"The Grand  - Early Bird Tickets","item_description":"5 x Early Bird ticket(s)","amount_gross":"265.00","amount_fee":"-6.10","amount_net":"258.90","custom_str1":"TKT1775304811940","custom_str2":"early_bird","custom_str3":"5","custom_str4":"{\"firstName\":\"lifalakhe\",\"lastName\":\"Zulu\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"early_bird\",\"quantity\":\"5\"}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"lifalakhe","name_last":"Zulu","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"91167d63f3f9ba21223f2859ef2f137a"}}
+[06-Apr-2026 14:54:03 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775479970653-6dqtzoda6","pf_payment_id":"3089802","payment_status_raw":"COMPLETE"}
+[06-Apr-2026 14:54:03 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775479970653-6dqtzoda6"}
+[06-Apr-2026 14:54:03 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775479970653-6dqtzoda6"}
+[06-Apr-2026 14:54:03 Europe/Berlin] PayFast ITN - 💰 Processing payment for booking: {"bookingId":"TKT-1775479970653-6dqtzoda6"}
+[06-Apr-2026 14:54:03 Europe/Berlin] PayFast ITN - 📝 Updated booking status: {"bookingId":"TKT-1775479970653-6dqtzoda6","rows_affected":1,"new_status":"completed"}
+[06-Apr-2026 14:54:03 Europe/Berlin] PayFast ITN - ❌ ITN processing error: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'te.event_location' in 'field list'","trace":"#0 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(225): PDOStatement->execute(Array)\n#1 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(96): TicketPayFastITN->processSuccessfulPayment(Array)\n#2 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(489): TicketPayFastITN->handleITN()\n#3 {main}"}
+[06-Apr-2026 15:03:18 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775480573861-us0qswmql","pf_payment_id":"3089817","payment_status":"COMPLETE","item_name":"The Grand  - General Admission Tickets","item_description":"1 x General Admission ticket(s)","amount_gross":"85.00","amount_fee":"-2.30","amount_net":"82.70","custom_str1":"TKT1775304811940","custom_str2":"general","custom_str3":"1","custom_str4":"{\"firstName\":\"Ananias\",\"lastName\":\"Ndou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"general\",\"quantity\":1}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Ananias","name_last":"Ndou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"b65f81aff6c21d53bd076f43273b6a10"}}
+[06-Apr-2026 15:03:18 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775480573861-us0qswmql","pf_payment_id":"3089817","payment_status_raw":"COMPLETE"}
+[06-Apr-2026 15:03:18 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775480573861-us0qswmql"}
+[06-Apr-2026 15:03:18 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775480573861-us0qswmql"}
+[06-Apr-2026 15:03:18 Europe/Berlin] PayFast ITN - 💰 Processing payment for booking: {"bookingId":"TKT-1775480573861-us0qswmql"}
+[06-Apr-2026 15:03:18 Europe/Berlin] PayFast ITN - 📝 Updated booking status: {"bookingId":"TKT-1775480573861-us0qswmql","rows_affected":1,"new_status":"completed"}
+[06-Apr-2026 15:03:18 Europe/Berlin] PayFast ITN - ❌ ITN processing error: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'te.event_location' in 'field list'","trace":"#0 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(225): PDOStatement->execute(Array)\n#1 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(96): TicketPayFastITN->processSuccessfulPayment(Array)\n#2 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(489): TicketPayFastITN->handleITN()\n#3 {main}"}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775480868632-l11zd4hgw","pf_payment_id":"3089823","payment_status":"COMPLETE","item_name":"The Grand  - Early Bird Tickets","item_description":"1 x Early Bird ticket(s)","amount_gross":"65.00","amount_fee":"-2.30","amount_net":"62.70","custom_str1":"TKT1775304811940","custom_str2":"early_bird","custom_str3":"1","custom_str4":"{\"firstName\":\"Selly\",\"lastName\":\"Tlou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"early_bird\",\"quantity\":1}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Selly","name_last":"Tlou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"7adee3b85658ce8731d9c00bab45e8a3"}}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775480868632-l11zd4hgw","pf_payment_id":"3089823","payment_status_raw":"COMPLETE","payment_status_db":"complete"}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - 🔐 Signature validation result: {"is_valid":true}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775480868632-l11zd4hgw"}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775480868632-l11zd4hgw"}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - 💰 Processing payment for booking: {"bookingId":"TKT-1775480868632-l11zd4hgw"}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - 📝 Updated booking status: {"bookingId":"TKT-1775480868632-l11zd4hgw","rows_affected":1,"new_status":"completed"}
+[06-Apr-2026 15:08:20 Europe/Berlin] PayFast ITN - ❌ ITN processing error: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'e.event_location' in 'field list'","trace":"#0 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(236): PDOStatement->execute(Array)\n#1 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(102): TicketPayFastITN->processSuccessfulPayment(Array)\n#2 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(499): TicketPayFastITN->handleITN()\n#3 {main}"}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775481128526-ytjujsf5z","pf_payment_id":"3089830","payment_status":"COMPLETE","item_name":"The Grand  - Early Bird Tickets","item_description":"1 x Early Bird ticket(s)","amount_gross":"65.00","amount_fee":"-2.30","amount_net":"62.70","custom_str1":"TKT1775304811940","custom_str2":"early_bird","custom_str3":"1","custom_str4":"{\"firstName\":\"mathodzi\",\"lastName\":\"zwane\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"early_bird\",\"quantity\":1}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"mathodzi","name_last":"zwane","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"897d0d8659d7ddea74010bd430c654da"}}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775481128526-ytjujsf5z","pf_payment_id":"3089830","payment_status_raw":"COMPLETE","payment_status_db":"complete"}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - 🔐 Signature validation result: {"is_valid":true}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775481128526-ytjujsf5z"}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775481128526-ytjujsf5z"}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - 💰 Processing payment for booking: {"bookingId":"TKT-1775481128526-ytjujsf5z"}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - 📝 Updated booking status: {"bookingId":"TKT-1775481128526-ytjujsf5z","rows_affected":1,"new_status":"completed"}
+[06-Apr-2026 15:12:54 Europe/Berlin] PayFast ITN - ❌ ITN processing error: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'e.event_location' in 'field list'","trace":"#0 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(236): PDOStatement->execute(Array)\n#1 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(102): TicketPayFastITN->processSuccessfulPayment(Array)\n#2 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(467): TicketPayFastITN->handleITN()\n#3 {main}"}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775480367419-fxszxl52z","pf_payment_id":"3089834","payment_status":"COMPLETE","item_name":"The Grand  - Early Bird Tickets","item_description":"4 x Early Bird ticket(s)","amount_gross":"215.00","amount_fee":"-4.95","amount_net":"210.05","custom_str1":"TKT1775304811940","custom_str2":"early_bird","custom_str3":"4","custom_str4":"{\"firstName\":\"Ananias\",\"lastName\":\"Ndou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"early_bird\",\"quantity\":\"4\"}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Ananias","name_last":"Ndou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"02296910e3435792cddba553c019e08b"}}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775480367419-fxszxl52z","pf_payment_id":"3089834","payment_status_raw":"COMPLETE","payment_status_db":"complete"}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - 🔐 Signature validation result: {"is_valid":true}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775480367419-fxszxl52z"}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775480367419-fxszxl52z"}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - 💰 Processing payment for booking: {"bookingId":"TKT-1775480367419-fxszxl52z"}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - 📝 Updated booking status: {"bookingId":"TKT-1775480367419-fxszxl52z","rows_affected":1,"new_status":"completed"}
+[06-Apr-2026 15:15:09 Europe/Berlin] PayFast ITN - ❌ ITN processing error: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'e.event_location' in 'field list'","trace":"#0 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(236): PDOStatement->execute(Array)\n#1 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(102): TicketPayFastITN->processSuccessfulPayment(Array)\n#2 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(467): TicketPayFastITN->handleITN()\n#3 {main}"}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775481596325-djzx8psdu","pf_payment_id":"3089838","payment_status":"COMPLETE","item_name":"The Grand  - General Admission Tickets","item_description":"1 x General Admission ticket(s)","amount_gross":"85.00","amount_fee":"-2.30","amount_net":"82.70","custom_str1":"TKT1775304811940","custom_str2":"general","custom_str3":"1","custom_str4":"{\"firstName\":\"Ananias\",\"lastName\":\"Ndou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"general\",\"quantity\":1}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Ananias","name_last":"Ndou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"ea2a86b91ccbb61c4030b2ed61c4134a"}}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775481596325-djzx8psdu","pf_payment_id":"3089838","payment_status_raw":"COMPLETE","payment_status_db":"complete"}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - 🔐 Signature validation result: {"is_valid":true}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775481596325-djzx8psdu"}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775481596325-djzx8psdu"}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - 💰 Processing payment for booking: {"bookingId":"TKT-1775481596325-djzx8psdu"}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - 📝 Updated booking status: {"bookingId":"TKT-1775481596325-djzx8psdu","rows_affected":1,"new_status":"completed"}
+[06-Apr-2026 15:20:54 Europe/Berlin] PayFast ITN - ❌ ITN processing error: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'e.event_location' in 'field list'","trace":"#0 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(237): PDOStatement->execute(Array)\n#1 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(103): TicketPayFastITN->processSuccessfulPayment(Array)\n#2 C:\\xampp\\htdocs\\eventa\\src\\pages\\php\\payfastIntTickets.php(468): TicketPayFastITN->handleITN()\n#3 {main}"}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775558987892-soehinrj5","pf_payment_id":"3090999","payment_status":"COMPLETE","item_name":"The Grand  - General Admission Tickets","item_description":"1 x General Admission ticket(s)","amount_gross":"85.00","amount_fee":"-2.30","amount_net":"82.70","custom_str1":"TKT1775304811940","custom_str2":"general","custom_str3":"1","custom_str4":"{\"firstName\":\"sz\",\"lastName\":\"sz\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"general\",\"quantity\":1}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"sz","name_last":"sz","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"7337eb814ddc47a645dd4b50142addd7"}}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775558987892-soehinrj5","pf_payment_id":"3090999","payment_status_raw":"COMPLETE"}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775558987892-soehinrj5"}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775558987892-soehinrj5"}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"TKT-1775558987892-soehinrj5","pf_payment_id":"3090999"}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"TKT-1775558987892-soehinrj5","exists":"YES"}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"TKT-1775558987892-soehinrj5","rows_affected":1}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3090999"}
+[07-Apr-2026 12:50:20 Europe/Berlin] PayFast ITN - ❌ PROCESSING ERROR: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'te.event_location' in 'field list'"}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775559711332-som52lzt6","pf_payment_id":"3091018","payment_status":"COMPLETE","item_name":"The Grand  - Early Bird Tickets","item_description":"1 x Early Bird ticket(s)","amount_gross":"65.00","amount_fee":"-2.30","amount_net":"62.70","custom_str1":"TKT1775304811940","custom_str2":"early_bird","custom_str3":"1","custom_str4":"{\"firstName\":\"mmm\",\"lastName\":\"Ndou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"early_bird\",\"quantity\":1}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"mmm","name_last":"Ndou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"9c9384eb1c0526b8d8e2bdfe186fbb79"}}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775559711332-som52lzt6","pf_payment_id":"3091018","payment_status_raw":"COMPLETE"}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775559711332-som52lzt6"}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775559711332-som52lzt6"}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"TKT-1775559711332-som52lzt6","pf_payment_id":"3091018"}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"TKT-1775559711332-som52lzt6","exists":"YES"}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"TKT-1775559711332-som52lzt6","rows_affected":1}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3091018"}
+[07-Apr-2026 13:02:15 Europe/Berlin] PayFast ITN - ❌ PROCESSING ERROR: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'te.event_location' in 'field list'"}
+[07-Apr-2026 14:26:04 Europe/Berlin] PHP Warning:  Undefined variable $pdo in C:\xampp\htdocs\eventa\src\pages\php\payfastIntTickets.php on line 271
+[07-Apr-2026 14:35:25 Europe/Berlin] PHP Warning:  Undefined variable $pdo in C:\xampp\htdocs\eventa\src\pages\php\payfastIntTickets.php on line 254
+[07-Apr-2026 14:51:11 Europe/Berlin] PHP Warning:  Undefined variable $pdo in C:\xampp\htdocs\eventa\src\pages\php\payfastIntTickets.php on line 254
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775566561858-1vr6cwfvj","pf_payment_id":"3091253","payment_status":"COMPLETE","item_name":"The Grand  - General Admission Tickets","item_description":"6 x General Admission ticket(s)","amount_gross":"435.00","amount_fee":"-10.01","amount_net":"424.99","custom_str1":"TKT1775304811940","custom_str2":"general","custom_str3":"6","custom_str4":"{\"firstName\":\"Selly\",\"lastName\":\"Tlou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"general\",\"quantity\":\"6\"}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Selly","name_last":"Tlou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"0c11c09b80db49a33b066dd93d0d9c95"}}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775566561858-1vr6cwfvj","pf_payment_id":"3091253","payment_status_raw":"COMPLETE"}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775566561858-1vr6cwfvj"}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775566561858-1vr6cwfvj"}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"TKT-1775566561858-1vr6cwfvj","pf_payment_id":"3091253"}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"TKT-1775566561858-1vr6cwfvj","exists":"YES"}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"TKT-1775566561858-1vr6cwfvj","rows_affected":1}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3091253"}
+[07-Apr-2026 14:56:15 Europe/Berlin] PayFast ITN - ❌ PROCESSING ERROR: {"error":"SQLSTATE[HY000]: General error: 1267 Illegal mix of collations (utf8mb4_general_ci,IMPLICIT) and (utf8mb4_unicode_ci,IMPLICIT) for operation '='"}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775567302248-ivql5qkf3","pf_payment_id":"3091274","payment_status":"COMPLETE","item_name":"The Grand  - VIP Tickets","item_description":"3 x VIP ticket(s)","amount_gross":"615.00","amount_fee":"-14.15","amount_net":"600.85","custom_str1":"TKT1775501209556","custom_str2":"vip","custom_str3":"3","custom_str4":"{\"firstName\":\"Selly\",\"lastName\":\"Tlou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775501209556\",\"ticket_type\":\"vip\",\"quantity\":\"3\"}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Selly","name_last":"Tlou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"e0162813e7b242f122ef3c5ec6f81599"}}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775567302248-ivql5qkf3","pf_payment_id":"3091274","payment_status_raw":"COMPLETE"}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775567302248-ivql5qkf3"}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775567302248-ivql5qkf3"}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"TKT-1775567302248-ivql5qkf3","pf_payment_id":"3091274"}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"TKT-1775567302248-ivql5qkf3","exists":"YES"}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"TKT-1775567302248-ivql5qkf3","rows_affected":1}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3091274"}
+[07-Apr-2026 15:08:33 Europe/Berlin] PayFast ITN - ❌ PROCESSING ERROR: {"error":"SQLSTATE[HY000]: General error: 1267 Illegal mix of collations (utf8mb4_general_ci,IMPLICIT) and (utf8mb4_unicode_ci,IMPLICIT) for operation '='"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775567548238-0vpp06gsq","pf_payment_id":"3091281","payment_status":"COMPLETE","item_name":"The Grand  - General Admission Tickets","item_description":"1 x General Admission ticket(s)","amount_gross":"85.00","amount_fee":"-2.30","amount_net":"82.70","custom_str1":"TKT1775304811940","custom_str2":"general","custom_str3":"1","custom_str4":"{\"firstName\":\"ANisto\",\"lastName\":\"Ndou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775304811940\",\"ticket_type\":\"general\",\"quantity\":1}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"ANisto","name_last":"Ndou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"c72d32ee942aa2a18e8d6cda9bba2c34"}}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775567548238-0vpp06gsq","pf_payment_id":"3091281","payment_status_raw":"COMPLETE"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775567548238-0vpp06gsq"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775567548238-0vpp06gsq"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"TKT-1775567548238-0vpp06gsq","pf_payment_id":"3091281"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"TKT-1775567548238-0vpp06gsq","exists":"YES"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"TKT-1775567548238-0vpp06gsq","rows_affected":1}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3091281"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - ✅ PAYMENT COMPLETED: {"bookingId":"TKT-1775567548238-0vpp06gsq","pf_payment_id":"3091281"}
+[07-Apr-2026 15:12:45 Europe/Berlin] PayFast ITN - 📧 Preparing email: {"to":"Ananiasndou0@gmail.com","bookingId":"TKT-1775567548238-0vpp06gsq","eventName":"The Grand "}
+[07-Apr-2026 15:12:48 Europe/Berlin] PayFast ITN - ✅ Email sent successfully: {"email":"Ananiasndou0@gmail.com"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775568559126-3nkfgpxqo","pf_payment_id":"3091332","payment_status":"COMPLETE","item_name":"The Grand  - VIP Tickets","item_description":"10 x VIP ticket(s)","amount_gross":"2015.00","amount_fee":"-46.35","amount_net":"1968.65","custom_str1":"TKT1775501209556","custom_str2":"vip","custom_str3":"10","custom_str4":"{\"firstName\":\"Ananias\",\"lastName\":\"Ndou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775501209556\",\"ticket_type\":\"vip\",\"quantity\":\"10\"}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Ananias","name_last":"Ndou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"76a3caf5c26b0a8a94c40490f5af9850"}}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775568559126-3nkfgpxqo","pf_payment_id":"3091332","payment_status_raw":"COMPLETE"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775568559126-3nkfgpxqo"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775568559126-3nkfgpxqo"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"TKT-1775568559126-3nkfgpxqo","pf_payment_id":"3091332"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"TKT-1775568559126-3nkfgpxqo","exists":"YES"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"TKT-1775568559126-3nkfgpxqo","rows_affected":1}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3091332"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - ✅ PAYMENT COMPLETED: {"bookingId":"TKT-1775568559126-3nkfgpxqo","pf_payment_id":"3091332"}
+[07-Apr-2026 15:30:17 Europe/Berlin] PayFast ITN - 📧 Preparing email: {"to":"Ananiasndou0@gmail.com","bookingId":"TKT-1775568559126-3nkfgpxqo","eventName":"The Grand "}
+[07-Apr-2026 15:30:21 Europe/Berlin] PayFast ITN - ✅ Email sent successfully: {"email":"Ananiasndou0@gmail.com"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"TKT-1775594442970-d0iqz7zpw","pf_payment_id":"3091909","payment_status":"COMPLETE","item_name":"The Grand  - General Admission Tickets","item_description":"4 x General Admission ticket(s)","amount_gross":"295.00","amount_fee":"-6.79","amount_net":"288.21","custom_str1":"TKT1775501209556","custom_str2":"general","custom_str3":"4","custom_str4":"{\"firstName\":\"Selly\",\"lastName\":\"Tlou\",\"email\":\"Ananiasndou0@gmail.com\",\"phone\":\"0736933987\",\"event_id\":\"TKT1775501209556\",\"ticket_type\":\"general\",\"quantity\":\"4\"}","custom_str5":"","custom_int1":"","custom_int2":"","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Selly","name_last":"Tlou","email_address":"Ananiasndou0@gmail.com","merchant_id":"10046113","signature":"c9d55a4cfadf661e48163020adf5f83a"}}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"TKT-1775594442970-d0iqz7zpw","pf_payment_id":"3091909","payment_status_raw":"COMPLETE"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"TKT-1775594442970-d0iqz7zpw"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"TKT-1775594442970-d0iqz7zpw"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"TKT-1775594442970-d0iqz7zpw","pf_payment_id":"3091909"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"TKT-1775594442970-d0iqz7zpw","exists":"YES"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"TKT-1775594442970-d0iqz7zpw","rows_affected":1}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3091909"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 🎫 Attempting to deduct tickets: {"event_id":"TKT1775501209556","ticket_type":"general","quantity":4,"bookingId":"TKT-1775594442970-d0iqz7zpw"}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 🧾 Deducted ticket quantity: {"eventID":"TKT1775501209556","ticketType":"general","quantityDeducted":4,"rowsAffected":1}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - ✅ Tickets deducted successfully: {"event_id":"TKT1775501209556","ticket_type":"general","quantity":4}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - ✅ PAYMENT COMPLETED: {"bookingId":"TKT-1775594442970-d0iqz7zpw","pf_payment_id":"3091909","tickets_deducted":{"event_id":"TKT1775501209556","ticket_type":"general","quantity":4}}
+[07-Apr-2026 22:40:58 Europe/Berlin] PayFast ITN - 📧 Preparing email: {"to":"Ananiasndou0@gmail.com","bookingId":"TKT-1775594442970-d0iqz7zpw","eventName":"The Grand "}
+[07-Apr-2026 22:41:00 Europe/Berlin] PayFast ITN - ✅ Email sent successfully: {"email":"Ananiasndou0@gmail.com"}
