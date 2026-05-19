@@ -11,6 +11,7 @@ const EventChecklist = () => {
     const [progress, setProgress] = useState(0);
     const [eventStatus, setEventStatus] = useState("");
     const [isTicketEvent, setIsTicketEvent] = useState(false);
+    const [checklistItems, setChecklistItems] = useState([]);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
     const [user, setUser] = useState(null);
@@ -82,11 +83,76 @@ const EventChecklist = () => {
                 const hasTickets = event.has_tickets === 1 || event.has_tickets === true;
                 setIsTicketEvent(hasTickets);
                 calculateProgress(event);
+                fetchChecklist(eventId);
             }
         } catch (err) {
             console.error("Error fetching event details:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchChecklist = async (eventId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append('function', 'getEventChecklist');
+            formData.append('event_id', eventId);
+
+            const response = await fetch(`${API_URL}/query.php`, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.success && Array.isArray(data.items)) {
+                setChecklistItems(data.items);
+                // compute progress from checklist
+                const total = data.items.length || 1;
+                const done = data.items.filter(i => (i.completed == 1 || i.completed === '1')).length;
+                setProgress(Math.round((done / total) * 100));
+            }
+        } catch (err) {
+            console.error('Error fetching checklist:', err);
+        }
+    };
+
+    const toggleChecklistItem = async (item) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append('function', 'updateChecklistItem');
+            formData.append('event_id', eventId);
+            formData.append('item_key', item.item_key);
+            formData.append('completed', item.completed == 1 ? 0 : 1);
+            const response = await fetch(`${API_URL}/query.php`, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.success && Array.isArray(data.items)) {
+                setChecklistItems(data.items);
+                const total = data.items.length || 1;
+                const done = data.items.filter(i => (i.completed == 1 || i.completed === '1')).length;
+                setProgress(Math.round((done / total) * 100));
+            }
+        } catch (err) {
+            console.error('Error updating checklist item:', err);
+        }
+    };
+
+    const updateChecklistItemByKey = async (itemKey, completed = 1) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append('function', 'updateChecklistItem');
+            formData.append('event_id', eventId);
+            formData.append('item_key', itemKey);
+            formData.append('completed', completed);
+
+            const response = await fetch(`${API_URL}/query.php`, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.success && Array.isArray(data.items)) {
+                setChecklistItems(data.items);
+                const total = data.items.length || 1;
+                const done = data.items.filter(i => (i.completed == 1 || i.completed === '1')).length;
+                setProgress(Math.round((done / total) * 100));
+            }
+        } catch (err) {
+            console.error('Error updating checklist item by key:', err);
         }
     };
     
@@ -162,6 +228,8 @@ const EventChecklist = () => {
                 ? `${frontendUrl}/ticketEvent_details?id=${eventId}`
                 : `${frontendUrl}/rsvpForm?event_id=${eventId}`;
             window.open(previewUrl, "_blank");
+            // mark preview completed
+            updateChecklistItemByKey('preview', 1);
         }
     };
     
@@ -183,6 +251,8 @@ const EventChecklist = () => {
             if (data.success) {
                 setEventStatus("Published");
                 printAlert("Event published successfully! You can now share it with guests.", "success");
+                // mark publish completed
+                updateChecklistItemByKey('publish', 1);
             } else {
                 printAlert("Failed to publish event.", "error");
             }
@@ -193,6 +263,9 @@ const EventChecklist = () => {
     };
     
     const handleShare = () => {
+        if (eventId) {
+            updateChecklistItemByKey('share', 1);
+        }
         navigate(`/invitationPage`);
     };
     
@@ -204,6 +277,27 @@ const EventChecklist = () => {
         navigate(`/guest_insights`);
     };
     
+    const handleExportReporting = () => {
+        if (eventId) {
+            updateChecklistItemByKey('export_report', 1);
+        }
+        navigate(`/guest_insights`);
+    };
+    
+    const handleReviewAttendance = () => {
+        if (eventId) {
+            updateChecklistItemByKey('review_attendance', 1);
+        }
+        navigate(`/guest_insights`);
+    };
+    
+    const handleThankYouEmails = () => {
+        if (eventId) {
+            updateChecklistItemByKey('thank_you', 1);
+        }
+        navigate(`/invitationPage`);
+    };
+    
     const copyEventLink = () => {
         const frontendUrl = getBaseFrontendUrl();
         const eventLink = isTicketEvent 
@@ -211,6 +305,7 @@ const EventChecklist = () => {
             : `${frontendUrl}/rsvpForm?event_id=${eventId}`;
         navigator.clipboard.writeText(eventLink);
         printAlert("Event link copied to clipboard!", "success");
+        updateChecklistItemByKey('share', 1);
     };
     
     if (loading) {
@@ -321,6 +416,19 @@ const EventChecklist = () => {
                                     <i className="bi bi-chevron-right arrow-icon"></i>
                                 </div>
                             </div>
+
+                            {/* Checklist items for Quick Start */}
+                            <div className="checklist-group">
+                                {checklistItems.filter(i => i.category === 'Quick Start').map(item => (
+                                    <div key={item.id} className="checklist-row">
+                                        <label>
+                                            <input type="checkbox" checked={item.completed == 1 || item.completed === '1'} onChange={() => toggleChecklistItem(item)} />
+                                            <span className="checklist-title">{item.title}</span>
+                                        </label>
+                                        <small className="checklist-desc">{item.description}</small>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -385,6 +493,19 @@ const EventChecklist = () => {
                                     </div>
                                 </div>
                             </div>
+
+                                {/* Checklist items for Launch */}
+                                <div className="checklist-group">
+                                    {checklistItems.filter(i => i.category === 'Launch').map(item => (
+                                        <div key={item.id} className="checklist-row">
+                                            <label>
+                                                <input type="checkbox" checked={item.completed == 1 || item.completed === '1'} onChange={() => toggleChecklistItem(item)} />
+                                                <span className="checklist-title">{item.title}</span>
+                                            </label>
+                                            <small className="checklist-desc">{item.description}</small>
+                                        </div>
+                                    ))}
+                                </div>
                         </div>
                     )}
                 </div>
@@ -421,12 +542,24 @@ const EventChecklist = () => {
                                     <p>Manage event details, capacity, and tickets</p>
                                 </div>
                                 
-                                <div className="organize-card">
+                                <div className="organize-card" onClick={() => navigate('/event-checkin')} style={{cursor: 'pointer'}}>
                                     <i className="bi bi-qr-code"></i>
                                     <h4>Check-in</h4>
                                     <p>Check-in guests by name, email, or QR code</p>
-                                    <small className="coming-soon">Coming soon</small>
                                 </div>
+                            </div>
+
+                            {/* Checklist items for Organize */}
+                            <div className="checklist-group">
+                                {checklistItems.filter(i => i.category === 'Organize').map(item => (
+                                    <div key={item.id} className="checklist-row">
+                                        <label>
+                                            <input type="checkbox" checked={item.completed == 1 || item.completed === '1'} onChange={() => toggleChecklistItem(item)} />
+                                            <span className="checklist-title">{item.title}</span>
+                                        </label>
+                                        <small className="checklist-desc">{item.description}</small>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -452,18 +585,31 @@ const EventChecklist = () => {
                     {expandedSections.followUp && (
                         <div className="section-content">
                             <div className="followup-actions">
-                                <div className="followup-item" onClick={handleGuestInsights}>
+                                <div className="followup-item" onClick={handleExportReporting}>
                                     <i className="bi bi-download"></i>
                                     <span>Export reporting</span>
                                 </div>
-                                <div className="followup-item" onClick={handleGuestInsights}>
+                                <div className="followup-item" onClick={handleReviewAttendance}>
                                     <i className="bi bi-people"></i>
                                     <span>Review attendance</span>
                                 </div>
-                                <div className="followup-item" onClick={handleShare}>
+                                <div className="followup-item" onClick={handleThankYouEmails}>
                                     <i className="bi bi-envelope-heart"></i>
                                     <span>Send thank you emails</span>
                                 </div>
+                            </div>
+
+                            {/* Checklist items for Follow Up */}
+                            <div className="checklist-group">
+                                {checklistItems.filter(i => i.category === 'Follow Up').map(item => (
+                                    <div key={item.id} className="checklist-row">
+                                        <label>
+                                            <input type="checkbox" checked={item.completed == 1 || item.completed === '1'} onChange={() => toggleChecklistItem(item)} />
+                                            <span className="checklist-title">{item.title}</span>
+                                        </label>
+                                        <small className="checklist-desc">{item.description}</small>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}

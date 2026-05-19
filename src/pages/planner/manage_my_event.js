@@ -1220,6 +1220,14 @@ const Manage_my_event = () => {
                 setOriginalGuestLimit(newGuestLimit);
 
                 printAlert("Ticket configuration saved successfully! Total capacity: " + newGuestLimit, "success");
+                try {
+                    const syncFd = new FormData();
+                    syncFd.append('function', 'syncChecklistAutoItems');
+                    syncFd.append('event_id', event_id);
+                    await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: 'POST', body: syncFd });
+                } catch (e) {
+                    console.error('Error syncing checklist after saving tickets', e);
+                }
                 return true;
             } else {
                 printAlert("Failed to save ticket configuration: " + (data.message || ''), "error");

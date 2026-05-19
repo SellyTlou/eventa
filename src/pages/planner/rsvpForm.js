@@ -144,7 +144,7 @@ const RsvpForm = () => {
             formData.append("function", "getEventCustomQuestions");
             formData.append("event_id", eventId);
 
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rsvp.php`, {
                 method: "POST",
                 body: formData,
             });
@@ -166,7 +166,7 @@ const RsvpForm = () => {
             form.append("function", "getRsvpGuestCount");
             form.append("event_id", eventId);
 
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rsvp.php`, {
                 method: "POST",
                 body: form,
             });
@@ -190,7 +190,7 @@ const RsvpForm = () => {
             form.append("function", "getEventGuestLimit");
             form.append("event_id", eventId);
 
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rsvp.php`, {
                 method: "POST",
                 body: form,
             });
@@ -215,7 +215,7 @@ const RsvpForm = () => {
             form.append("function", "getEventById");
             form.append("event_id", eventId);
 
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/events.php`, {
                 method: "POST",
                 body: form
             });
@@ -366,7 +366,7 @@ const RsvpForm = () => {
         formDataToSend.append("customAnswers", JSON.stringify(formData.customAnswers)); // Send custom answers
 
         try {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rsvp.php`, {
                 method: "POST",
                 body: formDataToSend,
             });

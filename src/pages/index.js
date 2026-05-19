@@ -28,7 +28,7 @@ function Index() {
     // Fetch pricing plans from database
     const fetchPricingPlans = async () => {
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
             const formData = new FormData();
             formData.append("function", "getAllPackages");
 
@@ -74,7 +74,7 @@ function Index() {
     const fetchTrendingEvents = async () => {
         try {
             setLoadingTrending(true);
-            const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
             const formData = new FormData();
             formData.append("function", "getTrendingEvents");
 

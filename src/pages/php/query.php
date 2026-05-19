@@ -1,7 +1,7 @@
 <?php
 
 
-header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Origin: http://localhost:3000");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
@@ -11,6 +11,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    echo json_encode(["success" => true, "message" => "Legacy API reachable"]);
+    exit();
+}
+
+// Start PHP session for authentication
+session_start();
 
 require_once "dbConnection.php";
 
@@ -140,6 +148,27 @@ function verifyAdminAccess($pdo, $userId)
         error_log("Admin verification error: " . $e->getMessage());
         return false;
     }
+}
+
+// Session-based authentication check
+function requireAuth()
+{
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_email'])) {
+        echo json_encode(["success" => false, "message" => "Authentication required"]);
+        exit;
+    }
+    return $_SESSION['user_id'];
+}
+
+// Admin auth check
+function requireAdminAuth($pdo)
+{
+    $userId = requireAuth();
+    if (!verifyAdminAccess($pdo, $userId)) {
+        echo json_encode(["success" => false, "message" => "Admin access required"]);
+        exit;
+    }
+    return $userId;
 }
 
 function generateUserID($pdo)
@@ -449,8 +478,229 @@ function verifyRecaptcha($secretKey, $responseToken)
     }
 }
 
-if (!isset($_POST['function'])) {
+$fun = $_POST['function'] ?? '';
+
+if (empty($fun)) {
     echo json_encode(["error" => "No function specified"]);
+    exit;
+}
+
+// Sync auto-complete checklist items based on event state
+if ($fun === "syncChecklistAutoItems") {
+    $event_id = $_POST['event_id'] ?? '';
+    if (empty($event_id)) {
+        echo json_encode(['success' => false, 'message' => 'Event ID required']);
+        exit;
+    }
+
+    try {
+        // Invite list
+        $inviteStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM invitations WHERE event_id = ?");
+        $inviteStmt->execute([$event_id]);
+        $inviteCnt = (int)$inviteStmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+        if ($inviteCnt > 0) {
+            $pdo->prepare("UPDATE event_checklist_items SET completed = 1, completed_at = NOW() WHERE event_id = ? AND item_key = 'invite_list'")->execute([$event_id]);
+        } else {
+            $pdo->prepare("UPDATE event_checklist_items SET completed = 0, completed_at = NULL WHERE event_id = ? AND item_key = 'invite_list'")->execute([$event_id]);
+        }
+
+        // Tickets configured
+        $ticketCfg = $pdo->prepare("SELECT ticket_config FROM events WHERE event_id = ? LIMIT 1");
+        $ticketCfg->execute([$event_id]);
+        $row = $ticketCfg->fetch(PDO::FETCH_ASSOC);
+        $hasTicketConfig = !empty($row['ticket_config']) && $row['ticket_config'] !== '{}' ;
+        if ($hasTicketConfig) {
+            $pdo->prepare("UPDATE event_checklist_items SET completed = 1, completed_at = NOW() WHERE event_id = ? AND item_key = 'configure_tickets'")->execute([$event_id]);
+        }
+
+        // Published
+        $pubStmt = $pdo->prepare("SELECT published FROM events WHERE event_id = ? LIMIT 1");
+        $pubStmt->execute([$event_id]);
+        $pub = $pubStmt->fetch(PDO::FETCH_ASSOC);
+        if (!empty($pub['published']) && $pub['published'] != '0') {
+            $pdo->prepare("UPDATE event_checklist_items SET completed = 1, completed_at = NOW() WHERE event_id = ? AND item_key = 'publish'")->execute([$event_id]);
+        }
+
+        // Return updated list
+        $list = $pdo->prepare("SELECT * FROM event_checklist_items WHERE event_id = ? ORDER BY item_order ASC, id ASC");
+        $list->execute([$event_id]);
+        $items = $list->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'items' => $items]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Check-in endpoints
+if ($fun === "performCheckin") {
+    $event_id = $_POST['event_id'] ?? '';
+    $guest_id = $_POST['guest_id'] ?? null;
+    $booking_id = $_POST['booking_id'] ?? null;
+    $checked_in_by = $_POST['user_id'] ?? null;
+
+    if (empty($event_id) || (empty($guest_id) && empty($booking_id))) {
+        echo json_encode(['success' => false, 'message' => 'event_id and guest_id or booking_id required']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO event_checkins (event_id, guest_id, booking_id, checked_in_by, checked_in_at) VALUES (?, ?, ?, ?, NOW())");
+        $stmt->execute([$event_id, $guest_id, $booking_id, $checked_in_by]);
+
+        // mark checkin task completed
+        $pdo->prepare("UPDATE event_checklist_items SET completed = 1, completed_at = NOW() WHERE event_id = ? AND item_key = 'checkin'")->execute([$event_id]);
+
+        echo json_encode(['success' => true, 'message' => 'Checked in']);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "getEventCheckins") {
+    $event_id = $_POST['event_id'] ?? '';
+    if (empty($event_id)) {
+        echo json_encode(['success' => false, 'message' => 'Event ID required']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM event_checkins WHERE event_id = ? ORDER BY checked_in_at DESC");
+        $stmt->execute([$event_id]);
+        $list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'checkins' => $list]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Event checklist handlers
+if ($fun === "getEventChecklist") {
+    $event_id = $_POST['event_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode(['success' => false, 'message' => 'Event ID is required']);
+        exit;
+    }
+
+    try {
+        // Fetch existing checklist items
+        $stmt = $pdo->prepare("SELECT * FROM event_checklist_items WHERE event_id = :event_id ORDER BY item_order ASC, id ASC");
+        $stmt->execute([':event_id' => $event_id]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // If no items exist, initialize default checklist
+        if (empty($items)) {
+            $eventStmt = $pdo->prepare("SELECT has_tickets FROM events WHERE event_id = :event_id LIMIT 1");
+            $eventStmt->execute([':event_id' => $event_id]);
+            $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
+            $hasTickets = !empty($event['has_tickets']);
+
+            $defaults = [
+                ['item_key' => 'website', 'title' => 'Event website', 'description' => 'Create a website to showcase details about your event', 'category' => 'Quick Start', 'item_order' => 10],
+                ['item_key' => 'form', 'title' => 'Form builder', 'description' => 'Customize your registration form', 'category' => 'Quick Start', 'item_order' => 20],
+                ['item_key' => 'invite_list', 'title' => 'Invite list', 'description' => 'Add invitees to receive email invitations', 'category' => 'Quick Start', 'item_order' => 30],
+                ['item_key' => 'preview', 'title' => 'Preview', 'description' => 'Test out the full experience from start to finish', 'category' => 'Launch', 'item_order' => 40],
+                ['item_key' => 'publish', 'title' => 'Publish', 'description' => 'Make your event link live and start collecting responses', 'category' => 'Launch', 'item_order' => 50],
+                ['item_key' => 'share', 'title' => 'Share & Invite', 'description' => 'Share your event link or send email invitations', 'category' => 'Launch', 'item_order' => 60],
+                ['item_key' => 'reporting', 'title' => 'Reporting', 'description' => 'Review and export all event response data', 'category' => 'Organize', 'item_order' => 70],
+                ['item_key' => 'settings', 'title' => 'Event settings', 'description' => 'Manage event details, capacity, and tickets', 'category' => 'Organize', 'item_order' => 80],
+                ['item_key' => 'checkin', 'title' => 'Check-in', 'description' => 'Check-in guests by name, email, or QR code', 'category' => 'Organize', 'item_order' => 90],
+                ['item_key' => 'export_report', 'title' => 'Export reporting', 'description' => 'Export attendee and RSVP reports', 'category' => 'Follow Up', 'item_order' => 100],
+                ['item_key' => 'review_attendance', 'title' => 'Review attendance', 'description' => 'Review who attended the event', 'category' => 'Follow Up', 'item_order' => 110],
+                ['item_key' => 'thank_you', 'title' => 'Send thank-you emails', 'description' => 'Send follow-up thank you emails', 'category' => 'Follow Up', 'item_order' => 120],
+            ];
+
+            if ($hasTickets) {
+                array_splice($defaults, 3, 0, [[
+                    'item_key' => 'configure_tickets',
+                    'title' => 'Configure tickets',
+                    'description' => 'Set up ticket types and limits',
+                    'category' => 'Quick Start',
+                    'item_order' => 35
+                ], [
+                    'item_key' => 'payment_setup',
+                    'title' => 'Payment gateway',
+                    'description' => 'Connect payment gateway for ticket sales',
+                    'category' => 'Quick Start',
+                    'item_order' => 36
+                ]]);
+            }
+
+            $insertStmt = $pdo->prepare("INSERT INTO event_checklist_items (event_id, item_key, title, description, category, item_order, created_at, updated_at) VALUES (:event_id, :item_key, :title, :description, :category, :item_order, NOW(), NOW())");
+            foreach ($defaults as $d) {
+                $insertStmt->execute([
+                    ':event_id' => $event_id,
+                    ':item_key' => $d['item_key'],
+                    ':title' => $d['title'],
+                    ':description' => $d['description'],
+                    ':category' => $d['category'],
+                    ':item_order' => $d['item_order']
+                ]);
+            }
+
+            // Re-fetch
+            $stmt->execute([':event_id' => $event_id]);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        echo json_encode(['success' => true, 'items' => $items]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($fun === "updateChecklistItem") {
+    $event_id = $_POST['event_id'] ?? '';
+    $item_key = $_POST['item_key'] ?? '';
+    $completed = isset($_POST['completed']) ? intval($_POST['completed']) : null;
+    $user_id = $_POST['user_id'] ?? null;
+
+    if (empty($event_id) || empty($item_key) || $completed === null) {
+        echo json_encode(['success' => false, 'message' => 'event_id, item_key and completed are required']);
+        exit;
+    }
+
+    try {
+        // Update existing
+        $stmt = $pdo->prepare("SELECT * FROM event_checklist_items WHERE event_id = :event_id AND item_key = :item_key LIMIT 1");
+        $stmt->execute([':event_id' => $event_id, ':item_key' => $item_key]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($row) {
+            $update = $pdo->prepare("UPDATE event_checklist_items SET completed = :completed, completed_by = :completed_by, completed_at = :completed_at, updated_at = NOW() WHERE id = :id");
+            $update->execute([
+                ':completed' => $completed,
+                ':completed_by' => $user_id ?: null,
+                ':completed_at' => $completed ? date('Y-m-d H:i:s') : null,
+                ':id' => $row['id']
+            ]);
+        } else {
+            // Insert new item if not present
+            $ins = $pdo->prepare("INSERT INTO event_checklist_items (event_id, item_key, title, description, category, item_order, completed, completed_by, completed_at, created_at, updated_at) VALUES (:event_id, :item_key, :title, '', 'General', 999, :completed, :completed_by, :completed_at, NOW(), NOW())");
+            $ins->execute([
+                ':event_id' => $event_id,
+                ':item_key' => $item_key,
+                ':title' => $item_key,
+                ':completed' => $completed,
+                ':completed_by' => $user_id ?: null,
+                ':completed_at' => $completed ? date('Y-m-d H:i:s') : null
+            ]);
+        }
+
+        // Return updated list
+        $list = $pdo->prepare("SELECT * FROM event_checklist_items WHERE event_id = :event_id ORDER BY item_order ASC, id ASC");
+        $list->execute([':event_id' => $event_id]);
+        $items = $list->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'items' => $items]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
     exit;
 }
 
@@ -744,6 +994,12 @@ if ($fun === "login") {
                 $update = $pdo->prepare("UPDATE users SET session = 1 WHERE user_id = :id");
                 $update->execute([":id" => $user['user_id']]);
 
+                // Set PHP session variables for authentication
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['user_email'] = $user['email'];
+                $_SESSION['user_role'] = $user['role'];
+                $_SESSION['user_name'] = $user['name'];
+
                 echo json_encode([
                     "success" => true,
                     "message" => "Login successful",
@@ -781,6 +1037,10 @@ if ($fun === "logout") {
     try {
         $stmt = $pdo->prepare("UPDATE users SET session = 0 WHERE user_id = :id");
         $stmt->execute([':id' => $id]);
+
+        // Clear PHP session
+        session_unset();
+        session_destroy();
 
         echo json_encode(["success" => true, "message" => "Logged out successfully"]);
     } catch (PDOException $e) {
@@ -3072,18 +3332,13 @@ if ($fun === "getRevenueData") {
 }
 
 if ($fun === "updateAdminProfile") {
+    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
     $name = $_POST['name'] ?? '';
     $lastname = $_POST['lastname'] ?? '';
     $email = $_POST['email'] ?? '';
 
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
+    // Additional check if needed, but session should ensure admin
 
     if (empty($name) || empty($email)) {
         echo json_encode([
@@ -3131,15 +3386,8 @@ if ($fun === "updateAdminProfile") {
 }
 
 if ($fun === "getAdminProfile") {
+    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized: Admin access required",
-        ]);
-        exit;
-    }
 
     try {
         $stmt = $pdo->prepare("
@@ -5199,14 +5447,10 @@ if ($fun === "addManualPayment") {
 }
 
 if ($fun === "changeAdminPassword") {
+    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
     $currentPassword = $_POST['current_password'] ?? '';
     $newPassword = $_POST['new_password'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
 
     if (empty($currentPassword) || empty($newPassword)) {
         echo json_encode(["success" => false, "message" => "Current and new password are required"]);
@@ -5333,17 +5577,13 @@ if ($fun === "getReportedEvents") {
 }
 
 if ($fun === "adminDeleteEvent") {
+    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
     $event_id = $_POST['event_id'] ?? '';
     $reason = $_POST['reason'] ?? '';
     $custom_reason = $_POST['custom_reason'] ?? '';
     $block_user = $_POST['block_user'] ?? false;
     $violation_severity = $_POST['violation_severity'] ?? 'medium';
-
-    if (!verifyAdminAccess($pdo, $adminUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized"]);
-        exit;
-    }
 
     if (empty($event_id) || empty($reason)) {
         echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -5535,16 +5775,12 @@ if ($fun === "getAllEvents") {
 }
 
 if ($fun === "createAdmin") {
+    requireAdminAuth($pdo);
     $requestingUserId = $_POST['requesting_user_id'] ?? '';
     $name = $_POST['name'] ?? '';
     $lastname = $_POST['lastname'] ?? '';
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
-
-    if (!verifyAdminAccess($pdo, $requestingUserId)) {
-        echo json_encode(["success" => false, "message" => "Unauthorized: Admin access required"]);
-        exit;
-    }
 
     if (empty($name) || empty($lastname) || empty($email) || empty($password)) {
         echo json_encode(["success" => false, "message" => "All fields are required"]);
@@ -7676,6 +7912,14 @@ if ($fun === "addEventInvite") {
         ");
         $stmt->execute([$event_id, $name, $email]);
         
+        // mark checklist invite_list completed if item exists
+        try {
+            $upd = $pdo->prepare("UPDATE event_checklist_items SET completed = 1, completed_at = NOW() WHERE event_id = ? AND item_key = 'invite_list'");
+            $upd->execute([$event_id]);
+        } catch (PDOException $ie) {
+            // ignore
+        }
+
         echo json_encode([
             'success' => true, 
             'message' => 'Invite added successfully',
@@ -7701,6 +7945,19 @@ if ($fun === "removeEventInvite") {
         $stmt->execute([$event_id, $email]);
         
         if ($stmt->rowCount() > 0) {
+            // If there are no more invites, mark invite_list incomplete
+            try {
+                $countStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM invitations WHERE event_id = ?");
+                $countStmt->execute([$event_id]);
+                $cnt = (int) $countStmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+                if ($cnt === 0) {
+                    $upd = $pdo->prepare("UPDATE event_checklist_items SET completed = 0, completed_at = NULL WHERE event_id = ? AND item_key = 'invite_list'");
+                    $upd->execute([$event_id]);
+                }
+            } catch (PDOException $ie) {
+                // ignore
+            }
+
             echo json_encode(['success' => true, 'message' => 'Invite removed successfully']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Invite not found']);
