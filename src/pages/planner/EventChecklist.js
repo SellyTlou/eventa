@@ -16,6 +16,7 @@ const EventChecklist = () => {
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
     const [user, setUser] = useState(null);
     const [eventId, setEventId] = useState(null);
+    const [ticketConfig, setTicketConfig] = useState(null);
     
     // Collapsible sections state - all closed by default
     const [expandedSections, setExpandedSections] = useState({
@@ -42,7 +43,7 @@ const EventChecklist = () => {
     
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
-        const storedEventId = localStorage.getItem("selectedEventId");
+        const savedEventData = localStorage.getItem("selectedEventData");
         
         if (!storedUser) {
             printAlert("Session expired. Please log in again.", "error");
@@ -52,11 +53,17 @@ const EventChecklist = () => {
         
         const userData = JSON.parse(storedUser);
         setUser(userData);
-        setEventId(storedEventId);
         
-        if (storedEventId) {
-            fetchEventDetails(storedEventId);
-            fetchEventStatus(storedEventId);
+        if (savedEventData) {
+            const eventDataObj = JSON.parse(savedEventData);
+            const eventIdValue = eventDataObj.eventId;
+            const hasTicketFlag = eventDataObj.hasTicket === 1 || eventDataObj.hasTicket === true;
+            
+            setEventId(eventIdValue);
+            setIsTicketEvent(hasTicketFlag);
+            
+            fetchEventDetails(eventIdValue, hasTicketFlag);
+            fetchEventStatus(eventIdValue, hasTicketFlag);
         } else {
             // No event selected, go to dashboard
             const dashPath = userData?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
@@ -64,11 +71,17 @@ const EventChecklist = () => {
         }
     }, [navigate]);
     
-    const fetchEventDetails = async (eventId) => {
+    const fetchEventDetails = async (eventId, hasTicketFlag) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            formData.append("function", "getEventById");
+            
+            if (hasTicketFlag) {
+                formData.append("function", "getTicketEventById");
+            } else {
+                formData.append("function", "getEventById");
+            }
+            
             formData.append("event_id", eventId);
             
             const response = await fetch(`${API_URL}/query.php`, {
@@ -77,18 +90,55 @@ const EventChecklist = () => {
             });
             
             const data = await response.json();
+            console.log("Event details response:", data);
+            
             if (data.success && data.events && data.events.length > 0) {
                 const event = data.events[0];
                 setEventData(event);
-                const hasTickets = event.has_tickets === 1 || event.has_tickets === true;
-                setIsTicketEvent(hasTickets);
-                calculateProgress(event);
+                
+                // For ticket events, also fetch ticket configuration
+                if (hasTicketFlag) {
+                    fetchTicketConfiguration(eventId);
+                }
+                
+                calculateProgress(event, hasTicketFlag);
                 fetchChecklist(eventId);
             }
         } catch (err) {
             console.error("Error fetching event details:", err);
         } finally {
             setLoading(false);
+        }
+    };
+    
+    const fetchTicketConfiguration = async (eventId) => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getTicketEventById");
+            formData.append("event_id", eventId);
+            
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData,
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.events && data.events.length > 0) {
+                const event = data.events[0];
+                setTicketConfig({
+                    earlybird_price: event.earlybird_price,
+                    earlybird_quantity: event.earlybird_quantity,
+                    general_price: event.general_price,
+                    general_quantity: event.general_quantity,
+                    vip_price: event.vip_price,
+                    vip_quantity: event.vip_quantity,
+                    has_tickets: event.has_tickets
+                });
+            }
+        } catch (err) {
+            console.error("Error fetching ticket configuration:", err);
         }
     };
 
@@ -156,11 +206,17 @@ const EventChecklist = () => {
         }
     };
     
-    const fetchEventStatus = async (eventId) => {
+    const fetchEventStatus = async (eventId, isTicketEvent) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            formData.append("function", "getEventStatusByID");
+            
+            if (isTicketEvent) {
+                formData.append("function", "getTicketEventStatusByID");
+            } else {
+                formData.append("function", "getEventStatusByID");
+            }
+            
             formData.append("event_id", eventId);
             
             const response = await fetch(`${API_URL}/query.php`, {
@@ -169,23 +225,52 @@ const EventChecklist = () => {
             });
             
             const data = await response.json();
+            console.log("Event status response:", data);
+            
             if (data.success && data.status) {
-                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+                if (isTicketEvent) {
+                    const statusValue = data.status.status;
+                    if (statusValue === 'published') {
+                        setEventStatus("Published");
+                    } else if (statusValue === 'pending') {
+                        setEventStatus("Pending");
+                    } else if (statusValue === 'cancelled') {
+                        setEventStatus("Cancelled");
+                    } else if (statusValue === 'completed') {
+                        setEventStatus("Completed");
+                    } else {
+                        setEventStatus("Unknown");
+                    }
+                } else {
+                    setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+                }
             }
         } catch (err) {
             console.error("Error fetching event status:", err);
         }
     };
     
-    const calculateProgress = (event) => {
+    const calculateProgress = (event, isTicketEvent) => {
         let completedSteps = 0;
-        const totalSteps = 5;
+        let totalSteps = isTicketEvent ? 6 : 5;
         
         if (event.event_name && event.event_name !== "Untitled Event") completedSteps++;
         if (event.event_start_date) completedSteps++;
-        if (event.event_location) completedSteps++;
+        if (event.event_location || event.address) completedSteps++;
         if (event.event_image) completedSteps++;
-        if (event.guest_limit > 0) completedSteps++;
+        
+        if (isTicketEvent) {
+            // For ticket events, check if any tickets are configured
+            const hasTicketsConfigured = (
+                (event.general_quantity > 0 && event.general_price > 0) ||
+                (event.earlybird_quantity > 0 && event.earlybird_price > 0) ||
+                (event.vip_quantity > 0 && event.vip_price > 0)
+            );
+            if (hasTicketsConfigured) completedSteps++;
+        } else {
+            // For RSVP events, check guest limit
+            if (event.guest_limit > 0) completedSteps++;
+        }
         
         setProgress(Math.round((completedSteps / totalSteps) * 100));
     };
@@ -237,10 +322,24 @@ const EventChecklist = () => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            formData.append("function", "updateEventStatus");
+            
+            if (isTicketEvent) {
+                formData.append("function", "publishTicketEvent");
+                // Calculate total capacity from ticket quantities
+                const totalCapacity = (
+                    parseInt(ticketConfig?.earlybird_quantity || 0) +
+                    parseInt(ticketConfig?.general_quantity || 0) +
+                    parseInt(ticketConfig?.vip_quantity || 0)
+                );
+                formData.append("guest_limit", totalCapacity);
+                formData.append("published", 1);
+            } else {
+                formData.append("function", "updateEventStatus");
+                formData.append("guest_limit", eventData?.guest_limit || 50);
+                formData.append("published", 1);
+            }
+            
             formData.append("event_id", eventId);
-            formData.append("published", 1);
-            formData.append("guest_limit", eventData?.guest_limit || 50);
             
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -248,13 +347,15 @@ const EventChecklist = () => {
             });
             
             const data = await response.json();
+            console.log("Publish response:", data);
+            
             if (data.success) {
                 setEventStatus("Published");
                 printAlert("Event published successfully! You can now share it with guests.", "success");
                 // mark publish completed
                 updateChecklistItemByKey('publish', 1);
             } else {
-                printAlert("Failed to publish event.", "error");
+                printAlert("Failed to publish event: " + (data.message || ''), "error");
             }
         } catch (err) {
             console.error("Error publishing event:", err);
@@ -306,6 +407,16 @@ const EventChecklist = () => {
         navigator.clipboard.writeText(eventLink);
         printAlert("Event link copied to clipboard!", "success");
         updateChecklistItemByKey('share', 1);
+    };
+    
+    // Calculate total capacity for ticket events
+    const getTotalCapacity = () => {
+        if (!isTicketEvent || !ticketConfig) return 0;
+        return (
+            parseInt(ticketConfig.earlybird_quantity || 0) +
+            parseInt(ticketConfig.general_quantity || 0) +
+            parseInt(ticketConfig.vip_quantity || 0)
+        );
     };
     
     if (loading) {
@@ -417,6 +528,18 @@ const EventChecklist = () => {
                                 </div>
                             </div>
 
+                            {/* Ticket Configuration - Only for ticket events */}
+                            {isTicketEvent && (
+                                <div className="checklist-item clickable-item">
+                                    <div className="item-header" onClick={() => navigate("/manage_my_event")}>
+                                        <i className="bi bi-ticket-perforated"></i>
+                                        <h3>Configure Tickets</h3>
+                                        <span className="item-badge">Set up ticket types, prices, and quantities</span>
+                                        <i className="bi bi-chevron-right arrow-icon"></i>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Checklist items for Quick Start */}
                             <div className="checklist-group">
                                 {checklistItems.filter(i => i.category === 'Quick Start').map(item => (
@@ -452,6 +575,14 @@ const EventChecklist = () => {
                     
                     {expandedSections.launch && (
                         <div className="section-content">
+                            {/* Show ticket event specific info */}
+                            {isTicketEvent && ticketConfig && (
+                                <div className="ticket-capacity-info">
+                                    <i className="bi bi-info-circle"></i>
+                                    <span>Total ticket capacity: {getTotalCapacity()} tickets</span>
+                                </div>
+                            )}
+                            
                             <div className="launch-actions">
                                 <div className="launch-card" onClick={handlePreview}>
                                     <i className="bi bi-eye launch-icon"></i>
@@ -494,18 +625,18 @@ const EventChecklist = () => {
                                 </div>
                             </div>
 
-                                {/* Checklist items for Launch */}
-                                <div className="checklist-group">
-                                    {checklistItems.filter(i => i.category === 'Launch').map(item => (
-                                        <div key={item.id} className="checklist-row">
-                                            <label>
-                                                <input type="checkbox" checked={item.completed == 1 || item.completed === '1'} onChange={() => toggleChecklistItem(item)} />
-                                                <span className="checklist-title">{item.title}</span>
-                                            </label>
-                                            <small className="checklist-desc">{item.description}</small>
-                                        </div>
-                                    ))}
-                                </div>
+                            {/* Checklist items for Launch */}
+                            <div className="checklist-group">
+                                {checklistItems.filter(i => i.category === 'Launch').map(item => (
+                                    <div key={item.id} className="checklist-row">
+                                        <label>
+                                            <input type="checkbox" checked={item.completed == 1 || item.completed === '1'} onChange={() => toggleChecklistItem(item)} />
+                                            <span className="checklist-title">{item.title}</span>
+                                        </label>
+                                        <small className="checklist-desc">{item.description}</small>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -547,6 +678,15 @@ const EventChecklist = () => {
                                     <h4>Check-in</h4>
                                     <p>Check-in guests by name, email, or QR code</p>
                                 </div>
+                                
+                                {/* Ticket Management - Only for ticket events */}
+                                {isTicketEvent && (
+                                    <div className="organize-card" onClick={() => navigate('/manage_my_event')}>
+                                        <i className="bi bi-ticket-perforated"></i>
+                                        <h4>Ticket Management</h4>
+                                        <p>Manage ticket types, prices, and availability</p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Checklist items for Organize */}

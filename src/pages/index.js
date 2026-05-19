@@ -25,6 +25,30 @@ function Index() {
         { id: 4, title: "Baby Shower", img: "images/popular events/baby shower.png", description: "Creating unforgattable baby shower memories" },
     ];
 
+    // Helper function to check if event has passed
+    const isEventExpired = (event) => {
+        if (!event.event_end_date) return false;
+        
+        try {
+            const endDate = new Date(event.event_end_date);
+            const today = new Date();
+            // Set time to 00:00:00 for date comparison
+            today.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            
+            return endDate < today;
+        } catch (error) {
+            console.error("Error comparing dates:", error);
+            return false;
+        }
+    };
+
+    // Filter events that haven't expired yet
+    const filterActiveEvents = (events) => {
+        if (!Array.isArray(events)) return [];
+        return events.filter(event => !isEventExpired(event));
+    };
+
     // Fetch pricing plans from database
     const fetchPricingPlans = async () => {
         try {
@@ -88,9 +112,27 @@ function Index() {
             const data = await response.json();
 
             if (data.success && Array.isArray(data.events)) {
+                // Filter out expired events
+                const activeEvents = data.events.filter(event => {
+                    // Check if event has an end date and if it's passed
+                    if (event.event_end_date) {
+                        const endDate = new Date(event.event_end_date);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        endDate.setHours(0, 0, 0, 0);
+                        
+                        // Only include events that haven't ended
+                        return endDate >= today;
+                    }
+                    // If no end date, include the event
+                    return true;
+                });
+                
                 // Ensure each event has an event_id
-                const validEvents = data.events.filter(event => event.event_id != null);
+                const validEvents = activeEvents.filter(event => event.event_id != null);
                 setTrendingEvents(validEvents);
+                
+                console.log(`Filtered trending events: ${validEvents.length} active out of ${data.events.length} total`);
             } else {
                 console.error("Failed to fetch trending events:", data.message);
                 setTrendingEvents([]);
@@ -105,6 +147,11 @@ function Index() {
 
     // Handle click on event
     const handleEventClick = (event) => {
+        // Check if event is expired before allowing navigation
+        if (isEventExpired(event)) {
+            alert("This event has already ended and is no longer available.");
+            return;
+        }
 
         // Get the event ID - could be in different formats
         const eventId = event?.event_id;
@@ -189,6 +236,7 @@ function Index() {
 
     // Log trending events when they change
     useEffect(() => {
+        console.log(`Trending events updated: ${trendingEvents.length} active events`);
     }, [trendingEvents]);
 
     // Fallback function for features
@@ -653,6 +701,11 @@ function Index() {
                                                             <span className="trending-badge">
                                                                 #{trendingEvents.findIndex(e => e.event_id === event.event_id) + 1} Trending
                                                             </span>
+                                                            {isEventExpired(event) && (
+                                                                <span className="expired-badge">
+                                                                    <i className="bi bi-calendar-x"></i> Expired
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="car-info">
@@ -719,8 +772,8 @@ function Index() {
                             <div className="text-center py-5">
                                 <div className="no-events-message">
                                     <i className="fas fa-calendar-alt fa-3x mb-3" style={{ color: '#ffd700' }}></i>
-                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>No Trending Events Yet</h3>
-                                    <p style={{ color: 'rgba(255,255,255,0.7)' }}>Check back soon for exciting events!</p>
+                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>No Active Trending Events</h3>
+                                    <p style={{ color: 'rgba(255,255,255,0.7)' }}>Check back soon for exciting upcoming events!</p>
                                 </div>
                             </div>
                         )}
