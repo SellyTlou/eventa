@@ -279,7 +279,7 @@ const EventsDashboard = () => {
     const fetchAllUserEvents = async (userId) => {
         try {
             setLoading(true);
-            const API_URL = process.env.REACT_APP_API_URL;
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
             // Fetch regular events
             const regularFormData = new FormData();

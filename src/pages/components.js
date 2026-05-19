@@ -49,6 +49,7 @@ import MyRequests from '../pages/business_planner/MyRequests';
 import RequestDetails from '../pages/business_planner/RequestDetails';
 import CreateTicketEvent from '../pages/createTicketEvent';
 import EventChecklist from './planner/EventChecklist';
+import EventCheckin from './planner/EventCheckin';
 import FormBuilder from './planner/FormBuilder';
 import TicketCancel from './ticketCancel';
 import TicketSuccess from './ticketSuccess';
@@ -82,7 +83,8 @@ export async function logOut() {
 
         const response = await fetch(`${API_URL}/query.php`, {
             method: "POST",
-            body: formData
+            body: formData,
+            credentials: 'include'
         });
 
         const result = await response.json();
@@ -142,6 +144,7 @@ export const useSessionTimeout = (timeoutMinutes = 10, warningSeconds = 10) => {
                 await fetch(`${API_URL}/query.php`, {
                     method: "POST",
                     body: formData,
+                    credentials: 'include'
                 });
             }
         } catch (err) {
@@ -190,6 +193,47 @@ export const SessionWarningModal = ({ show, countdown, onStayLoggedIn, onLogout 
 };
 
 
+export function PrivateRoute({ children, adminOnly = false }) {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const storedUser = localStorage.getItem("user");
+                if (!storedUser) {
+                    navigate("/");
+                    return;
+                }
+
+                const parsedUser = JSON.parse(storedUser);
+                
+                // For admin-only routes, check role
+                if (adminOnly && parsedUser.role !== 'admin') {
+                    navigate("/");
+                    return;
+                }
+
+                setUser(parsedUser);
+            } catch (error) {
+                console.error("Auth check error:", error);
+                navigate("/");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkAuth();
+    }, [navigate, adminOnly]);
+
+    if (loading) {
+        return <div>Loading...</div>; // Or a proper loading component
+    }
+
+    return user ? children : null;
+}
+
 export function SessionHandler() {
     const { showWarning, countdown, stayLoggedIn, logout } = useSessionTimeout(10, 10);
     return (
@@ -198,28 +242,28 @@ export function SessionHandler() {
                 <Route path="/" element={<Index />} />
                 <Route path="/feature" element={<Features />} />
                 <Route path="/pricing" element={<Pricing />} />
-                <Route path="/createEvent" element={<CreateEvent />} />
-                <Route path="/sales" element={<Sales />} />
-                <Route path="/admindashboard" element={<AdminDashboard />} />
-                <Route path="/eventTheme" element={<EventTheme />} />
-                <Route path="/postcardEditor" element={<PostcardEditor />} />
-                <Route path="/activeEventDetails" element={<ActiveEventDetails />} />
-                <Route path="/eventsDashboard" element={<EventsDashboard />} />
-                <Route path="/eventManagement" element={<EventManagement />} />
-                <Route path="/invitationPage" element={<InvitationPage />} />
-                <Route path="/rsvpForm" element={<RsvpForm />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/Manage_my_event" element={<ManageEyEvent />} />
-                <Route path="/packagepayment" element={<PackagePayment />} />
+                <Route path="/createEvent" element={<PrivateRoute><CreateEvent /></PrivateRoute>} />
+                <Route path="/sales" element={<PrivateRoute><Sales /></PrivateRoute>} />
+                <Route path="/admindashboard" element={<PrivateRoute adminOnly={true}><AdminDashboard /></PrivateRoute>} />
+                <Route path="/eventTheme" element={<PrivateRoute><EventTheme /></PrivateRoute>} />
+                <Route path="/postcardEditor" element={<PrivateRoute><PostcardEditor /></PrivateRoute>} />
+                <Route path="/activeEventDetails" element={<PrivateRoute><ActiveEventDetails /></PrivateRoute>} />
+                <Route path="/eventsDashboard" element={<PrivateRoute><EventsDashboard /></PrivateRoute>} />
+                <Route path="/eventManagement" element={<PrivateRoute><EventManagement /></PrivateRoute>} />
+                <Route path="/invitationPage" element={<PrivateRoute><InvitationPage /></PrivateRoute>} />
+                <Route path="/rsvpForm" element={<PrivateRoute><RsvpForm /></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/Manage_my_event" element={<PrivateRoute><ManageEyEvent /></PrivateRoute>} />
+                <Route path="/packagepayment" element={<PrivateRoute><PackagePayment /></PrivateRoute>} />
                 <Route path="/forgot_password" element={<ForgotPassword />} />
                 <Route path="/email_verify" element={<EmailVerify />} />
-                <Route path="/upgrade_package" element={<UpgradePackage />} />
-                <Route path="/upgrade_business_package" element={<UpgradeBusinessPackage />} />
-                <Route path="/business-package-payment" element={<BusinessPackagePayment />} />
+                <Route path="/upgrade_package" element={<PrivateRoute><UpgradePackage /></PrivateRoute>} />
+                <Route path="/upgrade_business_package" element={<PrivateRoute><UpgradeBusinessPackage /></PrivateRoute>} />
+                <Route path="/business-package-payment" element={<PrivateRoute><BusinessPackagePayment /></PrivateRoute>} />
                 <Route path="/support" element={<Support />} />
-                <Route path="/attendance_stats" element={<AttendanceStats />} />
-                <Route path="/guest_insights" element={<GuestInsights />} />
-                <Route path="/guestMessageView" element={<GuestMessageView />} />
+                <Route path="/attendance_stats" element={<PrivateRoute><AttendanceStats /></PrivateRoute>} />
+                <Route path="/guest_insights" element={<PrivateRoute><GuestInsights /></PrivateRoute>} />
+                <Route path="/guestMessageView" element={<PrivateRoute><GuestMessageView /></PrivateRoute>} />
                 <Route path="/report-event" element={<ReportEvent />} />
                 <Route path="/security-questions" element={<SecurityQuestionsModal />} />
                 <Route path="/admin-ticket" element={<AdminTicket />} />
@@ -241,6 +285,24 @@ export function SessionHandler() {
                 <Route path="/form-builder" element={<FormBuilder />} />
                 <Route path="/ticketCancel" element={<TicketCancel />} />
                 <Route path="/ticketSuccess" element={<TicketSuccess />} />
+                <Route path="/admin-ticket" element={<PrivateRoute adminOnly={true}><AdminTicket /></PrivateRoute>} />
+                <Route path="/ticket-selection" element={<PrivateRoute><TicketSelection /></PrivateRoute>} />
+                <Route path="/support-ticket" element={<PrivateRoute><SupportTicket /></PrivateRoute>} />
+                <Route path="/ticket_sales" element={<PrivateRoute><Ticket_Sale /></PrivateRoute>} />
+                <Route path="/ticketEvent_details" element={<PrivateRoute><TicketEvent_details /></PrivateRoute>} />
+                <Route path="/ticket_payment" element={<PrivateRoute><Ticket_payment /></PrivateRoute>} />
+                <Route path="/businessdashboard" element={<PrivateRoute><BusinessDashboard /></PrivateRoute>} />
+                <Route path="/event_ticket_manage" element={<PrivateRoute><TicketEventManage /></PrivateRoute>} />
+                <Route path="/my-requests" element={<PrivateRoute><MyRequests /></PrivateRoute>} />
+                <Route path="/request-details/:requestId" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
+                <Route path="/custom-plan-request" element={<PrivateRoute><CustomPlanRequestPage /></PrivateRoute>} />
+                <Route path="/request/:requestId" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
+                <Route path="/paymentCancel" element={<PrivateRoute><PaymentCancel /></PrivateRoute>} />
+                <Route path="/paymentSuccess" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
+                <Route path="/createTicketEvent" element={<PrivateRoute><CreateTicketEvent /></PrivateRoute>} />
+                <Route path="/event-checklist" element={<PrivateRoute><EventChecklist /></PrivateRoute>} />
+                <Route path="/event-checkin" element={<PrivateRoute><EventCheckin /></PrivateRoute>} />
+                <Route path="/form-builder" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
 
             </Routes>
 
@@ -1076,7 +1138,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             formData.append("question3", "What is your mother's maiden name?");
             formData.append("answer3", answers.answer3);
 
-            const url = `${apiUrl}/query.php`;
+            const url = `${apiUrl}/api/users.php`;
 
             const response = await fetchWithTimeout(url, {
                 method: "POST",
@@ -1152,7 +1214,8 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
 
             const response = await fetchWithTimeout(url, {
                 method: "POST",
-                body: formDataToSend
+                body: formDataToSend,
+                credentials: 'include'
             }, 15000);
 
             //Check if response is OK and has content
@@ -1685,17 +1748,12 @@ const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
 // Small helper to quickly verify API reaches the server before attempting large requests
 const checkApiReachable = async (baseUrl, timeout = 5000) => {
     try {
-        const form = new FormData();
-        form.append('function', 'getAllPackages'); // lightweight, public endpoint
-
         const resp = await fetchWithTimeout(`${baseUrl}/query.php`, {
-            method: 'POST',
-            body: form
+            method: 'GET'
         }, timeout);
 
         if (!resp.ok) return { ok: false, status: resp.status };
-        const json = await resp.json();
-        return { ok: true, body: json };
+        return { ok: true };
     } catch (err) {
         return { ok: false, error: err.message || String(err) };
     }

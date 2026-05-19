@@ -132,6 +132,15 @@ const InviteListManager = () => {
                 setInviteEmail("");
                 setInviteName("");
                 printAlert("Invite added to list!", "success");
+                // sync checklist auto items
+                try {
+                    const syncFd = new FormData();
+                    syncFd.append('function', 'syncChecklistAutoItems');
+                    syncFd.append('event_id', eventId);
+                    await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: 'POST', body: syncFd });
+                } catch (e) {
+                    console.error('Error syncing checklist after add invite', e);
+                }
             } else {
                 printAlert(data.message || "Failed to add invite.", "error");
             }
@@ -158,6 +167,14 @@ const InviteListManager = () => {
             if (data.success) {
                 setInviteList(inviteList.filter(invite => invite.email !== email));
                 printAlert("Invite removed.", "success");
+                try {
+                    const syncFd = new FormData();
+                    syncFd.append('function', 'syncChecklistAutoItems');
+                    syncFd.append('event_id', eventId);
+                    await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: 'POST', body: syncFd });
+                } catch (e) {
+                    console.error('Error syncing checklist after remove invite', e);
+                }
             } else {
                 printAlert("Failed to remove invite.", "error");
             }
@@ -198,7 +215,15 @@ const InviteListManager = () => {
             
             if (data.success) {
                 printAlert(`Successfully sent ${data.sent} of ${data.total} invitations!`, "success");
-                fetchInviteList(eventId);
+                await fetchInviteList(eventId);
+                try {
+                    const syncFd = new FormData();
+                    syncFd.append('function', 'syncChecklistAutoItems');
+                    syncFd.append('event_id', eventId);
+                    await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: 'POST', body: syncFd });
+                } catch (e) {
+                    console.error('Error syncing checklist after sending invites', e);
+                }
             } else {
                 printAlert(data.message || "Failed to send invitations", "error");
             }

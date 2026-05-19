@@ -127,6 +127,7 @@ class ActivityQueue {
         const response = await fetch(`${this.API_BASE_URL}/query.php`, {
             method: 'POST',
             body: formData,
+            credentials: 'include',
             // Add timeout
             signal: AbortSignal.timeout(10000) // 10 second timeout
         });

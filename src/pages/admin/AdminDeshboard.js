@@ -1161,7 +1161,7 @@ function AdminDashboard() {
             formData.append('email', newAdminData.email);
             formData.append('password', newAdminData.password);
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -1356,7 +1356,7 @@ function AdminDashboard() {
             formData.append('function', 'getAdminProfile');
             formData.append('admin_user_id', adminUserId);
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -2894,7 +2894,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
 
             console.log('Sending password change request for admin:', adminUserId);
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
                 method: 'POST',
                 body: formDataToSend
             });
@@ -3007,7 +3007,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
             formDataToSend.append('lastname', formData.lastname);
             formDataToSend.append('email', formData.email);
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
                 method: 'POST',
                 body: formDataToSend
             });
@@ -4211,7 +4211,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 formData.append('admin_user_id', adminUserId);
             }
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/api/packages.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -5492,7 +5492,7 @@ const EventManagementTabContent = ({
             formData.append('block_user', deleteForm.block_user ? '1' : '0');
             formData.append('violation_severity', deleteForm.violation_severity);
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
                 method: 'POST',
                 body: formData
             });
