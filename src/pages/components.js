@@ -332,7 +332,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
 
 
     useEffect(() => {
-        const handleScroll = () => {
+        const handleScroll = () => { 
             setScrolled(window.scrollY > 50);
         };
 

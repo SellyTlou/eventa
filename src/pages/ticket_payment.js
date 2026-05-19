@@ -54,149 +54,294 @@ function Ticket_payment() {
         PAYMENT_METHOD: "cc",
     };
 
-  const generateTransactionId = () => {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substr(2, 9);
-    return `TKT-${timestamp}-${random}`;
-  };
+const generateTransactionId = () => {
 
-  const generatePayFastSignature = async (data) => {
+    const timestamp = Date.now();
+
+    const random = Math.random()
+        .toString(36)
+        .substr(2, 9);
+
+    return `TKT-${timestamp}-${random}`;
+};
+
+const generatePayFastSignature = async (data) => {
 
     try {
-      const formData = new FormData();
 
-      Object.entries(data).forEach(([key, value]) => {
+        const formData = new FormData();
 
-        if (
-          value !== '' &&
-          value !== null &&
-          value !== undefined
-        ) {
-          formData.append(key, value);
+        Object.entries(data).forEach(([key, value]) => {
+
+            if (
+                value !== '' &&
+                value !== null &&
+                value !== undefined
+            ) {
+
+                formData.append(key, value);
+            }
+        });
+
+        const response = await fetch(
+            `${API_URL}/generateSignature.php`,
+            {
+                method: 'POST',
+                body: formData
+            }
+        );
+
+        const text = await response.text();
+
+        console.log("RAW RESPONSE:", text);
+
+        const result = JSON.parse(text);
+
+        if (!result.success) {
+
+            throw new Error(
+                result.error || 'Signature generation failed'
+            );
         }
-      });
 
-      const response = await fetch(`${API_URL}/generateSignature.php`, {
-        method: 'POST',
-        body: formData
-      });
-
-      const text = await response.text();
-
-      console.log("RAW RESPONSE:", text);
-
-      const result = JSON.parse(text);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Signature generation failed');
-      }
-
-      return result.signature;
+        return result.signature;
 
     } catch (error) {
 
-      console.error('Signature generation error:', error);
-      throw error;
-    }
-  };
+        console.error(
+            'Signature generation error:',
+            error
+        );
 
-  const preparePayFastData = (transactionId) => {
-    const totalWithFee = (parseFloat(calculateTotal()) + 15).toFixed(2);
+        throw error;
+    }
+};
+
+const preparePayFastData = (transactionId) => {
+
+    const totalWithFee =
+        (
+            parseFloat(calculateTotal()) + 15
+        ).toFixed(2);
 
     const customData = {
-      firstName: ticketData.firstName,
-      lastName: ticketData.lastName,
-      email: ticketData.email,
-      phone: ticketData.phone,
-      event_id: event.event_id,
-      ticket_type: ticketData.ticketType,
-      quantity: ticketData.quantity,
-      base_url: BASE_URL,
+
+        firstName: ticketData.firstName,
+
+        lastName: ticketData.lastName,
+
+        email: ticketData.email,
+
+        phone: ticketData.phone,
+
+        event_id: event.event_id,
+
+        ticket_type: ticketData.ticketType,
+
+        quantity: ticketData.quantity,
+
+        base_url: BASE_URL,
     };
 
     const paymentData = {
-      merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
-      merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
-      return_url: PAYFAST_CONFIG.RETURN_URL,
-      cancel_url: PAYFAST_CONFIG.CANCEL_URL,
-      notify_url: PAYFAST_CONFIG.ITN_URL,
-      name_first: ticketData.firstName || "Test",
-      name_last: ticketData.lastName || "User",
-      email_address: ticketData.email || "test@example.com",
-      cell_number: ticketData.phone || "0123456789",
 
-      m_payment_id: transactionId,
+        merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
 
-      amount: totalWithFee,
-      item_name: `${event.event_name} - ${getTicketTypeLabel(ticketData.ticketType)} Tickets`,
-      item_description: `${ticketData.quantity} x ${getTicketTypeLabel(ticketData.ticketType)} ticket(s)`,
+        merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
 
-      custom_str1: String(event.event_id || ""),
-      custom_str2: String(ticketData.ticketType || ""),
-      custom_str3: String(ticketData.quantity || "1"),
-      custom_str4: JSON.stringify(customData),
+        return_url: PAYFAST_CONFIG.RETURN_URL,
 
-      payment_method: PAYFAST_CONFIG.PAYMENT_METHOD,
-      email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? "1" : "0",
+        cancel_url: PAYFAST_CONFIG.CANCEL_URL,
+
+        notify_url: PAYFAST_CONFIG.ITN_URL,
+
+        name_first:
+            ticketData.firstName || "Customer",
+
+        name_last:
+            ticketData.lastName || "User",
+
+        email_address:
+            ticketData.email || "customer@email.com",
+
+        cell_number:
+            ticketData.phone || "0123456789",
+
+        m_payment_id: transactionId,
+
+        amount: totalWithFee,
+
+        item_name:
+            `${event.event_name} - ${getTicketTypeLabel(ticketData.ticketType)} Tickets`,
+
+        item_description:
+            `${ticketData.quantity} x ${getTicketTypeLabel(ticketData.ticketType)} ticket(s)`,
+
+        custom_str1:
+            String(event.event_id || ""),
+
+        custom_str2:
+            String(ticketData.ticketType || ""),
+
+        custom_str3:
+            String(ticketData.quantity || "1"),
+
+        custom_str4:
+            JSON.stringify(customData),
+
+        email_confirmation:
+            PAYFAST_CONFIG.EMAIL_CONFIRMATION
+                ? "1"
+                : "0"
     };
 
     if (ticketData.email) {
-      paymentData.confirmation_address = ticketData.email;
+
+        paymentData.confirmation_address =
+            ticketData.email;
     }
 
-    console.log("PayFast Data prepared:", paymentData);
+    /*
+    |--------------------------------------------------------------------------
+    | CLEAN EMPTY VALUES
+    |--------------------------------------------------------------------------
+    */
 
-    return paymentData;
-  };
+    const cleanedData = {};
 
-  const initiatePayFastPayment = async () => {
+    Object.entries(paymentData).forEach(([key, value]) => {
+
+        if (
+            value !== '' &&
+            value !== null &&
+            value !== undefined
+        ) {
+
+            cleanedData[key] = String(value);
+        }
+    });
+
+    console.log(
+        "PayFast Data prepared:",
+        cleanedData
+    );
+
+    return cleanedData;
+};
+
+const initiatePayFastPayment = async () => {
+
     setProcessingPayment(true);
+
     setPaymentStarted(true);
 
     try {
 
-      const id = generateTransactionId();
+        const id = generateTransactionId();
 
-      console.log("FINAL TRANSACTION ID:", id);
+        console.log(
+            "FINAL TRANSACTION ID:",
+            id
+        );
 
-      const paymentData = preparePayFastData(id);
-      paymentData.signature = await generatePayFastSignature(paymentData);
+        const paymentData =
+            preparePayFastData(id);
 
-      localStorage.setItem("lastTransactionId", id);
+        /*
+        |--------------------------------------------------------------------------
+        | GENERATE SIGNATURE
+        |--------------------------------------------------------------------------
+        */
 
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = PAYFAST_CONFIG.PAYFAST_URL;
-      form.target = "_blank";
-      form.style.display = "none";
+        const signature =
+            await generatePayFastSignature(paymentData);
 
-      Object.keys(paymentData).forEach((key) => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = key;
-        input.value = paymentData[key];
-        form.appendChild(input);
-      });
+        paymentData.signature = signature;
 
-      document.body.appendChild(form);
+        /*
+        |--------------------------------------------------------------------------
+        | SAVE TRANSACTION ID
+        |--------------------------------------------------------------------------
+        */
 
-      form.submit();
+        localStorage.setItem(
+            "last_payfast_transaction",
+            id
+        );
 
-      setTimeout(() => {
-        setShowPaymentPopup(false);
-        setProcessingPayment(false);
-      }, 1000);
+        /*
+        |--------------------------------------------------------------------------
+        | CREATE FORM
+        |--------------------------------------------------------------------------
+        */
+
+        const form =
+            document.createElement("form");
+
+        form.method = "POST";
+
+        form.action =
+            PAYFAST_CONFIG.PAYFAST_URL;
+
+        form.target = "_blank";
+
+        form.style.display = "none";
+
+        Object.keys(paymentData).forEach((key) => {
+
+            const input =
+                document.createElement("input");
+
+            input.type = "hidden";
+
+            input.name = key;
+
+            input.value = paymentData[key];
+
+            form.appendChild(input);
+
+            console.log(
+                `Adding field: ${key}=${paymentData[key]}`
+            );
+        });
+
+        document.body.appendChild(form);
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUBMIT TO PAYFAST
+        |--------------------------------------------------------------------------
+        */
+
+        form.submit();
+
+        setTimeout(() => {
+
+            document.body.removeChild(form);
+
+            setShowPaymentPopup(false);
+
+            setProcessingPayment(false);
+
+        }, 1000);
 
     } catch (error) {
-      console.error("PayFast payment error:", error);
-      printAlert("Failed to initiate payment. Please try again.", "error");
-      setProcessingPayment(false);
-      setPaymentStarted(false);
+
+        console.error(
+            "PayFast payment error:",
+            error
+        );
+
+        printAlert(
+            "Failed to initiate payment. Please try again.",
+            "error"
+        );
+
+        setProcessingPayment(false);
+
+        setPaymentStarted(false);
     }
-  };
-
-
-
+};
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setTicketData({

@@ -11,6 +11,8 @@ import {
     canCreateEvent,
     canHostGuests 
 } from "../utils/customPackageUtils";
+import { s } from "framer-motion/client";
+import { set } from "react-hook-form";
 
 const Manage_my_event = () => {
     const [loading, setLoading] = useState(true);
@@ -23,8 +25,7 @@ const Manage_my_event = () => {
     const [eventStatus, setEventStatus] = useState("");
     const [eventDetails, setEventDetails] = useState(null);
     const [userPackage, setUserPackage] = useState(null);
-    const [isTicketEvent, setIsTicketEvent] = useState(false);
-
+    
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [showPackagePopup, setShowPackagePopup] = useState(false);
     const [guestLimit, setGuestLimit] = useState(0);
@@ -36,12 +37,13 @@ const Manage_my_event = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
+    const [isTicketEvent, setIsTicketEvent] = useState(false);
+
     // Ticket configuration state
     const [ticketConfig, setTicketConfig] = useState({
         earlyBird: { name: "Early Bird", price: "", quantity: "", description: "Limited early bird tickets" },
         general: { name: "General Admission", price: "", quantity: "", description: "Standard admission ticket" },
         vip: { name: "VIP", price: "", quantity: "", description: "VIP experience with perks" },
-        vvip: { name: "VVIP", price: "", quantity: "", description: "Exclusive VVIP experience" }
     });
     const [eventInfo, setEventInfo] = useState("");
     const [isEditing, setIsEditing] = useState(false);
@@ -155,58 +157,44 @@ const Manage_my_event = () => {
         }
     }, []);
 
-    useEffect(() => {
-        const id = localStorage.getItem("selectedEventId")
-        const storedUser = localStorage.getItem("user");
-        if (id && storedUser) {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
-            setEventId(id);
-            fetchEventStatusByID(id);
-            fetchEventDetails(id);
+useEffect(() => {
+    const savedData = localStorage.getItem("selectedEventData");
+    const storedUser = localStorage.getItem("user");
+    
+    
+    if (savedData && storedUser) {
+        const userData = JSON.parse(storedUser);
+        const eventData = JSON.parse(savedData);
+        
+        console.log("Loaded event data from localStorage:", eventData);
+        setEventId(eventData.eventId);
+        setIsTicketEvent(eventData.hasTicket === 1 || eventData.hasTicket === true || eventData.hasTicket === "1");
+        setUser(userData);
+        
+     
+        fetchEventDetails(eventData.eventId, eventData.hasTicket);
+        fetchEventStatusByID(eventData.eventId, eventData.hasTicket);
 
-            const isTicket = localStorage.getItem("isTicketEvent") === "true";
-            if (!isTicket) {
-                fetchUserPackage(userData.user_id);
-                fetchAvailablePackages(); // Now this is defined
-            }
-
-            // In the useEffect, replace the if statement:
-            if (userData.account_type === 'business') {
-                console.log("Detected BUSINESS user (account_type='business'), fetching business packages...");
-                fetchUserBusinessPackage(userData.user_id);
-                fetchBusinessPackages();
-            } else {
-                console.log("Detected PERSONAL user (account_type='personal'), fetching personal packages...");
-                fetchUserPackage(userData.user_id);
-                fetchAvailablePackages(); // Changed from fetchPersonalPackages to fetchAvailablePackages
-            }
+        if (userData.account_type === 'business') {
+            console.log("Detected BUSINESS user (account_type='business'), fetching business packages...");
+            fetchUserBusinessPackage(userData.user_id);
+            fetchBusinessPackages();
+        } else {
+            console.log("Detected PERSONAL user (account_type='personal'), fetching personal packages...");
+            fetchUserPackage(userData.user_id);
+            fetchAvailablePackages();
         }
-        if (!storedUser) {
-            printAlert("Session expired. Please log in again.", "error");
-            logOut();
-            navigate("/");
-            return;
-        }
-        if (!id) {
-            const storedUser = localStorage.getItem('user');
-            const user = storedUser ? JSON.parse(storedUser) : null;
-            const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
-            navigate(dashPath);
-        }
-
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setDropdownOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [navigate, fetchAvailablePackages]); // Added fetchAvailablePackages to dependencies
-
+    }
+    
+    if (!storedUser) {
+        printAlert("Session expired. Please log in again.", "error");
+        logOut();
+        navigate("/");
+        return;
+    }
+    
+    // ... rest of your useEffect code
+}, [navigate, fetchAvailablePackages]);
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
             if (isDragging) {
@@ -507,121 +495,144 @@ const Manage_my_event = () => {
 
     const goToUpgradePlan = () => navigate("/upgrade_package");
 
-    const fetchEventStatusByID = async (eventId) => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
+const fetchEventStatusByID = async (eventId, isTicketEvent) => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        
+        // Use different function names based on event type
+        if (isTicketEvent) {
+            formData.append("function", "getTicketEventStatusByID");
+        } else {
             formData.append("function", "getEventStatusByID");
-            formData.append("event_id", eventId);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-            if (!response.ok) throw new Error("Network response was not ok");
-            const data = await response.json();
-            if (data.success && data.status) {
-                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
-            } else {
-                setEventStatus("Unknown");
-            }
-        } catch (err) {
-            console.error("Failed to fetch event status:", err);
-            return "unknown";
         }
-    }
+        
+        formData.append("event_id", eventId);
 
-    const fetchEventDetails = async (eventId) => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-
-            const formData = new FormData();
-            formData.append("function", "getEventById");
-            formData.append("event_id", eventId);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error("Network response was not ok");
-
-            const data = await response.json();
-            console.log("Event details response:", data);
-
-            if (data.success && data.events && data.events.length > 0) {
-                const event = data.events[0];
-
-                const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
-                setIsTicketEvent(hasTickets);
-                localStorage.setItem("isTicketEvent", hasTickets);
-
-                const formatDate = (dateString) => {
-                    if (!dateString) return "Not set";
-                    try {
-                        return new Date(dateString).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        });
-                    } catch (error) {
-                        return dateString;
-                    }
-                };
-
-                const formatTime = (timeString) => {
-                    if (!timeString) return "";
-                    try {
-                        const [hours, minutes] = timeString.split(':');
-                        const hour = parseInt(hours);
-                        const ampm = hour >= 12 ? 'PM' : 'AM';
-                        const displayHour = hour % 12 || 12;
-                        return `${displayHour}:${minutes} ${ampm}`;
-                    } catch (error) {
-                        return timeString;
-                    }
-                };
-
-                const formattedEventDetails = {
-                    event_name: event.event_name || "Untitled Event",
-                    event_start_date: formatDate(event.event_start_date),
-                    event_end_date: formatDate(event.event_end_date),
-                    event_start_time: formatTime(event.event_start_time),
-                    event_end_time: formatTime(event.event_end_time),
-                    venue: event.event_location || "Venue not specified",
-                    guest_limit: event.guest_limit || 0,
-                    has_tickets: hasTickets,
-                    event_type: hasTickets ? "Ticket Event" : "RSVP Event"
-                };
-
-                setEventDetails(formattedEventDetails);
-                setGuestLimit(event.guest_limit || 0);
-                setOriginalGuestLimit(event.guest_limit || 0);
-
-                // For ticket events, fetch ticket configuration
-                if (hasTickets) {
-                    fetchTicketConfiguration(eventId);
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
+        
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+        console.log("Event status response:", data);
+        
+        if (data.success && data.status) {
+            // For ticket events, status is stored as 'published', 'pending', etc.
+            if (isTicketEvent) {
+                const statusValue = data.status.status;
+                if (statusValue === 'published') {
+                    setEventStatus("Published");
+                } else if (statusValue === 'pending') {
+                    setEventStatus("Pending");
+                } else if (statusValue === 'cancelled') {
+                    setEventStatus("Cancelled");
+                } else if (statusValue === 'completed') {
+                    setEventStatus("Completed");
+                } else {
+                    setEventStatus("Unknown");
                 }
-
             } else {
-                console.error("No event found:", data.message);
-                setEventDetails({
-                    event_name: "---",
-                    event_start_date: "---",
-                    event_end_date: "---",
-                    event_start_time: "---",
-                    event_end_time: "---",
-                    venue: "----",
-                    guest_limit: 0,
-                    has_tickets: false,
-                    event_type: "RSVP Event"
-                });
-                setGuestLimit(0);
-                setOriginalGuestLimit(0);
+                // For regular events, published is 0 or 1
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+            }
+        } else {
+            setEventStatus("Unknown");
+        }
+    } catch (err) {
+        console.error("Failed to fetch event status:", err);
+        setEventStatus("Unknown");
+    }
+};
+
+
+const fetchEventDetails = async (id, hasTicketFlag) => {
+    console.log(`Fetching event details for ID: ${id} with hasTicketFlag: ${hasTicketFlag}`);
+    try {
+        const formData = new FormData();
+        const API_URL = process.env.REACT_APP_API_URL;
+
+        if (hasTicketFlag === 1) {
+            console.log("Fetching details for ticket event with ID:", id);
+            formData.append("function", "getTicketEventById");
+        } else {
+            formData.append("function", "getEventById");
+        }
+
+        formData.append("event_id", id);
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        console.log("Event details response:", data);
+
+        if (data.success && data.events && data.events.length > 0) {
+            const event = data.events[0];
+
+            const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
+            setIsTicketEvent(hasTickets);
+            
+            localStorage.setItem("selectedEventData", JSON.stringify({
+                eventId: id,
+                hasTicket: hasTickets ? 1 : 0
+            }));
+
+            const formatDate = (dateString) => {
+                if (!dateString) return "Not set";
+                try {
+                    return new Date(dateString).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } catch (error) {
+                    return dateString;
+                }
+            };
+
+            const formatTime = (timeString) => {
+                if (!timeString) return "";
+                try {
+                    const [hours, minutes] = timeString.split(':');
+                    const hour = parseInt(hours);
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    const displayHour = hour % 12 || 12;
+                    return `${displayHour}:${minutes} ${ampm}`;
+                } catch (error) {
+                    return timeString;
+                }
+            };
+
+            const formattedEventDetails = {
+                event_name: event.event_name || "Untitled Event",
+                event_start_date: formatDate(event.event_start_date),
+                event_end_date: formatDate(event.event_end_date),
+                event_start_time: formatTime(event.event_start_time),
+                event_end_time: formatTime(event.event_end_time),
+                venue: event.event_location || event.address || "Venue not specified",
+                guest_limit: event.guest_limit || 0,
+                has_tickets: hasTickets,
+                event_type: hasTickets ? "Ticket Event" : "RSVP Event"
+            };
+
+            setEventDetails(formattedEventDetails);
+            setGuestLimit(event.guest_limit || 0);
+            setOriginalGuestLimit(event.guest_limit || 0);
+
+            // For ticket events, fetch ticket configuration
+            if (hasTickets) {
+                fetchTicketConfiguration(id);
             }
 
-        } catch (err) {
-            console.error("Error fetching event details:", err);
+        } else {
+            console.error("No event found:", data.message);
             setEventDetails({
                 event_name: "---",
                 event_start_date: "---",
@@ -634,93 +645,99 @@ const Manage_my_event = () => {
                 event_type: "RSVP Event"
             });
             setGuestLimit(0);
-        } finally {
-            setLoading(false);
+            setOriginalGuestLimit(0);
         }
-    };
 
-    const fetchTicketConfiguration = async (eventId) => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "getEventTickets");
-            formData.append("event_id", eventId);
+    } catch (err) {
+        console.error("Error fetching event details:", err);
+        setEventDetails({
+            event_name: "---",
+            event_start_date: "---",
+            event_end_date: "---",
+            event_start_time: "---",
+            event_end_time: "---",
+            venue: "----",
+            guest_limit: 0,
+            has_tickets: false,
+            event_type: "RSVP Event"
+        });
+        setGuestLimit(0);
+        setOriginalGuestLimit(0);
+    } finally {
+        setLoading(false);
+    }
+};
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
+  const fetchTicketConfiguration = async (eventId) => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "getTicketEventById"); // Reuse the same function
+        formData.append("event_id", eventId);
 
-            if (!response.ok) throw new Error("Network response was not ok");
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
 
-            const data = await response.json();
-            console.log("Ticket configuration response:", data);
+        if (!response.ok) throw new Error("Network response was not ok");
 
-            if (data.success && data.tickets) {
-                // Initialize with default structure
-                const newTicketConfig = {
-                    earlyBird: { name: "Early Bird", price: "", quantity: "", description: "Limited early bird tickets" },
-                    general: { name: "General Admission", price: "", quantity: "", description: "Standard admission ticket" },
-                    vip: { name: "VIP", price: "", quantity: "", description: "VIP experience with perks" },
-                    vvip: { name: "VVIP", price: "", quantity: "", description: "Exclusive VVIP experience" }
-                };
+        const data = await response.json();
+        console.log("Ticket configuration response:", data);
 
-                let totalCapacity = 0;
+        if (data.success && data.events && data.events.length > 0) {
+            const event = data.events[0];
+            
+            // Initialize with default structure
+            const newTicketConfig = {
+                earlyBird: { name: "Early Bird", price: "", quantity: "", description: "Limited early bird tickets" },
+                general: { name: "General Admission", price: "", quantity: "", description: "Standard admission ticket" },
+                vip: { name: "VIP", price: "", quantity: "", description: "VIP experience with perks" },
+            };
 
-                // Map returned tickets to our configuration
-                data.tickets.forEach(ticket => {
-                    const quantity = parseInt(ticket.quantity_available) || 0;
-                    totalCapacity += quantity;
+            // Set ticket quantities and prices from the event data
+            if (event.earlybird_quantity > 0) {
+                newTicketConfig.earlyBird.price = event.earlybird_price?.toString() || "";
+                newTicketConfig.earlyBird.quantity = event.earlybird_quantity?.toString() || "";
+            }
+            
+            if (event.general_quantity > 0) {
+                newTicketConfig.general.price = event.general_price?.toString() || "";
+                newTicketConfig.general.quantity = event.general_quantity?.toString() || "";
+            }
+            
+            if (event.vip_quantity > 0) {
+                newTicketConfig.vip.price = event.vip_price?.toString() || "";
+                newTicketConfig.vip.quantity = event.vip_quantity?.toString() || "";
+            }
 
-                    switch (ticket.type_key) {
-                        case 'earlyBird':
-                            newTicketConfig.earlyBird = {
-                                name: ticket.ticket_type,
-                                price: ticket.price.toString(),
-                                quantity: quantity.toString(),
-                                description: ticket.description
-                            };
-                            break;
-                        case 'general':
-                            newTicketConfig.general = {
-                                name: ticket.ticket_type,
-                                price: ticket.price.toString(),
-                                quantity: quantity.toString(),
-                                description: ticket.description
-                            };
-                            break;
-                        case 'vip':
-                            newTicketConfig.vip = {
-                                name: ticket.ticket_type,
-                                price: ticket.price.toString(),
-                                quantity: quantity.toString(),
-                                description: ticket.description
-                            };
-                            break;
-                        case 'vvip':
-                            newTicketConfig.vvip = {
-                                name: ticket.ticket_type,
-                                price: ticket.price.toString(),
-                                quantity: quantity.toString(),
-                                description: ticket.description
-                            };
-                            break;
+            // Try to parse VVIP info from more_info if stored there
+            if (event.more_info) {
+                try {
+                    const moreInfo = JSON.parse(event.more_info);
+                    if (moreInfo.vvip_quantity > 0) {
+                        newTicketConfig.vvip.price = moreInfo.vvip_price?.toString() || "";
+                        newTicketConfig.vvip.quantity = moreInfo.vvip_quantity?.toString() || "";
                     }
-                });
-
-                setTicketConfig(newTicketConfig);
-                setOriginalTicketConfig(JSON.parse(JSON.stringify(newTicketConfig)));
-
-                // Set event info
-                if (data.event_info) {
-                    setEventInfo(data.event_info);
-                    setOriginalEventInfo(data.event_info);
+                    // Extract event info if it was stored
+                    if (moreInfo.event_info) {
+                        setEventInfo(moreInfo.event_info);
+                        setOriginalEventInfo(moreInfo.event_info);
+                    }
+                } catch (e) {
+                    // If not JSON, use as plain text for event info
+                    setEventInfo(event.more_info);
+                    setOriginalEventInfo(event.more_info);
                 }
             }
-        } catch (err) {
-            console.error("Error fetching ticket configuration:", err);
+
+            setTicketConfig(newTicketConfig);
+            setOriginalTicketConfig(JSON.parse(JSON.stringify(newTicketConfig)));
         }
-    };
+    } catch (err) {
+        console.error("Error fetching ticket configuration:", err);
+    }
+};
 
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
@@ -1068,169 +1085,148 @@ const Manage_my_event = () => {
     };
 
     const saveTicketConfiguration = async () => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
 
-            // Filter out empty ticket types
-            let earlyBirdPrice = 0;
-            let earlyBirdQuantity = 0;
-            let generalPrice = 0;
-            let generalQuantity = 0;
-            let vipPrice = 0;
-            let vipQuantity = 0;
-            let vvipPrice = 0;
-            let vvipQuantity = 0;
+        // Process each ticket type
+        let earlyBirdPrice = 0;
+        let earlyBirdQuantity = 0;
+        let generalPrice = 0;
+        let generalQuantity = 0;
+        let vipPrice = 0;
+        let vipQuantity = 0;
 
-            // Also prepare JSON config
-            const configJson = {};
+        // Prepare JSON config for additional storage if needed
+        const configJson = {};
 
-            // Process Early Bird
-            if (ticketConfig.earlyBird.price && ticketConfig.earlyBird.quantity) {
-                const price = parseFloat(ticketConfig.earlyBird.price);
-                const quantity = parseInt(ticketConfig.earlyBird.quantity);
+        // Process Early Bird
+        if (ticketConfig.earlyBird.price && ticketConfig.earlyBird.quantity) {
+            const price = parseFloat(ticketConfig.earlyBird.price);
+            const quantity = parseInt(ticketConfig.earlyBird.quantity);
 
-                if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
-                    earlyBirdPrice = price;
-                    earlyBirdQuantity = quantity;
-                    configJson.earlyBird = {
-                        name: ticketConfig.earlyBird.name,
-                        price: price,
-                        quantity: quantity,
-                        description: ticketConfig.earlyBird.description
-                    };
-                }
+            if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
+                earlyBirdPrice = price;
+                earlyBirdQuantity = quantity;
+                configJson.earlyBird = {
+                    name: ticketConfig.earlyBird.name,
+                    price: price,
+                    quantity: quantity,
+                    description: ticketConfig.earlyBird.description
+                };
             }
+        }
 
-            // Process General Admission
-            if (ticketConfig.general.price && ticketConfig.general.quantity) {
-                const price = parseFloat(ticketConfig.general.price);
-                const quantity = parseInt(ticketConfig.general.quantity);
+        // Process General Admission
+        if (ticketConfig.general.price && ticketConfig.general.quantity) {
+            const price = parseFloat(ticketConfig.general.price);
+            const quantity = parseInt(ticketConfig.general.quantity);
 
-                if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
-                    generalPrice = price;
-                    generalQuantity = quantity;
-                    configJson.general = {
-                        name: ticketConfig.general.name,
-                        price: price,
-                        quantity: quantity,
-                        description: ticketConfig.general.description
-                    };
-                }
+            if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
+                generalPrice = price;
+                generalQuantity = quantity;
+                configJson.general = {
+                    name: ticketConfig.general.name,
+                    price: price,
+                    quantity: quantity,
+                    description: ticketConfig.general.description
+                };
             }
+        }
 
-            // Process VIP
-            if (ticketConfig.vip.price && ticketConfig.vip.quantity) {
-                const price = parseFloat(ticketConfig.vip.price);
-                const quantity = parseInt(ticketConfig.vip.quantity);
+        // Process VIP
+        if (ticketConfig.vip.price && ticketConfig.vip.quantity) {
+            const price = parseFloat(ticketConfig.vip.price);
+            const quantity = parseInt(ticketConfig.vip.quantity);
 
-                if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
-                    vipPrice = price;
-                    vipQuantity = quantity;
-                    configJson.vip = {
-                        name: ticketConfig.vip.name,
-                        price: price,
-                        quantity: quantity,
-                        description: ticketConfig.vip.description
-                    };
-                }
+            if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
+                vipPrice = price;
+                vipQuantity = quantity;
+                configJson.vip = {
+                    name: ticketConfig.vip.name,
+                    price: price,
+                    quantity: quantity,
+                    description: ticketConfig.vip.description
+                };
             }
+        }
 
-            // Process VVIP
-            if (ticketConfig.vvip.price && ticketConfig.vvip.quantity) {
-                const price = parseFloat(ticketConfig.vvip.price);
-                const quantity = parseInt(ticketConfig.vvip.quantity);
 
-                if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
-                    vvipPrice = price;
-                    vvipQuantity = quantity;
-                    configJson.vvip = {
-                        name: ticketConfig.vvip.name,
-                        price: price,
-                        quantity: quantity,
-                        description: ticketConfig.vvip.description
-                    };
-                }
-            }
-
-            // Check if at least one ticket type is configured
-            const totalQuantity = earlyBirdQuantity + generalQuantity + vipQuantity + vvipQuantity;
-            if (totalQuantity === 0) {
-                printAlert("Please configure at least one ticket type with quantity.", "warning");
-                return false;
-            }
-
-            // Save ticket configuration
-            const formData = new FormData();
-            formData.append("function", "saveTicketConfiguration");
-            formData.append("event_id", event_id);
-            formData.append("has_tickets", 1);
-            formData.append("event_info", eventInfo);
-            formData.append("early_bird_price", earlyBirdPrice);
-            formData.append("early_bird_quantity", earlyBirdQuantity);
-            formData.append("general_price", generalPrice);
-            formData.append("general_quantity", generalQuantity);
-            formData.append("vip_price", vipPrice);
-            formData.append("vip_quantity", vipQuantity);
-            formData.append("vvip_price", vvipPrice);
-            formData.append("vvip_quantity", vvipQuantity);
-            formData.append("ticket_config", JSON.stringify(configJson));
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Update local state with the saved values
-                setTicketConfig({
-                    earlyBird: {
-                        name: "Early Bird",
-                        price: earlyBirdPrice > 0 ? earlyBirdPrice.toString() : "",
-                        quantity: earlyBirdQuantity > 0 ? earlyBirdQuantity.toString() : "",
-                        description: "Limited early bird tickets"
-                    },
-                    general: {
-                        name: "General Admission",
-                        price: generalPrice > 0 ? generalPrice.toString() : "",
-                        quantity: generalQuantity > 0 ? generalQuantity.toString() : "",
-                        description: "Standard admission ticket"
-                    },
-                    vip: {
-                        name: "VIP",
-                        price: vipPrice > 0 ? vipPrice.toString() : "",
-                        quantity: vipQuantity > 0 ? vipQuantity.toString() : "",
-                        description: "VIP experience with perks"
-                    },
-                    vvip: {
-                        name: "VVIP",
-                        price: vvipPrice > 0 ? vvipPrice.toString() : "",
-                        quantity: vvipQuantity > 0 ? vvipQuantity.toString() : "",
-                        description: "Exclusive VVIP experience"
-                    }
-                });
-
-                setOriginalTicketConfig(JSON.parse(JSON.stringify(ticketConfig)));
-                setOriginalEventInfo(eventInfo);
-
-                // Calculate and update guest limit automatically
-                const newGuestLimit = earlyBirdQuantity + generalQuantity + vipQuantity + vvipQuantity;
-                setGuestLimit(newGuestLimit);
-                setOriginalGuestLimit(newGuestLimit);
-
-                printAlert("Ticket configuration saved successfully! Total capacity: " + newGuestLimit, "success");
-                return true;
-            } else {
-                printAlert("Failed to save ticket configuration: " + (data.message || ''), "error");
-                return false;
-            }
-        } catch (err) {
-            console.error("Error saving ticket configuration:", err);
-            printAlert("Error saving ticket configuration. Please try again.", "error");
+        // Check if at least one ticket type is configured
+        const totalQuantity = earlyBirdQuantity + generalQuantity + vipQuantity;
+        if (totalQuantity === 0) {
+            printAlert("Please configure at least one ticket type with quantity.", "warning");
             return false;
         }
-    };
+
+        const formData = new FormData();
+        formData.append("function", "saveTicketConfiguration");
+        formData.append("event_id", event_id);
+        formData.append("earlybird_price", earlyBirdPrice);
+        formData.append("earlybird_quantity", earlyBirdQuantity);
+        formData.append("general_price", generalPrice);
+        formData.append("general_quantity", generalQuantity);
+        formData.append("vip_price", vipPrice);
+        formData.append("vip_quantity", vipQuantity);
+      
+
+        const moreInfo = JSON.stringify({
+            event_info: eventInfo,  
+            ticket_config: configJson,
+
+        });
+        formData.append("more_info", moreInfo);
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update local state with the saved values
+            setTicketConfig({
+                earlyBird: {
+                    name: "Early Bird",
+                    price: earlyBirdPrice > 0 ? earlyBirdPrice.toString() : "",
+                    quantity: earlyBirdQuantity > 0 ? earlyBirdQuantity.toString() : "",
+                    description: "Limited early bird tickets"
+                },
+                general: {
+                    name: "General Admission",
+                    price: generalPrice > 0 ? generalPrice.toString() : "",
+                    quantity: generalQuantity > 0 ? generalQuantity.toString() : "",
+                    description: "Standard admission ticket"
+                },
+                vip: {
+                    name: "VIP",
+                    price: vipPrice > 0 ? vipPrice.toString() : "",
+                    quantity: vipQuantity > 0 ? vipQuantity.toString() : "",
+                    description: "VIP experience with perks"
+                },
+                
+            });
+
+            setOriginalTicketConfig(JSON.parse(JSON.stringify(ticketConfig)));
+            setOriginalEventInfo(eventInfo);
+
+            // Calculate and update guest limit automatically
+            const newGuestLimit = earlyBirdQuantity + generalQuantity + vipQuantity;
+            setGuestLimit(newGuestLimit);
+            setOriginalGuestLimit(newGuestLimit);
+
+            printAlert("Ticket configuration saved successfully! Total capacity: " + newGuestLimit, "success");
+            return true;
+        } else {
+            printAlert("Failed to save ticket configuration: " + (data.message || ''), "error");
+            return false;
+        }
+    } catch (err) {
+        console.error("Error saving ticket configuration:", err);
+        printAlert("Error saving ticket configuration. Please try again.", "error");
+        return false;
+    }
+};
 
     const handleEditTickets = () => {
         setIsEditing(true);
@@ -1401,36 +1397,7 @@ const Manage_my_event = () => {
                             </div>
                         </div>
                         
-                        {/* VVIP Ticket */}
-                        <div className="ticket-type-card">
-                            <h4>VVIP</h4>
-                            <p className="ticket-description">Exclusive VVIP experience</p>
-                            <div className="ticket-fields">
-                                <div className="form-group">
-                                    <label>Price (R)</label>
-                                    <input
-                                        type="number"
-                                        value={ticketConfig.vvip.price}
-                                        onChange={(e) => handleTicketInputChange('vvip', 'price', e.target.value)}
-                                        placeholder="e.g., 500"
-                                        min="0"
-                                        step="0.01"
-                                        disabled={!isEditing && eventStatus === "Published"}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Quantity</label>
-                                    <input
-                                        type="number"
-                                        value={ticketConfig.vvip.quantity}
-                                        onChange={(e) => handleTicketInputChange('vvip', 'quantity', e.target.value)}
-                                        placeholder="e.g., 20"
-                                        min="1"
-                                        disabled={!isEditing && eventStatus === "Published"}
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                     
                     </div>
                     
                     <div className="ticket-notes">

@@ -351,13 +351,13 @@ const EventsDashboard = () => {
             setAllEvents(sortedEvents);
             setFilteredEvents(sortedEvents);
             setSoonestEvent(soonest);
-            
+
             // Fetch RSVP stats for regular events
             fetchRSVPStatsForEvents(sortedEvents.filter(e => !e.has_tickets));
-            
+
             // Fetch ticket stats for ticket events
             fetchTicketStatsForEvents(sortedEvents.filter(e => e.has_tickets));
-            
+
         } catch (error) {
             console.error("Failed to fetch events:", error);
             printAlert("Failed to load events. Please check your connection.", "error");
@@ -414,7 +414,7 @@ const EventsDashboard = () => {
         );
         setRsvpStats(stats);
     };
-    
+
     const fetchTicketStatsForEvents = async (eventsArray) => {
         const stats = {};
         await Promise.all(
@@ -434,17 +434,17 @@ const EventsDashboard = () => {
                         const data = await response.json();
                         if (data.success) {
                             stats[event.event_id] = data.ticket_stats || [];
-                            
+
                             // Also fetch booking IDs for messaging
                             const bookingFormData = new FormData();
                             bookingFormData.append("function", "getEventBookings");
                             bookingFormData.append("event_id", event.event_id);
-                            
+
                             const bookingResponse = await fetch(`${API_URL}/query.php`, {
                                 method: "POST",
                                 body: bookingFormData
                             });
-                            
+
                             if (bookingResponse.ok) {
                                 const bookingData = await bookingResponse.json();
                                 if (bookingData.success && bookingData.bookings) {
@@ -581,7 +581,7 @@ const EventsDashboard = () => {
             // Check if it's a ticket event
             const event = allEvents.find(e => e.event_id === cancelEventId);
             const isTicketEvent = event?.has_tickets === 1;
-            
+
             if (isTicketEvent) {
                 // For ticket events, get booking IDs from ticketStats
                 const bookingIds = ticketStats[cancelEventId]?.map(stat => stat.bookingId) || [];
@@ -605,8 +605,8 @@ const EventsDashboard = () => {
             const data = await response.json();
 
             if (data.success) {
-                const recipientCount = isTicketEvent ? 
-                    (ticketStats[cancelEventId]?.length || 0) : 
+                const recipientCount = isTicketEvent ?
+                    (ticketStats[cancelEventId]?.length || 0) :
                     affectedGuests.length;
                 printAlert(`Cancellation message sent to ${recipientCount} recipient(s)`, "success");
                 await performCancel();
@@ -642,20 +642,20 @@ const EventsDashboard = () => {
 
             if (data.success) {
                 printAlert("Event cancelled successfully!", "success");
-                
+
                 // Update all event arrays
-                const updateEventInArray = (event) => 
+                const updateEventInArray = (event) =>
                     event.event_id === cancelEventId ? { ...event, status: "cancelled" } : event;
-                
+
                 const updatedAll = allEvents.map(updateEventInArray);
                 const updatedRegular = events.map(updateEventInArray);
                 const updatedTicket = ticketEvents.map(updateEventInArray);
-                
+
                 setAllEvents(updatedAll);
                 setEvents(updatedRegular);
                 setTicketEvents(updatedTicket);
                 setFilteredEvents(sortEventsWithMinHeap(updatedAll));
-                
+
                 setSoonestEvent(
                     updatedAll.filter(
                         (e) =>
@@ -734,7 +734,7 @@ const EventsDashboard = () => {
             // Check if it's a ticket event
             const event = allEvents.find(e => e.event_id === deleteEventId);
             const isTicketEvent = event?.has_tickets === 1;
-            
+
             if (isTicketEvent) {
                 // For ticket events, get booking IDs from ticketStats
                 const bookingIds = ticketStats[deleteEventId]?.map(stat => stat.bookingId) || [];
@@ -758,8 +758,8 @@ const EventsDashboard = () => {
             const data = await response.json();
 
             if (data.success) {
-                const cnt = isTicketEvent ? 
-                    (ticketStats[deleteEventId]?.length || 0) : 
+                const cnt = isTicketEvent ?
+                    (ticketStats[deleteEventId]?.length || 0) :
                     affectedDeleteGuests.length;
                 printAlert(`Deletion message sent to ${cnt} recipient(s)`, "success");
                 await performDelete();
@@ -796,17 +796,17 @@ const EventsDashboard = () => {
 
             if (data.success) {
                 printAlert("Event deleted successfully!", "success");
-                
+
                 // Update all event arrays
                 const updatedAll = allEvents.filter((e) => e.event_id !== deleteEventId);
                 const updatedRegular = events.filter((e) => e.event_id !== deleteEventId);
                 const updatedTicket = ticketEvents.filter((e) => e.event_id !== deleteEventId);
-                
+
                 setAllEvents(updatedAll);
                 setEvents(updatedRegular);
                 setTicketEvents(updatedTicket);
                 setFilteredEvents(sortEventsWithMinHeap(updatedAll));
-                
+
                 setSoonestEvent(
                     updatedAll.filter(
                         (e) =>
@@ -863,21 +863,21 @@ const EventsDashboard = () => {
 
             if (data.success) {
                 printAlert("Event reactivated!", "success");
-                
-                const updateEventInArray = (event) => 
+
+                const updateEventInArray = (event) =>
                     event.event_id === eventId
                         ? { ...event, status: event.is_published ? "published" : "draft" }
                         : event;
-                
+
                 const updatedAll = allEvents.map(updateEventInArray);
                 const updatedRegular = events.map(updateEventInArray);
                 const updatedTicket = ticketEvents.map(updateEventInArray);
-                
+
                 setAllEvents(updatedAll);
                 setEvents(updatedRegular);
                 setTicketEvents(updatedTicket);
                 setFilteredEvents(sortEventsWithMinHeap(updatedAll));
-                
+
                 setSoonestEvent(
                     updatedAll.filter(
                         (e) =>
@@ -971,20 +971,20 @@ const EventsDashboard = () => {
 
             if (data.success) {
                 printAlert("Event updated successfully!", "success");
-                
+
                 // Update local state
-                const updateEventInArray = (event) => 
+                const updateEventInArray = (event) =>
                     event.event_id === selectedEvent.event_id ? { ...event, ...editedEvent } : event;
-                
+
                 const updatedAll = allEvents.map(updateEventInArray);
                 const updatedRegular = events.map(updateEventInArray);
                 const updatedTicket = ticketEvents.map(updateEventInArray);
-                
+
                 setAllEvents(updatedAll);
                 setEvents(updatedRegular);
                 setTicketEvents(updatedTicket);
                 setFilteredEvents(sortEventsWithMinHeap(updatedAll));
-                
+
                 setSoonestEvent(
                     updatedAll.filter(
                         (e) =>
@@ -1009,9 +1009,23 @@ const EventsDashboard = () => {
             return;
         }
 
-        localStorage.setItem("selectedEventId", eventId);
-
         const isTicketEvent = event.has_tickets === 1;
+
+
+        let ticketFlag = 0;
+        if (isTicketEvent) {
+            ticketFlag = 1;
+        } else {
+            ticketFlag = 0;
+        }
+
+        const eventPackage = {
+            eventId: eventId,
+            hasTicket: ticketFlag
+        };
+
+        localStorage.setItem("selectedEventData", JSON.stringify(eventPackage));
+
 
         if (isTicketEvent) {
             navigate("/event_ticket_manage");
@@ -1086,11 +1100,11 @@ const EventsDashboard = () => {
                     <span>{alert.message}</span>
                 </div>
             )}
-            
-<NewEventPopupBtn/>
+
+            <NewEventPopupBtn />
             <section className="eventsDashboard">
                 <LoginNav />
-                
+
                 <div className="container">
                     {/* HEADER
                     <div className="dashboard-header">
@@ -1105,21 +1119,21 @@ const EventsDashboard = () => {
 
                     {/* Tabs Navigation */}
                     <div className="events-tabs">
-                        <button 
+                        <button
                             className={`tab-btn all-tab ${activeTab === 'all' ? 'active' : ''}`}
                             onClick={() => setActiveTab('all')}
                         >
                             <i className="bi bi-grid-3x3-gap-fill"></i>
                             All Events ({allEvents.length})
                         </button>
-                        <button 
+                        <button
                             className={`tab-btn rsvp-tab ${activeTab === 'rsvp' ? 'active' : ''}`}
                             onClick={() => setActiveTab('rsvp')}
                         >
                             <i className="bi bi-envelope-paper"></i>
                             RSVP Events ({events.length})
                         </button>
-                        <button 
+                        <button
                             className={`tab-btn ticket-tab ${activeTab === 'ticket' ? 'active' : ''}`}
                             onClick={() => setActiveTab('ticket')}
                         >
@@ -1422,7 +1436,7 @@ const EventsDashboard = () => {
                                                     }}
                                                     disabled={cancelled}
                                                 >
-                                                    <i className="bi bi-people"></i> 
+                                                    <i className="bi bi-people"></i>
                                                     {event.has_tickets ? 'TICKET SALES' : 'RSVP'}
                                                 </button>
                                             </div>
@@ -1437,13 +1451,13 @@ const EventsDashboard = () => {
                                 </div>
                                 <h3>No Events Found</h3>
                                 <p>
-                                    {activeTab === 'rsvp' 
-                                        ? "You don't have any RSVP events yet." 
+                                    {activeTab === 'rsvp'
+                                        ? "You don't have any RSVP events yet."
                                         : activeTab === 'ticket'
-                                        ? "You don't have any ticket events yet."
-                                        : "Create your first event or adjust your filters to view existing events."}
+                                            ? "You don't have any ticket events yet."
+                                            : "Create your first event or adjust your filters to view existing events."}
                                 </p>
-                               
+
                             </div>
                         )}
                     </div>
@@ -1545,9 +1559,9 @@ const EventsDashboard = () => {
                                                 </div>
                                                 <div className="stat-content">
                                                     <div className="stat-number">
-                                                        {(reserveStats.rsvpStats?.yes || 0) + 
-                                                         (reserveStats.rsvpStats?.maybe || 0) + 
-                                                         (reserveStats.rsvpStats?.no || 0)}
+                                                        {(reserveStats.rsvpStats?.yes || 0) +
+                                                            (reserveStats.rsvpStats?.maybe || 0) +
+                                                            (reserveStats.rsvpStats?.no || 0)}
                                                     </div>
                                                     <div className="stat-label">Total Responses</div>
                                                 </div>

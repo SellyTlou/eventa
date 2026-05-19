@@ -1478,73 +1478,56 @@ if ($fun === "getEventTickets") {
 
 if ($fun === "saveTicketConfiguration") {
     $event_id = $_POST['event_id'] ?? '';
-    $has_tickets = isset($_POST['has_tickets']) ? intval($_POST['has_tickets']) : 0;
-    $event_info = $_POST['event_info'] ?? '';
-    
-    // Individual ticket fields
-    $earlybird_price = isset($_POST['earlybird_price']) ? floatval($_POST['earlybird_price']) : 0.00;
-    $earlybird_quantity = isset($_POST['earlybird_quantity']) ? intval($_POST['earlybird_quantity']) : 0;
-    $general_price = isset($_POST['general_price']) ? floatval($_POST['general_price']) : 0.00;
-    $general_quantity = isset($_POST['general_quantity']) ? intval($_POST['general_quantity']) : 0;
-    $vip_price = isset($_POST['vip_price']) ? floatval($_POST['vip_price']) : 0.00;
-    $vip_quantity = isset($_POST['vip_quantity']) ? intval($_POST['vip_quantity']) : 0;
-    $vvip_price = isset($_POST['vvip_price']) ? floatval($_POST['vvip_price']) : 0.00;
-    $vvip_quantity = isset($_POST['vvip_quantity']) ? intval($_POST['vvip_quantity']) : 0;
-    
-    $ticket_config = $_POST['ticket_config'] ?? '{}';
-    
-    if (empty($event_id)) {
+    $earlybird_price = $_POST['earlybird_price'] ?? 0;
+    $earlybird_quantity = $_POST['earlybird_quantity'] ?? 0;
+    $general_price = $_POST['general_price'] ?? 0;
+    $general_quantity = $_POST['general_quantity'] ?? 0;
+    $vip_price = $_POST['vip_price'] ?? 0;
+    $vip_quantity = $_POST['vip_quantity'] ?? 0;
+    $more_info = $_POST['more_info'] ?? null;
+
+    if (!$event_id) {
         echo json_encode([
             "success" => false,
-            "message" => "Event ID is required"
+            "message" => "Missing event ID",
         ]);
         exit;
     }
-    
+
     try {
-        // Update event with ticket configuration
+        // Update the ticket_events table with the correct column names
         $stmt = $pdo->prepare("
-            UPDATE events SET
-                has_tickets = :has_tickets,
-                event_info = :event_info,
-                earlybird_price = :earlybird_price,
+            UPDATE ticket_events 
+            SET earlybird_price = :earlybird_price,
                 earlybird_quantity = :earlybird_quantity,
                 general_price = :general_price,
                 general_quantity = :general_quantity,
                 vip_price = :vip_price,
                 vip_quantity = :vip_quantity,
-                vvip_price = :vvip_price,
-                vvip_quantity = :vvip_quantity,
-                ticket_config = :ticket_config,
+                more_info = :more_info,
                 updated_at = NOW()
             WHERE event_id = :event_id
         ");
-        
+
         $stmt->execute([
-            ':has_tickets' => $has_tickets,
-            ':event_info' => $event_info,
-            ':earlybird_price' => $earlybird_price,
-            ':earlybird_quantity' => $earlybird_quantity,
-            ':general_price' => $general_price,
-            ':general_quantity' => $general_quantity,
-            ':vip_price' => $vip_price,
-            ':vip_quantity' => $vip_quantity,
-            ':vvip_price' => $vvip_price,
-            ':vvip_quantity' => $vvip_quantity,
-            ':ticket_config' => $ticket_config,
-            ':event_id' => $event_id
+            ":earlybird_price" => $earlybird_price,
+            ":earlybird_quantity" => $earlybird_quantity,
+            ":general_price" => $general_price,
+            ":general_quantity" => $general_quantity,
+            ":vip_price" => $vip_price,
+            ":vip_quantity" => $vip_quantity,
+            ":more_info" => $more_info,
+            ":event_id" => $event_id
         ]);
-        
+
         echo json_encode([
             "success" => true,
             "message" => "Ticket configuration saved successfully"
         ]);
-        
     } catch (PDOException $e) {
-        error_log("saveTicketConfiguration PDO Exception: " . $e->getMessage());
         echo json_encode([
             "success" => false,
-            "message" => "Database error: " . $e->getMessage()
+            "message" => "Database error: " . $e->getMessage(),
         ]);
     }
     exit;
@@ -1647,13 +1630,10 @@ if ($fun === 'reactivateEvent') {
         $ticketEvent = $checkTicketStmt->fetch(PDO::FETCH_ASSOC);
 
         if ($ticketEvent) {
-            // This is a ticket event - reactivate in ticket_events table
-            // For ticket events, set status back to 'published'
             $stmt = $pdo->prepare("UPDATE ticket_events SET status = 'published', updated_at = NOW() WHERE event_id = ?");
             $stmt->execute([$event_id]);
             $eventName = $ticketEvent['event_name'];
         } else {
-            // Check regular events table
             $verifyStmt = $pdo->prepare("SELECT event_id, event_name, published FROM events WHERE event_id = ? AND user_id = ?");
             $verifyStmt->execute([$event_id, $user_id]);
             $event = $verifyStmt->fetch(PDO::FETCH_ASSOC);
@@ -2385,39 +2365,40 @@ if ($fun === "publishTicketEvent") {
     }
     
     try {
-        // First, get the event to check if it exists
-        $checkStmt = $pdo->prepare("SELECT has_tickets FROM events WHERE event_id = :event_id");
+        // First, get the event to check if it exists in ticket_events table
+        $checkStmt = $pdo->prepare("SELECT event_id, status FROM ticket_events WHERE event_id = :event_id");
         $checkStmt->execute([':event_id' => $event_id]);
         $event = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$event) {
             echo json_encode([
                 "success" => false,
-                "message" => "Event not found"
+                "message" => "Ticket event not found"
             ]);
             exit;
         }
         
-        // Update the event with published status and guest limit
-        // Based on your saveEvent function, you have a 'published' column in events table
+        // Update the ticket event with published status and calculate total capacity
+        // Total capacity is sum of all ticket quantities
         $stmt = $pdo->prepare("
-            UPDATE events SET
-                published = :published,
+            UPDATE ticket_events SET
+                status = :status,
                 guest_limit = :guest_limit,
                 updated_at = NOW()
             WHERE event_id = :event_id
         ");
         
         $stmt->execute([
-            ':published' => $published,
+            ':status' => $published == 1 ? 'published' : 'pending',
             ':guest_limit' => $guest_limit,
             ':event_id' => $event_id
         ]);
         
         echo json_encode([
             "success" => true,
-            "message" => "Event published successfully",
-            "guest_limit" => $guest_limit
+            "message" => $published == 1 ? "Ticket event published successfully" : "Ticket event unpublished",
+            "guest_limit" => $guest_limit,
+            "status" => $published == 1 ? 'published' : 'pending'
         ]);
         
     } catch (PDOException $e) {
@@ -2443,6 +2424,35 @@ if ($fun === "getEventStatusByID") {
 
     try {
         $stmt = $pdo->prepare("SELECT published FROM events WHERE event_id = :event_id");
+        $stmt->execute([":event_id" => $event_id]);
+        $status = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            "success" => true,
+            "status" => $status,
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error: " . $e->getMessage(),
+        ]);
+    }
+    exit;
+}
+
+if ($fun === "getTicketEventStatusByID") {
+    $event_id = $_POST['event_id'] ?? '';
+
+    if (empty($event_id)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Missing event ID",
+        ]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT status FROM ticket_events WHERE event_id = :event_id");
         $stmt->execute([":event_id" => $event_id]);
         $status = $stmt->fetch(PDO::FETCH_ASSOC);
 

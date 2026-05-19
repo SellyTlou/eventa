@@ -3,6 +3,7 @@ import "./main.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { logOut, DashboardHeader, DashboardSidebar, DashboardTicketSidebar } from "../components";
 import '../../alert.css';
+import { set } from "react-hook-form";
 
 const InvitationPage = () => {
     const [emailInput, setEmailInput] = useState("");
@@ -21,6 +22,7 @@ const InvitationPage = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [eventDetails, setEventDetails] = useState(null);
     const [isTicketEvent, setIsTicketEvent] = useState(false);
+  
 
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
@@ -32,58 +34,58 @@ const InvitationPage = () => {
     };
 
     const API_URL = process.env.REACT_APP_API_URL;
-    
-const getBaseFrontendUrl = () => {
-    if (!API_URL) return "http://localhost:3000";
-    
-    let frontendUrl = API_URL;
-    
-    frontendUrl = frontendUrl.replace(/\/php(\/.*)?$/i, '');
-    frontendUrl = frontendUrl.replace(/\/api(\/.*)?$/i, '');
-    frontendUrl = frontendUrl.replace(/\/query\.php$/i, '');
-    
-    // Remove the /eventa/src/pages part if it exists
-    frontendUrl = frontendUrl.replace(/\/eventa\/src\/pages(\/.*)?$/i, '');
-    frontendUrl = frontendUrl.replace(/\/eventa\/src(\/.*)?$/i, '');
-    frontendUrl = frontendUrl.replace(/\/eventa(\/.*)?$/i, '');
-    
-    // Remove any remaining specific React paths
-    frontendUrl = frontendUrl.replace(/\/src\/.*$/i, '');
-    frontendUrl = frontendUrl.replace(/\/pages\/.*$/i, '');
-    frontendUrl = frontendUrl.replace(/\/components\/.*$/i, '');
-    
-    // Remove trailing slash
-    frontendUrl = frontendUrl.replace(/\/$/, '');
-    
-    // If it's localhost with a port, ensure it's correct
-    if (frontendUrl.includes('localhost')) {
-        // Extract just the protocol and host with port
-        try {
-            const urlObj = new URL(frontendUrl);
-            frontendUrl = `${urlObj.protocol}//${urlObj.host}`;
-            
-            // Ensure port 3000 for localhost if no port specified
-            if (frontendUrl === 'http://localhost' || frontendUrl === 'https://localhost') {
-                frontendUrl = 'http://localhost:3000';
-            }
-        } catch (e) {
-            // If URL parsing fails, use default
-            if (!frontendUrl.includes(':3000') && !frontendUrl.match(/localhost:\d+/)) {
-                frontendUrl = 'http://localhost:3000';
+
+    const getBaseFrontendUrl = () => {
+        if (!API_URL) return "http://localhost:3000";
+
+        let frontendUrl = API_URL;
+
+        frontendUrl = frontendUrl.replace(/\/php(\/.*)?$/i, '');
+        frontendUrl = frontendUrl.replace(/\/api(\/.*)?$/i, '');
+        frontendUrl = frontendUrl.replace(/\/query\.php$/i, '');
+
+        // Remove the /eventa/src/pages part if it exists
+        frontendUrl = frontendUrl.replace(/\/eventa\/src\/pages(\/.*)?$/i, '');
+        frontendUrl = frontendUrl.replace(/\/eventa\/src(\/.*)?$/i, '');
+        frontendUrl = frontendUrl.replace(/\/eventa(\/.*)?$/i, '');
+
+        // Remove any remaining specific React paths
+        frontendUrl = frontendUrl.replace(/\/src\/.*$/i, '');
+        frontendUrl = frontendUrl.replace(/\/pages\/.*$/i, '');
+        frontendUrl = frontendUrl.replace(/\/components\/.*$/i, '');
+
+        // Remove trailing slash
+        frontendUrl = frontendUrl.replace(/\/$/, '');
+
+        // If it's localhost with a port, ensure it's correct
+        if (frontendUrl.includes('localhost')) {
+            // Extract just the protocol and host with port
+            try {
+                const urlObj = new URL(frontendUrl);
+                frontendUrl = `${urlObj.protocol}//${urlObj.host}`;
+
+                // Ensure port 3000 for localhost if no port specified
+                if (frontendUrl === 'http://localhost' || frontendUrl === 'https://localhost') {
+                    frontendUrl = 'http://localhost:3000';
+                }
+            } catch (e) {
+                // If URL parsing fails, use default
+                if (!frontendUrl.includes(':3000') && !frontendUrl.match(/localhost:\d+/)) {
+                    frontendUrl = 'http://localhost:3000';
+                }
             }
         }
-    }
-    
-    console.log("Frontend URL generated:", frontendUrl);
-    return frontendUrl;
-};
+
+        console.log("Frontend URL generated:", frontendUrl);
+        return frontendUrl;
+    };
 
     // Function to get the correct invitation link based on event type
     const getInvitationLink = () => {
         if (!event_id) return "";
-        
+
         const frontendBaseUrl = getBaseFrontendUrl();
-        
+
         if (isTicketEvent) {
             // Ticket event link - no user_email parameter needed
             return `${frontendBaseUrl}/ticketEvent_details?id=${encodeURIComponent(event_id)}`;
@@ -97,26 +99,22 @@ const getBaseFrontendUrl = () => {
     const invitationLink = getInvitationLink();
 
     useEffect(() => {
-        const id = localStorage.getItem("selectedEventId");
-        const storedUser = localStorage.getItem("user");
+    
+   const savedData = localStorage.getItem("selectedEventData");
+    const storedUser = localStorage.getItem("user");
+    
+    if (savedData && storedUser) {
+        const userData = JSON.parse(storedUser);
+        const eventData = JSON.parse(savedData);
 
-        console.log("Retrieved event_id from localStorage:", id);
-        console.log("Event_id length:", id ? id.length : 0);
-
-        if (id && storedUser) {
-            const userData = JSON.parse(storedUser);
             setUser(userData);
-            
-            // Ensure the event ID is not truncated
-            const fullEventId = id.trim();
-            console.log("Setting event_id to:", fullEventId);
-            setEventId(fullEventId);
-            
-            fetchEventStatusByID(fullEventId);
-            fetchEventDetails(fullEventId);
+setIsTicketEvent(eventData.hasTicket === 1 || eventData.hasTicket === true || eventData.hasTicket === "1");
+            setEventId(eventData.eventId);
+            fetchEventStatusByID(eventData.eventId, eventData.hasTicket);
+            fetchEventDetails(eventData.eventId, eventData.hasTickets);
         }
-
-        if (!id) navigate("/eventsDashboard");
+        
+        if (!savedData) navigate("/eventsDashboard");
         if (!storedUser) {
             printAlert("Session expired. Please log in again.", "error");
             logOut();
@@ -136,12 +134,17 @@ const getBaseFrontendUrl = () => {
         };
     }, [searchParams, navigate]);
 
-    // Fetch event details to check if it's a ticket event
-    const fetchEventDetails = async (eventId) => {
+    const fetchEventDetails = async (id, hasTicketFlag) => {
         try {
             const formData = new FormData();
-            formData.append("function", "getEventById");
-            formData.append("event_id", eventId);
+
+            if (hasTicketFlag === 1) {
+                formData.append("function", "getTicketEventById");
+            } else {
+                formData.append("function", "getEventById");
+            }
+
+            formData.append("event_id", id);
 
             const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
@@ -149,12 +152,25 @@ const getBaseFrontendUrl = () => {
             });
 
             const data = await response.json();
+            console.log("Event details response:", data);
+
             if (data.success && data.events) {
                 const event = Array.isArray(data.events) ? data.events[0] : data.events;
                 if (event) {
                     setEventDetails(event);
+
+                    // Keep frontend state reactive to any backend modifications
                     const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
                     setIsTicketEvent(hasTickets);
+
+                    // Optional: Keep localStorage updated if the ticket count hits 0 on the server
+                    const updatedFlag = hasTickets ? 1 : 0;
+                    if (updatedFlag !== hasTicketFlag) {
+                        localStorage.setItem("selectedEventData", JSON.stringify({
+                            eventId: id,
+                            hasTicket: updatedFlag
+                        }));
+                    }
                 }
             }
         } catch (err) {
@@ -172,27 +188,57 @@ const getBaseFrontendUrl = () => {
         setSidebarOpen(false);
     };
 
-    const fetchEventStatusByID = async (eventId) => {
-        try {
-            const formData = new FormData();
+ const fetchEventStatusByID = async (eventId, isTicketEvent) => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        
+        // Use different function names based on event type
+        if (isTicketEvent) {
+            formData.append("function", "getTicketEventStatusByID");
+        } else {
             formData.append("function", "getEventStatusByID");
-            formData.append("event_id", eventId);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-
-            const data = await response.json();
-            if (data.success && data.status) {
-                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
-            } else {
-                setEventStatus("Unknown");
-            }
-        } catch (err) {
-            console.error("Failed to fetch event status:", err);
         }
-    };
+        
+        formData.append("event_id", eventId);
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
+        
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+        console.log("Event status response:", data);
+        
+        if (data.success && data.status) {
+            // For ticket events, status is stored as 'published', 'pending', etc.
+            if (isTicketEvent) {
+                const statusValue = data.status.status;
+                if (statusValue === 'published') {
+                    setEventStatus("Published");
+                } else if (statusValue === 'pending') {
+                    setEventStatus("Pending");
+                } else if (statusValue === 'cancelled') {
+                    setEventStatus("Cancelled");
+                } else if (statusValue === 'completed') {
+                    setEventStatus("Completed");
+                } else {
+                    setEventStatus("Unknown");
+                }
+            } else {
+                // For regular events, published is 0 or 1
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+            }
+        } else {
+            setEventStatus("Unknown");
+        }
+    } catch (err) {
+        console.error("Failed to fetch event status:", err);
+        setEventStatus("Unknown");
+    }
+};
 
     const addEmail = () => {
         if (!emailInput.trim()) return;
@@ -320,7 +366,7 @@ const getBaseFrontendUrl = () => {
         for (const guest of guestsArr) {
             try {
                 const fd = new FormData();
-                
+
                 // Debug each field before appending
                 console.log("Appending data to FormData:");
                 console.log("- email:", guest.email, "length:", guest.email.length);
@@ -328,7 +374,7 @@ const getBaseFrontendUrl = () => {
                 console.log("- event:", event_id, "length:", event_id ? event_id.length : 0);
                 console.log("- API_URL:", API_URL, "length:", API_URL ? API_URL.length : 0);
                 console.log("- user_email:", user.email, "length:", user.email ? user.email.length : 0);
-                
+
                 fd.append("email", guest.email);
                 fd.append("name", guest.name);
                 fd.append("event", event_id);
@@ -362,12 +408,12 @@ const getBaseFrontendUrl = () => {
                     method: "POST",
                     body: fd,
                 });
-                
+
                 console.log("Response status:", resp.status);
-                
+
                 const text = await resp.text();
                 console.log("Raw response text:", text);
-                
+
                 let parsed;
                 try {
                     parsed = JSON.parse(text);
@@ -445,15 +491,15 @@ const getBaseFrontendUrl = () => {
 
     // Social share functions
     const shareOnFacebook = () => {
-        const message = isTicketEvent 
-            ? "Check out this event and get your tickets! 🎟️" 
+        const message = isTicketEvent
+            ? "Check out this event and get your tickets! 🎟️"
             : "You're invited to this event! 🎉";
         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(invitationLink)}&quote=${encodeURIComponent(message)}`, "_blank");
     };
 
     const shareOnTwitter = () => {
-        const message = isTicketEvent 
-            ? "🎟️ Get your tickets for this event!" 
+        const message = isTicketEvent
+            ? "🎟️ Get your tickets for this event!"
             : "🎉 You're invited to this event!";
         window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(invitationLink)}&text=${encodeURIComponent(message)}`, "_blank");
     };
@@ -631,8 +677,8 @@ const getBaseFrontendUrl = () => {
                             </div>
                             <div className="card-body">
                                 <p>
-                                    {isTicketEvent 
-                                        ? "Share this link with your guests to purchase tickets" 
+                                    {isTicketEvent
+                                        ? "Share this link with your guests to purchase tickets"
                                         : "Share this link with your guests to RSVP"}
                                 </p>
                                 {isTicketEvent && (
@@ -665,8 +711,8 @@ const getBaseFrontendUrl = () => {
                                 <div className="link-info">
                                     <small>
                                         <i className="bi bi-info-circle"></i>
-                                        {isTicketEvent 
-                                            ? "Guests will be directed to the ticket purchase page" 
+                                        {isTicketEvent
+                                            ? "Guests will be directed to the ticket purchase page"
                                             : "Guests will be directed to the RSVP form"}
                                     </small>
                                 </div>
@@ -729,7 +775,7 @@ const getBaseFrontendUrl = () => {
                             <div className="share-instructions">
                                 <small>
                                     <i className="bi bi-lightbulb"></i>
-                                    {isTicketEvent 
+                                    {isTicketEvent
                                         ? "When sharing, let guests know they can purchase tickets through the link"
                                         : "When sharing, let guests know they can RSVP through the link"}
                                 </small>
