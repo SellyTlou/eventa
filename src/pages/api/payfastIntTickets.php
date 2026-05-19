@@ -120,74 +120,49 @@ class TicketPayFastITN
         }
     }
 
-    private function validatePayFastData($data) {
-        // Remove the signature from the data to validate
-        $dataToValidate = $data;
-        if (isset($dataToValidate['signature'])) {
-            unset($dataToValidate['signature']);
-        }
-        
-        $queryString = http_build_query($dataToValidate);
-        
-        $validationUrl = 'https://www.payfast.co.za/eng/query/validate';
-        
-        $this->logData('Validation Request (LIVE)', [
-            'url' => $validationUrl,
-            'query_string' => $queryString
-        ]);
-        
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $validationUrl,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $queryString,
-            CURLOPT_SSL_VERIFYPEER => true, // Enable SSL verification for LIVE
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/x-www-form-urlencoded',
-                'Content-Length: ' . strlen($queryString)
-            ]
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-        
-        $this->logData('Validation Response (LIVE)', [
-            'http_code' => $httpCode,
-            'response' => $response,
-            'curl_error' => $curlError
-        ]);
-        
-        // PayFast returns "VALID" or "INVALID" in the response body
-        return ($httpCode == 200 && strpos($response, 'VALID') !== false);
+   private function validatePayFastData($paymentData) {
+    if (!isset($paymentData['signature'])) {
+        return false;
     }
 
-    private function generateQueryString($data)
-    {
-        $output = '';
-        ksort($data);
+    $receivedSignature = $paymentData['signature'];
+    
+    
+    $generatedSignature = $this->localSignatureGenerator($paymentData, null); 
+    
+    $this->logData('Signature Validation', [
+        'generated' => $generatedSignature,
+        'received' => $receivedSignature
+    ]);
 
-        foreach ($data as $key => $val) {
-            if ($val !== '' && $val !== null && $key !== 'signature') {
-                if (is_array($val)) {
-                    $val = json_encode($val);
-                }
-                $output .= $key . '=' . urlencode(trim($val)) . '&';
-            }
-        }
+    return ($receivedSignature === $generatedSignature);
+}
 
-        $output = rtrim($output, '&');
+private function localSignatureGenerator($data, $passphrase = null)
+{
+    unset($data['signature']);
 
-        if (!empty($this->PAYFAST_PASSPHRASE)) {
-            $output .= '&passphrase=' . urlencode(trim($this->PAYFAST_PASSPHRASE));
-        }
+    $pfOutput = '';
 
-        return $output;
+    foreach ($data as $key => $val) {
+
+        $val = (string)$val;
+
+        $pfOutput .= $key . '=' . urlencode(trim($val)) . '&';
     }
+
+    $getString = rtrim($pfOutput, '&');
+
+    if (!empty($passphrase)) {
+        $getString .= '&passphrase=' . urlencode($passphrase);
+    }
+
+    $this->logData('ITN Signature String', [
+        'string' => $getString
+    ]);
+
+    return md5($getString);
+}
 
 private function processSuccessfulPayment($data)
 {

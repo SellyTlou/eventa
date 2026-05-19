@@ -27,8 +27,8 @@ function Ticket_payment() {
     quantity: 1,
     agreeToTerms: false,
   });
-const API_URL = process.env.REACT_APP_API_URL;
-const BASE_URL = API_URL.replace('/api', '');
+  const API_URL = process.env.REACT_APP_API_URL;
+  const BASE_URL = API_URL.replace('/api', '');
 
   useEffect(() => {
     if (!event) {
@@ -40,22 +40,19 @@ const BASE_URL = API_URL.replace('/api', '');
     setAlert({ show: true, message: msg, type });
     setTimeout(() => setAlert({ show: false, message: "", type: "" }), 6000);
   };
-  
-// ============ PAYFAST CONFIGURATION for LIVE ============
 
-const PAYFAST_CONFIG = {
-  MERCHANT_ID: "33426571",
-  MERCHANT_KEY: "lkqoiy0ftb9yc",
-  PASS_PHRASE: "",
-  
-  ITN_URL: `${API_URL}/payFastIntTickets.php`,
-  PAYFAST_URL: "https://www.payfast.co.za/eng/process",
-  RETURN_URL: `${BASE_URL}/ticketSuccess`,
-  CANCEL_URL: `${BASE_URL}/ticketCancel`,
-  
-  EMAIL_CONFIRMATION: true,
-  PAYMENT_METHOD: "",
-};
+  // ============ PAYFAST CONFIGURATION for testing ============
+    const PAYFAST_CONFIG = {
+        MERCHANT_ID: "10039229",
+        MERCHANT_KEY: "1ogl07vai6oig",
+        ITN_URL: "https://dc86-197-185-137-11.ngrok-free.app/eventa/src/pages/api/payfastIntTickets.php",
+        PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
+        RETURN_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentSuccess",
+        CANCEL_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentCancel",
+        EMAIL_CONFIRMATION: true,
+        CONFIRMATION_EMAIL: "",
+        PAYMENT_METHOD: "cc",
+    };
 
   const generateTransactionId = () => {
     const timestamp = Date.now();
@@ -63,20 +60,44 @@ const PAYFAST_CONFIG = {
     return `TKT-${timestamp}-${random}`;
   };
 
-  const getSignature = async (data) => {
-    const res = await fetch(`${API_URL}/generateSignature.php`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
-    });
+  const generatePayFastSignature = async (data) => {
 
-    const result = await res.json();
-    if (!result.success) {
-      throw new Error(result.message || "Failed to generate PayFast signature");
+    try {
+      const formData = new FormData();
+
+      Object.entries(data).forEach(([key, value]) => {
+
+        if (
+          value !== '' &&
+          value !== null &&
+          value !== undefined
+        ) {
+          formData.append(key, value);
+        }
+      });
+
+      const response = await fetch(`${API_URL}/generateSignature.php`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const text = await response.text();
+
+      console.log("RAW RESPONSE:", text);
+
+      const result = JSON.parse(text);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Signature generation failed');
+      }
+
+      return result.signature;
+
+    } catch (error) {
+
+      console.error('Signature generation error:', error);
+      throw error;
     }
-    return result.signature;
   };
 
   const preparePayFastData = (transactionId) => {
@@ -127,6 +148,54 @@ const PAYFAST_CONFIG = {
 
     return paymentData;
   };
+
+  const initiatePayFastPayment = async () => {
+    setProcessingPayment(true);
+    setPaymentStarted(true);
+
+    try {
+
+      const id = generateTransactionId();
+
+      console.log("FINAL TRANSACTION ID:", id);
+
+      const paymentData = preparePayFastData(id);
+      paymentData.signature = await generatePayFastSignature(paymentData);
+
+      localStorage.setItem("lastTransactionId", id);
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = PAYFAST_CONFIG.PAYFAST_URL;
+      form.target = "_blank";
+      form.style.display = "none";
+
+      Object.keys(paymentData).forEach((key) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = paymentData[key];
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+
+      form.submit();
+
+      setTimeout(() => {
+        setShowPaymentPopup(false);
+        setProcessingPayment(false);
+      }, 1000);
+
+    } catch (error) {
+      console.error("PayFast payment error:", error);
+      printAlert("Failed to initiate payment. Please try again.", "error");
+      setProcessingPayment(false);
+      setPaymentStarted(false);
+    }
+  };
+
+
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -191,7 +260,7 @@ const PAYFAST_CONFIG = {
 
   const validateForm = () => {
     const errors = [];
-    
+
     if (!ticketData.firstName.trim()) {
       errors.push("First name is required");
     }
@@ -211,7 +280,7 @@ const PAYFAST_CONFIG = {
       printAlert(errors.join(". "), "error");
       return false;
     }
-    
+
     return true;
   };
 
@@ -220,118 +289,6 @@ const PAYFAST_CONFIG = {
       setSelectedPaymentMethod('payFast');
       setShowPaymentPopup(true);
     }
-  };
-
-const initiatePayFastPayment = async () => {
-  setProcessingPayment(true);
-  setPaymentStarted(true);
-
-  try {
-
-    const id = generateTransactionId();
-
-    console.log("FINAL TRANSACTION ID:", id);
-
-    const paymentData = preparePayFastData(id);
-    paymentData.signature = await getSignature(paymentData);
-
-    localStorage.setItem("lastTransactionId", id);
-
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = PAYFAST_CONFIG.PAYFAST_URL;
-    form.target = "_blank";
-    form.style.display = "none";
-
-    Object.keys(paymentData).forEach((key) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = key;
-      input.value = paymentData[key];
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-
-    form.submit();
-
-    setTimeout(() => {
-      setShowPaymentPopup(false);
-      setProcessingPayment(false);
-    }, 1000);
-
-  } catch (error) {
-    console.error("PayFast payment error:", error);
-    printAlert("Failed to initiate payment. Please try again.", "error");
-    setProcessingPayment(false);
-    setPaymentStarted(false);
-  }
-};
-
-  const recordPayment = async (status = 'pending', txId) => {
-    if (!event) {
-      throw new Error("No event data available");
-    }
-
-    if (!txId) {
-      throw new Error("Transaction ID not generated");
-    }
-
-    const API_URL = process.env.REACT_APP_API_URL;
-    const totalWithFee = (parseFloat(calculateTotal()) + 15).toFixed(2);
-
-    const bookingPayload = {
-      function: "processTicketPayment",
-      event_id: event.event_id,
-      customer_email: ticketData.email,
-      customer_first_name: ticketData.firstName,
-      customer_last_name: ticketData.lastName,
-      customer_phone: ticketData.phone,
-      ticket_type: ticketData.ticketType,
-      ticket_type_label: getTicketTypeLabel(ticketData.ticketType),
-      quantity: ticketData.quantity.toString(),
-      unit_price: getTicketPrice(),
-      total_amount: totalWithFee,
-      payment_method: 'payFast',
-      payment_status: status,
-      transaction_id: txId,
-    };
-
-    const formData = new FormData();
-    Object.entries(bookingPayload).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-
-    const res = await fetch(`${API_URL}/query.php`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}`);
-    }
-
-    const text = await res.text();
-    if (!text.trim()) {
-      throw new Error("Empty response from server");
-    }
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error("Invalid JSON response from server");
-    }
-
-    if (!data.success) {
-      throw new Error(data.message || "Failed to record booking");
-    }
-
-    return {
-      ...bookingPayload,
-      booking_id: data.bookingId || txId,
-      transaction_id: txId,
-    };
   };
 
   const getTicketPrice = () => {
@@ -355,7 +312,7 @@ const initiatePayFastPayment = async () => {
     if (processingPayment || paymentStarted) {
       console.log("Payment already in progress — ignoring");
       printAlert("Payment is already being processed. Please wait...", "warning");
-      
+
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -436,8 +393,8 @@ const initiatePayFastPayment = async () => {
           <i className="bi bi-shield-check"></i>
           <small>Secured by PayFast | PCI DSS Level 1 Compliant</small>
         </div>
-      
-                {/* {<div className="payfast-test-info">
+
+        {/* {<div className="payfast-test-info">
                     <small className="text-muted">
                         Test Mode: Use card 4111111111111111, any expiry, CVV 123
                     </small>
@@ -638,16 +595,15 @@ const initiatePayFastPayment = async () => {
       {alert.show && (
         <div className={`custom-alert ${alert.type}`}>
           <i
-            className={`fas ${
-              alert.type === "error" ? "fa-times-circle" :
-              alert.type === "success" ? "fa-check-circle" :
-              alert.type === "warning" ? "fa-exclamation-triangle" : "fa-info-circle"
-            }`}
+            className={`fas ${alert.type === "error" ? "fa-times-circle" :
+                alert.type === "success" ? "fa-check-circle" :
+                  alert.type === "warning" ? "fa-exclamation-triangle" : "fa-info-circle"
+              }`}
           />
           <span>{alert.message}</span>
         </div>
       )}
-      
+
       <div className="payment-container">
         <div className="event-summary">
           <div className="event-header">

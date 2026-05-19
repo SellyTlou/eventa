@@ -12,24 +12,31 @@ const PaymentSuccess = () => {
     const [transactionId, setTransactionId] = useState(null);
     const [paymentDetails, setPaymentDetails] = useState(null);
 
-    useEffect(() => {
-        // Get transaction ID from URL parameters
-        const params = new URLSearchParams(location.search);
-        let id = params.get('m_payment_id');
-        
-        // If not in URL, check localStorage
-        if (!id) {
-            id = localStorage.getItem("lastTransactionId");
-        }
-        
-        if (id) {
-            console.log("Found transaction ID:", id);
-            setTransactionId(id);
-        } else {
-            console.log("No transaction ID found");
-            setStatus("unknown");
-        }
-    }, [location]);
+  useEffect(() => {
+
+    const params = new URLSearchParams(location.search);
+
+    let id = params.get('m_payment_id');
+
+    if (!id) {
+
+        id = localStorage.getItem("last_payfast_transaction");
+    }
+
+    if (id) {
+
+        console.log("Found transaction ID:", id);
+
+        setTransactionId(id);
+
+    } else {
+
+        console.log("No transaction ID found");
+
+        setStatus("unknown");
+    }
+
+}, [location]);
 
     useEffect(() => {
         const verifyPayment = async () => {
@@ -100,7 +107,7 @@ const PaymentSuccess = () => {
     // Navigate after countdown
     useEffect(() => {
         if (countdown <= 0) {
-            navigate('/eventsDashboard');
+            navigate('/profile');
         }
     }, [countdown, navigate]);
 
@@ -139,10 +146,10 @@ const PaymentSuccess = () => {
 
                 <div className="action-buttons">
                     <button
-                        onClick={() => navigate('/eventsDashboard')}
+                        onClick={() => navigate('/profile')}
                         className="btn-event btn-event-primary"
                     >
-                        Go to Dashboard
+                        Go to Profile
                     </button>
                 </div>
             </div>

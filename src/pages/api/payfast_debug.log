@@ -155,3 +155,317 @@ GET data: Array
 
 ================================================================================
 
+2026-05-19 00:39:30 - payFastInt.php accessed
+REQUEST_METHOD: GET
+REMOTE_ADDR: ::1
+POST data: Array
+(
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 00:40:06 - payFastInt.php accessed
+REQUEST_METHOD: GET
+REMOTE_ADDR: ::1
+POST data: Array
+(
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 00:41:34 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779144083952-e79wz7p85
+    [pf_payment_id] => 3163980
+    [payment_status] => COMPLETE
+    [item_name] => premium Package
+    [item_description] => Max Events: 20, Max Guests: 200
+    [amount_gross] => 352.00
+    [amount_fee] => -8.10
+    [amount_net] => 343.90
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-PREMIUM-002
+    [custom_str3] => premium
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 20
+    [custom_int2] => 200
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => 034c19c36b1666ad918746f8d4747e2c
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 01:03:00 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779145369948-mmo5xp0sa
+    [pf_payment_id] => 3163989
+    [payment_status] => COMPLETE
+    [item_name] => advanced Package
+    [item_description] => Max Events: 150, Max Guests: 100
+    [amount_gross] => 552.00
+    [amount_fee] => -12.70
+    [amount_net] => 539.30
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-ENTERPRISE-003
+    [custom_str3] => advanced
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 150
+    [custom_int2] => 100
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => 6cb4ac0de792652f4ddf115f3a5b9739
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 12:25:00 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779186277367-fmid7w5ll
+    [pf_payment_id] => 3164907
+    [payment_status] => COMPLETE
+    [item_name] => advanced Package
+    [item_description] => Max Events: 150, Max Guests: 100
+    [amount_gross] => 552.00
+    [amount_fee] => -12.70
+    [amount_net] => 539.30
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-ENTERPRISE-003
+    [custom_str3] => advanced
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 150
+    [custom_int2] => 100
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => da24dbd545bdc2113fa040682c7bf78c
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 12:41:46 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779187292577-yc3vuqqks
+    [pf_payment_id] => 3164947
+    [payment_status] => COMPLETE
+    [item_name] => premium Package
+    [item_description] => Max Events: 20, Max Guests: 200
+    [amount_gross] => 352.00
+    [amount_fee] => -8.10
+    [amount_net] => 343.90
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-PREMIUM-002
+    [custom_str3] => premium
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 20
+    [custom_int2] => 200
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => 80c60d0ab77d6a61e49a5323f9be8706
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 12:51:46 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779187876384-bl0jt0euy
+    [pf_payment_id] => 3164974
+    [payment_status] => COMPLETE
+    [item_name] => premium Package
+    [item_description] => Max Events: 20, Max Guests: 200
+    [amount_gross] => 352.00
+    [amount_fee] => -8.10
+    [amount_net] => 343.90
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-PREMIUM-002
+    [custom_str3] => premium
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 20
+    [custom_int2] => 200
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => e4f68a99e3ccc4aad277cddc310d8f0e
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 16:00:15 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779199194177-fk7a1po6r
+    [pf_payment_id] => 3165528
+    [payment_status] => COMPLETE
+    [item_name] => premium Package
+    [item_description] => Max Events: 20, Max Guests: 200
+    [amount_gross] => 352.00
+    [amount_fee] => -8.10
+    [amount_net] => 343.90
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-PREMIUM-002
+    [custom_str3] => premium
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 20
+    [custom_int2] => 200
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => f88868d618e7f326ad9f9ed7257dab86
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 16:04:33 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779199461941-hhl9yv0be
+    [pf_payment_id] => 3165543
+    [payment_status] => COMPLETE
+    [item_name] => premium Package
+    [item_description] => Max Events: 20, Max Guests: 200
+    [amount_gross] => 352.00
+    [amount_fee] => -8.10
+    [amount_net] => 343.90
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-PREMIUM-002
+    [custom_str3] => premium
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 20
+    [custom_int2] => 200
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => 1b4f14dbcedb3626832b6e72337e1872
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
+2026-05-19 16:14:59 - payFastInt.php accessed
+REQUEST_METHOD: POST
+REMOTE_ADDR: ::1
+POST data: Array
+(
+    [m_payment_id] => PF-1779200075990-6u482qspx
+    [pf_payment_id] => 3165584
+    [payment_status] => COMPLETE
+    [item_name] => basic Package
+    [item_description] => Max Events: 6, Max Guests: 51
+    [amount_gross] => 7.00
+    [amount_fee] => -2.30
+    [amount_net] => 4.70
+    [custom_str1] => USER-RPLG39-1768465852
+    [custom_str2] => PCK-BASIC-001
+    [custom_str3] => basic
+    [custom_str4] => payfast
+    [custom_str5] => 
+    [custom_int1] => 6
+    [custom_int2] => 51
+    [custom_int3] => 
+    [custom_int4] => 
+    [custom_int5] => 
+    [name_first] => Ananias
+    [name_last] => 
+    [email_address] => sellytlou@gmail.com
+    [merchant_id] => 10039229
+    [signature] => 4056a21c53cfb647c866d48626871666
+)
+
+GET data: Array
+(
+)
+
+================================================================================
+
