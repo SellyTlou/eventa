@@ -81,7 +81,7 @@ export async function logOut() {
         formData.append("function", "logout");
         formData.append("user_id", user.user_id);
 
-        const response = await fetch(`${API_URL}/api/auth.php`, {
+        const response = await fetch(`${API_URL}/query.php`, {
             method: "POST",
             body: formData,
             credentials: 'include'
@@ -141,7 +141,7 @@ export const useSessionTimeout = (timeoutMinutes = 10, warningSeconds = 10) => {
                 formData.append("function", "logout");
                 formData.append("user_id", user.user_id);
 
-                await fetch(`${API_URL}/api/auth.php`, {
+                await fetch(`${API_URL}/query.php`, {
                     method: "POST",
                     body: formData,
                     credentials: 'include'
@@ -1203,7 +1203,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
                 }
             }
 
-            const url = `${API_URL}/api/auth.php`;
+            const url = `${API_URL}/query.php`;
 
             // quick pre-check so we can fail fast with a helpful message (avoids a long timeout)
             const check = await checkApiReachable(API_URL, 5000);
@@ -1748,7 +1748,7 @@ const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
 // Small helper to quickly verify API reaches the server before attempting large requests
 const checkApiReachable = async (baseUrl, timeout = 5000) => {
     try {
-        const resp = await fetchWithTimeout(`${baseUrl}/api/auth.php`, {
+        const resp = await fetchWithTimeout(`${baseUrl}/query.php`, {
             method: 'GET'
         }, timeout);
 
