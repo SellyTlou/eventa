@@ -536,9 +536,7 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                                 <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
                                                     <i className="bi bi-grid-fill me-2"></i> Dashboard
                                                 </button>
-                                                <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
-                                                    <i className="bi bi-plus-circle me-2"></i> New Event
-                                                </button>
+                                                
                                                 <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
                                                     <i className="bi bi-person me-2"></i> Profile
                                                 </button>
@@ -1849,9 +1847,7 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
                             <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
                                 <i className="bi bi-grid-fill me-2"></i> Dashboard
                             </button>
-                            <button onClick={(e) => handleDropdownItemClick(createEventClicked, e)} className="dropdown-item">
-                                <i className="bi bi-plus-circle me-2"></i> New Event
-                            </button>
+                            
                             <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
                                 <i className="bi bi-person me-2"></i> Profile
                             </button>

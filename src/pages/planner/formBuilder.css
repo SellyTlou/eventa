@@ -650,8 +650,8 @@
     display: flex;
     gap: 2rem;
 }
+/* 
 
-/* Sidebar */
 .form-builder-sidebar {
     width: 320px;
     flex-shrink: 0;
@@ -670,7 +670,7 @@
     font-weight: 600;
     color: #2d3748;
     margin-bottom: 1rem;
-}
+} */
 
 .theme-options {
     display: flex;

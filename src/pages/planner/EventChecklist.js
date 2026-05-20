@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardHeader, DashboardSidebar, DashboardTicketSidebar } from "../components";
+import "./main.css";
 import "./eventChecklist.css";
 import "../../alert.css";
 

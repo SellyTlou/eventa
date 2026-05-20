@@ -8703,13 +8703,47 @@ createEvent Styling
   font-size: 1rem;
 }
 
-.event-type-badge {
-  background: #dbeafe;
-  color: #1d4ed8;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
+
+/* Event Type Badge - Updated Colors */
+.invitation-content .event-type-badge {
+    position: absolute;
+       top: 50px;
+    right: 0;
+    z-index: 10;
+    width: 250px;
+}
+
+.invitation-content .badge {
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-left: -200px;
+}
+
+/* Ticket Event - Black/Gray Theme */
+.invitation-content .ticket-badge {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    border: 2px solid rgba(44, 62, 80, 0.3);
+}
+
+/* RSVP Event - Blue/Purple Theme */
+.invitation-content.rsvp-badge {
+    background: linear-gradient(135deg, #3498db 0%, #9b59b6 100%);
+    color: white;
+    border: 2px solid rgba(52, 152, 219, 0.3);
+}
+
+
+.invitation-content.rsvp-event {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 .event-stats {
