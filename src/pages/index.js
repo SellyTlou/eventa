@@ -461,16 +461,30 @@ function Index() {
         setShowMaintenance(true);
     };
 
-    const handleGetStartedClick = (planName, planId) => {
-        const isFreePlan = planName.toLowerCase() === 'free' || planName === 'Free';
+  const handleGetStartedClick = (planName, planId) => {
+    const isFreePlan = planName.toLowerCase() === 'free' || planName === 'Free';
+    
+    // Check if user is logged in
+    const storedUser = localStorage.getItem("user");
+    const isLoggedIn = !!storedUser;
 
-        if (isFreePlan) {
+    if (isFreePlan) {
+        if (isLoggedIn) {
             window.location.href = "/createevent";
         } else {
-            window.location.href = `/upgrade_package?package_id=${planId}`;
+            // Show login popup
+            handleLoginClick("personal");
         }
-    };
-
+    } else {
+        if (isLoggedIn) {
+            window.location.href = `/upgrade_package?package_id=${planId}`;
+        } else {
+            // Show login popup
+            handleLoginClick("personal");
+        }
+    }
+};
+ 
     // Get visible trending events
     const visibleTrendingEvents = getVisibleTrendingEvents();
     const cardsToShow = isMobile ? 1 : 3;

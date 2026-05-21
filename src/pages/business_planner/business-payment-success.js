@@ -10,7 +10,6 @@ const BusinessPaymentSuccess = () => {
     useEffect(() => {
         console.log('Business payment success page loaded');
         
-        // Retrieve the transaction ID from localStorage
         const lastTransactionId = localStorage.getItem("lastBusinessTransactionId");
         const selectedPackageId = localStorage.getItem("selectedBusinessPackageId");
         
@@ -20,17 +19,14 @@ const BusinessPaymentSuccess = () => {
         if (lastTransactionId) {
             setTransactionId(lastTransactionId);
             
-            // Clear the stored transaction ID to prevent reuse
             localStorage.removeItem("lastBusinessTransactionId");
             localStorage.removeItem("selectedBusinessPackageId");
         } else {
-            // If no transaction ID found, maybe user came directly to this page
             console.warn('No transaction ID found in localStorage');
         }
         
         setLoading(false);
         
-        // Optional: Redirect to dashboard after 5 seconds
         const timer = setTimeout(() => {
             // navigate('/businessdashboard');
         }, 5000);

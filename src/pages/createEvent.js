@@ -4,7 +4,7 @@ import EventProgressBar from "./EventProgressBar";
 import "../App.css";
 import "../responce.css";
 
-import { Navbar, Footer, Login } from "./components";
+import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
 import { useEventCreation } from "./eventDataCollector";
 
 function CreateEvent() {
@@ -23,23 +23,30 @@ function CreateEvent() {
   const [eventCategory, setEventCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   
-  // NEW: Event Type State
-  const [eventType, setEventType] = useState(""); // "ticket" or "rsvp"
+  // Event Type State
+  const [eventType, setEventType] = useState("");
   const [ticketPrice, setTicketPrice] = useState("");
   const [ticketQuantity, setTicketQuantity] = useState("");
   const [rsvpLimit, setRsvpLimit] = useState("");
   const [requireApproval, setRequireApproval] = useState(false);
   
   const [error, setError] = useState("");
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState("login");
   const [loginAccountType, setLoginAccountType] = useState("personal");
   const [fieldErrors, setFieldErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [user, setUser] = useState(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const { saveStep1Data, saveStep2Data, getEventDetails, saveEventTypeData } = useEventCreation();
-  const totalSteps = 4; // Changed from 3 to 4 (added event type step)
+  const totalSteps = 4;
+
+  const [alert, setAlert] = useState({
+    show: false,
+    message: "",
+    type: "",
+  });
 
   // Event categories
   const eventCategories = [
@@ -61,16 +68,43 @@ function CreateEvent() {
     { value: "other", label: "Other", icon: "📌" }
   ];
 
-  // Check if user is already logged in on component mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setCurrentStep(1);
-    } else {
-      setCurrentStep(4); // Changed from 3 to 4 (login step is now step 4)
-    }
+    checkAuth();
   }, []);
+
+  const checkAuth = () => {
+    let userID = null;
+    
+    const userString = localStorage.getItem("user");
+    if (userString) {
+      try {
+        const userData = JSON.parse(userString);
+        userID = userData.id || userData.user_id || userData.ID || null;
+        if (userID) {
+          setUser(userData);
+        }
+      } catch (e) {
+        console.error("Error parsing user object:", e);
+      }
+    }
+    
+    if (!userID) {
+      userID = localStorage.getItem('user_id') || localStorage.getItem('userId') || localStorage.getItem('uid');
+    }
+    
+    if (!userID) {
+      // Not logged in - show login popup
+      printAlert("Please log in to create an event", "warning");
+      setIsLoginOpen(true);
+    }
+    
+    setIsCheckingAuth(false);
+  };
+
+  const printAlert = (msg, type = "info") => {
+    setAlert({ show: true, message: msg, type });
+    setTimeout(() => setAlert({ show: false, message: "", type: "" }), 6000);
+  };
 
   // Load saved data when user logs in
   useEffect(() => {
@@ -94,7 +128,6 @@ function CreateEvent() {
                 setCustomCategory(savedData.customCategory);
               }
             }
-            // Load event type data
             if (savedData.eventType) setEventType(savedData.eventType);
             if (savedData.ticketPrice) setTicketPrice(savedData.ticketPrice);
             if (savedData.ticketQuantity) setTicketQuantity(savedData.ticketQuantity);
@@ -164,7 +197,6 @@ function CreateEvent() {
       maxLength: 50,
       message: "Custom category cannot exceed 50 characters"
     },
-    // NEW: Event Type Validation
     eventType: {
       required: true,
       message: "Please select an event type"
@@ -190,7 +222,7 @@ function CreateEvent() {
   const handleLoginSuccess = (userData) => {
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
-    setShowLoginPopup(false);
+    setIsLoginOpen(false);
     setCurrentStep(1);
   };
 
@@ -198,7 +230,7 @@ function CreateEvent() {
   const handleSignupSuccess = (userData) => {
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
-    setShowLoginPopup(false);
+    setIsLoginOpen(false);
     setCurrentStep(1);
   };
 
@@ -213,7 +245,6 @@ function CreateEvent() {
       const startDate = new Date(eventStartDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       return startDate > today ? eventStartDate : getTodayDate();
     }
     return getTodayDate();
@@ -223,7 +254,6 @@ function CreateEvent() {
     const rules = validationRules[name];
     if (!rules) return "";
 
-    // Handle conditional required fields
     if (rules.required) {
       const isRequired = typeof rules.required === 'function' 
         ? rules.required(allValues) 
@@ -250,7 +280,6 @@ function CreateEvent() {
       const inputDate = new Date(value);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       if (inputDate < today) {
         return "Event date cannot be in the past";
       }
@@ -259,11 +288,9 @@ function CreateEvent() {
     if (rules.afterStartDate && value && allValues.eventStartDate) {
       const startDate = new Date(allValues.eventStartDate);
       const endDate = new Date(value);
-
       if (endDate < startDate) {
         return "End date cannot be before start date";
       }
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (endDate < today) {
@@ -273,20 +300,16 @@ function CreateEvent() {
 
     if (rules.afterStartTime && value && allValues.eventStartTime &&
       allValues.eventStartDate && allValues.eventEndDate) {
-
       const startDateTime = new Date(`${allValues.eventStartDate}T${allValues.eventStartTime}`);
       const endDateTime = new Date(`${allValues.eventEndDate}T${value}`);
-
       if (startDateTime.getTime() === endDateTime.getTime()) {
         return "End time cannot be the same as start time";
       }
-
       if (endDateTime <= startDateTime) {
         return "End time must be after start time";
       }
     }
 
-    // Numeric validations
     if (rules.min !== undefined && value && parseFloat(value) < rules.min) {
       return `Value must be at least ${rules.min}`;
     }
@@ -310,35 +333,26 @@ function CreateEvent() {
           eventEndDate,
           eventEndTime
         };
-
         const startDateError = validateField("eventStartDate", eventStartDate);
         if (startDateError) newErrors.eventStartDate = startDateError;
-
         const startTimeError = validateField("eventStartTime", eventStartTime, allValues);
         if (startTimeError) newErrors.eventStartTime = startTimeError;
-
         const endDateError = validateField("eventEndDate", eventEndDate, allValues);
         if (endDateError) newErrors.eventEndDate = endDateError;
-
         const endTimeError = validateField("eventEndTime", eventEndTime, allValues);
         if (endTimeError) newErrors.eventEndTime = endTimeError;
-
         const timezoneError = validateField("timezone", timezone);
         if (timezoneError) newErrors.timezone = timezoneError;
       }
-
       if (subStep === 2) {
         const locationError = validateField("eventLocation", eventLocation);
         if (locationError) newErrors.eventLocation = locationError;
-
         const cityError = validateField("eventCity", eventCity);
         if (cityError) newErrors.eventCity = cityError;
       }
-
       if (subStep === 3) {
         const categoryError = validateField("eventCategory", eventCategory);
         if (categoryError) newErrors.eventCategory = categoryError;
-
         if (eventCategory === "other") {
           const customError = validateField("customCategory", customCategory);
           if (customError) newErrors.customCategory = customError;
@@ -346,21 +360,16 @@ function CreateEvent() {
       }
     }
 
-    // NEW: Validate Event Type Step
     if (step === 3) {
       const allValues = { eventType, ticketPrice, ticketQuantity, rsvpLimit };
-      
       const eventTypeError = validateField("eventType", eventType);
       if (eventTypeError) newErrors.eventType = eventTypeError;
-      
       if (eventType === "ticket") {
         const ticketPriceError = validateField("ticketPrice", ticketPrice, allValues);
         if (ticketPriceError) newErrors.ticketPrice = ticketPriceError;
-        
         const ticketQuantityError = validateField("ticketQuantity", ticketQuantity, allValues);
         if (ticketQuantityError) newErrors.ticketQuantity = ticketQuantityError;
       }
-      
       if (eventType === "rsvp" && rsvpLimit) {
         const rsvpLimitError = validateField("rsvpLimit", rsvpLimit, allValues);
         if (rsvpLimitError) newErrors.rsvpLimit = rsvpLimitError;
@@ -373,7 +382,6 @@ function CreateEvent() {
 
   const handleBlur = (fieldName) => {
     setTouched(prev => ({ ...prev, [fieldName]: true }));
-
     const allValues = {
       eventStartDate,
       eventStartTime,
@@ -391,7 +399,6 @@ function CreateEvent() {
       ticketQuantity,
       rsvpLimit
     };
-
     const error = validateField(fieldName, allValues[fieldName], allValues);
     setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
@@ -399,19 +406,25 @@ function CreateEvent() {
   const handleLoginClick = (accountType = "personal") => {
     setLoginMode("login");
     setLoginAccountType(accountType);
-    setShowLoginPopup(true);
+    setIsLoginOpen(true);
   };
 
   const handleSignupClick = (accountType = "personal") => {
     setLoginMode("signup");
     setLoginAccountType(accountType);
-    setShowLoginPopup(true);
+    setIsLoginOpen(true);
   };
 
   const handleNext = async () => {
+    // Check if user is logged in
+    if (!user) {
+      printAlert("Please log in to create an event", "warning");
+      setIsLoginOpen(true);
+      return;
+    }
+
     setError("");
 
-    // Mark all fields in current step as touched
     const newTouched = { ...touched };
     if (currentStep === 1) {
       newTouched.eventName = true;
@@ -444,11 +457,9 @@ function CreateEvent() {
     }
     setTouched(newTouched);
 
-    // Validate current step
     const isValid = validateStep(currentStep, step2SubStep);
     if (!isValid) return;
 
-    // Step 1 validation and saving
     if (currentStep === 1) {
       const success = saveStep1Data(eventName);
       if (!success) {
@@ -457,13 +468,11 @@ function CreateEvent() {
       }
     }
 
-    // Step 2 validation and saving
     if (currentStep === 2) {
       if (step2SubStep < 3) {
         setStep2SubStep(step2SubStep + 1);
         return;
       }
-
       if (step2SubStep === 3) {
         const step2Data = {
           eventStartDate,
@@ -477,7 +486,6 @@ function CreateEvent() {
           eventCategory, 
           customCategory: eventCategory === "other" ? customCategory : ""
         };
-
         const success = saveStep2Data(step2Data);
         if (!success) {
           setError("Failed to save event details. Please try again.");
@@ -486,7 +494,6 @@ function CreateEvent() {
       }
     }
 
-    // NEW: Step 3 - Save Event Type
     if (currentStep === 3) {
       const eventTypeData = {
         eventType,
@@ -495,7 +502,6 @@ function CreateEvent() {
         rsvpLimit: eventType === "rsvp" && rsvpLimit ? rsvpLimit : null,
         requireApproval: eventType === "rsvp" ? requireApproval : false
       };
-      
       const success = saveEventTypeData(eventTypeData);
       if (!success) {
         setError("Failed to save event type. Please try again.");
@@ -503,19 +509,11 @@ function CreateEvent() {
       }
     }
 
-    // If user is logged in and completed step 3, go to event theme
-    if (user && currentStep === 3) {
+    if (currentStep === 3) {
       navigate("/eventTheme");
       return;
     }
 
-    // If user is not logged in and reached step 4, show login/signup
-    if (!user && currentStep === 4) {
-      handleLoginClick();
-      return;
-    }
-
-    // Move to next step
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
       if (currentStep === 2) setStep2SubStep(1);
@@ -547,10 +545,8 @@ function CreateEvent() {
     setFieldErrors(prev => ({ ...prev, eventCategory: "" }));
   };
 
-  // NEW: Handle Event Type Selection
   const handleEventTypeSelect = (type) => {
     setEventType(type);
-    // Reset related fields
     if (type === "ticket") {
       setRsvpLimit("");
       setRequireApproval(false);
@@ -562,7 +558,6 @@ function CreateEvent() {
     setFieldErrors(prev => ({ ...prev, eventType: "" }));
   };
 
-  // Get selected category details
   const getSelectedCategory = () => {
     if (eventCategory === "other") {
       return { label: customCategory || "Other", icon: "📌" };
@@ -570,18 +565,47 @@ function CreateEvent() {
     return eventCategories.find(cat => cat.value === eventCategory) || null;
   };
 
+  // Show loading while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div>
+        <Navbar onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+          <div className="spinner-border text-warning" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div>
-      {/* Login/Signup Popup */}
-      {showLoginPopup && (
-        <Login
-          isOpen={showLoginPopup}
-          onClose={() => setShowLoginPopup(false)}
-          defaultMode={loginMode}
-          defaultAccountType={loginAccountType}
-          onLoginSuccess={handleLoginSuccess}
-          onSignupSuccess={handleSignupSuccess}
-        />
+      <Navbar
+        onLoginClick={handleLoginClick}
+        onSignupClick={handleSignupClick}
+      />
+      <Login
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onSignupSuccess={handleSignupSuccess}
+        defaultMode={loginMode}
+        defaultAccountType={loginAccountType}
+      />
+      <NewEventPopupBtn />
+
+      {alert.show && (
+        <div className={`custom-alert ${alert.type}`}>
+          <i className={`fas ${
+            alert.type === "error" ? "fa-times-circle" :
+            alert.type === "success" ? "fa-check-circle" :
+            alert.type === "warning" ? "fa-exclamation-triangle" :
+            "fa-info-circle"
+          }`} />
+          <span>{alert.message}</span>
+        </div>
       )}
 
       <div className="eventa-header-bar">
@@ -607,431 +631,11 @@ function CreateEvent() {
 
       <div className="create-event-container" id="createEventPage">
         <div className="create-event-body">
-          {/* Step 1: Event Name */}
-          {user && currentStep === 1 && (
+          {/* Show login required message when not logged in */}
+          {!user ? (
             <div className="event-step">
-              {error && <div className="form-error">{error}</div>}
-              <h2 className="step-title">What's the name of your Event</h2>
-              <p className="step-subtitle">Type the name of your Event</p>
-              <div className="form-group-event">
-                <input
-                  type="text"
-                  className={`form-control-event ${shouldShowError('eventName') ? 'error' : ''}`}
-                  id="eventName"
-                  placeholder="e.g., mfana's Birthday Party"
-                  value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
-                  onBlur={() => handleBlur('eventName')}
-                />
-                {shouldShowError('eventName') && (
-                  <div className="field-error">
-                    <span className="error-icon">⚠</span>
-                    {fieldErrors.eventName}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Event Details */}
-          {user && currentStep === 2 && (
-            <div className="event-step">
-              {error && <div className="form-error">{error}</div>}
-              <h2 className="step-title">Event Details</h2>
-
-              {step2SubStep === 1 && (
-                <>
-                  <p className="step-subtitle">
-                    When is Your Event? <span className="text-muted">Not sure yet? You can add things later.</span>
-                  </p>
-                  <div className="datetime-row">
-                    <div className="datetime-group">
-                      <label htmlFor="eventStartDate">EVENT START - Date</label>
-                      <input
-                        type="date"
-                        className={`form-control-event ${shouldShowError('eventStartDate') ? 'error' : ''}`}
-                        id="eventStartDate"
-                        value={eventStartDate}
-                        onChange={(e) => setEventStartDate(e.target.value)}
-                        onBlur={() => handleBlur('eventStartDate')}
-                        min={getTodayDate()}
-                      />
-                      {shouldShowError('eventStartDate') && (
-                        <div className="field-error">
-                          <span className="error-icon">⚠</span>
-                          {fieldErrors.eventStartDate}
-                        </div>
-                      )}
-                    </div>
-                    <div className="datetime-group">
-                      <label htmlFor="eventStartTime">Time</label>
-                      <input
-                        type="time"
-                        className={`form-control-event ${shouldShowError('eventStartTime') ? 'error' : ''}`}
-                        id="eventStartTime"
-                        value={eventStartTime}
-                        onChange={(e) => setEventStartTime(e.target.value)}
-                        onBlur={() => handleBlur('eventStartTime')}
-                      />
-                      {shouldShowError('eventStartTime') && (
-                        <div className="field-error">
-                          <span className="error-icon">⚠</span>
-                          {fieldErrors.eventStartTime}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="datetime-row">
-                    <div className="datetime-group">
-                      <label htmlFor="eventEndDate">EVENT END - Date</label>
-                      <input
-                        type="date"
-                        className={`form-control-event ${shouldShowError('eventEndDate') ? 'error' : ''}`}
-                        id="eventEndDate"
-                        value={eventEndDate}
-                        onChange={(e) => setEventEndDate(e.target.value)}
-                        onBlur={() => handleBlur('eventEndDate')}
-                        min={getMinEndDate()}
-                      />
-                      {shouldShowError('eventEndDate') && (
-                        <div className="field-error">
-                          <span className="error-icon">⚠</span>
-                          {fieldErrors.eventEndDate}
-                        </div>
-                      )}
-                    </div>
-                    <div className="datetime-group">
-                      <label htmlFor="eventEndTime">Time</label>
-                      <input
-                        type="time"
-                        className={`form-control-event ${shouldShowError('eventEndTime') ? 'error' : ''}`}
-                        id="eventEndTime"
-                        value={eventEndTime}
-                        onChange={(e) => setEventEndTime(e.target.value)}
-                        onBlur={() => handleBlur('eventEndTime')}
-                      />
-                      {shouldShowError('eventEndTime') && (
-                        <div className="field-error">
-                          <span className="error-icon">⚠</span>
-                          {fieldErrors.eventEndTime}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="form-group-event">
-                    <label htmlFor="timezone">TIMEZONE</label>
-                    <select
-                      className={`form-control-event ${shouldShowError('timezone') ? 'error' : ''}`}
-                      id="timezone"
-                      value={timezone}
-                      onChange={(e) => setTimezone(e.target.value)}
-                      onBlur={() => handleBlur('timezone')}
-                    >
-                      <option value="Africa/Johannesburg">Africa/Johannesburg</option>
-                      <option value="UTC">UTC</option>
-                      <option value="Europe/London">Europe/London</option>
-                      <option value="America/New_York">America/New_York</option>
-                    </select>
-                    {shouldShowError('timezone') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.timezone}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {step2SubStep === 2 && (
-                <>
-                  <h2 className="step-title">Event Location</h2>
-                  <p className="step-subtitle">Where is your Event?</p>
-
-                  <div className="form-group-event">
-                    <label htmlFor="eventLocation">VENUE / ADDRESS</label>
-                    <input
-                      type="text"
-                      className={`form-control-event ${shouldShowError('eventLocation') ? 'error' : ''}`}
-                      id="eventLocation"
-                      placeholder="e.g., 123 Main Street, Convention Center"
-                      value={eventLocation}
-                      onChange={(e) => setEventLocation(e.target.value)}
-                      onBlur={() => handleBlur('eventLocation')}
-                    />
-                    {shouldShowError('eventLocation') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.eventLocation}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-group-event">
-                    <label htmlFor="eventCity">CITY / TOWN</label>
-                    <input
-                      type="text"
-                      className={`form-control-event ${shouldShowError('eventCity') ? 'error' : ''}`}
-                      id="eventCity"
-                      placeholder="e.g., Johannesburg, Cape Town"
-                      value={eventCity}
-                      onChange={(e) => setEventCity(e.target.value)}
-                      onBlur={() => handleBlur('eventCity')}
-                    />
-                    {shouldShowError('eventCity') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.eventCity}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-group-event">
-                    <label htmlFor="eventProvince">PROVINCE / STATE</label>
-                    <select
-                      className={`form-control-event ${shouldShowError('eventProvince') ? 'error' : ''}`}
-                      id="eventProvince"
-                      value={eventProvince}
-                      onChange={(e) => setEventProvince(e.target.value)}
-                      onBlur={() => handleBlur('eventProvince')}
-                    >
-                      <option value="">Select a province</option>
-                      <option value="Eastern Cape">Eastern Cape</option>
-                      <option value="Free State">Free State</option>
-                      <option value="Gauteng">Gauteng</option>
-                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                      <option value="Limpopo">Limpopo</option>
-                      <option value="Mpumalanga">Mpumalanga</option>
-                      <option value="Northern Cape">Northern Cape</option>
-                      <option value="North West">North West</option>
-                      <option value="Western Cape">Western Cape</option>
-                    </select>
-                    {shouldShowError('eventProvince') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.eventProvince}
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-muted small mt-1">
-                    Not sure yet? You can add location details later.
-                  </p>
-                </>
-              )}
-
-              {step2SubStep === 3 && (
-                <>
-                  <h2 className="step-title">Event Category</h2>
-                  <p className="step-subtitle">Select the type of event you're creating</p>
-
-                  <div className="event-category-compact">
-                    <div className="category-grid-4x4">
-                      {eventCategories.map((category) => (
-                        <div
-                          key={category.value}
-                          className={`category-option ${eventCategory === category.value ? 'selected' : ''}`}
-                          onClick={() => handleCategorySelect(category.value)}
-                        >
-                          <span className="category-option-icon">{category.icon}</span>
-                          <span className="category-option-label">{category.label}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {shouldShowError('eventCategory') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.eventCategory}
-                      </div>
-                    )}
-
-                    {eventCategory === "other" && (
-                      <div className="custom-category-input-container">
-                        <label htmlFor="customCategory">Specify event type</label>
-                        <input
-                          type="text"
-                          id="customCategory"
-                          className={`form-control-event ${shouldShowError('customCategory') ? 'error' : ''}`}
-                          placeholder="e.g., Festival, Meetup, etc."
-                          value={customCategory}
-                          onChange={(e) => setCustomCategory(e.target.value)}
-                          onBlur={() => handleBlur('customCategory')}
-                          autoFocus
-                        />
-                        {shouldShowError('customCategory') && (
-                          <div className="field-error">
-                            <span className="error-icon">⚠</span>
-                            {fieldErrors.customCategory}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {eventCategory && (
-                      <div className="selected-category-badge">
-                        <span>Selected: </span>
-                        <strong>
-                          {getSelectedCategory()?.icon} {eventCategory === "other" ? customCategory || "Other" : getSelectedCategory()?.label}
-                        </strong>
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-muted small mt-2">
-                    Choose a category to help attendees find your event
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* NEW: Step 3: Event Type (Ticket vs RSVP) */}
-          {user && currentStep === 3 && (
-            <div className="event-step">
-              {error && <div className="form-error">{error}</div>}
-              <h2 className="step-title">How will people attend?</h2>
-              <p className="step-subtitle">Choose how you want to manage attendance</p>
-
-              <div className="event-type-selector">
-                {/* Ticket Event Option */}
-                <div 
-                  className={`event-type-card ${eventType === "ticket" ? "selected" : ""}`}
-                  onClick={() => handleEventTypeSelect("ticket")}
-                >
-                  <div className="event-type-icon">🎟️</div>
-                  <h3>Ticket Event</h3>
-                  <p>Sell tickets to your event. Perfect for concerts, workshops, conferences, and paid events.</p>
-                  <div className="event-type-features">
-                    <span>✓ Set ticket prices</span>
-                    <span>✓ Limit ticket quantity</span>
-                    <span>✓ Track sales</span>
-                  </div>
-                </div>
-
-                {/* RSVP Event Option */}
-                <div 
-                  className={`event-type-card ${eventType === "rsvp" ? "selected" : ""}`}
-                  onClick={() => handleEventTypeSelect("rsvp")}
-                >
-                  <div className="event-type-icon">📝</div>
-                  <h3>RSVP Event</h3>
-                  <p>Free event where guests confirm attendance. Great for parties, weddings, and social gatherings.</p>
-                  <div className="event-type-features">
-                    <span>✓ Free attendance</span>
-                    <span>✓ Track guest count</span>
-                    <span>✓ Optional approval</span>
-                  </div>
-                </div>
-              </div>
-
-              {shouldShowError('eventType') && (
-                <div className="field-error">
-                  <span className="error-icon">⚠</span>
-                  {fieldErrors.eventType}
-                </div>
-              )}
-
-              {/* Ticket Event Details */}
-              {eventType === "ticket" && (
-                <div className="event-type-details">
-                  <h3>Ticket Details</h3>
-                  
-                  <div className="form-group-event">
-                    <label htmlFor="ticketPrice">Ticket Price (ZAR)</label>
-                    <input
-                      type="number"
-                      id="ticketPrice"
-                      className={`form-control-event ${shouldShowError('ticketPrice') ? 'error' : ''}`}
-                      placeholder="e.g., 150"
-                      value={ticketPrice}
-                      onChange={(e) => setTicketPrice(e.target.value)}
-                      onBlur={() => handleBlur('ticketPrice')}
-                      min="0"
-                      step="0.01"
-                    />
-                    {shouldShowError('ticketPrice') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.ticketPrice}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-group-event">
-                    <label htmlFor="ticketQuantity">Number of Tickets Available</label>
-                    <input
-                      type="number"
-                      id="ticketQuantity"
-                      className={`form-control-event ${shouldShowError('ticketQuantity') ? 'error' : ''}`}
-                      placeholder="e.g., 100"
-                      value={ticketQuantity}
-                      onChange={(e) => setTicketQuantity(e.target.value)}
-                      onBlur={() => handleBlur('ticketQuantity')}
-                      min="1"
-                    />
-                    {shouldShowError('ticketQuantity') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.ticketQuantity}
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-muted small">
-                    You can add multiple ticket types (VIP, Early Bird, etc.) after creating the event.
-                  </p>
-                </div>
-              )}
-
-              {/* RSVP Event Details */}
-              {eventType === "rsvp" && (
-                <div className="event-type-details">
-                  <h3>RSVP Settings</h3>
-                  
-                  <div className="form-group-event">
-                    <label htmlFor="rsvpLimit">RSVP Limit (Optional)</label>
-                    <input
-                      type="number"
-                      id="rsvpLimit"
-                      className={`form-control-event ${shouldShowError('rsvpLimit') ? 'error' : ''}`}
-                      placeholder="Leave empty for unlimited"
-                      value={rsvpLimit}
-                      onChange={(e) => setRsvpLimit(e.target.value)}
-                      onBlur={() => handleBlur('rsvpLimit')}
-                      min="1"
-                    />
-                    {shouldShowError('rsvpLimit') && (
-                      <div className="field-error">
-                        <span className="error-icon">⚠</span>
-                        {fieldErrors.rsvpLimit}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="checkbox-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={requireApproval}
-                        onChange={(e) => setRequireApproval(e.target.checked)}
-                      />
-                      <span>Require approval for RSVPs</span>
-                    </label>
-                    <p className="text-muted small">
-                      If enabled, you'll need to manually approve each RSVP request.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 4: Login/Signup Prompt */}
-          {!user && currentStep === 4 && (
-            <div className="event-step">
-              <h2 className="step-title">Account Required</h2>
-              <p className="step-subtitle">To create and manage your event, you need an account</p>
-
+              <h2 className="step-title">Login Required</h2>
+              <p className="step-subtitle">Please log in to create an event</p>
               <div className="account-prompt-container">
                 <div className="account-prompt-card">
                   <h3>Already have an account?</h3>
@@ -1043,7 +647,6 @@ function CreateEvent() {
                     Log In
                   </button>
                 </div>
-
                 <div className="account-prompt-card">
                   <h3>New to Eventa?</h3>
                   <p>Create an account to start managing your events</p>
@@ -1055,25 +658,419 @@ function CreateEvent() {
                   </button>
                 </div>
               </div>
-
-              <p className="text-muted small mt-3">
-                Don't worry, your event details are saved. You can continue where you left off after logging in.
-              </p>
             </div>
+          ) : (
+            <>
+              {/* Step 1: Event Name */}
+              {currentStep === 1 && (
+                <div className="event-step">
+                  {error && <div className="form-error">{error}</div>}
+                  <h2 className="step-title">What's the name of your Event</h2>
+                  <p className="step-subtitle">Type the name of your Event</p>
+                  <div className="form-group-event">
+                    <input
+                      type="text"
+                      className={`form-control-event ${shouldShowError('eventName') ? 'error' : ''}`}
+                      id="eventName"
+                      placeholder="e.g., mfana's Birthday Party"
+                      value={eventName}
+                      onChange={(e) => setEventName(e.target.value)}
+                      onBlur={() => handleBlur('eventName')}
+                    />
+                    {shouldShowError('eventName') && (
+                      <div className="field-error">
+                        <span className="error-icon">⚠</span>
+                        {fieldErrors.eventName}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Event Details */}
+              {currentStep === 2 && (
+                <div className="event-step">
+                  {error && <div className="form-error">{error}</div>}
+                  <h2 className="step-title">Event Details</h2>
+
+                  {step2SubStep === 1 && (
+                    <>
+                      <p className="step-subtitle">
+                        When is Your Event? <span className="text-muted">Not sure yet? You can add things later.</span>
+                      </p>
+                      <div className="datetime-row">
+                        <div className="datetime-group">
+                          <label htmlFor="eventStartDate">EVENT START - Date</label>
+                          <input
+                            type="date"
+                            className={`form-control-event ${shouldShowError('eventStartDate') ? 'error' : ''}`}
+                            id="eventStartDate"
+                            value={eventStartDate}
+                            onChange={(e) => setEventStartDate(e.target.value)}
+                            onBlur={() => handleBlur('eventStartDate')}
+                            min={getTodayDate()}
+                          />
+                          {shouldShowError('eventStartDate') && (
+                            <div className="field-error">
+                              <span className="error-icon">⚠</span>
+                              {fieldErrors.eventStartDate}
+                            </div>
+                          )}
+                        </div>
+                        <div className="datetime-group">
+                          <label htmlFor="eventStartTime">Time</label>
+                          <input
+                            type="time"
+                            className={`form-control-event ${shouldShowError('eventStartTime') ? 'error' : ''}`}
+                            id="eventStartTime"
+                            value={eventStartTime}
+                            onChange={(e) => setEventStartTime(e.target.value)}
+                            onBlur={() => handleBlur('eventStartTime')}
+                          />
+                          {shouldShowError('eventStartTime') && (
+                            <div className="field-error">
+                              <span className="error-icon">⚠</span>
+                              {fieldErrors.eventStartTime}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="datetime-row">
+                        <div className="datetime-group">
+                          <label htmlFor="eventEndDate">EVENT END - Date</label>
+                          <input
+                            type="date"
+                            className={`form-control-event ${shouldShowError('eventEndDate') ? 'error' : ''}`}
+                            id="eventEndDate"
+                            value={eventEndDate}
+                            onChange={(e) => setEventEndDate(e.target.value)}
+                            onBlur={() => handleBlur('eventEndDate')}
+                            min={getMinEndDate()}
+                          />
+                          {shouldShowError('eventEndDate') && (
+                            <div className="field-error">
+                              <span className="error-icon">⚠</span>
+                              {fieldErrors.eventEndDate}
+                            </div>
+                          )}
+                        </div>
+                        <div className="datetime-group">
+                          <label htmlFor="eventEndTime">Time</label>
+                          <input
+                            type="time"
+                            className={`form-control-event ${shouldShowError('eventEndTime') ? 'error' : ''}`}
+                            id="eventEndTime"
+                            value={eventEndTime}
+                            onChange={(e) => setEventEndTime(e.target.value)}
+                            onBlur={() => handleBlur('eventEndTime')}
+                          />
+                          {shouldShowError('eventEndTime') && (
+                            <div className="field-error">
+                              <span className="error-icon">⚠</span>
+                              {fieldErrors.eventEndTime}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="form-group-event">
+                        <label htmlFor="timezone">TIMEZONE</label>
+                        <select
+                          className={`form-control-event ${shouldShowError('timezone') ? 'error' : ''}`}
+                          id="timezone"
+                          value={timezone}
+                          onChange={(e) => setTimezone(e.target.value)}
+                          onBlur={() => handleBlur('timezone')}
+                        >
+                          <option value="Africa/Johannesburg">Africa/Johannesburg</option>
+                          <option value="UTC">UTC</option>
+                          <option value="Europe/London">Europe/London</option>
+                          <option value="America/New_York">America/New_York</option>
+                        </select>
+                        {shouldShowError('timezone') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.timezone}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {step2SubStep === 2 && (
+                    <>
+                      <h2 className="step-title">Event Location</h2>
+                      <p className="step-subtitle">Where is your Event?</p>
+                      <div className="form-group-event">
+                        <label htmlFor="eventLocation">VENUE / ADDRESS</label>
+                        <input
+                          type="text"
+                          className={`form-control-event ${shouldShowError('eventLocation') ? 'error' : ''}`}
+                          id="eventLocation"
+                          placeholder="e.g., 123 Main Street, Convention Center"
+                          value={eventLocation}
+                          onChange={(e) => setEventLocation(e.target.value)}
+                          onBlur={() => handleBlur('eventLocation')}
+                        />
+                        {shouldShowError('eventLocation') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.eventLocation}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group-event">
+                        <label htmlFor="eventCity">CITY / TOWN</label>
+                        <input
+                          type="text"
+                          className={`form-control-event ${shouldShowError('eventCity') ? 'error' : ''}`}
+                          id="eventCity"
+                          placeholder="e.g., Johannesburg, Cape Town"
+                          value={eventCity}
+                          onChange={(e) => setEventCity(e.target.value)}
+                          onBlur={() => handleBlur('eventCity')}
+                        />
+                        {shouldShowError('eventCity') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.eventCity}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group-event">
+                        <label htmlFor="eventProvince">PROVINCE / STATE</label>
+                        <select
+                          className={`form-control-event ${shouldShowError('eventProvince') ? 'error' : ''}`}
+                          id="eventProvince"
+                          value={eventProvince}
+                          onChange={(e) => setEventProvince(e.target.value)}
+                          onBlur={() => handleBlur('eventProvince')}
+                        >
+                          <option value="">Select a province</option>
+                          <option value="Eastern Cape">Eastern Cape</option>
+                          <option value="Free State">Free State</option>
+                          <option value="Gauteng">Gauteng</option>
+                          <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                          <option value="Limpopo">Limpopo</option>
+                          <option value="Mpumalanga">Mpumalanga</option>
+                          <option value="Northern Cape">Northern Cape</option>
+                          <option value="North West">North West</option>
+                          <option value="Western Cape">Western Cape</option>
+                        </select>
+                        {shouldShowError('eventProvince') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.eventProvince}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-muted small mt-1">
+                        Not sure yet? You can add location details later.
+                      </p>
+                    </>
+                  )}
+
+                  {step2SubStep === 3 && (
+                    <>
+                      <h2 className="step-title">Event Category</h2>
+                      <p className="step-subtitle">Select the type of event you're creating</p>
+                      <div className="event-category-compact">
+                        <div className="category-grid-4x4">
+                          {eventCategories.map((category) => (
+                            <div
+                              key={category.value}
+                              className={`category-option ${eventCategory === category.value ? 'selected' : ''}`}
+                              onClick={() => handleCategorySelect(category.value)}
+                            >
+                              <span className="category-option-icon">{category.icon}</span>
+                              <span className="category-option-label">{category.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {shouldShowError('eventCategory') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.eventCategory}
+                          </div>
+                        )}
+                        {eventCategory === "other" && (
+                          <div className="custom-category-input-container">
+                            <label htmlFor="customCategory">Specify event type</label>
+                            <input
+                              type="text"
+                              id="customCategory"
+                              className={`form-control-event ${shouldShowError('customCategory') ? 'error' : ''}`}
+                              placeholder="e.g., Festival, Meetup, etc."
+                              value={customCategory}
+                              onChange={(e) => setCustomCategory(e.target.value)}
+                              onBlur={() => handleBlur('customCategory')}
+                              autoFocus
+                            />
+                            {shouldShowError('customCategory') && (
+                              <div className="field-error">
+                                <span className="error-icon">⚠</span>
+                                {fieldErrors.customCategory}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {eventCategory && (
+                          <div className="selected-category-badge">
+                            <span>Selected: </span>
+                            <strong>
+                              {getSelectedCategory()?.icon} {eventCategory === "other" ? customCategory || "Other" : getSelectedCategory()?.label}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-muted small mt-2">
+                        Choose a category to help attendees find your event
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Event Type */}
+              {currentStep === 3 && (
+                <div className="event-step">
+                  {error && <div className="form-error">{error}</div>}
+                  <h2 className="step-title">How will people attend?</h2>
+                  <p className="step-subtitle">Choose how you want to manage attendance</p>
+                  <div className="event-type-selector">
+                    <div 
+                      className={`event-type-card ${eventType === "ticket" ? "selected" : ""}`}
+                      onClick={() => handleEventTypeSelect("ticket")}
+                    >
+                      <div className="event-type-icon">🎟️</div>
+                      <h3>Ticket Event</h3>
+                      <p>Sell tickets to your event. Perfect for concerts, workshops, conferences, and paid events.</p>
+                      <div className="event-type-features">
+                        <span>✓ Set ticket prices</span>
+                        <span>✓ Limit ticket quantity</span>
+                        <span>✓ Track sales</span>
+                      </div>
+                    </div>
+                    <div 
+                      className={`event-type-card ${eventType === "rsvp" ? "selected" : ""}`}
+                      onClick={() => handleEventTypeSelect("rsvp")}
+                    >
+                      <div className="event-type-icon">📝</div>
+                      <h3>RSVP Event</h3>
+                      <p>Free event where guests confirm attendance. Great for parties, weddings, and social gatherings.</p>
+                      <div className="event-type-features">
+                        <span>✓ Free attendance</span>
+                        <span>✓ Track guest count</span>
+                        <span>✓ Optional approval</span>
+                      </div>
+                    </div>
+                  </div>
+                  {shouldShowError('eventType') && (
+                    <div className="field-error">
+                      <span className="error-icon">⚠</span>
+                      {fieldErrors.eventType}
+                    </div>
+                  )}
+                  {eventType === "ticket" && (
+                    <div className="event-type-details">
+                      <h3>Ticket Details</h3>
+                      <div className="form-group-event">
+                        <label htmlFor="ticketPrice">Ticket Price (ZAR)</label>
+                        <input
+                          type="number"
+                          id="ticketPrice"
+                          className={`form-control-event ${shouldShowError('ticketPrice') ? 'error' : ''}`}
+                          placeholder="e.g., 150"
+                          value={ticketPrice}
+                          onChange={(e) => setTicketPrice(e.target.value)}
+                          onBlur={() => handleBlur('ticketPrice')}
+                          min="0"
+                          step="0.01"
+                        />
+                        {shouldShowError('ticketPrice') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.ticketPrice}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group-event">
+                        <label htmlFor="ticketQuantity">Number of Tickets Available</label>
+                        <input
+                          type="number"
+                          id="ticketQuantity"
+                          className={`form-control-event ${shouldShowError('ticketQuantity') ? 'error' : ''}`}
+                          placeholder="e.g., 100"
+                          value={ticketQuantity}
+                          onChange={(e) => setTicketQuantity(e.target.value)}
+                          onBlur={() => handleBlur('ticketQuantity')}
+                          min="1"
+                        />
+                        {shouldShowError('ticketQuantity') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.ticketQuantity}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-muted small">
+                        You can add multiple ticket types (VIP, Early Bird, etc.) after creating the event.
+                      </p>
+                    </div>
+                  )}
+                  {eventType === "rsvp" && (
+                    <div className="event-type-details">
+                      <h3>RSVP Settings</h3>
+                      <div className="form-group-event">
+                        <label htmlFor="rsvpLimit">RSVP Limit (Optional)</label>
+                        <input
+                          type="number"
+                          id="rsvpLimit"
+                          className={`form-control-event ${shouldShowError('rsvpLimit') ? 'error' : ''}`}
+                          placeholder="Leave empty for unlimited"
+                          value={rsvpLimit}
+                          onChange={(e) => setRsvpLimit(e.target.value)}
+                          onBlur={() => handleBlur('rsvpLimit')}
+                          min="1"
+                        />
+                        {shouldShowError('rsvpLimit') && (
+                          <div className="field-error">
+                            <span className="error-icon">⚠</span>
+                            {fieldErrors.rsvpLimit}
+                          </div>
+                        )}
+                      </div>
+                      <div className="checkbox-group">
+                        <label className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={requireApproval}
+                            onChange={(e) => setRequireApproval(e.target.checked)}
+                          />
+                          <span>Require approval for RSVPs</span>
+                        </label>
+                        <p className="text-muted small">
+                          If enabled, you'll need to manually approve each RSVP request.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Footer with navigation buttons */}
-        <div className="create-event-footer">
-          <div>
-            {((user && currentStep > 1) || (user && currentStep === 2 && step2SubStep > 1)) && (
-              <button className="btn-event btn-event-back" onClick={handleBack}>
-                Back
-              </button>
-            )}
-          </div>
-          <div>
-            {user ? (
+        {/* Footer with navigation buttons - Only show when logged in */}
+        {user && (
+          <div className="create-event-footer">
+            <div>
+              {((currentStep > 1) || (currentStep === 2 && step2SubStep > 1)) && (
+                <button className="btn-event btn-event-back" onClick={handleBack}>
+                  Back
+                </button>
+              )}
+            </div>
+            <div>
               <button className="btn-event btn-event-next" onClick={handleNext}>
                 {currentStep === 1 && "NEXT: EVENT DETAILS"}
                 {currentStep === 2 && step2SubStep === 1 && "NEXT: LOCATION"}
@@ -1081,14 +1078,12 @@ function CreateEvent() {
                 {currentStep === 2 && step2SubStep === 3 && "NEXT: EVENT TYPE"}
                 {currentStep === 3 && "NEXT: EVENT THEME"}
               </button>
-            ) : (
-              <button className="btn-event btn-event-next" onClick={handleNext}>
-                CONTINUE
-              </button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      <Footer />
 
       <style>{`
         .event-type-selector {
@@ -1097,7 +1092,6 @@ function CreateEvent() {
           gap: 20px;
           margin: 30px 0;
         }
-
         .event-type-card {
           background: white;
           border: 2px solid #e0e0e0;
@@ -1106,34 +1100,28 @@ function CreateEvent() {
           cursor: pointer;
           transition: all 0.3s ease;
         }
-
         .event-type-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
-
         .event-type-card.selected {
           border-color: #667eea;
           background: linear-gradient(135deg, rgba(102,126,234,0.05) 0%, rgba(118,75,162,0.05) 100%);
         }
-
         .event-type-icon {
           font-size: 48px;
           margin-bottom: 16px;
         }
-
         .event-type-card h3 {
           font-size: 20px;
           margin-bottom: 12px;
           color: #333;
         }
-
         .event-type-card p {
           color: #666;
           margin-bottom: 16px;
           line-height: 1.5;
         }
-
         .event-type-features {
           display: flex;
           flex-direction: column;
@@ -1141,49 +1129,80 @@ function CreateEvent() {
           font-size: 13px;
           color: #667eea;
         }
-
         .event-type-features span {
           display: flex;
           align-items: center;
           gap: 6px;
         }
-
         .event-type-details {
           margin-top: 30px;
           padding: 24px;
           background: #f8f9fa;
           border-radius: 12px;
         }
-
         .event-type-details h3 {
           margin-bottom: 20px;
           color: #333;
         }
-
         .checkbox-group {
           margin-top: 16px;
         }
-
         .checkbox-label {
           display: flex;
           align-items: center;
           gap: 10px;
           cursor: pointer;
         }
-
         .checkbox-label input {
           width: 18px;
           height: 18px;
           cursor: pointer;
         }
-
         .checkbox-label span {
           font-size: 14px;
           color: #333;
         }
-
+        .account-prompt-container {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 24px;
+          margin: 30px 0;
+        }
+        .account-prompt-card {
+          background: #f8f9fa;
+          border-radius: 12px;
+          padding: 24px;
+          text-align: center;
+        }
+        .account-prompt-card h3 {
+          margin-bottom: 12px;
+          color: #333;
+        }
+        .account-prompt-card p {
+          color: #666;
+          margin-bottom: 20px;
+        }
+        .btn-event-primary {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          padding: 10px 24px;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+        .btn-event-secondary {
+          background: white;
+          color: #667eea;
+          border: 2px solid #667eea;
+          padding: 10px 24px;
+          border-radius: 8px;
+          cursor: pointer;
+        }
         @media (max-width: 768px) {
           .event-type-selector {
+            grid-template-columns: 1fr;
+          }
+          .account-prompt-container {
             grid-template-columns: 1fr;
           }
         }

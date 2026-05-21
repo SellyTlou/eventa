@@ -7,29 +7,29 @@ import "../alert.css";
 
 function CreateTicketEvent() {
     const navigate = useNavigate();
-    
+
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [loginMode, setLoginMode] = useState("login");
     const [loginAccountType, setLoginAccountType] = useState("personal");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const [alert, setAlert] = useState({
         show: false,
         message: "",
         type: "",
     });
-    
+
     const [currentStep, setCurrentStep] = useState(1);
     const [eventImage, setEventImage] = useState(null);
     const [imagePreview, setImagePreview] = useState("");
     const [eventName, setEventName] = useState("");
-    
+
     // Date and time fields
     const [eventStartDate, setEventStartDate] = useState("");
     const [eventEndDate, setEventEndDate] = useState("");
     const [eventStartTime, setEventStartTime] = useState("");
     const [eventEndTime, setEventEndTime] = useState("");
-    
+
     // Location fields
     const [address, setAddress] = useState("");
     const [province, setProvince] = useState("");
@@ -37,20 +37,20 @@ function CreateTicketEvent() {
     const [eventType, setEventType] = useState("");
     const [moreInfo, setMoreInfo] = useState("");
     const [customEventType, setCustomEventType] = useState("");
-    
+
     // Ticket types - only 4 types with their own state
     const [generalPrice, setGeneralPrice] = useState("");
     const [generalQuantity, setGeneralQuantity] = useState("");
-    
+
     const [earlybirdPrice, setEarlybirdPrice] = useState("");
     const [earlybirdQuantity, setEarlybirdQuantity] = useState("");
-    
+
     const [vipPrice, setVipPrice] = useState("");
     const [vipQuantity, setVipQuantity] = useState("");
-    
+
     const [vvipPrice, setVvipPrice] = useState("");
     const [vvipQuantity, setVvipQuantity] = useState("");
-    
+
     // Validation errors
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
@@ -79,7 +79,7 @@ function CreateTicketEvent() {
 
     const checkAuth = () => {
         let userID = null;
-        
+
         const userString = localStorage.getItem("user");
         if (userString) {
             try {
@@ -89,11 +89,11 @@ function CreateTicketEvent() {
                 console.error("Error parsing user object:", e);
             }
         }
-        
+
         if (!userID) {
             userID = localStorage.getItem('user_id') || localStorage.getItem('userId') || localStorage.getItem('uid');
         }
-        
+
         if (!userID) {
             printAlert("Please log in to create an event", "warning");
             setIsLoginOpen(true);
@@ -130,15 +130,15 @@ function CreateTicketEvent() {
                 setErrors(prev => ({ ...prev, eventImage: "Image size must be less than 5MB" }));
                 return;
             }
-            
+
             if (!file.type.match('image.*')) {
                 setErrors(prev => ({ ...prev, eventImage: "Please upload an image file" }));
                 return;
             }
-            
+
             setEventImage(file);
             setErrors(prev => ({ ...prev, eventImage: "" }));
-            
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result);
@@ -155,45 +155,45 @@ function CreateTicketEvent() {
             if (!eventName.trim()) {
                 newErrors.eventName = "Event name is required";
             }
-            
+
             if (!eventImage) {
                 newErrors.eventImage = "Please upload an event image";
             }
-            
+
             if (!eventStartDate) {
                 newErrors.eventStartDate = "Start date is required";
             }
-            
+
             if (!eventEndDate) {
                 newErrors.eventEndDate = "End date is required";
             }
-            
+
             if (!eventStartTime) {
                 newErrors.eventStartTime = "Start time is required";
             }
-            
+
             if (!eventEndTime) {
                 newErrors.eventEndTime = "End time is required";
             }
-            
+
             if (!address.trim()) {
                 newErrors.address = "Address is required";
             }
-            
+
             if (!cityTown.trim()) {
                 newErrors.cityTown = "City/Town is required";
             }
-            
+
             if (!province) {
                 newErrors.province = "Please select a province";
             }
-            
+
             if (!eventType) {
                 newErrors.eventType = "Please select an event type";
             } else if (eventType === "other" && !customEventType.trim()) {
                 newErrors.customEventType = "Please specify the event type";
             }
-            
+
             if (!moreInfo.trim()) {
                 newErrors.moreInfo = "Please provide more information about the event";
             } else if (moreInfo.length < 20) {
@@ -263,7 +263,7 @@ function CreateTicketEvent() {
     const getUserCredentials = () => {
         let userID = null;
         let userName = null;
-        
+
         const userString = localStorage.getItem("user");
         if (userString) {
             try {
@@ -274,61 +274,61 @@ function CreateTicketEvent() {
                 console.error("Error parsing user object:", e);
             }
         }
-        
+
         if (!userID) {
             userID = localStorage.getItem('user_id') || localStorage.getItem('userId') || localStorage.getItem('uid');
         }
-        
+
         if (!userName) {
             userName = localStorage.getItem('user_name') || localStorage.getItem('username') || localStorage.getItem('name');
         }
-        
+
         return { userID, userName };
     };
 
     const handleSubmit = async () => {
         const { userID, userName } = getUserCredentials();
-        
+
         if (!userID) {
             printAlert("Please log in to create an event", "warning");
             setIsLoginOpen(true);
             return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         try {
             const ticketEventData = {
                 eventName: eventName || "Ticket Event",
-                
+
                 eventStartDate,
                 eventEndDate,
                 eventStartTime,
                 eventEndTime,
-                
+
                 address,
                 province,
                 cityTown,
                 eventType: eventType === "other" ? customEventType : eventType,
                 moreInfo,
-                
+
                 generalPrice: generalPrice === "" ? null : generalPrice,
                 generalQuantity: generalQuantity === "" ? null : generalQuantity,
-                
+
                 earlybirdPrice: earlybirdPrice === "" ? null : earlybirdPrice,
                 earlybirdQuantity: earlybirdQuantity === "" ? null : earlybirdQuantity,
-                
+
                 vipPrice: vipPrice === "" ? null : vipPrice,
                 vipQuantity: vipQuantity === "" ? null : vipQuantity,
-                
-               
+
+
             };
 
             console.log("Submitting ticket event:", ticketEventData);
 
             const API_URL = process.env.REACT_APP_API_URL || '';
             const fd = new FormData();
-            
+
             if (eventImage) {
                 if (eventImage instanceof File) {
                     const base64Image = await fileToBase64(eventImage);
@@ -337,7 +337,7 @@ function CreateTicketEvent() {
                     ticketEventData.image = eventImage;
                 }
             }
-            
+
             fd.append("user_id", userID);
             fd.append("user_name", userName || '');
             fd.append("function", "saveNewTicketEvent");
@@ -349,11 +349,28 @@ function CreateTicketEvent() {
             });
 
             const data = await resp.json();
-            
+
             if (data.success) {
                 printAlert("Ticket event created successfully!", "success");
+                const userString = localStorage.getItem("user");
+                let accountType = null;
+
+                if (userString) {
+                    try {
+                        const userData = JSON.parse(userString);
+                        accountType = userData.account_type || userData.accountType || userData.user_type;
+                    } catch (e) {
+                        console.error("Error parsing user data:", e);
+                    }
+                }
+
+                // Navigate based on account type
                 setTimeout(() => {
-                    navigate(`/eventsDashboard`);
+                    if (accountType === "business") {
+                        navigate("/businessdashboard");
+                    } else {
+                        navigate("/eventsDashboard");
+                    }
                 }, 2000);
             } else {
                 printAlert(data.message || "Failed to create event", "error");
@@ -394,12 +411,11 @@ function CreateTicketEvent() {
 
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
-                    <i className={`fas ${
-                        alert.type === "error" ? "fa-times-circle" :
-                        alert.type === "success" ? "fa-check-circle" :
-                        alert.type === "warning" ? "fa-exclamation-triangle" :
-                        "fa-info-circle"
-                    }`} />
+                    <i className={`fas ${alert.type === "error" ? "fa-times-circle" :
+                            alert.type === "success" ? "fa-check-circle" :
+                                alert.type === "warning" ? "fa-exclamation-triangle" :
+                                    "fa-info-circle"
+                        }`} />
                     <span>{alert.message}</span>
                 </div>
             )}
@@ -408,7 +424,7 @@ function CreateTicketEvent() {
                 <button className="eventa-back-btn" onClick={handleBack}>
                     &#8592; Back
                 </button>
-                
+
                 <div className="container">
                     {/* Progress Bar */}
                     <div className="progressBar">
@@ -457,8 +473,8 @@ function CreateTicketEvent() {
                                         {imagePreview ? (
                                             <div className="image-preview">
                                                 <img src={imagePreview} alt="Event preview" />
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     className="remove-image"
                                                     onClick={() => {
                                                         setEventImage(null);
@@ -801,7 +817,7 @@ function CreateTicketEvent() {
                                         </div>
                                     </div>
 
-                                 
+
                                 </div>
 
                                 <div className="ticket-info-note">
@@ -823,13 +839,13 @@ function CreateTicketEvent() {
                                 )}
                             </div>
                             <div>
-                                <button 
-                                    className="btn-event btn-event-next" 
+                                <button
+                                    className="btn-event btn-event-next"
                                     onClick={handleNext}
                                     disabled={isSubmitting}
                                 >
-                                    {isSubmitting ? "CREATING..." : 
-                                     currentStep === 1 ? "NEXT: TICKET PRICING" : "CREATE TICKET EVENT"}
+                                    {isSubmitting ? "CREATING..." :
+                                        currentStep === 1 ? "NEXT: TICKET PRICING" : "CREATE TICKET EVENT"}
                                 </button>
                             </div>
                         </div>

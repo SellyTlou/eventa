@@ -846,7 +846,6 @@ export function LoginNav() {
             setUser(JSON.parse(storedUser));
         }
 
-        // Listen for logout events
         const handleUserLogout = () => {
             setUser(null);
         };
@@ -864,7 +863,6 @@ export function LoginNav() {
                 setDropdownOpen(false);
             }
 
-            // Close mobile menu if clicked outside (except the hamburger button)
             if (mobileMenuRef.current &&
                 !mobileMenuRef.current.contains(event.target) &&
                 !event.target.closest('.mobile-menu-toggle')) {

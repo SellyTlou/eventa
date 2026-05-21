@@ -1,4 +1,3 @@
-// business-payment-cancel.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,31 +8,23 @@ const BusinessPaymentCancel = () => {
     useEffect(() => {
         console.log('Business payment cancelled');
         
-        // Retrieve the transaction ID from localStorage if exists
         const lastTransactionId = localStorage.getItem("lastBusinessTransactionId");
         
         if (lastTransactionId) {
             setTransactionId(lastTransactionId);
             console.log('Cancelled transaction ID:', lastTransactionId);
-            
-            // Optional: Log the cancelled transaction for analytics
-            // You can also send this to your backend for tracking
         }
         
-        // Clear the stored transaction ID to prevent reuse
         localStorage.removeItem("lastBusinessTransactionId");
         localStorage.removeItem("selectedBusinessPackageId");
         
-        // Optional: Redirect to packages page after 10 seconds
         const timer = setTimeout(() => {
-            // navigate('/upgrade_business_package');
         }, 10000);
         
         return () => clearTimeout(timer);
     }, []);
     
     const handleTryAgain = () => {
-        // Navigate back to the payment page with the same package
         const selectedPackageId = localStorage.getItem("selectedBusinessPackageId");
         if (selectedPackageId) {
             navigate('/business-package-payment');
