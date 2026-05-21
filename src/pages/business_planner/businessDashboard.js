@@ -4,7 +4,7 @@ import PriorityQueue from "js-priority-queue";
 import "../planner/main.css";
 import "../../responce.css";
 import "../../alert.css";
-import { LoginNav } from "../components";
+import { LoginNav, NewEventPopupBtn } from "../components";  // ← Added NewEventPopupBtn
 import { 
     getEffectivePackageValue, 
     getEffectivePackageName,
@@ -177,34 +177,34 @@ const BusinessDashboard = () => {
 
     // Fetch user's business package
     const fetchUserBusinessPackage = async (userId) => {
-    try {
-        const API_URL = process.env.REACT_APP_API_URL;
-        const formData = new FormData();
-        formData.append("function", "getUserBusinessPackage");
-        formData.append("user_id", userId);
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const formData = new FormData();
+            formData.append("function", "getUserBusinessPackage");
+            formData.append("user_id", userId);
 
-        const response = await fetch(`${API_URL}/query.php`, {
-            method: "POST",
-            body: formData
-        });
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-        const data = await response.json();
-        console.log("User business package data:", data);
-        
-        if (data.success && data.userBusinessPackage) {
-            setUserBusinessPackage(data.userBusinessPackage);
-            console.log("Package set successfully:", data.userBusinessPackage);
-        } else {
-            console.log("No business package found for user:", data.message);
+            const data = await response.json();
+            console.log("User business package data:", data);
+            
+            if (data.success && data.userBusinessPackage) {
+                setUserBusinessPackage(data.userBusinessPackage);
+                console.log("Package set successfully:", data.userBusinessPackage);
+            } else {
+                console.log("No business package found for user:", data.message);
+                setUserBusinessPackage(null);
+            }
+        } catch (error) {
+            console.error("Error fetching business package:", error);
             setUserBusinessPackage(null);
         }
-    } catch (error) {
-        console.error("Error fetching business package:", error);
-        setUserBusinessPackage(null);
-    }
-};
+    };
 
     // Navbar click outside handler
     useEffect(() => {
@@ -936,81 +936,80 @@ const BusinessDashboard = () => {
         });
     };
 
-    // Business Package Status Card - UPDATED to use utility functions
     // Business Package Status Card - SIMPLIFIED VERSION
-const renderBusinessPackageStatus = () => {
-    if (!userBusinessPackage) {
+    const renderBusinessPackageStatus = () => {
+        if (!userBusinessPackage) {
+            return (
+                <div className="business-package-status no-package">
+                    <div className="status-icon">
+                        <i className="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div className="status-content">
+                        <h4>No Business Package</h4>
+                        <p>You don't have an active business package. Upgrade to publish events.</p>
+                        <button className="btn-upgrade-small" onClick={goToBusinessUpgrade}>
+                            Get Business Package
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        const isCustom = isCustomPackage(userBusinessPackage);
+        const packageName = getEffectivePackageName(userBusinessPackage);
+        const eventsUsed = userBusinessPackage.event_used || 0;
+        const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
+        
+        const eventsRemaining = eventLimit === 0 ? 'Unlimited' : eventLimit - eventsUsed;
+        const percentUsed = eventLimit > 0 ? (eventsUsed / eventLimit) * 100 : 0;
+
         return (
-            <div className="business-package-status no-package">
+            <div className={`business-package-status active ${isCustom ? 'custom-package' : ''}`}>
                 <div className="status-icon">
-                    <i className="bi bi-exclamation-triangle"></i>
+                    {isCustom ? (
+                        <i className="bi bi-star-fill"></i>
+                    ) : (
+                        <i className="bi bi-briefcase"></i>
+                    )}
                 </div>
                 <div className="status-content">
-                    <h4>No Business Package</h4>
-                    <p>You don't have an active business package. Upgrade to publish events.</p>
-                    <button className="btn-upgrade-small" onClick={goToBusinessUpgrade}>
-                        Get Business Package
-                    </button>
+                    <div className="package-header">
+                        <h4>
+                            {packageName}
+                            {isCustom && (
+                                <span className="custom-badge">
+                                    <i className="bi bi-star"></i> Custom Plan
+                                </span>
+                            )}
+                        </h4>
+                    </div>
+
+                    {/* ONLY the usage bar and counter - all other details removed */}
+                    <div className="usage-info">
+                        <div className="usage-bar">
+                            <div 
+                                className="usage-progress" 
+                                style={{ width: `${Math.min(percentUsed, 100)}%` }}
+                            ></div>
+                        </div>
+                        <div className="usage-text">
+                            <span>{eventsUsed} of {eventLimit === 0 ? '∞' : eventLimit} events used</span>
+                            <span className="remaining">
+                                {eventsRemaining === 'Unlimited' ? 'Unlimited left' : `${eventsRemaining} remaining`}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* ONLY the View Custom Plan button */}
+                    <div className="package-footer">
+                        <button className="btn-manage-package" onClick={goToBusinessUpgrade}>
+                            {isCustom ? 'View Custom Plan' : 'Manage Package'}
+                        </button>
+                    </div>
                 </div>
             </div>
         );
-    }
-
-    const isCustom = isCustomPackage(userBusinessPackage);
-    const packageName = getEffectivePackageName(userBusinessPackage);
-    const eventsUsed = userBusinessPackage.event_used || 0;
-    const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
-    
-    const eventsRemaining = eventLimit === 0 ? 'Unlimited' : eventLimit - eventsUsed;
-    const percentUsed = eventLimit > 0 ? (eventsUsed / eventLimit) * 100 : 0;
-
-    return (
-        <div className={`business-package-status active ${isCustom ? 'custom-package' : ''}`}>
-            <div className="status-icon">
-                {isCustom ? (
-                    <i className="bi bi-star-fill"></i>
-                ) : (
-                    <i className="bi bi-briefcase"></i>
-                )}
-            </div>
-            <div className="status-content">
-                <div className="package-header">
-                    <h4>
-                        {packageName}
-                        {isCustom && (
-                            <span className="custom-badge">
-                                <i className="bi bi-star"></i> Custom Plan
-                            </span>
-                        )}
-                    </h4>
-                </div>
-
-                {/* ONLY the usage bar and counter - all other details removed */}
-                <div className="usage-info">
-                    <div className="usage-bar">
-                        <div 
-                            className="usage-progress" 
-                            style={{ width: `${Math.min(percentUsed, 100)}%` }}
-                        ></div>
-                    </div>
-                    <div className="usage-text">
-                        <span>{eventsUsed} of {eventLimit === 0 ? '∞' : eventLimit} events used</span>
-                        <span className="remaining">
-                            {eventsRemaining === 'Unlimited' ? 'Unlimited left' : `${eventsRemaining} remaining`}
-                        </span>
-                    </div>
-                </div>
-
-                {/* ONLY the View Custom Plan button */}
-                <div className="package-footer">
-                    <button className="btn-manage-package" onClick={goToBusinessUpgrade}>
-                        {isCustom ? 'View Custom Plan' : 'Manage Package'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
+    };
 
     if (loading) {
         return (
@@ -1046,11 +1045,13 @@ const renderBusinessPackageStatus = () => {
                 </div>
             )}
 
+            {/* NewEventPopupBtn component - This adds the floating button */}
+            <NewEventPopupBtn />
+
             <section className="eventsDashboard">
                 <LoginNav />
                 <div className="container">
-                    {/* HEADER */}
-                    <div className="dashboard-header">
+                    <div className="dashboard-header-business">
                         <div className="header-content">
                             <h1 className="dashboard-title">Business Event Dashboard</h1>
                             <p className="dashboard-subtitle">Manage your business events and packages</p>
@@ -1065,12 +1066,10 @@ const renderBusinessPackageStatus = () => {
                             <i className="bi bi-file-text"></i>
                             Request Custom Plan
                         </button>
-                        <button className="create-event-btn-main" onClick={createEvent}>
-                            <i className="bi bi-plus-lg"></i> New Event
-                        </button>
+                        {/* REMOVED: <button className="create-event-btn-main" onClick={createEvent}> */}
                     </div>
 
-                    {/* BUSINESS PACKAGE STATUS - UPDATED */}
+                    {/* BUSINESS PACKAGE STATUS */}
                     {renderBusinessPackageStatus()}
 
                     {/* NEXT EVENT CARD */}
@@ -1353,9 +1352,7 @@ const renderBusinessPackageStatus = () => {
                                 </div>
                                 <h3>No Events Found</h3>
                                 <p>Create your first business event or adjust your filters to view existing events.</p>
-                                <button className="cta-button" onClick={createEvent}>
-                                    <i className="bi bi-plus-circle"></i> Create Event
-                                </button>
+                                {/* The NewEventPopupBtn handles the create event button, so no need for extra button here */}
                             </div>
                         )}
                     </div>

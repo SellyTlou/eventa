@@ -26,21 +26,42 @@ const BusinessPackagePayment = () => {
 
     const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost/eventa/src/pages/php';
 
+    const API_URL = process.env.REACT_APP_API_URL;
+  const BASE_URL = API_URL.replace('/api', '');
+
     // ============ PAYFAST CONFIGURATION for LIVE ============
     const PAYFAST_CONFIG = {
+
         MERCHANT_ID: "33426571",
         MERCHANT_KEY: "lkqoiy0ftb9yc",
-        PASS_PHRASE: "",
-        
-        ITN_URL: "https://evenditest.evendi.co.za/src/pages/php/payFastIntBusiness.php",
         PAYFAST_URL: "https://www.payfast.co.za/eng/process",
-        
-        RETURN_URL: "https://evenditest.evendi.co.za/business-payment-success",
-        CANCEL_URL: "https://evenditest.evendi.co.za/business-payment-cancel",
-        
+
+        ITN_URL: `${API_URL}/payFastIntBusiness.php`,
+
+        RETURN_URL: `${BASE_URL}/business-payment-success`,
+
+        CANCEL_URL: `${BASE_URL}/business-payment-cancel`,
+
         EMAIL_CONFIRMATION: true,
-        PAYMENT_METHOD: "",
+
+        CONFIRMATION_EMAIL: "",
+
+        PAYMENT_METHOD: ""
     };
+
+
+    // ============ PAYFAST CONFIGURATION for testing ============
+    // const PAYFAST_CONFIG = {
+    //     MERCHANT_ID: "10039229",
+    //     MERCHANT_KEY: "1ogl07vai6oig",
+    //     ITN_URL: "https://yen-rigging-timid.ngrok-free.dev/eventa/src/pages/api/payfastIntBusiness.php",
+    //     PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
+    //     RETURN_URL: "https://yen-rigging-timid.ngrok-free.dev/eventa/src/pages/planner/paymentSuccess",
+    //     CANCEL_URL: "https://yen-rigging-timid.ngrok-free.dev/eventa/src/pages/business_planner/paymentCancel",
+    //     EMAIL_CONFIRMATION: true,
+    //     CONFIRMATION_EMAIL: "",
+    //     PAYMENT_METHOD: "cc",
+    // };
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });
@@ -48,6 +69,7 @@ const BusinessPackagePayment = () => {
             setAlert({ show: false, message: "", type: "" });
         }, 5000);
     };
+
 
     // Memoized calculation function
     const calculatePaymentDetails = useCallback(() => {
@@ -72,7 +94,7 @@ const BusinessPackagePayment = () => {
     const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
-        
+
         try {
             const response = await fetch(url, {
                 ...options,
@@ -118,72 +140,169 @@ const BusinessPackagePayment = () => {
 
     // ============ PAYFAST FUNCTIONS ============
     const generateTransactionId = () => {
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substr(2, 9);
-        return `BP-${timestamp}-${random}`;
-    };
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substr(2, 9);
+    return `BP-${timestamp}-${random}`;
+};
 
-    const getSignature = async (data) => {
-        const res = await fetch(`${API_BASE_URL}/generateSignature.php`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
+const generatePayFastSignature = async (data) => {
+    try {
+        const formData = new FormData();
+        
+        Object.entries(data).forEach(([key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) {
+                formData.append(key, value);
+            }
         });
 
-        const result = await res.json();
+        const response = await fetch(`${API_URL}/generateSignature.php`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await response.text();
+        console.log("RAW RESPONSE:", text);
+        const result = JSON.parse(text);
+
         if (!result.success) {
-            throw new Error(result.message || "Failed to generate PayFast signature");
+            throw new Error(result.error || 'Signature generation failed');
         }
 
         return result.signature;
+    } catch (error) {
+        console.error('Signature generation error:', error);
+        throw error;
+    }
+};
+
+const preparePayFastData = (transactionId) => {
+    const userData = user || JSON.parse(localStorage.getItem("user") || "{}");
+    
+    const totalWithFee = (
+        parseFloat(paymentDetails?.totalAmount || "0.00")
+    ).toFixed(2);
+
+    const customData = {
+        user_id: userData?.user_id,
+        business_name: userData?.business_name || userData?.name,
+        email: userData?.email,
+        phone: userData?.phone,
+        package_id: selectedPackage?.id || selectedPackage?.package_id,
+        package_name: selectedPackage?.name || selectedPackage?.package_type,
+        max_events: selectedPackage?.max_events,
+        max_guests: selectedPackage?.max_guests,
+        base_url: BASE_URL,
     };
 
-    const preparePayFastData = () => {
-        const mPaymentId = generateTransactionId();
-        setTransactionId(mPaymentId);
-        
-        const userData = user || JSON.parse(localStorage.getItem("user") || "{}");
-        
-        const paymentData = {
-            merchant_id: String(PAYFAST_CONFIG.MERCHANT_ID),
-            merchant_key: String(PAYFAST_CONFIG.MERCHANT_KEY),
-            return_url: String(PAYFAST_CONFIG.RETURN_URL),
-            cancel_url: String(PAYFAST_CONFIG.CANCEL_URL),
-            notify_url: String(PAYFAST_CONFIG.ITN_URL),
-            
-            name_first: String(userData?.name?.split(' ')[0] || ''),
-            name_last: String(userData?.name?.split(' ').slice(1).join(' ') || ''),
-            email_address: String(userData?.email || ''),
-            cell_number: String(userData?.phone || ''),
-            
-            m_payment_id: String(mPaymentId),
-            amount: String(paymentDetails?.totalAmount || "0.00"),
-            item_name: String(`${selectedPackage?.name || selectedPackage?.package_type || 'Business Package'} - Evenda`),
-            item_description: String(`Max Events: ${selectedPackage?.max_events || 'Unlimited'}, Max Guests: ${selectedPackage?.max_guests || 0}`),
-            
-            custom_str1: String(userData?.user_id || ''),
-            custom_str2: String(selectedPackage?.id || selectedPackage?.package_id || ''),
-            custom_str3: String(selectedPackage?.name || selectedPackage?.package_type || 'Business'),
-            custom_str4: 'PayFast-Business',
-            custom_int1: String(parseInt(selectedPackage?.max_events) || 0),
-            custom_int2: String(parseInt(selectedPackage?.max_guests) || 0),
-            
-            email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? "1" : "0",
-        };
+    const paymentData = {
+        merchant_id: PAYFAST_CONFIG.MERCHANT_ID,
 
-        if (userData?.email) {
-            paymentData.confirmation_address = String(userData.email);
+        merchant_key: PAYFAST_CONFIG.MERCHANT_KEY,
+
+        return_url: PAYFAST_CONFIG.RETURN_URL,
+
+        cancel_url: PAYFAST_CONFIG.CANCEL_URL,
+
+        notify_url: PAYFAST_CONFIG.ITN_URL,
+        
+        name_first: String(userData?.business_name?.split(' ')[0] || userData?.name?.split(' ')[0] || 'Business'),
+        name_last: String(userData?.business_name?.split(' ').slice(1).join(' ') || userData?.name?.split(' ').slice(1).join(' ') || 'Customer'),
+        email_address: String(userData?.email || 'business@email.com'),
+        cell_number: String(userData?.phone || '0123456789'),
+        
+        m_payment_id: transactionId,
+        amount: totalWithFee,
+        item_name: String(`${selectedPackage?.name || selectedPackage?.package_type || 'Business Package'} - Evenda Business`),
+        item_description: String(`Max Events: ${selectedPackage?.max_events || 'Unlimited'}, Max Guests: ${selectedPackage?.max_guests || 0}`),
+        
+        custom_str1: String(userData?.user_id || ''),
+        custom_str2: String(selectedPackage?.id || selectedPackage?.package_id || ''),
+        custom_str3: String(selectedPackage?.name || selectedPackage?.package_type || 'Business'),
+        custom_str4: 'business_payment',
+        custom_int1: String(parseInt(selectedPackage?.max_events) || 0),
+        custom_int2: String(parseInt(selectedPackage?.max_guests) || 0),
+        
+        email_confirmation: PAYFAST_CONFIG.EMAIL_CONFIRMATION ? "1" : "0",
+    };
+
+    if (userData?.email) {
+        paymentData.confirmation_address = String(userData.email);
+    }
+
+    const cleanedData = {};
+    Object.entries(paymentData).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+            cleanedData[key] = String(value);
         }
+    });
+
+    console.log("PayFast Data prepared:", cleanedData);
+    return cleanedData;
+};
+
+const initiatePayFastPayment = async () => {
+    setProcessingPayment(true);
+    setPaymentStarted(true);
+
+    try {
         
-        console.log("PayFast Data prepared for Business Package:", {
-            ...paymentData,
-            signature: "***HIDDEN***"
+        const id = generateTransactionId();
+        console.log("FINAL TRANSACTION ID:", id);
+        setTransactionId(id);
+        
+        const paymentData = preparePayFastData(id);
+        
+        const signature = await generatePayFastSignature(paymentData);
+        paymentData.signature = signature;
+
+        localStorage.setItem("lastBusinessTransactionId", id);
+        localStorage.setItem("selectedBusinessPackageId", selectedPackage?.id);
+
+        // Record initial payment with pending status
+        const paymentRecorded = await recordBusinessPayment({
+            payment_method: 'payfast',
+            payment_status: 'pending',
+            transaction_id: id
         });
+
+        if (!paymentRecorded.success) {
+            throw new Error("Failed to record payment");
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = PAYFAST_CONFIG.PAYFAST_URL;
+        form.target = '_blank';
+        form.style.display = 'none';
+
+        Object.keys(paymentData).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = paymentData[key];
+            form.appendChild(input);
+            console.log(`Adding field: ${key}=${paymentData[key]}`);
+        });
+
+        document.body.appendChild(form);
+        console.log("Submitting to PayFast:", PAYFAST_CONFIG.PAYFAST_URL);
         
-        return paymentData;
-    };
+        form.submit();
+
+        setTimeout(() => {
+            document.body.removeChild(form);
+            setShowPaymentPopup(false);
+            setProcessingPayment(false);
+        }, 1000);
+
+    } catch (error) {
+        console.error("PayFast payment error:", error);
+        setError("Failed to initiate payment. Please try again.");
+        printAlert("Payment initiation failed. Please try again.", "error");
+        setProcessingPayment(false);
+        setPaymentStarted(false);
+    }
+};
 
     // ============ PAYMENT FUNCTIONS ============
     const getBusinessPackageById = async (packageId) => {
@@ -231,14 +350,14 @@ const BusinessPackagePayment = () => {
     const recordBusinessPayment = async (paymentInfo = {}) => {
         try {
             const formData = new FormData();
-            
+
             formData.append("function", "recordBusinessPayment");
             formData.append("user_id", user?.user_id);
             formData.append("business_package_id", selectedPackage?.id || selectedPackage?.package_id);
             formData.append("amount", paymentDetails?.totalAmount || "0.00");
             formData.append("payment_method", paymentInfo.payment_method || selectedPaymentMethod);
             formData.append("payment_status", paymentInfo.payment_status || "pending");
-            
+
             if (transactionId || paymentInfo.transaction_id) {
                 formData.append("transaction_id", paymentInfo.transaction_id || transactionId);
             }
@@ -276,12 +395,12 @@ const BusinessPackagePayment = () => {
             }
 
             console.log("✅ Business payment recorded successfully:", result);
-            
+
             if (paymentInfo.payment_status === 'completed' || result.payment_id) {
                 generatePaymentProof(result.transaction_id || transactionId);
                 setShowProofOptions(true);
             }
-            
+
             return { success: true, transaction_id: transactionId };
 
         } catch (error) {
@@ -332,60 +451,6 @@ const BusinessPackagePayment = () => {
         }
     };
 
-    const initiatePayFastPayment = async () => {
-        setProcessingPayment(true);
-        setPaymentStarted(true);
-        
-        try {
-            const paymentData = preparePayFastData();
-            paymentData.signature = await getSignature(paymentData);
-
-            localStorage.setItem("lastBusinessTransactionId", paymentData.m_payment_id);
-            localStorage.setItem("selectedBusinessPackageId", selectedPackage?.id);
-            
-            // Record initial payment with pending status
-            const paymentRecorded = await recordBusinessPayment({
-                payment_method: 'payfast',
-                payment_status: 'pending',
-                transaction_id: paymentData.m_payment_id
-            });
-
-            if (!paymentRecorded.success) {
-                throw new Error("Failed to record payment");
-            }
-
-            // Create and submit the form to PayFast
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = PAYFAST_CONFIG.PAYFAST_URL;
-            form.target = '_blank';
-            form.style.display = 'none';
-            
-            Object.keys(paymentData).forEach(key => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = paymentData[key];
-                form.appendChild(input);
-            });
-            
-            document.body.appendChild(form);
-            console.log("Submitting to PayFast:", PAYFAST_CONFIG.PAYFAST_URL);
-            form.submit();
-            
-            setTimeout(() => {
-                setShowPaymentPopup(false);
-                setProcessingPayment(false);
-            }, 1000);
-            
-        } catch (error) {
-            console.error("PayFast payment error:", error);
-            setError("Failed to initiate payment. Please try again.");
-            printAlert("Payment initiation failed. Please try again.", "error");
-            setProcessingPayment(false);
-            setPaymentStarted(false);
-        }
-    };
 
     const generatePaymentProof = (paymentId) => {
         const proof = {
@@ -403,14 +468,14 @@ const BusinessPackagePayment = () => {
             reference: `EVENDA-BIZ-${Date.now()}`,
             terms: "Thank you for your business package payment. Your account has been upgraded."
         };
-        
+
         setPaymentProof(proof);
         return proof;
     };
 
     const downloadPaymentProof = () => {
         if (!paymentProof) return;
-        
+
         const proofText = `
         =====================================
           BUSINESS PACKAGE PAYMENT RECEIPT
@@ -442,7 +507,7 @@ const BusinessPackagePayment = () => {
         Generated by Evenda Event Management
         =====================================
         `;
-        
+
         const blob = new Blob([proofText], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -452,7 +517,7 @@ const BusinessPackagePayment = () => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         printAlert("Payment proof downloaded successfully!", "success");
     };
 
@@ -461,10 +526,10 @@ const BusinessPackagePayment = () => {
             printAlert("Unable to send email. Missing payment proof or email address.", "error");
             return;
         }
-        
+
         try {
             setProcessingPayment(true);
-            
+
             const result = await sendPaymentReceiptEmail(
                 user.email,
                 user.business_name || user.name,
@@ -472,13 +537,13 @@ const BusinessPackagePayment = () => {
                 paymentProof.total,
                 paymentProof.package
             );
-            
+
             if (result.success) {
                 printAlert("Payment receipt sent to your email!", "success");
             } else {
                 throw new Error(result.message || "Failed to send email");
             }
-            
+
         } catch (error) {
             console.error("Email sending error:", error);
             printAlert("Failed to send email receipt. You can download the proof instead.", "error");
@@ -502,7 +567,7 @@ const BusinessPackagePayment = () => {
                 await initiatePayFastPayment();
                 return;
             }
-            
+
             // For other payment methods (if any)
             await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -519,9 +584,9 @@ const BusinessPackagePayment = () => {
                     localStorage.removeItem("selectedPackageType");
                     localStorage.removeItem("selectedPackage");
                     localStorage.removeItem("selectedBusinessPackage");
-                    
+
                     printAlert("Payment successful! Your business package has been activated.", "success");
-                    
+
                     setTimeout(() => {
                         navigate('/businessdashboard');
                     }, 2000);
@@ -608,7 +673,7 @@ const BusinessPackagePayment = () => {
                 <button className="close-modal" onClick={() => setShowProofOptions(false)}>×</button>
                 <h3>Payment Successful! 🎉</h3>
                 <p>Your business package payment of <strong>R{paymentDetails?.totalAmount}</strong> has been processed successfully.</p>
-                
+
                 {paymentProof && (
                     <div className="proof-details">
                         <p><strong>Transaction ID:</strong> {paymentProof.transactionId}</p>
@@ -616,24 +681,24 @@ const BusinessPackagePayment = () => {
                         <p><strong>Date:</strong> {new Date(paymentProof.date).toLocaleString()}</p>
                     </div>
                 )}
-                
+
                 <div className="proof-actions">
-                    <button 
-                        className="btn-event" 
+                    <button
+                        className="btn-event"
                         onClick={downloadPaymentProof}
                         disabled={processingPayment}
                     >
                         <i className="bi bi-download"></i> Download Proof
                     </button>
-                    <button 
-                        className="btn-event btn-event-success" 
+                    <button
+                        className="btn-event btn-event-success"
                         onClick={handleSendEmailReceipt}
                         disabled={processingPayment}
                     >
                         <i className="bi bi-envelope"></i> Email Receipt
                     </button>
-                    <button 
-                        className="btn-event btn-event-secondary" 
+                    <button
+                        className="btn-event btn-event-secondary"
                         onClick={() => {
                             setShowProofOptions(false);
                             localStorage.removeItem("selectedPackageId");
@@ -680,13 +745,13 @@ const BusinessPackagePayment = () => {
                 }
 
                 const userData = JSON.parse(storedUser);
-                
+
                 if (userData.account_type !== 'business') {
                     printAlert("This page is for business accounts only.", "error");
                     navigate("/packagePayment");
                     return;
                 }
-                
+
                 setUser(userData);
 
                 if (!packageId || packageType !== 'business') {
@@ -802,7 +867,7 @@ const BusinessPackagePayment = () => {
     return (
         <>
             <LoginNav />
-            
+
             {/* Custom alert box */}
             {alert.show && (
                 <div className={`custom-alert ${alert.type}`}>
@@ -827,7 +892,7 @@ const BusinessPackagePayment = () => {
                     <div className="payment-header">
                         <h1>Complete Your Business Package Payment</h1>
                         <p className="lead">Secure and fast checkout powered by PayFast</p>
-                        
+
                         {/* Business Account Badge */}
                         <div className="account-badge">
                             <i className="bi bi-building"></i>
@@ -932,7 +997,7 @@ const BusinessPackagePayment = () => {
                             <div className="payment-popup" onClick={(e) => e.stopPropagation()}>
                                 <button className="close-popup" onClick={closePopup}>×</button>
                                 <h3>Complete Your Business Package Payment</h3>
-                                
+
                                 <div className="popup-package-summary">
                                     <p><strong>Package:</strong> {selectedPackage.name || selectedPackage.package_type}</p>
                                     <p><strong>Total Amount:</strong> R{paymentDetails?.totalAmount}</p>

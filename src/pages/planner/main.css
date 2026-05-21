@@ -2460,6 +2460,152 @@ Profile container dropdown
     }
 }
 
+/* Header Section for Business Dashboard */
+.eventsDashboard .dashboard-header-business {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    margin-top: 70px;
+}
+
+.eventsDashboard .dashboard-header-business .header-content {
+    flex: 1;
+}
+
+.eventsDashboard .dashboard-header-business .dashboard-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.eventsDashboard .dashboard-header-business .dashboard-subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Button Styles */
+.eventsDashboard .dashboard-header-business .btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.eventsDashboard .dashboard-header-business .btn-outline {
+    background: transparent;
+    border: 1.5px solid #667eea;
+    color: #667eea;
+}
+
+.eventsDashboard .dashboard-header-business .btn-outline:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.eventsDashboard .dashboard-header-business .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+}
+
+.eventsDashboard .dashboard-header-business .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.eventsDashboard .dashboard-header-business .me-2 {
+    margin-right: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .eventsDashboard .dashboard-header-business {
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1.25rem;
+        margin-top: 60px;
+    }
+
+    .eventsDashboard .dashboard-header-business .header-content {
+        flex: 1 1 100%;
+        text-align: center;
+    }
+
+    .eventsDashboard .dashboard-header-business .dashboard-title {
+        font-size: 1.5rem;
+    }
+
+    .eventsDashboard .dashboard-header-business .btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .eventsDashboard .dashboard-header-business {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem;
+        margin-top: 55px;
+    }
+
+    .eventsDashboard .dashboard-header-business .header-content {
+        text-align: center;
+    }
+
+    .eventsDashboard .dashboard-header-business .dashboard-title {
+        font-size: 1.3rem;
+    }
+
+    .eventsDashboard .dashboard-header-business .dashboard-subtitle {
+        font-size: 0.8rem;
+    }
+
+    .eventsDashboard .dashboard-header-business .btn {
+        width: 100%;
+        margin-right: 0 !important;
+        justify-content: center;
+    }
+
+    .eventsDashboard .dashboard-header-business .me-2 {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .eventsDashboard .dashboard-header-business {
+        margin-top: 50px;
+        padding: 0.875rem;
+    }
+
+    .eventsDashboard .dashboard-header-business .dashboard-title {
+        font-size: 1.1rem;
+    }
+
+    .eventsDashboard .dashboard-header-business .btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.75rem;
+    }
+}
+
 /* Package Banner */
 .package-banner {
     padding: 8px 16px;
@@ -5861,7 +6007,7 @@ Package Payment Page
 /* Loading Message */
 .loading-container {
     position: relative;
-    min-height: 100vh;
+    min-height: 100vh !important;
 }
 
 .loading-container .loading-overlay {
@@ -7670,106 +7816,228 @@ overflow-y: hidden;
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-
-/* Business Dashboard Specific Styles */
+/* ========================================
+   BUSINESS PACKAGE STATUS CARD - COMPACT
+   ======================================== */
 
 .business-package-status {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 30px;
-    color: white;
+    padding: 12px 20px;
+    margin-bottom: 25px;
     display: flex;
     align-items: center;
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
+    gap: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
 }
 
 .business-package-status.no-package {
+    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+}
+
+.business-package-status.custom-package {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
-.business-package-status.active {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+.business-package-status .status-icon {
+    width: 45px;
+    height: 45px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: white;
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
 }
 
-.status-icon {
-    font-size: 40px;
-    margin-right: 20px;
-    opacity: 0.9;
-}
-
-.status-content {
+.business-package-status .status-content {
     flex: 1;
 }
 
-.status-content h4 {
-    margin: 0 0 10px 0;
-    font-size: 22px;
-    font-weight: 600;
-}
-
-.status-content p {
-    margin: 0 0 15px 0;
-    opacity: 0.9;
-    font-size: 14px;
-}
-
-.usage-info {
-    margin: 15px 0;
-}
-
-.usage-bar {
-    height: 8px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    overflow: hidden;
+.business-package-status .package-header {
     margin-bottom: 8px;
 }
 
-.usage-progress {
-    height: 100%;
-    background: white;
-    border-radius: 4px;
-    transition: width 0.3s ease;
+.business-package-status .package-header h4 {
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.usage-text {
+.business-package-status .custom-badge {
+    background: rgba(255, 255, 255, 0.25);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(5px);
+}
+
+.business-package-status .custom-badge i {
+    font-size: 9px;
+    margin-right: 3px;
+}
+
+/* Usage Info Section */
+.business-package-status .usage-info {
+    margin-bottom: 10px;
+}
+
+.business-package-status .usage-bar {
+    background: rgba(255, 255, 255, 0.25);
+    height: 5px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.business-package-status .usage-progress {
+    background: white;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+}
+
+.business-package-status .usage-text {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
-    opacity: 0.8;
+    align-items: center;
+    color: white;
+    font-size: 11px;
+    font-weight: 500;
 }
 
-.usage-text .remaining {
-    color: #4cff88;
+.business-package-status .usage-text span:first-child {
+    opacity: 0.9;
+}
+
+.business-package-status .usage-text .remaining {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
     font-weight: 600;
 }
 
-.btn-upgrade-small,
-.btn-manage-package {
+/* Package Footer Button */
+.business-package-status .package-footer {
+    margin-top: 0;
+}
+
+.business-package-status .btn-manage-package {
     background: white;
-    color: #667eea;
     border: none;
-    padding: 8px 20px;
+    padding: 5px 14px;
     border-radius: 6px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 14px;
+    color: #667eea;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
 
-.btn-upgrade-small:hover,
-.btn-manage-package:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+.business-package-status .btn-manage-package:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.business-package-status.no-package .btn-upgrade-small {
+.business-package-status.custom-package .btn-manage-package {
     color: #f5576c;
 }
 
-.business-package-status.active .btn-manage-package {
-    color: #4facfe;
+.business-package-status.no-package .btn-manage-package {
+    color: #f59e0b;
+}
+
+/* No Package Specific Styles */
+.business-package-status.no-package .status-content h4 {
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.business-package-status.no-package .status-content p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+}
+
+.business-package-status .btn-upgrade-small {
+    background: white;
+    border: none;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #f59e0b;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.business-package-status .btn-upgrade-small:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .business-package-status {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+
+    .business-package-status .status-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+
+    .business-package-status .package-header h4 {
+        justify-content: center;
+    }
+
+    .business-package-status .usage-text {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .business-package-status .package-footer {
+        text-align: center;
+    }
+}
+
+/* Animation for package status */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.business-package-status {
+    animation: slideDown 0.4s ease-out;
 }
 
 /* Update dashboard header for business */
@@ -8551,7 +8819,7 @@ overflow-y: hidden;
 /* business-package-payment.css */
 
 .business-payment-page {
-    padding: 40px 0 60px;
+    padding: 80px 0 60px;
     background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
     min-height: calc(100vh - 200px);
 }
@@ -9282,165 +9550,6 @@ overflow-y: hidden;
     .method-info {
         text-align: center;
     }
-}
-
-/* Simplified Business Package Status Card */
-.business-package-status {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 25px;
-    display: flex;
-    align-items: flex-start;
-    gap: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border-left: 4px solid #667eea;
-}
-
-.business-package-status.active {
-    border-left-color: #28a745;
-}
-
-.business-package-status.custom-package {
-    border-left-color: #ffc107;
-    background: linear-gradient(to right, #fff9e6, #ffffff);
-}
-
-.business-package-status.no-package {
-    border-left-color: #dc3545;
-    background: #fff8f8;
-}
-
-.status-icon {
-    width: 48px;
-    height: 48px;
-    background: #f0f4ff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: #667eea;
-    flex-shrink: 0;
-}
-
-.business-package-status.custom-package .status-icon {
-    background: #fff3cd;
-    color: #ffc107;
-}
-
-.business-package-status.no-package .status-icon {
-    background: #f8d7da;
-    color: #dc3545;
-}
-
-.status-content {
-    flex: 1;
-}
-
-.package-header {
-    margin-bottom: 15px;
-}
-
-.package-header h4 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.custom-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    color: white;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.custom-badge i {
-    font-size: 12px;
-}
-
-/* Usage Info - This is the main focus now */
-.usage-info {
-    margin: 15px 0 20px;
-}
-
-.usage-bar {
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 8px;
-}
-
-.usage-progress {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-.business-package-status.custom-package .usage-progress {
-    background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
-}
-
-.usage-text {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #555;
-}
-
-.usage-text .remaining {
-    color: #667eea;
-    font-weight: 500;
-}
-
-.business-package-status.custom-package .usage-text .remaining {
-    color: #fd7e14;
-}
-
-/* Package Footer - Only the button */
-.package-footer {
-    margin-top: 5px;
-}
-
-.btn-manage-package {
-    padding: 10px 20px;
-    background: white;
-    border: 2px solid #667eea;
-    border-radius: 8px;
-    color: #667eea;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.btn-manage-package:hover {
-    background: #667eea;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.business-package-status.custom-package .btn-manage-package {
-    border-color: #ffc107;
-    color: #fd7e14;
-}
-
-.business-package-status.custom-package .btn-manage-package:hover {
-    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    color: white;
-    border-color: transparent;
 }
 
 .btn-upgrade-small {

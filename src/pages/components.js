@@ -53,7 +53,8 @@ import EventCheckin from './planner/EventCheckin';
 import FormBuilder from './planner/FormBuilder';
 import TicketCancel from './ticketCancel';
 import TicketSuccess from './ticketSuccess';
-
+import BusinessPaymentSuccess from './business_planner/business-payment-success';
+import BusinessPaymentCancel from './business_planner/business-payment-cancel';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -280,6 +281,8 @@ export function SessionHandler() {
                 <Route path="/request/:requestId" element={<RequestDetails />} />
                 <Route path="/paymentCancel" element={<PaymentCancel />} />
                 <Route path="/paymentSuccess" element={<PaymentSuccess />} />
+                <Route path="/businessPaymentCancel" element={<BusinessPaymentCancel />} />
+                <Route path="/businessPaymentSuccess" element={<BusinessPaymentSuccess />} />
                 <Route path="/createTicketEvent" element={<CreateTicketEvent />} />
                 <Route path="/event-checklist" element={<EventChecklist />} />
                 <Route path="/form-builder" element={<FormBuilder />} />
@@ -303,7 +306,6 @@ export function SessionHandler() {
                 <Route path="/event-checklist" element={<PrivateRoute><EventChecklist /></PrivateRoute>} />
                 <Route path="/event-checkin" element={<PrivateRoute><EventCheckin /></PrivateRoute>} />
                 <Route path="/form-builder" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
-
             </Routes>
 
             <SessionWarningModal
@@ -1969,7 +1971,11 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
     const location = useLocation();
 
     const goToHome = () => {
-        navigate("/eventsDashboard");
+        const storedUser = localStorage.getItem('user');
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+        navigate(dashPath);
+
         onClose?.();
     };
     const goToManage = () => {

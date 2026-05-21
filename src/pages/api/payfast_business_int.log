@@ -1,0 +1,255 @@
+[2026-05-21 13:09:59] === ITN HANDLER STARTED ===
+Array
+(
+    [timestamp] => 2026-05-21 13:09:59
+    [post_data] => Array
+        (
+            [m_payment_id] => BP-1779361743589-52amc5d9x
+            [pf_payment_id] => 3169750
+            [payment_status] => COMPLETE
+            [item_name] => Customize Plan - Evenda Business
+            [item_description] => Max Events: Unlimited, Max Guests: 99999
+            [amount_gross] => 16.50
+            [amount_fee] => -2.30
+            [amount_net] => 14.20
+            [custom_str1] => USER-RPLG39-1768465852
+            [custom_str2] => PCK-CUSTOM-004
+            [custom_str3] => Customize Plan
+            [custom_str4] => business_payment
+            [custom_str5] => 
+            [custom_int1] => 
+            [custom_int2] => 99999
+            [custom_int3] => 
+            [custom_int4] => 
+            [custom_int5] => 
+            [name_first] => Ananias
+            [name_last] => Customer
+            [email_address] => sellytlou@gmail.com
+            [merchant_id] => 10039229
+            [signature] => 6c623ac1ae1c86ace2bc4a2f1de687e3
+        )
+
+    [server] => Array
+        (
+            [remote_addr] => ::1
+            [request_uri] => /eventa/src/pages/api/payfastIntBusiness.php
+            [http_user_agent] => Mozilla/5.0 (Windows NT 10.0; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0
+        )
+
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] Payment Status Check
+Array
+(
+    [payment_status] => COMPLETE
+    [m_payment_id] => BP-1779361743589-52amc5d9x
+    [pf_payment_id] => 3169750
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] ITN Signature String
+Array
+(
+    [string] => m_payment_id=BP-1779361743589-52amc5d9x&pf_payment_id=3169750&payment_status=COMPLETE&item_name=Customize+Plan+-+Evenda+Business&item_description=Max+Events%3A+Unlimited%2C+Max+Guests%3A+99999&amount_gross=16.50&amount_fee=-2.30&amount_net=14.20&custom_str1=USER-RPLG39-1768465852&custom_str2=PCK-CUSTOM-004&custom_str3=Customize+Plan&custom_str4=business_payment&custom_str5=&custom_int1=&custom_int2=99999&custom_int3=&custom_int4=&custom_int5=&name_first=Ananias&name_last=Customer&email_address=sellytlou%40gmail.com&merchant_id=10039229
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] Signature Validation
+Array
+(
+    [generated] => 6c623ac1ae1c86ace2bc4a2f1de687e3
+    [received] => 6c623ac1ae1c86ace2bc4a2f1de687e3
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] Validation Result
+Array
+(
+    [is_valid] => 1
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] Processing COMPLETE payment
+Array
+(
+    [m_payment_id] => BP-1779361743589-52amc5d9x
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] ✅ Updated existing business package transaction
+Array
+(
+    [m_payment_id] => BP-1779361743589-52amc5d9x
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] ✅ Created new user business package
+Array
+(
+    [user_id] => USER-RPLG39-1768465852
+    [business_package_id] => PCK-CUSTOM-004
+    [event_limit] => 0
+    [expiry_date] => 2027-05-21 13:09:59
+    [success] => 1
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:09:59] ✅ BUSINESS PACKAGE PAYMENT COMPLETED ✅
+Array
+(
+    [transaction_id] => BP-1779361743589-52amc5d9x
+    [pf_payment_id] => 3169750
+    [user_id] => USER-RPLG39-1768465852
+    [package_id] => PCK-CUSTOM-004
+    [amount] => 16.50
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:10:01] ✅ Email sent successfully
+Array
+(
+    [email] => sellytlou@gmail.com
+    [transaction_id] => BP-1779361743589-52amc5d9x
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] === ITN HANDLER STARTED ===
+Array
+(
+    [timestamp] => 2026-05-21 13:21:48
+    [post_data] => Array
+        (
+            [m_payment_id] => BP-1779362441779-js708focr
+            [pf_payment_id] => 3169850
+            [payment_status] => COMPLETE
+            [item_name] => STARTER PLAN - Evenda Business
+            [item_description] => Max Events: 100, Max Guests: 200
+            [amount_gross] => 751.35
+            [amount_fee] => -17.28
+            [amount_net] => 734.07
+            [custom_str1] => USER-RPLG39-1768465852
+            [custom_str2] => PCK-STARTER-001
+            [custom_str3] => STARTER PLAN
+            [custom_str4] => business_payment
+            [custom_str5] => 
+            [custom_int1] => 100
+            [custom_int2] => 200
+            [custom_int3] => 
+            [custom_int4] => 
+            [custom_int5] => 
+            [name_first] => Ananias
+            [name_last] => Customer
+            [email_address] => sellytlou@gmail.com
+            [merchant_id] => 10039229
+            [signature] => ca1771f26eae91fbd7328c37a8fcddb6
+        )
+
+    [server] => Array
+        (
+            [remote_addr] => ::1
+            [request_uri] => /eventa/src/pages/api/payfastIntBusiness.php
+            [http_user_agent] => Mozilla/5.0 (Windows NT 10.0; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0
+        )
+
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] Payment Status Check
+Array
+(
+    [payment_status] => COMPLETE
+    [m_payment_id] => BP-1779362441779-js708focr
+    [pf_payment_id] => 3169850
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] ITN Signature String
+Array
+(
+    [string] => m_payment_id=BP-1779362441779-js708focr&pf_payment_id=3169850&payment_status=COMPLETE&item_name=STARTER+PLAN+-+Evenda+Business&item_description=Max+Events%3A+100%2C+Max+Guests%3A+200&amount_gross=751.35&amount_fee=-17.28&amount_net=734.07&custom_str1=USER-RPLG39-1768465852&custom_str2=PCK-STARTER-001&custom_str3=STARTER+PLAN&custom_str4=business_payment&custom_str5=&custom_int1=100&custom_int2=200&custom_int3=&custom_int4=&custom_int5=&name_first=Ananias&name_last=Customer&email_address=sellytlou%40gmail.com&merchant_id=10039229
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] Signature Validation
+Array
+(
+    [generated] => ca1771f26eae91fbd7328c37a8fcddb6
+    [received] => ca1771f26eae91fbd7328c37a8fcddb6
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] Validation Result
+Array
+(
+    [is_valid] => 1
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] Processing COMPLETE payment
+Array
+(
+    [m_payment_id] => BP-1779362441779-js708focr
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] ✅ Created new business package transaction
+Array
+(
+    [m_payment_id] => BP-1779362441779-js708focr
+    [user_id] => USER-RPLG39-1768465852
+    [package_id] => PCK-STARTER-001
+    [amount] => 751.35
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] ✅ Created new user business package
+Array
+(
+    [user_id] => USER-RPLG39-1768465852
+    [business_package_id] => PCK-STARTER-001
+    [event_limit] => 100
+    [expiry_date] => 2027-05-21 13:21:48
+    [success] => 1
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:48] ✅ BUSINESS PACKAGE PAYMENT COMPLETED ✅
+Array
+(
+    [transaction_id] => BP-1779362441779-js708focr
+    [pf_payment_id] => 3169850
+    [user_id] => USER-RPLG39-1768465852
+    [package_id] => PCK-STARTER-001
+    [amount] => 751.35
+)
+
+--------------------------------------------------------------------------------
+
+[2026-05-21 13:21:50] ✅ Email sent successfully
+Array
+(
+    [email] => sellytlou@gmail.com
+    [transaction_id] => BP-1779362441779-js708focr
+)
+
+--------------------------------------------------------------------------------
+

@@ -6452,19 +6452,17 @@ if ($fun === "getUserBusinessPackage") {
     }
     
     try {
+        // Simplified query without non-existent columns
         $stmt = $pdo->prepare("
             SELECT ubp.*, 
                    bp.package_type, 
-                   bp.name, 
+                   bp.name as package_name, 
                    bp.max_guests, 
                    bp.max_events, 
                    bp.price,
-                   bp.features as package_features,
-                   base_pkg.features as base_package_features,
-                   base_pkg.name as base_package_name
+                   bp.features
             FROM user_business_packages ubp 
-            JOIN business_packages bp ON ubp.business_package_id = bp.id 
-            LEFT JOIN business_packages base_pkg ON ubp.base_package_id = base_pkg.id
+            LEFT JOIN business_packages bp ON ubp.business_package_id = bp.package_id
             WHERE ubp.user_id = :user_id 
               AND ubp.status = 'active' 
               AND (ubp.expiry_date IS NULL OR ubp.expiry_date > NOW())
@@ -6477,41 +6475,20 @@ if ($fun === "getUserBusinessPackage") {
         if ($stmt->rowCount() > 0) {
             $package = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            // Parse custom limits
-            if ($package['is_custom'] && $package['custom_limits']) {
-                $customLimits = json_decode($package['custom_limits'], true);
-                
-                // Get base package features
-                $baseFeatures = [];
-                if (!empty($package['base_package_features'])) {
-                    $baseFeatures = explode(',', $package['base_package_features']);
-                    $baseFeatures = array_map('trim', $baseFeatures);
-                }
-                
-                // Get custom features from JSON
-                $customFeatures = $customLimits['features'] ?? [];
-                
-                // Merge features (base + custom)
-                $allFeatures = array_merge($baseFeatures, $customFeatures);
-                
-                // Apply overrides
-                $package['max_guests'] = $customLimits['guests'] ?? $package['max_guests'];
-                $package['max_events'] = $customLimits['events'] ?? $package['max_events'];
-                $package['price'] = $customLimits['price'] ?? $package['custom_price'] ?? $package['price'];
-                $package['features'] = $allFeatures;
-                $package['base_package_name'] = $package['base_package_name'] ?? null;
-            }
+            // Debug log to see what's being returned
+            error_log("getUserBusinessPackage result for user {$user_id}: " . json_encode($package));
             
             echo json_encode(["success" => true, "userBusinessPackage" => $package]);
         } else {
+            error_log("No active business package found for user: {$user_id}");
             echo json_encode(["success" => false, "message" => "No active business package found"]);
         }
     } catch (PDOException $e) {
+        error_log("getUserBusinessPackage error: " . $e->getMessage());
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
 }
-
 // BUSINESS PACKAGES FUNCTIONS - ADD AFTER THE EXISTING PERSONAL PACKAGE FUNCTIONS
 
 if ($fun === "getBusinessPackages") {
@@ -6657,11 +6634,12 @@ if ($fun === "assignBusinessPackage") {
 if ($fun === "recordBusinessPayment") {
     $user_id = $_POST['user_id'] ?? '';
     $business_package_id = $_POST['business_package_id'] ?? '';
-    $amount = $_POST['amount'] ?? 0;
+    $amount = $_POST['amount'] ?? '0.00';
     $payment_method = $_POST['payment_method'] ?? '';
+    $payment_status = $_POST['payment_status'] ?? 'pending';
     $transaction_id = $_POST['transaction_id'] ?? uniqid('BP', true);
     
-    error_log("recordBusinessPayment called: user_id={$user_id}, business_package_id={$business_package_id}, amount={$amount}, payment_method={$payment_method}, transaction_id={$transaction_id}");
+    error_log("recordBusinessPayment called: user_id={$user_id}, business_package_id={$business_package_id}, amount={$amount}, payment_method={$payment_method}, payment_status={$payment_status}, transaction_id={$transaction_id}");
 
     if (empty($user_id) || empty($business_package_id) || empty($amount)) {
         echo json_encode(["success" => false, "message" => "Missing required fields"]);
@@ -6669,28 +6647,71 @@ if ($fun === "recordBusinessPayment") {
     }
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO business_package_transactions 
-                               (user_id, business_package_id, amount, payment_method, transaction_id, status) 
-                               VALUES (:user_id, :business_package_id, :amount, :payment_method, :transaction_id, 'success')");
+        // Get user details
+        $userStmt = $pdo->prepare("SELECT name, email, phone, business_name FROM users WHERE user_id = ?");
+        $userStmt->execute([$user_id]);
+        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
         
-        $success = $stmt->execute([
-            ':user_id' => $user_id,
-            ':business_package_id' => $business_package_id,
-            ':amount' => $amount,
-            ':payment_method' => $payment_method,
-            ':transaction_id' => $transaction_id
-        ]);
-        error_log("recordBusinessPayment execute returned: " . var_export($success, true));
+        // Get package details
+        $pkgStmt = $pdo->prepare("SELECT package_type, name, max_events, max_guests FROM business_packages WHERE package_id = ?");
+        $pkgStmt->execute([$business_package_id]);
+        $package = $pkgStmt->fetch(PDO::FETCH_ASSOC);
+        
+        $customer_name = $user['business_name'] ?? $user['name'] ?? '';
+        $customer_email = $user['email'] ?? '';
+        $customer_phone = $user['phone'] ?? '';
+        $package_name = $package['name'] ?? $package['package_type'] ?? 'Business Package';
+        
+        // Check if transaction already exists
+        $checkStmt = $pdo->prepare("SELECT * FROM business_package_transactions WHERE transaction_id = ?");
+        $checkStmt->execute([$transaction_id]);
+        $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$existing) {
+            $stmt = $pdo->prepare("
+                INSERT INTO business_package_transactions 
+                (user_id, customer_name, customer_email, customer_phone, business_package_id, 
+                 package_name, amount, payment_method, transaction_id, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
+            
+            $success = $stmt->execute([
+                $user_id,
+                $customer_name,
+                $customer_email,
+                $customer_phone,
+                $business_package_id,
+                $package_name,
+                $amount,
+                $payment_method,
+                $transaction_id,
+                $payment_status
+            ]);
+            error_log("recordBusinessPayment INSERT returned: " . var_export($success, true));
+        } else {
+            $stmt = $pdo->prepare("
+                UPDATE business_package_transactions 
+                SET status = ?, updated_at = NOW()
+                WHERE transaction_id = ?
+            ");
+            $success = $stmt->execute([$payment_status, $transaction_id]);
+            error_log("recordBusinessPayment UPDATE returned: " . var_export($success, true));
+        }
         
         if ($success) {
             error_log("recordBusinessPayment success for transaction_id={$transaction_id}");
-            echo json_encode(["success" => true, "message" => "Payment recorded successfully"]);
+            echo json_encode([
+                "success" => true, 
+                "message" => "Payment recorded successfully",
+                "transaction_id" => $transaction_id
+            ]);
         } else {
             $err = $stmt->errorInfo();
             error_log("recordBusinessPayment failed: " . json_encode($err));
-            echo json_encode(["success" => false, "message" => "Failed to record payment"]);
+            echo json_encode(["success" => false, "message" => "Failed to record payment: " . ($err[2] ?? "Unknown error")]);
         }
     } catch (PDOException $e) {
+        error_log("recordBusinessPayment PDOException: " . $e->getMessage());
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;

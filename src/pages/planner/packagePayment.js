@@ -25,18 +25,7 @@ const PackagePayment = () => {
     const vatRate = 0.0;
     const [alert, setAlert] = useState({ show: false, message: "", type: "" });
 
-    // // ============ PAYFAST CONFIGURATION for testing ============
-    // const PAYFAST_CONFIG = {
-    //     MERCHANT_ID: "10039229",
-    //     MERCHANT_KEY: "1ogl07vai6oig",
-    //     ITN_URL: "https://dc86-197-185-137-11.ngrok-free.app/eventa/src/pages/api/payFastInt.php",
-    //     PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
-    //     RETURN_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentSuccess",
-    //     CANCEL_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentCancel",
-    //     EMAIL_CONFIRMATION: true,
-    //     CONFIRMATION_EMAIL: "",
-    //     PAYMENT_METHOD: "cc",
-    // };
+    
     const API_URL = process.env.REACT_APP_API_URL;
     const BASE_URL = API_URL.replace('/api', '');
 

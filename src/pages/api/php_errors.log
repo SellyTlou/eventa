@@ -737,3 +737,22 @@ Stack trace:
 [19-May-2026 22:58:57 Europe/Berlin] PayFast ITN - ✅ PAYMENT COMPLETED: {"bookingId":"TKT-1779224323761-ilwsd0c0o","pf_payment_id":"3166224","tickets_deducted":{"event_id":"TKT1779224140885","ticket_type":"general","quantity":1}}
 [19-May-2026 22:58:57 Europe/Berlin] PayFast ITN - 📧 Preparing email: {"to":"sellytlou@gmail.com","bookingId":"TKT-1779224323761-ilwsd0c0o","eventName":"test ticket event"}
 [19-May-2026 22:58:58 Europe/Berlin] PayFast ITN - ✅ Email sent successfully: {"email":"sellytlou@gmail.com"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":{"m_payment_id":"BP-1779354804732-ia0px165x","pf_payment_id":"3169339","payment_status":"COMPLETE","item_name":"Customize Plan - Evenda Business","item_description":"Max Events: Unlimited, Max Guests: 99999","amount_gross":"16.50","amount_fee":"-2.30","amount_net":"14.20","custom_str1":"USER-RPLG39-1768465852","custom_str2":"PCK-CUSTOM-004","custom_str3":"Customize Plan","custom_str4":"business_payment","custom_str5":"","custom_int1":"","custom_int2":"99999","custom_int3":"","custom_int4":"","custom_int5":"","name_first":"Ananias","name_last":"Customer","email_address":"sellytlou@gmail.com","merchant_id":"10039229","signature":"cf93cf766eea97fa23c7e16ec29949e1"}}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 📊 Payment Data Extracted: {"m_payment_id":"BP-1779354804732-ia0px165x","pf_payment_id":"3169339","payment_status_raw":"COMPLETE"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - ITN Signature String: {"string":"m_payment_id=BP-1779354804732-ia0px165x&pf_payment_id=3169339&payment_status=COMPLETE&item_name=Customize+Plan+-+Evenda+Business&item_description=Max+Events%3A+Unlimited%2C+Max+Guests%3A+99999&amount_gross=16.50&amount_fee=-2.30&amount_net=14.20&custom_str1=USER-RPLG39-1768465852&custom_str2=PCK-CUSTOM-004&custom_str3=Customize+Plan&custom_str4=business_payment&custom_str5=&custom_int1=&custom_int2=99999&custom_int3=&custom_int4=&custom_int5=&name_first=Ananias&name_last=Customer&email_address=sellytlou%40gmail.com&merchant_id=10039229"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - Signature Validation: {"generated":"cf93cf766eea97fa23c7e16ec29949e1","received":"cf93cf766eea97fa23c7e16ec29949e1"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - Validation Result: {"is_valid":true}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - ✅ Signature validated successfully: {"bookingId":"BP-1779354804732-ia0px165x"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 💰 Processing COMPLETE payment: {"bookingId":"BP-1779354804732-ia0px165x"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 💰 Processing payment: {"bookingId":"BP-1779354804732-ia0px165x","pf_payment_id":"3169339"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 🔎 BOOKING CHECK: {"bookingId":"BP-1779354804732-ia0px165x","exists":"NO"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 📝 Creating booking from ITN: []
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - ✅ Booking inserted: {"bookingId":"BP-1779354804732-ia0px165x"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 🧪 UPDATE ATTEMPT: {"bookingId":"BP-1779354804732-ia0px165x","rows_affected":1}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 🧪 VERIFY AFTER UPDATE: {"payment_status":"completed","pf_payment_id":"3169339"}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - ⚠️ No ticket data to deduct: {"eventId":"","ticketType":"general","quantity":1}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - ✅ PAYMENT COMPLETED: {"bookingId":"BP-1779354804732-ia0px165x","pf_payment_id":"3169339","tickets_deducted":{"event_id":"","ticket_type":"general","quantity":1}}
+[21-May-2026 11:13:50 Europe/Berlin] PayFast ITN - 📧 Preparing email: {"to":"","bookingId":"BP-1779354804732-ia0px165x","eventName":"Event"}
+[21-May-2026 11:13:54 Europe/Berlin] PayFast ITN - ❌ Email failed: {"status":400,"response":"{\"code\":\"missing_parameter\",\"message\":\"email is missing in to\"}\n"}
+[21-May-2026 11:27:31 Europe/Berlin] PayFast ITN - 🚀 handleITN() started: {"post_data":[]}
+[21-May-2026 11:27:31 Europe/Berlin] PayFast ITN - ⚠️ No POST data received: []
