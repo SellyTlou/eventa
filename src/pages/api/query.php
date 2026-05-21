@@ -2613,7 +2613,6 @@ if ($fun === "getInvitationStats") {
 
 if ($fun === "publishTicketEvent") {
     $event_id = $_POST['event_id'] ?? '';
-    $guest_limit = isset($_POST['guest_limit']) ? intval($_POST['guest_limit']) : 0;
     $published = isset($_POST['published']) ? intval($_POST['published']) : 1;
     
     if (empty($event_id)) {
@@ -2638,26 +2637,22 @@ if ($fun === "publishTicketEvent") {
             exit;
         }
         
-        // Update the ticket event with published status and calculate total capacity
-        // Total capacity is sum of all ticket quantities
+        // Remove guest_limit from the UPDATE query
         $stmt = $pdo->prepare("
             UPDATE ticket_events SET
                 status = :status,
-                guest_limit = :guest_limit,
                 updated_at = NOW()
             WHERE event_id = :event_id
         ");
         
         $stmt->execute([
             ':status' => $published == 1 ? 'published' : 'pending',
-            ':guest_limit' => $guest_limit,
             ':event_id' => $event_id
         ]);
         
         echo json_encode([
             "success" => true,
             "message" => $published == 1 ? "Ticket event published successfully" : "Ticket event unpublished",
-            "guest_limit" => $guest_limit,
             "status" => $published == 1 ? 'published' : 'pending'
         ]);
         
@@ -2815,71 +2810,20 @@ if ($fun === "updateUserProfile") {
     exit;
 }
 
-if ($fun === "getUserPackage") {
-    $user_id = $_POST['user_id'] ?? '';
-
-    if (empty($user_id)) {
-        echo json_encode(["success" => false, "message" => "User ID required"]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM user_packages WHERE user_id = ? LIMIT 1");
-        $stmt->execute([$user_id]);
-        $userPackage = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$userPackage) {
-            // No package found - return success but null userPackage
-            echo json_encode([
-                "success" => true,
-                "userPackage" => null,
-                "message" => "No package found"
-            ]);
-            exit;
-        }
-
-        // If we have a package, fetch its details from packagetb
-        if (!empty($userPackage['package_id'])) {
-            $pkgStmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_id = ? LIMIT 1");
-            $pkgStmt->execute([$userPackage['package_id']]);
-            $packageDetails = $pkgStmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($packageDetails) {
-                // Merge package details with user package
-                $userPackage = array_merge($userPackage, [
-                    'package_type' => $packageDetails['package_type'] ?? null,
-                    'package_name' => $packageDetails['package_name'] ?? null,
-                    'max_guests' => $packageDetails['max_guests'] ?? null,
-                    'max_events' => $packageDetails['max_events'] ?? null,
-                    'price' => $packageDetails['price'] ?? null,
-                ]);
-            }
-        }
-
-        // Ensure required fields exist
-        $userPackage['event_limit'] = $userPackage['event_limit'] ?? ($userPackage['max_events'] ?? 0);
-        $userPackage['event_used'] = $userPackage['event_used'] ?? 0;
-
-        echo json_encode(["success" => true, "userPackage" => $userPackage]);
-    } catch (PDOException $e) {
-        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
 
 if ($fun === "getAllPackages") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
     try {
-       
         $stmt = $pdo->prepare("SELECT * FROM packagetb 
-                                    ORDER BY 
-                                    CASE 
-                                        WHEN package_type = 'basic' THEN 1
-                                        WHEN package_type = 'premium' THEN 2
-                                        WHEN package_type = 'advanced' THEN 3
-                                        ELSE 5
-                                    END, price ASC");
+                                ORDER BY 
+                                CASE 
+                                    WHEN package_type = 'free' THEN 0
+                                    WHEN package_type = 'basic' THEN 1
+                                    WHEN package_type = 'premium' THEN 2
+                                    WHEN package_type = 'advanced' THEN 3
+                                    ELSE 5
+                                END, price ASC");
         $stmt->execute();
         $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -2890,12 +2834,45 @@ if ($fun === "getAllPackages") {
     exit;
 }
 
+if ($fun === "getPackageById") {
+    $package_id = $_POST['package_id'] ?? '';
+
+    if (empty($package_id)) {
+        echo json_encode(["success" => false, "message" => "Package ID required"]);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_id = ? LIMIT 1");
+        $stmt->execute([$package_id]);
+        $package = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($package) {
+            // Parse features if needed
+            if (!empty($package['features'])) {
+                $features = json_decode($package['features'], true);
+                if ($features === null) {
+                    $package['features'] = explode(',', $package['features']);
+                } else {
+                    $package['features'] = $features;
+                }
+            }
+            echo json_encode(["success" => true, "package" => $package]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Package not found"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
 if ($fun === "updateEventUsedCount") {
     $user_id = $_POST['user_id'] ?? '';
     $event_id = $_POST['event_id'] ?? '';
-    $package_id = $_POST['package_id'] ?? '';
+    $account_type = $_POST['account_type'] ?? 'personal';
+    $is_ticket_event = $_POST['is_ticket_event'] ?? 0;
 
-    if (!$user_id || !$event_id || !$package_id) {
+    if (!$user_id || !$event_id) {
         echo json_encode(["success" => false, "message" => "Missing required data"]);
         exit;
     }
@@ -2903,8 +2880,12 @@ if ($fun === "updateEventUsedCount") {
     try {
         $pdo->beginTransaction();
 
-        // 1. Lock user package row
-        $checkStmt = $pdo->prepare("SELECT event_used, event_limit FROM user_packages WHERE user_id = ? FOR UPDATE");
+        // Determine which package table to use based on account type
+        $packageTable = ($account_type === 'business') ? 'user_business_packages' : 'user_packages';
+        $eventTable = ($is_ticket_event == 1) ? 'ticket_events' : 'events';
+        
+        // 1. Lock user package row from appropriate table
+        $checkStmt = $pdo->prepare("SELECT event_used, event_limit FROM $packageTable WHERE user_id = ? FOR UPDATE");
         $checkStmt->execute([$user_id]);
         $package = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -2915,48 +2896,146 @@ if ($fun === "updateEventUsedCount") {
         }
 
         // 2. Check if event is already published
-        $eventStmt = $pdo->prepare("SELECT published FROM events WHERE event_id = ? FOR UPDATE");
-        $eventStmt->execute([$event_id]);
-        $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$event) {
-            $pdo->rollBack();
-            echo json_encode(["success" => false, "message" => "Event not found"]);
-            exit;
+        if ($is_ticket_event == 1) {
+            // For ticket events, check status field
+            $eventStmt = $pdo->prepare("SELECT status FROM $eventTable WHERE event_id = ? FOR UPDATE");
+            $eventStmt->execute([$event_id]);
+            $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$event) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Ticket event not found"]);
+                exit;
+            }
+            $isPublished = ($event['status'] === 'published' || $event['status'] === 'active');
+        } else {
+            // For RSVP events, check published field
+            $eventStmt = $pdo->prepare("SELECT published FROM $eventTable WHERE event_id = ? FOR UPDATE");
+            $eventStmt->execute([$event_id]);
+            $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$event) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Event not found"]);
+                exit;
+            }
+            $isPublished = !empty($event['published']) && $event['published'] != '0';
         }
-
-        $isPublished = !empty($event['published']) && $event['published'] != '0';
 
         // 3. Only increment if NOT published
         if (!$isPublished) {
-            if ($package['event_used'] >= $package['event_limit']) {
+            // Check if event_limit is 0 (unlimited) or if user has remaining events
+            $eventLimit = intval($package['event_limit'] ?? 0);
+            $eventUsed = intval($package['event_used'] ?? 0);
+            
+            if ($eventLimit > 0 && $eventUsed >= $eventLimit) {
                 $pdo->rollBack();
-                echo json_encode(["success" => false, "message" => "Event limit reached"]);
+                echo json_encode(["success" => false, "message" => "Event limit reached. You have used $eventUsed of $eventLimit events."]);
                 exit;
             }
 
-            $updateStmt = $pdo->prepare("UPDATE user_packages SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = ?");
+            // Update the event_used count in the user's package table
+            $updateStmt = $pdo->prepare("UPDATE $packageTable SET event_used = event_used + 1, updated_at = NOW() WHERE user_id = ?");
             $updateStmt->execute([$user_id]);
+            
+            $incremented = true;
+        } else {
+            $incremented = false;
         }
-
-        // 4. Always assign package_id to the event
-        $assignStmt = $pdo->prepare("UPDATE events SET package_id = :package_id WHERE event_id = :event_id");
-        $assignStmt->execute([
-            ":package_id" => $package_id,
-            ":event_id" => $event_id,
-        ]);
 
         $pdo->commit();
 
-        $action = $isPublished ? "Package assigned (already published)" : "Event count incremented and package assigned";
+        $action = $isPublished ? "Event already published, no count increment" : "Event count incremented successfully";
         echo json_encode([
             "success" => true,
             "message" => $action,
-            "incremented" => !$isPublished,
+            "incremented" => $incremented,
+            "account_type" => $account_type,
+            "is_ticket_event" => $is_ticket_event
         ]);
 
     } catch (PDOException $e) {
         $pdo->rollBack();
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+    exit;
+}
+
+// Get user package (personal or business)
+if ($fun === "getUserPackage") {
+    $user_id = $_POST['user_id'] ?? '';
+    $account_type = $_POST['account_type'] ?? 'personal';
+
+    if (empty($user_id)) {
+        echo json_encode(["success" => false, "message" => "User ID required"]);
+        exit;
+    }
+
+    try {
+        if ($account_type === 'business') {
+            // Fetch from business tables
+            $stmt = $pdo->prepare("
+                SELECT ubp.*, bp.name as package_name, bp.package_type, bp.max_guests, bp.max_events, bp.price, bp.features
+                FROM user_business_packages ubp
+                LEFT JOIN business_packages bp ON ubp.business_package_id = bp.package_id
+                WHERE ubp.user_id = ? AND (ubp.status = 'active' OR ubp.status IS NULL)
+                LIMIT 1
+            ");
+            $stmt->execute([$user_id]);
+            $userPackage = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($userPackage) {
+                // Map business_package_id to package_id for consistency
+                $userPackage['package_id'] = $userPackage['business_package_id'];
+                $userPackage['account_type'] = 'business';
+            }
+        } else {
+            // Fetch from personal tables
+            $stmt = $pdo->prepare("
+                SELECT up.*, p.package_type, p.max_guests, p.max_events, p.price, p.features
+                FROM user_packages up
+                LEFT JOIN packagetb p ON up.package_id = p.package_id
+                WHERE up.user_id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$user_id]);
+            $userPackage = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($userPackage) {
+                $userPackage['account_type'] = 'personal';
+            }
+        }
+
+        if (!$userPackage) {
+            echo json_encode([
+                "success" => true,
+                "userPackage" => null,
+                "account_type" => $account_type,
+                "message" => "No active package found"
+            ]);
+            exit;
+        }
+
+        // Ensure required fields exist
+        $userPackage['event_limit'] = $userPackage['event_limit'] ?? ($userPackage['max_events'] ?? 0);
+        $userPackage['event_used'] = $userPackage['event_used'] ?? 0;
+        
+        // Parse features if it's a JSON string or comma-separated
+        if (!empty($userPackage['features'])) {
+            // Check if features is JSON
+            $features = json_decode($userPackage['features'], true);
+            if ($features === null) {
+                // If not JSON, treat as comma-separated
+                $userPackage['features'] = explode(',', $userPackage['features']);
+            } else {
+                $userPackage['features'] = $features;
+            }
+        } else {
+            $userPackage['features'] = [];
+        }
+
+        echo json_encode(["success" => true, "userPackage" => $userPackage]);
+    } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
@@ -2988,36 +3067,6 @@ if ($fun === "updateEventStatus") {
         echo json_encode(["success" => true, "message" => "Event status and guest limit updated"]);
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
-    }
-    exit;
-}
-
-if ($fun === "getPackageById") {
-    $package_id = $_POST['package_id'] ?? '';
-
-    if (!$package_id) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Missing package ID",
-        ]);
-        exit;
-    }
-
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM packagetb WHERE package_id = :package_id LIMIT 1");
-        $stmt->execute([":package_id" => $package_id]);
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            "success" => true,
-            "package" => $data,
-        ]);
-
-    } catch (PDOException $e) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Database error: " . $e->getMessage(),
-        ]);
     }
     exit;
 }

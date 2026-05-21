@@ -132,33 +132,51 @@ const TicketEventManage = () => {
         setConfirmModal({ show: false, title: "", message: "", onConfirm: null, onCancel: null });
     };
 
-    useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (!storedUser) {
-            printAlert("Session expired. Please log in again.", "error");
-            logOut();
-            navigate("/");
-            return;
-        }
+useEffect(() => {
+    const savedData = localStorage.getItem("selectedEventData");
+    const storedUser = localStorage.getItem("user");
+    
+    if (savedData && storedUser) {
         const userData = JSON.parse(storedUser);
+        const eventData = JSON.parse(savedData);
+
         setUser(userData);
-
+        
+        fetchEventStatusByID(eventData.eventId, eventData.hasTicket);
+        getBookingDetails(eventData.eventId);
         fetchUserPackage();
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-
-    }, []);
-
-    useEffect(() => {
-        const eventId = localStorage.getItem("selectedEventId");
-        if (!eventId) {
-            printAlert("No event selected.", "error");
-            return navigate("/eventsDashboard");
+    } 
+    
+    if (!savedData) {
+        // Check account type before navigating to dashboard
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            const accountType = userData?.account_type || userData?.accountType;
+            
+            // Navigate based on account type
+            if (accountType === 'business') {
+                navigate("/businessdashboard");
+            } else {
+                navigate("/eventsDashboard");
+            }
+        } else {
+            navigate("/eventsDashboard");
         }
-        fetchEventStatusByID(eventId);
-        getBookingDetails(eventId);
-    }, []);
+    }
+    
+    if (!storedUser) {
+        printAlert("Session expired. Please log in again.", "error");
+        logOut();
+        navigate("/");
+        return;
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
+
+  
 
     useEffect(() => {
         if (bst) {
@@ -172,82 +190,127 @@ const TicketEventManage = () => {
         }
     };
 
-    const fetchEventStatusByID = async (eventId) => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
+  const fetchEventStatusByID = async (eventId, isTicketEvent) => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        
+        if (isTicketEvent) {
+            formData.append("function", "getTicketEventStatusByID");
+        } else {
             formData.append("function", "getEventStatusByID");
-            formData.append("event_id", eventId);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
-            if (!response.ok) throw new Error("Network response was not ok");
-            const data = await response.json();
-            if (data.success && data.status) {
-                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
-            } else {
-                setEventStatus("Unknown");
-            }
-        } catch (err) {
-            console.error("Failed to fetch event status:", err);
-            return "unknown";
         }
-    }
+        
+        formData.append("event_id", eventId);
 
-    const fetchUserPackage = async () => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const userData = JSON.parse(localStorage.getItem("user"));
-            const formData = new FormData();
-            formData.append("function", "getUserPackage");
-            formData.append("user_id", userData.user_id);
-
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData
-            });
-            const data = await response.json();
-
-            if (data.success && data.userPackage) {
-                setUserPackage(data.userPackage);
-
-                // Create package info object
-                const packageInfo = {
-                    name: data.userPackage.package_name ||
-                        (data.userPackage.package_type ?
-                            data.userPackage.package_type.charAt(0).toUpperCase() +
-                            data.userPackage.package_type.slice(1) : "Basic"),
-                    type: data.userPackage.package_type || "basic",
-                    color: getPackageColor(),
-                    features: getPackageFeatures(data.userPackage.package_type)
-                };
-                setPackageInfo(packageInfo);
-
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
+        
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+        console.log("Event status response:", data);
+        
+        if (data.success && data.status) {
+            if (isTicketEvent) {
+                const statusValue = data.status.status;
+                if (statusValue === 'published') {
+                    setEventStatus("Published");
+                } else if (statusValue === 'pending') {
+                    setEventStatus("Pending");
+                } else if (statusValue === 'cancelled') {
+                    setEventStatus("Cancelled");
+                } else if (statusValue === 'completed') {
+                    setEventStatus("Completed");
+                } else {
+                    setEventStatus("Unknown");
+                }
             } else {
-                printAlert("You don't have an active package", "warning");
-                setUserPackage({ package_type: "basic" });
-                setPackageInfo({
-                    name: "Basic",
-                    type: "basic",
-                    color: "#6c757d",
-                    features: ["Basic features only"]
-                });
+                // For regular events, published is 0 or 1
+                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
             }
-        } catch (error) {
-            console.error("Error fetching user package:", error);
-            printAlert("System error fetching user package", "error");
-            // Default to basic on error
+        } else {
+            setEventStatus("Unknown");
+        }
+    } catch (err) {
+        console.error("Failed to fetch event status:", err);
+        setEventStatus("Unknown");
+    }
+};
+
+  const fetchUserPackage = async () => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const userData = JSON.parse(localStorage.getItem("user"));
+        
+        // Get account type from user data
+        const accountType = userData.account_type || userData.accountType || 'personal';
+        
+        const formData = new FormData();
+        formData.append("function", "getUserPackage");
+        formData.append("user_id", userData.user_id);
+        formData.append("account_type", accountType); 
+
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData
+        });
+        const data = await response.json();
+        
+        console.log("User package response:", data); // Debug log
+
+        if (data.success && data.userPackage) {
+            setUserPackage(data.userPackage);
+            
+            // Get package features based on package_type
+            const packageFeatures = getPackageFeatures(data.userPackage.package_type);
+            const packageColor = getPackageColor(data.userPackage.package_type);
+            
+            // Create package info object
+            const packageInfo = {
+                name: data.userPackage.package_name ||
+                    (data.userPackage.package_type ?
+                        data.userPackage.package_type.charAt(0).toUpperCase() +
+                        data.userPackage.package_type.slice(1) : "Basic"),
+                type: data.userPackage.package_type || "basic",
+                color: packageColor,
+                features: packageFeatures,
+                event_limit: data.userPackage.event_limit || data.userPackage.max_events || 0,
+                event_used: data.userPackage.event_used || 0
+            };
+            setPackageInfo(packageInfo);
+            
+            console.log("Package loaded:", packageInfo); // Debug log
+        } else {
+            console.log("No package found:", data.message);
+            printAlert("You don't have an active package", "warning");
             setUserPackage({ package_type: "basic" });
             setPackageInfo({
                 name: "Basic",
                 type: "basic",
                 color: "#6c757d",
-                features: ["Basic features only"]
+                features: ["Basic features only"],
+                event_limit: 0,
+                event_used: 0
             });
         }
-    };
+    } catch (error) {
+        console.error("Error fetching user package:", error);
+        printAlert("System error fetching user package", "error");
+        // Default to basic on error
+        setUserPackage({ package_type: "basic" });
+        setPackageInfo({
+            name: "Basic",
+            type: "basic",
+            color: "#6c757d",
+            features: ["Basic features only"],
+            event_limit: 0,
+            event_used: 0
+        });
+    }
+};
 
     // Helper to get package features based on type
     const getPackageFeatures = (packageType) => {

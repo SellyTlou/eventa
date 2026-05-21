@@ -837,198 +837,184 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
         }
     };
 
-    const publishTicketEvent = async () => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "publishTicketEvent");
-            formData.append("event_id", event_id);
-            formData.append("guest_limit", guestLimit);
-            formData.append("published", 1);
+ const publishTicketEvent = async () => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "publishTicketEvent");
+        formData.append("event_id", event_id);
+        formData.append("guest_limit", calculateTotalCapacity()); // Add the calculated total capacity
+        formData.append("published", 1);
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
 
-            const data = await response.json();
-            console.log("Publish ticket event response:", data);
+        const data = await response.json();
+        console.log("Publish ticket event response:", data);
 
-            if (data.success) {
-                setEventStatus("Published");
-                setOriginalGuestLimit(guestLimit);
-                setShowUpdateButton(false);
-                printAlert(`Ticket event published successfully!`, "success");
-            } else {
-                printAlert(`Failed to publish ticket event: ${data.message}`, "error");
-            }
-        } catch (err) {
-            console.error("Error publishing ticket event:", err);
-            printAlert("Error publishing ticket event. Please try again.", "error");
+        if (data.success) {
+            setEventStatus("Published");
+            setOriginalGuestLimit(calculateTotalCapacity());
+            setShowUpdateButton(false);
+            printAlert(`Ticket event published successfully!`, "success");
+        } else {
+            printAlert(`Failed to publish ticket event: ${data.message}`, "error");
         }
-    };
+    } catch (err) {
+        console.error("Error publishing ticket event:", err);
+        printAlert("Error publishing ticket event. Please try again.", "error");
+    }
+};
 
-    const updateEventUsedCount = async () => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "updateEventUsedCount");
-            formData.append("user_id", user.user_id);
-            formData.append("event_id", event_id);
-            formData.append("package_id", userPackage.package_id);
+  const updateEventUsedCount = async () => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "updateEventUsedCount");
+        formData.append("user_id", user.user_id);
+        formData.append("event_id", event_id);
+        formData.append("account_type", user?.account_type === 'business' ? 'business' : 'personal');
+        formData.append("is_ticket_event", isTicketEvent ? 1 : 0);
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
 
-            const data = await response.json();
-            console.log(data);
-            if (data.success) {
-                console.log("Event used count updated and package assigned to event");
+        const data = await response.json();
+        console.log("Update event used count response:", data);
+        
+        if (data.success) {
+            console.log("Event count updated:", data.message);
+            if (user?.account_type === 'business') {
+                await fetchUserBusinessPackage(user.user_id);
+            } else {
                 await fetchUserPackage(user.user_id);
-                return true;
-            } else {
-                printAlert("Failed to update event count: " + (data.message || ''), "error");
-                return false;
             }
-        } catch (err) {
-            console.error("Error updating event used count:", err);
-            printAlert("Error updating event count.", "error");
+            return true;
+        } else {
+            printAlert("Failed to update event count: " + (data.message || ''), "error");
             return false;
         }
-    };
+    } catch (err) {
+        console.error("Error updating event used count:", err);
+        printAlert("Error updating event count.", "error");
+        return false;
+    }
+};
 
-    const updateBusinessEventCount = async () => {
-        try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "updateBusinessEventCount");
-            formData.append("user_id", user.user_id);
-            formData.append("event_id", event_id);
-            formData.append("business_package_id", userPackage?.package_id);
+const updateBusinessEventCount = async () => {
+    try {
+        const API_URL = process.env.REACT_APP_API_URL;
+        const formData = new FormData();
+        formData.append("function", "updateEventUsedCount");
+        formData.append("user_id", user.user_id);
+        formData.append("event_id", event_id);
+        formData.append("package_id", userPackage?.package_id);
+        formData.append("account_type", 'business');
+        formData.append("is_ticket_event", isTicketEvent ? 1 : 0); // Add this line
 
-            const response = await fetch(`${API_URL}/query.php`, {
-                method: "POST",
-                body: formData,
-            });
+        const response = await fetch(`${API_URL}/query.php`, {
+            method: "POST",
+            body: formData,
+        });
 
-            const data = await response.json();
-            console.log("Business event count update:", data);
+        const data = await response.json();
+        console.log("Business event count update:", data);
 
-            if (data.success) {
-                console.log("Business event used count updated");
+        if (data.success) {
+            console.log("Business event used count updated");
+            if (user?.account_type === 'business') {
+                await fetchUserBusinessPackage(user.user_id);
+            }
+            return true;
+        } else {
+            printAlert("Failed to update business event count: " + (data.message || ''), "error");
+            return false;
+        }
+    } catch (err) {
+        console.error("Error updating business event used count:", err);
+        printAlert("Error updating business event count.", "error");
+        return false;
+    }
+};
+
+const handlePublishEvent = async () => {
+    if (isTicketEvent) {
+        // For ticket events, validate tickets
+        const validTickets = validateTicketConfiguration();
+        if (!validTickets) {
+            printAlert("Please configure at least one valid ticket type with price and quantity.", "warning");
+            return;
+        }
+
+        // First save the ticket configuration to ensure guest_limit is calculated
+        const saved = await saveTicketConfiguration();
+        if (!saved) {
+            printAlert("Please save your ticket configuration before publishing.", "warning");
+            return;
+        }
+
+        // Check if user has available events using utility
+        if (currentPlan && currentPlan.hasPackage) {
+            const canPublish = canCreateEvent(
+                { 
+                    ...currentPlan, 
+                    is_custom: currentPlan.isCustom,
+                    event_used: currentPlan.event_used,
+                    event_limit: currentPlan.event_limit === "Unlimited" ? 0 : currentPlan.event_limit
+                }, 
+                currentPlan.event_used
+            );
+
+            if (canPublish.allowed || currentPlan.available_events === "Unlimited") {
+                // Determine which update function to use
+                let updated = false;
                 if (user?.account_type === 'business') {
-                    await fetchUserBusinessPackage(user.user_id);
-                }
-                return true;
-            } else {
-                printAlert("Failed to update business event count: " + (data.message || ''), "error");
-                return false;
-            }
-        } catch (err) {
-            console.error("Error updating business event used count:", err);
-            printAlert("Error updating business event count.", "error");
-            return false;
-        }
-    };
-
-    const handlePublishEvent = async () => {
-        if (isTicketEvent) {
-            // For ticket events, validate tickets
-            const validTickets = validateTicketConfiguration();
-            if (!validTickets) {
-                printAlert("Please configure at least one valid ticket type with price and quantity.", "warning");
-                return;
-            }
-
-            // Check if user has available events using utility
-            if (currentPlan && currentPlan.hasPackage) {
-                const canPublish = canCreateEvent(
-                    { 
-                        ...currentPlan, 
-                        is_custom: currentPlan.isCustom,
-                        event_used: currentPlan.event_used,
-                        event_limit: currentPlan.event_limit === "Unlimited" ? 0 : currentPlan.event_limit
-                    }, 
-                    currentPlan.event_used
-                );
-
-                if (canPublish.allowed || currentPlan.available_events === "Unlimited") {
-                    if (user?.account_type === 'business') {
-                        const updated = await updateBusinessEventCount();
-                        if (updated) {
-                            await publishTicketEvent();
-                        } else {
-                            printAlert("Failed to record event usage. Publish aborted.", "error");
-                        }
-                    } else {
-                        const updated = await updateEventUsedCount();
-                        if (updated) {
-                            await publishTicketEvent();
-                        } else {
-                            printAlert("Failed to record event usage. Publish aborted.", "error");
-                        }
-                    }
+                    updated = await updateBusinessEventCount();
                 } else {
-                    printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
+                    updated = await updateEventUsedCount();
+                }
+                
+                if (updated) {
+                    await publishTicketEvent();
+                } else {
+                    printAlert("Failed to record event usage. Publish aborted.", "error");
                 }
             } else {
                 printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
             }
         } else {
-            // For RSVP events
-            if (currentPlan && currentPlan.hasPackage) {
-                // Check guest limit using utility
-                const canHost = canHostGuests(
-                    { 
-                        ...currentPlan, 
-                        is_custom: currentPlan.isCustom,
-                        max_guests: currentPlan.max_guest
-                    }, 
-                    guestLimit
-                );
-
-                if (!canHost.allowed) {
-                    printAlert(canHost.message, "error");
-                    return;
-                }
-
-                // Check event limit using utility
-                const canPublish = canCreateEvent(
-                    { 
-                        ...currentPlan, 
-                        is_custom: currentPlan.isCustom,
-                        event_used: currentPlan.event_used,
-                        event_limit: currentPlan.event_limit === "Unlimited" ? 0 : currentPlan.event_limit
-                    }, 
-                    currentPlan.event_used
-                );
-
-                if (canPublish.allowed || currentPlan.available_events === "Unlimited") {
-                    if (user?.account_type === 'business') {
-                        const updated = await updateBusinessEventCount();
-                        if (updated) {
-                            await updateEventStatus();
-                        } else {
-                            printAlert("Failed to record event usage. Publish aborted.", "error");
-                        }
-                    } else {
-                        const updated = await updateEventUsedCount();
-                        if (updated) {
-                            await updateEventStatus();
-                        } else {
-                            printAlert("Failed to record event usage. Publish aborted.", "error");
-                        }
-                    }
-                } else {
-                    printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
-                }
-            } else {
-                printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
-            }
+            printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
         }
-    };
+    } else {
+        // For RSVP events
+        if (!currentPlan?.hasPackage || (currentPlan?.available_events === 0 && currentPlan?.available_events !== "Unlimited")) {
+            printAlert("No available events left in your plan or no active package. Please upgrade your package.", "error");
+            return;
+        }
+
+        if (guestLimit === 0) {
+            printAlert("Please set a guest limit greater than 0 before publishing.", "warning");
+            return;
+        }
+
+        let updated = false;
+        if (user?.account_type === 'business') {
+            updated = await updateBusinessEventCount();
+        } else {
+            updated = await updateEventUsedCount();
+        }
+        
+        if (updated) {
+            await updateEventStatus();
+        } else {
+            printAlert("Failed to record event usage. Publish aborted.", "error");
+        }
+    }
+};
 
     const maxGuests = currentPlan?.hasPackage ? 
         (currentPlan.max_guest || 0) : 
@@ -1084,7 +1070,7 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
         return hasValidTicket;
     };
 
-    const saveTicketConfiguration = async () => {
+const saveTicketConfiguration = async () => {
     try {
         const API_URL = process.env.REACT_APP_API_URL;
 
@@ -1096,14 +1082,12 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
         let vipPrice = 0;
         let vipQuantity = 0;
 
-        // Prepare JSON config for additional storage if needed
         const configJson = {};
 
         // Process Early Bird
         if (ticketConfig.earlyBird.price && ticketConfig.earlyBird.quantity) {
             const price = parseFloat(ticketConfig.earlyBird.price);
             const quantity = parseInt(ticketConfig.earlyBird.quantity);
-
             if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
                 earlyBirdPrice = price;
                 earlyBirdQuantity = quantity;
@@ -1120,7 +1104,6 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
         if (ticketConfig.general.price && ticketConfig.general.quantity) {
             const price = parseFloat(ticketConfig.general.price);
             const quantity = parseInt(ticketConfig.general.quantity);
-
             if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
                 generalPrice = price;
                 generalQuantity = quantity;
@@ -1137,7 +1120,6 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
         if (ticketConfig.vip.price && ticketConfig.vip.quantity) {
             const price = parseFloat(ticketConfig.vip.price);
             const quantity = parseInt(ticketConfig.vip.quantity);
-
             if (!isNaN(price) && price >= 0 && !isNaN(quantity) && quantity >= 1) {
                 vipPrice = price;
                 vipQuantity = quantity;
@@ -1149,7 +1131,6 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
                 };
             }
         }
-
 
         // Check if at least one ticket type is configured
         const totalQuantity = earlyBirdQuantity + generalQuantity + vipQuantity;
@@ -1167,12 +1148,10 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
         formData.append("general_quantity", generalQuantity);
         formData.append("vip_price", vipPrice);
         formData.append("vip_quantity", vipQuantity);
-      
 
         const moreInfo = JSON.stringify({
             event_info: eventInfo,  
             ticket_config: configJson,
-
         });
         formData.append("more_info", moreInfo);
 
@@ -1204,7 +1183,6 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
                     quantity: vipQuantity > 0 ? vipQuantity.toString() : "",
                     description: "VIP experience with perks"
                 },
-                
             });
 
             setOriginalTicketConfig(JSON.parse(JSON.stringify(ticketConfig)));
@@ -1216,14 +1194,15 @@ const fetchEventDetails = async (id, hasTicketFlag) => {
             setOriginalGuestLimit(newGuestLimit);
 
             printAlert("Ticket configuration saved successfully! Total capacity: " + newGuestLimit, "success");
-                try {
-                    const syncFd = new FormData();
-                    syncFd.append('function', 'syncChecklistAutoItems');
-                    syncFd.append('event_id', event_id);
-                    await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: 'POST', body: syncFd });
-                } catch (e) {
-                    console.error('Error syncing checklist after saving tickets', e);
-                }
+            
+            try {
+                const syncFd = new FormData();
+                syncFd.append('function', 'syncChecklistAutoItems');
+                syncFd.append('event_id', event_id);
+                await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: 'POST', body: syncFd });
+            } catch (e) {
+                console.error('Error syncing checklist after saving tickets', e);
+            }
             return true;
         } else {
             printAlert("Failed to save ticket configuration: " + (data.message || ''), "error");

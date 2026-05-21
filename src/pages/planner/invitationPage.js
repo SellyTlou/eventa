@@ -114,7 +114,24 @@ setIsTicketEvent(eventData.hasTicket === 1 || eventData.hasTicket === true || ev
             fetchEventDetails(eventData.eventId, eventData.hasTickets);
         }
         
-        if (!savedData) navigate("/eventsDashboard");
+         
+    if (!savedData) {
+        // Check account type before navigating to dashboard
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            const accountType = userData?.account_type || userData?.accountType;
+            
+            // Navigate based on account type
+            if (accountType === 'business') {
+                navigate("/businessdashboard");
+            } else {
+                navigate("/eventsDashboard");
+            }
+        } else {
+            navigate("/eventsDashboard");
+        }
+    }
         if (!storedUser) {
             printAlert("Session expired. Please log in again.", "error");
             logOut();

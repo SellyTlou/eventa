@@ -329,60 +329,100 @@ const BusinessDashboard = () => {
         }
     }, [navigate]);
 
-    const fetchEvents = async (userId) => {
-        try {
-            setLoading(true);
-            const API_URL = process.env.REACT_APP_API_URL;
-            const formData = new FormData();
-            formData.append("function", "getUserEvents");
-            formData.append("userID", userId);
+  const fetchEvents = async (userId) => {
+    try {
+        setLoading(true);
+        const API_URL = process.env.REACT_APP_API_URL;
+        
+        // Fetch regular RSVP events
+        const regularFormData = new FormData();
+        regularFormData.append("function", "getUserEvents");
+        regularFormData.append("userID", userId);
 
-            const response = await fetch(`${API_URL}/query.php`, {
+        // Fetch ticket events
+        const ticketFormData = new FormData();
+        ticketFormData.append("function", "getUserTicketEvents");
+        ticketFormData.append("userID", userId);
+
+        const [regularResponse, ticketResponse] = await Promise.all([
+            fetch(`${API_URL}/query.php`, {
                 method: "POST",
-                body: formData
-            });
+                body: regularFormData
+            }),
+            fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: ticketFormData
+            })
+        ]);
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+        let regularEvents = [];
+        let ticketEventsData = [];
+
+        if (regularResponse.ok) {
+            const regularData = await regularResponse.json();
+            if (regularData.success && Array.isArray(regularData.events)) {
+                regularEvents = regularData.events.map(event => ({
+                    ...event,
+                    has_tickets: 0,
+                    event_type_category: 'rsvp'
+                }));
             }
-
-            const data = await response.json();
-
-            if (data.success && Array.isArray(data.events)) {
-                const uniqueEvents = [];
-                data.events.forEach((event) => {
-                    if (!uniqueEvents.some((e) => e.event_id === event.event_id)) {
-                        uniqueEvents.push(event);
-                    }
-                });
-
-                // Apply minHeap sorting
-                const sortedEvents = sortEventsWithMinHeap(uniqueEvents);
-
-                // Find the soonest upcoming event
-                const soonest = sortedEvents.find(event => {
-                    if (isEventCancelled(event)) return false;
-                    const evDate = new Date(event.event_start_date || event.created_at);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    evDate.setHours(0, 0, 0, 0);
-                    return evDate >= today;
-                }) || null;
-
-                setSoonestEvent(soonest);
-                setEvents(sortedEvents);
-                setFilteredEvents(sortedEvents);
-                fetchRSVPStatsForEvents(sortedEvents);
-            } else {
-                printAlert("Failed to load events: " + (data.message || "Unknown error"), "error");
-            }
-        } catch (error) {
-            console.error("Failed to fetch events:", error);
-            printAlert("Failed to load events. Please check your connection.", "error");
-        } finally {
-            setLoading(false);
         }
-    };
+
+        if (ticketResponse.ok) {
+            const ticketData = await ticketResponse.json();
+            if (ticketData.success && Array.isArray(ticketData.events)) {
+                ticketEventsData = ticketData.events.map(event => ({
+                    ...event,
+                    has_tickets: 1,
+                    event_type_category: 'ticket'
+                }));
+            }
+        }
+
+        // Combine all events
+        const allUserEvents = [...regularEvents, ...ticketEventsData];
+
+        // Remove duplicates based on event_id
+        const uniqueEvents = [];
+        allUserEvents.forEach((event) => {
+            if (!uniqueEvents.some((e) => e.event_id === event.event_id)) {
+                uniqueEvents.push(event);
+            }
+        });
+
+        console.log("Total events fetched:", uniqueEvents.length);
+        console.log("RSVP events:", regularEvents.length);
+        console.log("Ticket events:", ticketEventsData.length);
+
+        // Apply minHeap sorting
+        const sortedEvents = sortEventsWithMinHeap(uniqueEvents);
+
+        // Find the soonest upcoming event
+        const soonest = sortedEvents.find(event => {
+            if (isEventCancelled(event)) return false;
+            const evDate = new Date(event.event_start_date || event.created_at);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            evDate.setHours(0, 0, 0, 0);
+            return evDate >= today;
+        }) || null;
+
+        setSoonestEvent(soonest);
+        setEvents(sortedEvents);
+        setFilteredEvents(sortedEvents);
+        
+        // Fetch RSVP stats for regular events only (ticket events don't have RSVP stats)
+        fetchRSVPStatsForEvents(regularEvents);
+        
+    } catch (error) {
+        console.error("Failed to fetch events:", error);
+        printAlert("Failed to load events. Please check your connection.", "error");
+    } finally {
+        setLoading(false);
+    }
+};
+
 
     const fetchRSVPStatsForEvents = async (eventsArray) => {
         const stats = {};
@@ -887,14 +927,36 @@ const BusinessDashboard = () => {
         }
     };
 
-    const handleEventClick = (eventId) => {
+   const handleEventClick = (eventId) => {
         const event = events.find((e) => e.event_id === eventId);
         if (isEventCancelled(event)) {
             printAlert("Event is cancelled. Reactivate it to manage it.", "warning");
             return;
         }
-        localStorage.setItem("selectedEventId", eventId);
-        navigate("/eventManagement");
+
+        const isTicketEvent = event.has_tickets === 1;
+
+
+        let ticketFlag = 0;
+        if (isTicketEvent) {
+            ticketFlag = 1;
+        } else {
+            ticketFlag = 0;
+        }
+
+        const eventPackage = {
+            eventId: eventId,
+            hasTicket: ticketFlag
+        };
+
+        localStorage.setItem("selectedEventData", JSON.stringify(eventPackage));
+
+
+        if (isTicketEvent) {
+            navigate("/event_ticket_manage");
+        } else {
+            navigate("/eventManagement");
+        }
     };
 
     // Business-specific navigation
@@ -936,80 +998,83 @@ const BusinessDashboard = () => {
         });
     };
 
-    // Business Package Status Card - SIMPLIFIED VERSION
-    const renderBusinessPackageStatus = () => {
-        if (!userBusinessPackage) {
-            return (
-                <div className="business-package-status no-package">
-                    <div className="status-icon">
-                        <i className="bi bi-exclamation-triangle"></i>
-                    </div>
-                    <div className="status-content">
-                        <h4>No Business Package</h4>
-                        <p>You don't have an active business package. Upgrade to publish events.</p>
-                        <button className="btn-upgrade-small" onClick={goToBusinessUpgrade}>
-                            Get Business Package
-                        </button>
-                    </div>
-                </div>
-            );
-        }
+// Add this helper function before renderBusinessPackageStatus
+const canCreateNewEvent = () => {
+    if (!userBusinessPackage) return false;
+    const eventsUsed = userBusinessPackage.event_used || 0;
+    const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
+    return eventLimit === 0 || eventsUsed < eventLimit;
+};
 
-        const isCustom = isCustomPackage(userBusinessPackage);
-        const packageName = getEffectivePackageName(userBusinessPackage);
-        const eventsUsed = userBusinessPackage.event_used || 0;
-        const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
-        
-        const eventsRemaining = eventLimit === 0 ? 'Unlimited' : eventLimit - eventsUsed;
-        const percentUsed = eventLimit > 0 ? (eventsUsed / eventLimit) * 100 : 0;
-
+// Then in the Business Package Status card, add a create button if they can create:
+const renderBusinessPackageStatus = () => {
+    if (!userBusinessPackage) {
         return (
-            <div className={`business-package-status active ${isCustom ? 'custom-package' : ''}`}>
+            <div className="business-package-status no-package">
                 <div className="status-icon">
-                    {isCustom ? (
-                        <i className="bi bi-star-fill"></i>
-                    ) : (
-                        <i className="bi bi-briefcase"></i>
-                    )}
+                    <i className="bi bi-exclamation-triangle"></i>
                 </div>
                 <div className="status-content">
-                    <div className="package-header">
-                        <h4>
-                            {packageName}
-                            {isCustom && (
-                                <span className="custom-badge">
-                                    <i className="bi bi-star"></i> Custom Plan
-                                </span>
-                            )}
-                        </h4>
-                    </div>
-
-                    {/* ONLY the usage bar and counter - all other details removed */}
-                    <div className="usage-info">
-                        <div className="usage-bar">
-                            <div 
-                                className="usage-progress" 
-                                style={{ width: `${Math.min(percentUsed, 100)}%` }}
-                            ></div>
-                        </div>
-                        <div className="usage-text">
-                            <span>{eventsUsed} of {eventLimit === 0 ? '∞' : eventLimit} events used</span>
-                            <span className="remaining">
-                                {eventsRemaining === 'Unlimited' ? 'Unlimited left' : `${eventsRemaining} remaining`}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* ONLY the View Custom Plan button */}
-                    <div className="package-footer">
-                        <button className="btn-manage-package" onClick={goToBusinessUpgrade}>
-                            {isCustom ? 'View Custom Plan' : 'Manage Package'}
-                        </button>
-                    </div>
+                    <h4>No Business Package</h4>
+                    <p>You don't have an active business package. Upgrade to publish events.</p>
+                    <button className="btn-upgrade-small" onClick={goToBusinessUpgrade}>
+                        Get Business Package
+                    </button>
                 </div>
             </div>
         );
-    };
+    }
+
+    const isCustom = isCustomPackage(userBusinessPackage);
+    const packageName = getEffectivePackageName(userBusinessPackage);
+    const eventsUsed = userBusinessPackage.event_used || 0;
+    const eventLimit = getEffectivePackageValue(userBusinessPackage, 'events', 0);
+    const canCreate = canCreateNewEvent();
+    
+    const eventsRemaining = eventLimit === 0 ? 'Unlimited' : eventLimit - eventsUsed;
+    const percentUsed = eventLimit > 0 ? (eventsUsed / eventLimit) * 100 : 0;
+
+    return (
+        <div className={`business-package-status active ${isCustom ? 'custom-package' : ''}`}>
+            <div className="status-icon">
+                {isCustom ? (
+                    <i className="bi bi-star-fill"></i>
+                ) : (
+                    <i className="bi bi-briefcase"></i>
+                )}
+            </div>
+            <div className="status-content">
+                <div className="package-header">
+                    <h4>
+                        {packageName}
+                        {isCustom && (
+                            <span className="custom-badge">
+                                <i className="bi bi-star"></i> Custom Plan
+                            </span>
+                        )}
+                    </h4>
+                </div>
+
+                {/* Usage bar and counter */}
+                <div className="usage-info">
+                    <div className="usage-bar">
+                        <div 
+                            className="usage-progress" 
+                            style={{ width: `${Math.min(percentUsed, 100)}%` }}
+                        ></div>
+                    </div>
+                    <div className="usage-text">
+                        <span>{eventsUsed} of {eventLimit === 0 ? '∞' : eventLimit} events used</span>
+                        <span className="remaining">
+                            {eventsRemaining === 'Unlimited' ? 'Unlimited left' : `${eventsRemaining} remaining`}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+};
 
     if (loading) {
         return (
