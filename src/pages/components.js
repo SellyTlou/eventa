@@ -642,9 +642,10 @@ export function Navbar({ onLoginClick, onSignupClick }) {
 
                         {!user && (
                             <li className="mobile-nav-item">
-                                <div className="mobile-auth-buttons">
+                                <div className="mobile-buttons">
+                                    <div className="mobile-banner">Welcome Back!</div>
                                     <button
-                                        className="btn mobile-signin-btn me-2"
+                                        className="btn mobile-signin-btn"
                                         onClick={() => {
                                             handleSigninClick('personal');
                                             closeAllMenus();
@@ -652,7 +653,8 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                     >
                                         Sign In
                                     </button>
-                                    <div className="mobile-dropdown-container">
+                                    <div className="mobile-dropdown-container mobile-dropdown-center">
+                                        <div className="mobile-banner mobile-banner-alt">New Here?</div>
                                         <button className="btn mobile-signup-btn" onClick={() => {
                                             setSignupDropdownOpen(!signupDropdownOpen);
                                         }}>

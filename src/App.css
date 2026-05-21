@@ -1,3 +1,21 @@
+.mobile-banner {
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto 8px auto;
+  background: #e9f5ff;
+  color: #1976d2;
+  text-align: center;
+  font-size: 0.98rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 6px 0 5px 0;
+  letter-spacing: 0.01em;
+}
+.mobile-banner-alt {
+  background: #fffbe7;
+  color: #b48a00;
+  margin-bottom: 8px;
+}
 
 
 .logged-in-container {
@@ -11922,11 +11940,21 @@ create ticket popup
   position: relative;
 }
 
+.mobile-dropdown-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 .mobile-auth-dropdown {
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  max-width: 280px;
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
