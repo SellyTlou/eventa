@@ -275,9 +275,9 @@ function Features() {
 
                         {/* Tab Content */}
                         <div className="features-content">
-                            <div className="section-header text-center">
-                                <h2>{activeTab}</h2>
-                                <p>Discover our comprehensive {activeTab.toLowerCase()} designed to streamline your event planning process</p>
+                            <div className="section-header features-section-header">
+                                <h2 className="features-section-title">{activeTab}</h2>
+                                <p className="features-section-desc">Discover our comprehensive {activeTab.toLowerCase()} designed to streamline your event planning process</p>
                             </div>
 
                             {/* Cards Slider - All tabs in row layout */}
