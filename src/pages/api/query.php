@@ -5181,7 +5181,7 @@ if ($fun === "replyToGuestMessage") {
         ]);
     }
     exit;
-}
+} 
 
 if ($fun === "getPaymentHistory") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
@@ -5197,8 +5197,8 @@ if ($fun === "getPaymentHistory") {
         $package = $_POST['package'] ?? 'all';
         $dateFilter = $_POST['date_filter'] ?? 'all';
 
-        // Query to get all payments from payment_history
-        $query = "
+        // Query for personal payments from payment_history
+        $personalQuery = "
             SELECT
                 ph.payment_id,
                 ph.user_id,
@@ -5206,42 +5206,69 @@ if ($fun === "getPaymentHistory") {
                 ph.package_id,
                 ph.package_name AS package_type,
                 ph.amount,
-                ph.payment_status,
+                ph.payment_status AS status,
                 ph.payment_date,
                 ph.payment_method,
                 u.email AS user_email,
                 u.account_type,
+                'personal' AS payment_type,
                 p.max_events,
                 p.max_guests,
-                CASE WHEN u.account_type = 'business' THEN 'business' ELSE 'personal' END AS payment_type
+                ph.transaction_id,
+                ph.pf_payment_id,
+                ph.payment_provider
             FROM payment_history AS ph
             LEFT JOIN users AS u ON ph.user_id = u.user_id
-            LEFT JOIN packagetb AS p ON ph.package_id = p.package_id AND u.account_type = 'personal'
-            LEFT JOIN business_packages AS bp ON ph.package_id = bp.id AND u.account_type = 'business'
+            LEFT JOIN packagetb AS p ON ph.package_id = p.package_id
+            WHERE 1=1
         ";
 
+        // Query for business payments from business_package_transactions
+        $businessQuery = "
+            SELECT
+                bpt.id AS payment_id,
+                bpt.user_id,
+                bpt.customer_name AS user_name,
+                bpt.business_package_id AS package_id,
+                bpt.package_name AS package_type,
+                bpt.amount,
+                bpt.status,
+                bpt.created_at AS payment_date,
+                bpt.payment_method,
+                u.email AS user_email,
+                u.account_type,
+                'business' AS payment_type,
+                bp.max_events,
+                bp.max_guests,
+                bpt.transaction_id,
+                bpt.pf_payment_id,
+                bpt.payment_provider
+            FROM business_package_transactions AS bpt
+            LEFT JOIN users AS u ON bpt.user_id = u.user_id
+            LEFT JOIN business_packages AS bp ON bpt.business_package_id = bp.package_id
+            WHERE 1=1
+        ";
+
+        // Combine both queries with UNION
+        $combinedQuery = "($personalQuery) UNION ALL ($businessQuery)";
+        
+        // Wrap in subquery for filtering
+        $query = "SELECT * FROM ($combinedQuery) AS combined_payments WHERE 1=1";
+        
         $params = [];
-        $where_conditions = [];
 
         // Search filter
         if (!empty($search)) {
             $searchTerm = "%$search%";
-            $where_conditions[] = "(ph.user_name LIKE ? OR ph.user_id LIKE ? OR ph.payment_id LIKE ? OR u.email LIKE ?)";
-            for ($i = 0; $i < 4; $i++) {
+            $query .= " AND (user_name LIKE ? OR user_id LIKE ? OR payment_id LIKE ? OR user_email LIKE ? OR package_type LIKE ?)";
+            for ($i = 0; $i < 5; $i++) {
                 $params[] = $searchTerm;
             }
         }
 
-        // Build WHERE clause if needed
-        if (!empty($where_conditions)) {
-            $query = "SELECT * FROM ($query) AS combined WHERE " . implode(" AND ", $where_conditions);
-        } else {
-            $query = "SELECT * FROM ($query) AS combined WHERE 1=1";
-        }
-
-        // Payment status filter
+        // Payment status filter - works for both 'status' and 'payment_status' (aliased as 'status')
         if ($status !== 'all') {
-            $query .= " AND payment_status = ?";
+            $query .= " AND status = ?";
             $params[] = $status;
         }
 
@@ -5249,6 +5276,12 @@ if ($fun === "getPaymentHistory") {
         if ($package !== 'all') {
             $query .= " AND package_type = ?";
             $params[] = $package;
+        }
+
+        // Payment type filter (personal or business)
+        if (isset($_POST['payment_type']) && $_POST['payment_type'] !== 'all') {
+            $query .= " AND payment_type = ?";
+            $params[] = $_POST['payment_type'];
         }
 
         // Date filter
@@ -5275,7 +5308,7 @@ if ($fun === "getPaymentHistory") {
         $stmt->execute($params);
         $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        echo json_encode(["success" => true, "payments" => $payments]);
+        echo json_encode(["success" => true, "payments" => $payments, "total" => count($payments)]);
 
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
@@ -6052,50 +6085,38 @@ if ($fun === "exportGuestData") {
 
 if ($fun === "updatePaymentStatus") {
     $adminUserId = $_POST['admin_user_id'] ?? '';
-    $paymentId = $_POST['payment_id'] ?? '';
+    $payment_id = $_POST['payment_id'] ?? '';
     $status = $_POST['status'] ?? '';
+    $payment_type = $_POST['payment_type'] ?? '';
 
     if (!verifyAdminAccess($pdo, $adminUserId)) {
         echo json_encode(["success" => false, "message" => "Unauthorized"]);
         exit;
     }
 
-    if (empty($paymentId) || !in_array($status, ['completed', 'pending', 'failed', 'refunded'])) {
-        echo json_encode(["success" => false, "message" => "Invalid payment ID or status"]);
+    if (empty($payment_id) || empty($status)) {
+        echo json_encode(["success" => false, "message" => "Payment ID and status are required"]);
         exit;
     }
 
     try {
-        $pdo->beginTransaction();
-
-        // Get payment details for logging
-        $paymentStmt = $pdo->prepare("SELECT user_id, amount, user_name FROM payment_history WHERE payment_id = ?");
-        $paymentStmt->execute([$paymentId]);
-        $payment = $paymentStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$payment) {
-            throw new Exception("Payment not found");
+        if ($payment_type === 'business') {
+            // Update business_package_transactions table
+            $stmt = $pdo->prepare("UPDATE business_package_transactions SET status = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$status, $payment_id]);
+        } else {
+            // Update payment_history table
+            $stmt = $pdo->prepare("UPDATE payment_history SET payment_status = ?, updated_at = NOW() WHERE payment_id = ?");
+            $stmt->execute([$status, $payment_id]);
         }
 
-        // Update payment status
-        $updateStmt = $pdo->prepare("UPDATE payment_history SET payment_status = ?, updated_at = NOW() WHERE payment_id = ?");
-        $updateStmt->execute([$status, $paymentId]);
-
-        // Log the activity
-        $logStmt = $pdo->prepare("INSERT INTO system_activity (user_id, action, description) VALUES (?, ?, ?)");
-        $logStmt->execute([
-            $adminUserId,
-            'Payment Status Updated',
-            "Payment {$paymentId} status changed to {$status} for user {$payment['user_name']} - R{$payment['amount']}",
-        ]);
-
-        $pdo->commit();
-
-        echo json_encode(["success" => true, "message" => "Payment status updated successfully"]);
-
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
+        if ($stmt->rowCount() > 0) {
+            echo json_encode(["success" => true, "message" => "Payment status updated successfully"]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Payment not found or status already set"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }
     exit;
 }

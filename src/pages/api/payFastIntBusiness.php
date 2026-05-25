@@ -208,7 +208,7 @@ private function processSuccessfulPayment($data)
                  package_name, amount, amount_fee, amount_net, payment_method, 
                  transaction_id, pf_payment_id, m_payment_id, payment_provider, 
                  status, created_at, payment_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'success', NOW(), NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW(), NOW())
             ");
             
             $result = $stmt->execute([
@@ -238,7 +238,7 @@ private function processSuccessfulPayment($data)
             // Update existing transaction with PayFast details
             $stmt = $this->pdo->prepare("
                 UPDATE business_package_transactions 
-                SET status = 'success',
+                SET status = 'completed',
                     amount = ?,
                     amount_fee = ?,
                     amount_net = ?,

@@ -3831,6 +3831,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         price: '',
         features: ''
     });
+    const [businessTransactions, setBusinessTransactions] = useState([]);
     const [allPlans, setAllPlans] = useState(plans);
     const [businessPlans, setBusinessPlans] = useState([]);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -3906,12 +3907,16 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
-            });
+            }); 
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
                     setPaymentHistory(data.payments);
+                    const businessPayments = data.payments.filter(p => p.payment_type === 'business');
+                    setBusinessTransactions(businessPayments);
+                } else {
+                    console.error('Failed to fetch payment history:', data.message);
                 }
             }
         } catch (error) {
@@ -4018,24 +4023,44 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
     };
 
-    const getPersonalRevenue = () => {
+    // Get revenue based on user type filter
+    const getRevenueByUserType = () => {
         if (!paymentHistory || !Array.isArray(paymentHistory)) return 0;
+        
         return paymentHistory
-            .filter(p => p.account_type === 'personal' && p.payment_status === 'completed')
+            .filter(p => {
+                const paymentStatus = p.payment_status || p.status;
+                const isCompleted = paymentStatus === 'completed' || paymentStatus === 'success';
+                
+                if (userTypeFilter === 'all') {
+                    return isCompleted;
+                } else if (userTypeFilter === 'personal') {
+                    return p.payment_type === 'personal' && isCompleted;
+                } else if (userTypeFilter === 'business') {
+                    return p.payment_type === 'business' && isCompleted;
+                }
+                return false;
+            })
             .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
     };
 
-    const getBusinessRevenue = () => {
+    // Get count of active subscriptions by user type
+    const getActiveSubscriptionsCount = (type) => {
         if (!paymentHistory || !Array.isArray(paymentHistory)) return 0;
+        
         return paymentHistory
-            .filter(p => p.account_type === 'business' && p.payment_status === 'completed')
-            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    };
-
-    const getFilteredRevenue = () => {
-        return filteredPayments
-            .filter(p => p.payment_status === 'completed')
-            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+            .filter(p => {
+                const paymentStatus = p.payment_status || p.status;
+                const isCompleted = paymentStatus === 'completed' || paymentStatus === 'success';
+                
+                if (type === 'personal') {
+                    return p.payment_type === 'personal' && isCompleted;
+                } else if (type === 'business') {
+                    return p.payment_type === 'business' && isCompleted;
+                }
+                return false;
+            })
+            .length;
     };
 
     const filteredPayments = useMemo(() => {
@@ -4054,7 +4079,10 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
 
         if (statusFilter !== 'all') {
-            filtered = filtered.filter(payment => payment.payment_status === statusFilter);
+            filtered = filtered.filter(payment => {
+                const paymentStatus = payment.payment_status || payment.status;
+                return paymentStatus === statusFilter;
+            });
         }
 
         if (packageFilter !== 'all') {
@@ -4062,7 +4090,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
 
         if (userTypeFilter !== 'all') {
-            filtered = filtered.filter(payment => payment.account_type === userTypeFilter);
+            filtered = filtered.filter(payment => payment.payment_type === userTypeFilter);
         }
 
         if (dateFilter !== 'all') {
@@ -4312,13 +4340,14 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
     };
 
-    const updatePaymentStatus = async (paymentId, status) => {
+    const updatePaymentStatus = async (paymentId, status, paymentType) => {
         try {
             const formData = new FormData();
             formData.append('function', 'updatePaymentStatus');
             formData.append('admin_user_id', adminUserId);
             formData.append('payment_id', paymentId);
             formData.append('status', status);
+            formData.append('payment_type', paymentType);
 
             const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
@@ -4342,8 +4371,13 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
     };
 
-    const formatPlanName = (packageType) => {
+    const formatPlanName = (packageType, paymentType = 'personal') => {
         if (!packageType) return 'Enterprise';
+        
+        if (paymentType === 'business') {
+            return packageType.charAt(0).toUpperCase() + packageType.slice(1);
+        }
+        
         return packageType.charAt(0).toUpperCase() + packageType.slice(1);
     };
 
@@ -4379,8 +4413,10 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         return new Date(dateString).toLocaleDateString();
     };
 
-    const getStatusBadgeClass = (status) => {
+    const getStatusBadgeClass = (payment) => {
+        const status = payment.payment_status || payment.status;
         const statusClasses = {
+            'success': 'status-completed',
             'completed': 'status-completed',
             'pending': 'status-pending',
             'failed': 'status-failed',
@@ -4390,7 +4426,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
     };
 
     return (
-        <div className="admin-tab-content">
+        <div className="admin-tab-content ">
             <div className="admin-content-header">
                 <h2>Pricing & Payments Management</h2>
                 <div className="header-actions">
@@ -4494,12 +4530,12 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                             <div className="revenue-content">
                                 <h3>Total Revenue</h3>
                                 <p className="revenue-amount">
-                                    {userTypeFilter === 'all' 
-                                        ? (revenueData ? formatCurrency(revenueData.total_revenue) : 'Loading...')
-                                        : formatCurrency(getFilteredRevenue())
-                                    }
+                                    {formatCurrency(getRevenueByUserType())}
                                 </p>
-                                <span className="revenue-trend">{userTypeFilter === 'all' ? 'All time' : `${userTypeFilter} users`}</span>
+                                <span className="revenue-trend">
+                                    {userTypeFilter === 'all' ? 'All users' : 
+                                     userTypeFilter === 'personal' ? 'Personal users only' : 'Business users only'}
+                                </span>
                             </div>
                         </div>
                         <div className="revenue-card monthly">
@@ -4507,7 +4543,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                             <div className="revenue-content">
                                 <h3>Personal Subscriptions</h3>
                                 <p className="revenue-amount">
-                                    {paymentHistory.filter(p => p.account_type === 'personal' && p.payment_status === 'completed').length}
+                                    {getActiveSubscriptionsCount('personal')}
                                 </p>
                                 <span className="revenue-trend">Active personal users</span>
                             </div>
@@ -4517,7 +4553,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                             <div className="revenue-content">
                                 <h3>Business Subscriptions</h3>
                                 <p className="revenue-amount">
-                                    {paymentHistory.filter(p => p.account_type === 'business' && p.payment_status === 'completed').length}
+                                    {getActiveSubscriptionsCount('business')}
                                 </p>
                                 <span className="revenue-trend">Active business users</span>
                             </div>
@@ -4593,17 +4629,25 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                             <div className="user-email">{payment.user_email}</div>
                                         </span>
                                         <span>
-                                            <span className={`user-type-badge ${payment.account_type}`}>
-                                                {payment.account_type === 'business' ? '🏢 Business' : '👤 Personal'}
+                                            <span className={`user-type-badge ${payment.payment_type}`}>
+                                                {payment.payment_type === 'business' ? '🏢 Business' : '👤 Personal'}
                                             </span>
                                         </span>
                                         <span><span className="package-badge">{formatPlanName(payment.package_type)}</span></span>
                                         <span className="amount">{formatCurrency(payment.amount)}</span>
                                         <span><span className={`method-badge ${payment.payment_method}`}>{payment.payment_method}</span></span>
-                                        <span><span className={`status-badge ${getStatusBadgeClass(payment.payment_status)}`}>{payment.payment_status}</span></span>
+                                        <span>
+                                            <span className={`status-badge ${getStatusBadgeClass(payment)}`}>
+                                                {payment.payment_status || payment.status}
+                                            </span>
+                                        </span>
                                         <span className="actions">
-                                            {payment.payment_status === 'pending' && (
-                                                <button className="btn-icon success" onClick={() => updatePaymentStatus(payment.payment_id, 'completed')} title="Mark as Completed">
+                                            {(payment.payment_status === 'pending' || payment.status === 'pending') && (
+                                                <button 
+                                                    className="btn-icon success" 
+                                                    onClick={() => updatePaymentStatus(payment.payment_id, 'completed', payment.payment_type)} 
+                                                    title="Mark as Completed"
+                                                >
                                                     <i className="bi bi-check"></i>
                                                 </button>
                                             )}
@@ -4617,7 +4661,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <div key="no-payments" className="no-payments">
                                         <i className="bi bi-receipt"></i>
                                         <p>No payments found matching your criteria</p>
-                                        <button className="btn btn-outline" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setPackageFilter('all'); setDateFilter('all'); }}>
+                                        <button className="btn btn-outline" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setPackageFilter('all'); setDateFilter('all'); setUserTypeFilter('all'); }}>
                                             Clear Filters
                                         </button>
                                     </div>
@@ -4809,7 +4853,9 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                     <div className="detail-icon-new"><i className="bi bi-activity"></i></div>
                                     <div className="detail-content-new">
                                         <label>Status</label>
-                                        <p className={`status-indicator-new ${selectedPayment.payment_status}`}>{selectedPayment.payment_status}</p>
+                                        <p className={`status-indicator-new ${selectedPayment.payment_status || selectedPayment.status}`}>
+                                            {selectedPayment.payment_status || selectedPayment.status}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="detail-card-new package-card">
@@ -4850,8 +4896,11 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                                 </div>
                             </div>
                             <div className="payment-actions-new">
-                                {selectedPayment.payment_status === 'pending' && (
-                                    <button className="action-btn-new success" onClick={() => { updatePaymentStatus(selectedPayment.payment_id, 'completed'); setShowPaymentModal(false); }}>
+                                {(selectedPayment.payment_status === 'pending' || selectedPayment.status === 'pending') && (
+                                    <button className="action-btn-new success" onClick={() => { 
+                                        updatePaymentStatus(selectedPayment.payment_id, 'completed', selectedPayment.payment_type); 
+                                        setShowPaymentModal(false); 
+                                    }}>
                                         <i className="bi bi-check-circle"></i> Mark as Completed
                                     </button>
                                 )}
