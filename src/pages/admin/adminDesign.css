@@ -1026,7 +1026,65 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* Sidebar Overlay */
+/* ============================================
+   ADMIN DASHBOARD NAVIGATION & SIDEBAR
+   
+   ============================================ */
+
+/* ============================================
+   TOP NAVIGATION BAR (Mobile Only)
+   ============================================ */
+
+.admin_top_nav {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.admin_top_nav_title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.admin-dashboard-user-greeting {
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Mobile Menu Button */
+.admin-dashboard-mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    margin-right: 15px;
+}
+
+.admin-dashboard-mobile-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.02);
+}
+
+/* ============================================
+   SIDEBAR OVERLAY
+   ============================================ */
+
 .admin-dashboard-sidebar-overlay {
     display: none;
     position: fixed;
@@ -1045,7 +1103,10 @@
     opacity: 1;
 }
 
-/* Sidebar Close Button */
+/* ============================================
+   SIDEBAR CLOSE BUTTON (Mobile Only)
+   ============================================ */
+
 .admin-dashboard-sidebar-close-btn {
     display: none;
     position: absolute;
@@ -1053,9 +1114,9 @@
     right: 15px;
     background: rgba(255, 255, 255, 0.1);
     border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     color: white;
     cursor: pointer;
     align-items: center;
@@ -1066,13 +1127,17 @@
 
 .admin-dashboard-sidebar-close-btn:hover {
     background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
 }
 
 .admin-dashboard-sidebar-close-btn i {
-    font-size: 16px;
+    font-size: 18px;
 }
 
-/* Sidebar - Desktop */
+/* ============================================
+   SIDEBAR - Desktop Styles
+   ============================================ */
+
 .admin-dashboard-sidebar {
     background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
     border-right: 1px solid #334155;
@@ -1085,10 +1150,31 @@
     left: 0;
     overflow-y: auto;
     z-index: 1000;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, left 0.3s ease;
 }
 
-/* Logo Section */
+/* Sidebar Scrollbar */
+.admin-dashboard-sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.admin-dashboard-sidebar::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+.admin-dashboard-sidebar::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 5px;
+}
+
+.admin-dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #60a5fa;
+}
+
+/* ============================================
+   SIDEBAR LOGO SECTION
+   ============================================ */
+
 .admin-dashboard-logo {
     padding: 24px 20px;
     border-bottom: 1px solid #334155;
@@ -1104,7 +1190,7 @@
 .logo-container i {
     font-size: 2rem;
     color: #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(59, 130, 246, 0.15);
     padding: 10px;
     border-radius: 12px;
 }
@@ -1119,11 +1205,14 @@
 
 .logo-content span {
     color: #94a3b8;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 400;
 }
 
-/* Navigation Menu */
+/* ============================================
+   SIDEBAR NAVIGATION MENU
+   ============================================ */
+
 .admin-dashboard-nav {
     padding: 20px 0;
 }
@@ -1134,13 +1223,13 @@
     margin: 0;
 }
 
+/* Navigation Items */
 .admin-dashboard-nav-item {
     padding: 0;
     margin: 0;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-
 }
 
 .nav-item-content {
@@ -1150,9 +1239,6 @@
     padding: 12px 20px;
     color: #cbd5e0;
     transition: all 0.3s ease;
-        display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .admin-dashboard-nav-item:hover .nav-item-content {
@@ -1166,6 +1252,27 @@
     border-right: 3px solid #3b82f6;
 }
 
+/* Navigation Icons */
+.admin-dashboard-nav-item i {
+    font-size: 1.2rem;
+    width: 24px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.admin-dashboard-nav-item.active i {
+    opacity: 1;
+    color: #3b82f6;
+}
+
+/* Navigation Text */
+.admin-dashboard-nav-item span {
+    font-weight: 500;
+    font-size: 0.9rem;
+    flex: 1;
+}
+
+/* Active Indicator Dot */
 .nav-indicator {
     display: none;
 }
@@ -1182,26 +1289,6 @@
     border-radius: 50%;
 }
 
-.admin-dashboard-nav-item i {
-    font-size: 1.2rem;
-    width: 24px;
-    text-align: center;
-    opacity: 0.8;
-}
-
-.admin-dashboard-nav-item.active i {
-    opacity: 1;
-    color: #3b82f6;
-}
-
-.admin-dashboard-nav-item span {
-    font-weight: 500;
-    font-size: 0.9rem;
-    flex: 1;
-    color: #ffff;
-    display: block;
-}
-
 /* Nav Divider */
 .nav-divider {
     padding: 16px 20px 8px 20px;
@@ -1216,7 +1303,10 @@
     letter-spacing: 0.05em;
 }
 
-/* Badge Styles */
+/* ============================================
+   BADGE STYLES
+   ============================================ */
+
 .admin-dashboard-message-badge {
     background: #ef4444;
     color: white;
@@ -1241,30 +1331,223 @@
     text-align: center;
 }
 
-/* Scrollbar for Sidebar */
-.admin-dashboard-sidebar::-webkit-scrollbar {
-    width: 5px;
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+
+.admin-dashboard-main {
+    flex: 1;
+    padding: 20px 30px;
+    overflow-x: auto;
+    background: #f1f5f9;
+    min-height: 100vh;
 }
 
-.admin-dashboard-sidebar::-webkit-scrollbar-track {
-    background: #1e293b;
+/* Page Header */
+.admin-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
-.admin-dashboard-sidebar::-webkit-scrollbar-thumb {
-    background: #3b82f6;
-    border-radius: 5px;
+.admin-dashboard-header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
 }
 
-.admin-dashboard-sidebar::-webkit-scrollbar-thumb:hover {
-    background: #2563eb;
+/* Header Actions */
+.admin-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 /* ============================================
-   RESPONSIVE DESIGN
+   PROFILE SECTION
    ============================================ */
 
-/* Tablet & Mobile */
+.profile-section {
+    position: relative;
+}
+
+.profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 40px;
+    padding: 6px 15px 6px 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.profile-trigger:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.profile-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-avatar-sm img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-placeholder-sm {
+    font-size: 24px;
+    color: #94a3b8;
+}
+
+.profile-name-sm {
+    font-size: 14px;
+    font-weight: 500;
+    color: #334155;
+}
+
+/* Profile Dropdown */
+.profile-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 280px;
+    z-index: 100;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.profile-dropdown-header {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.profile-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-placeholder {
+    font-size: 32px;
+    color: white;
+}
+
+.profile-info .profile-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.profile-info .profile-email {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.profile-info .profile-role {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+.profile-dropdown-menu {
+    padding: 8px 0;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    width: 100%;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #334155;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: #f1f5f9;
+}
+
+.dropdown-item i {
+    font-size: 16px;
+    width: 20px;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 8px 0;
+}
+
+.dropdown-item.logout-btn {
+    color: #dc2626;
+}
+
+.dropdown-item.logout-btn:hover {
+    background: #fef2f2;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - MOBILE & TABLET
+   ============================================ */
+
+/* Tablet & Mobile (max-width: 768px) */
 @media (max-width: 768px) {
+    /* Show top navigation */
+    .admin_top_nav {
+        display: flex;
+    }
+    
     /* Show mobile menu button */
     .admin-dashboard-mobile-menu-btn {
         display: flex;
@@ -1272,7 +1555,12 @@
         justify-content: center;
     }
     
-    /* Sidebar - hidden by default */
+    /* Show close button */
+    .admin-dashboard-sidebar-close-btn {
+        display: flex;
+    }
+    
+    /* Sidebar - hidden by default on mobile */
     .admin-dashboard-sidebar {
         position: fixed;
         top: 0;
@@ -1291,47 +1579,41 @@
         box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     }
     
-    /* Show close button on mobile */
-    .admin-dashboard-sidebar-close-btn {
-        display: flex;
+    /* Adjust main content padding for fixed header */
+    .admin-dashboard-main {
+        padding: 40px 15px 20px 15px;
     }
     
-    /* Adjust top nav for mobile */
-    .admin_top_nav {
-        padding: 10px 16px;
-                display: flex;
-                position: fixed;
-                top: 0;
-                left: 0;
-                z-index: 1000;
-                width: 100%;
+    /* Header adjustments */
+    .admin-dashboard-header {
+        margin-top: 0;
     }
     
-    .admin_top_nav_title {
-        font-size: 16px;
+    .admin-dashboard-header h1 {
+        font-size: 20px;
     }
     
-    .admin-dashboard-user-greeting {
+    /* Profile trigger adjustments */
+    .profile-trigger {
+        padding: 4px 12px 4px 4px;
+    }
+    
+    .profile-name-sm {
         font-size: 12px;
     }
     
-    /* Adjust nav item padding */
+    /* Sidebar nav item adjustments */
     .nav-item-content {
         padding: 10px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
     }
     
     .admin-dashboard-nav-item i {
         font-size: 1.1rem;
-        width: 20px;
+        width: 22px;
     }
     
     .admin-dashboard-nav-item span {
         font-size: 0.85rem;
-        display: block;
     }
 }
 
@@ -1345,15 +1627,49 @@
         display: none;
     }
     
+    .admin_top_nav {
+        display: none;
+    }
+    
     .nav-item-content {
         padding: 10px 16px;
+    }
+    
+    .admin-dashboard-nav-item i {
+        font-size: 1rem;
+        width: 20px;
+    }
+    
+    .admin-dashboard-nav-item span {
+        font-size: 0.85rem;
+    }
+    
+    .admin-dashboard-logo {
+        padding: 20px 16px;
+    }
+    
+    .logo-container i {
+        font-size: 1.6rem;
+        padding: 8px;
+    }
+    
+    .logo-content h3 {
+        font-size: 1rem;
+    }
+    
+    .logo-content span {
+        font-size: 0.7rem;
     }
 }
 
 /* Desktop (1025px and above) */
 @media (min-width: 1025px) {
     .admin-dashboard-mobile-menu-btn {
-        display: none;
+        display: none !important;
+    }
+    
+    .admin_top_nav {
+        display: none !important;
     }
     
     .admin-dashboard-sidebar-overlay {
@@ -1363,220 +1679,55 @@
     .admin-dashboard-sidebar-close-btn {
         display: none !important;
     }
+    
+    .admin-dashboard-sidebar {
+        transform: translateX(0) !important;
+        position: sticky;
+    }
 }
 
-/* ============================================
-   ADD THESE TO YOUR EXISTING adminDesign.css
-   Mobile Responsive Styles for Sidebar & Layout
-   ============================================ */
-
-/* Mobile Sidebar Toggle Button */
-.mobile-sidebar-toggle {
-  display: none;
-  position: fixed;
-  top: 15px;
-  left: 15px;
-  z-index: 1001;
-  background: #667eea;
-  border: none;
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-}
-
-.mobile-sidebar-toggle:hover {
-  background: #5a67d8;
-  transform: scale(1.05);
-}
-
-/* Sidebar Overlay */
-.sidebar-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 998;
-  display: none;
-}
-
-.sidebar-overlay.active {
-  display: block;
-}
-
-/* Mobile Sidebar Styles */
-@media (max-width: 991px) {
-  .admin-dashboard-sidebar {
-    position: fixed;
-    left: -280px;
-    top: 0;
-    transition: left 0.3s ease;
-    z-index: 999;
-    height: 100vh;
-    overflow-y: auto;
-  }
-  
-  .admin-dashboard-sidebar.mobile-open {
-    left: 0;
-  }
-  
-  .mobile-sidebar-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .admin-dashboard-main {
-    width: 100%;
-    padding-top: 70px;
-  }
-  
-  .admin-dashboard-header {
-    padding-left: 60px;
-  }
-}
-
-/* Small Desktop / Tablet Landscape */
-@media (max-width: 1200px) {
-  .admin-dashboard-stats-grid {
-    gap: 1rem;
-  }
-  
-  .admin-dashboard-stat-card {
-    padding: 1rem;
-  }
-  
-  .admin-dashboard-stat-content p {
-    font-size: 1.5rem;
-  }
-}
-
-/* Tablet Portrait */
-@media (max-width: 991px) {
-  .admin-dashboard-container {
-    flex-direction: column;
-  }
-  
-  .admin-dashboard-main {
-    margin-left: 0;
-    padding: 20px 15px;
-  }
-  
-  .admin-dashboard-header h1 {
-    font-size: 1.5rem;
-  }
-  
-  .admin-dashboard-content-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-}
-
-/* Mobile Landscape */
-@media (max-width: 768px) {
-  .admin-dashboard-stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .admin-dashboard-stat-card {
-    padding: 0.875rem;
-  }
-  
-  .admin-dashboard-stat-content p {
-    font-size: 1.3rem;
-  }
-  
-  .admin-dashboard-section-header h2 {
-    font-size: 1rem;
-  }
-  
-  .admin-dashboard-activity-item {
-    padding: 0.75rem;
-  }
-  
-  .admin-dashboard-activity-content h4 {
-    font-size: 0.9rem;
-  }
-  
-  .admin-dashboard-activity-content p {
-    font-size: 0.75rem;
-  }
-  
-  .admin-dashboard-action-btn {
-    padding: 0.75rem;
-    font-size: 0.9rem;
-  }
-}
-
-/* Small Mobile */
-@media (max-width: 576px) {
-  .admin-dashboard-main {
-    padding: 15px 10px;
-  }
-  
-  .admin-dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .admin-dashboard-header h1 {
-    font-size: 1.2rem;
-  }
-  
-  .admin-header-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-  
-  .profile-trigger {
-    padding: 6px 12px;
-  }
-  
-  .profile-name-sm {
-    display: none;
-  }
-  
-  .admin-dashboard-stat-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
-  }
-  
-  .admin-dashboard-stat-content p {
-    font-size: 1.1rem;
-  }
-  
-  .admin-dashboard-stat-content h3 {
-    font-size: 0.75rem;
-  }
-}
-
-/* Extra Small Mobile */
-@media (max-width: 375px) {
-  .admin-dashboard-main {
-    padding: 10px 8px;
-  }
-  
-  .mobile-sidebar-toggle {
-    width: 38px;
-    height: 38px;
-    font-size: 1.2rem;
-    top: 10px;
-    left: 10px;
-  }
-  
-  .admin-dashboard-header {
-    padding-left: 50px;
-  }
-  
-  .admin-dashboard-header h1 {
-    font-size: 1rem;
-  }
+/* Extra Small Mobile (max-width: 480px) */
+@media (max-width: 480px) {
+    .admin_top_nav_title {
+        font-size: 16px;
+    }
+    
+    .admin-dashboard-user-greeting {
+        font-size: 11px;
+    }
+    
+    .admin-dashboard-main {
+        padding: 30px 12px 15px 12px;
+    }
+    
+    .admin-dashboard-header h1 {
+        font-size: 18px;
+    }
+    
+    .profile-name-sm {
+        display: none;
+    }
+    
+    .profile-trigger {
+        padding: 4px 8px 4px 4px;
+    }
+    
+    .nav-item-content {
+        padding: 8px 12px;
+        width: 100%;
+        
+    }
+    
+    .admin-dashboard-nav-item span {
+        font-size: 0.8rem;
+        display: flex;
+        justify-content: left;
+        align-items: center;
+        display: block;
+    }
+    
+    .admin-dashboard-sidebar {
+        width: 90%;
+        max-width: 280px;
+    }
 }

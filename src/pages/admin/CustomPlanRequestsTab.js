@@ -48,12 +48,13 @@ const CustomPlanRequestsTab = ({
                         onChange={(e) => onStatusFilterChange(e.target.value)}
                         className="status-filter"
                     >
+                         <option value="all">All Requests</option>
                         <option value="pending">Pending</option>
                         <option value="reviewed">Reviewed</option>
                         <option value="approved">Approved</option>
                         <option value="rejected">Rejected</option>
                         <option value="completed">Completed</option>
-                        <option value="all">All Requests</option>
+                       
                     </select>
                     
                     <button 
