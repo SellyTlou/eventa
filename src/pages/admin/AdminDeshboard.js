@@ -431,6 +431,43 @@ function AdminDashboard() {
     const profileTriggerRef = useRef(null);
     const profileDropdownRef = useRef(null);
 
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+// Add these functions
+const toggleMobileSidebar = () => {
+    setIsMobileSidebarOpen(!isMobileSidebarOpen);
+};
+
+const closeMobileSidebar = () => {
+    setIsMobileSidebarOpen(false);
+};
+
+// Add resize listener to detect mobile view
+useEffect(() => {
+    const handleResize = () => {
+        setIsMobile(window.innerWidth <= 768);
+        if (window.innerWidth > 768) {
+            setIsMobileSidebarOpen(false);
+        }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+}, []);
+
+
+useEffect(() => {
+    if (isMobileSidebarOpen && isMobile) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+    
+    return () => {
+        document.body.style.overflow = '';
+    };
+}, [isMobileSidebarOpen, isMobile]);
     // ==================== PRODUCTION-READY REAL-TIME UPDATES ====================
     // PROPER real-time activity addition
     const addActivityToTreeSet = (activity) => {
@@ -1368,7 +1405,7 @@ function AdminDashboard() {
             formData.append('function', 'getAdminProfile');
             formData.append('admin_user_id', adminUserId);
 
-            const response = await fetch(`${API_BASE_URL}/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -2273,112 +2310,171 @@ function AdminDashboard() {
                                     "fa-info-circle"
                             }`}></i>
                         <span>{alert.message}</span>
-                    </div>
+                    </div> 
                 )}
                 <div className="admin-dashboard-container">
-                    {/* Sidebar Navigation */}
-                    <aside className="admin-dashboard-sidebar">
-                        <div className="admin-dashboard-logo">
-                            <div className="logo-container">
-                                <i className="bi bi-building-gear"></i>
-                                <div className="logo-content">
-                                    <h3>Evendi</h3>
-                                    <span>Control Center</span>
-                                </div>
-                            </div>
-                        </div>
+{/* Top Navigation */}
+<nav className="admin_top_nav">
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+        <button 
+            className="admin-dashboard-mobile-menu-btn" 
+            onClick={toggleMobileSidebar}
+            aria-label="Toggle menu"
+        >
+            <i className="bi bi-list"></i>
+        </button>
+        <p className="admin_top_nav_title">Admin Dashboard</p>
+    </div>
+    <span className="admin-dashboard-user-greeting">
+        Welcome, {adminProfile ? adminProfile.name : 'Admin'}!
+    </span>
+</nav>
 
-                        <nav className="admin-dashboard-nav">
-                            <ul>
-                                <li
-                                    className={`admin-dashboard-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("dashboard")}
-                                >
-                                    <div className="nav-item-content">
-                                        <i className="bi bi-grid-1x2"></i>
-                                        <span>Dashboard Overview</span>
-                                    </div>
-                                    <div className="nav-indicator"></div>
-                                </li>
+{/* Sidebar Overlay */}
+<div 
+    className={`admin-dashboard-sidebar-overlay ${isMobileSidebarOpen ? 'active' : ''}`} 
+    onClick={closeMobileSidebar}
+></div>
 
-                                <li className="nav-divider">
-                                    <span>Content Management</span>
-                                </li>
+{/* Sidebar Navigation */}
+<aside className={`admin-dashboard-sidebar ${isMobileSidebarOpen ? 'mobile-open' : ''}`}>
+    {/* Close button for mobile */}
+    <button 
+        className="admin-dashboard-sidebar-close-btn"
+        onClick={closeMobileSidebar}
+        aria-label="Close menu"
+    >
+        <i className="bi bi-x-lg"></i>
+    </button>
+    <div className="admin-dashboard-logo">
+        <div className="logo-container">
+            <i className="bi bi-building-gear"></i>
+            <div className="logo-content">
+                <h3>Evendi</h3>
+                <span>Control Center</span>
+            </div>
+        </div>
+    </div>
 
-                                <li
-                                    className={`admin-dashboard-nav-item ${activeTab === "event-management" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("event-management")}
-                                >
-                                    <div className="nav-item-content">
-                                        <i className="bi bi-calendar-week"></i>
-                                        <span>Event Management</span>
-                                    </div>
-                                </li>
+    {/* Close button for mobile */}
+    <button 
+        className="admin-dashboard-sidebar-close-btn"
+        onClick={closeMobileSidebar}
+        aria-label="Close menu"
+    >
+        <i className="bi bi-x-lg"></i>
+    </button>
 
-                                <li
-                                    className={`admin-dashboard-nav-item ${activeTab === "users" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("users")}
-                                >
-                                    <div className="nav-item-content">
-                                        <i className="bi bi-person-gear"></i>
-                                        <span>User Administration</span>
-                                    </div>
-                                </li>
+    <nav className="admin-dashboard-nav">
+        <ul>
+            <li
+                className={`admin-dashboard-nav-item ${activeTab === "dashboard" ? "active" : ""}`}
+                onClick={() => {
+                    setActiveTab("dashboard");
+                    closeMobileSidebar();
+                }}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-grid-1x2"></i>
+                    <span>Dashboard Overview</span>
+                </div>
+                <div className="nav-indicator"></div>
+            </li>
 
-                                <li
-                                    className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("invitations")}
-                                >
-                                    <div className="nav-item-content">
-                                        <i className="bi bi-send-check"></i>
-                                        <span>Invitation Analytics</span>
-                                    </div>
-                                </li>
+            <li className="nav-divider">
+                <span>Content Management</span>
+            </li>
 
-                                <li
-                                    className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("pricing")}
-                                >
-                                    <div className="nav-item-content">
-                                        <i className="bi bi-graph-up"></i>
-                                        <span>Revenue & Pricing</span>
-                                    </div>
-                                </li>
+            <li
+                className={`admin-dashboard-nav-item ${activeTab === "event-management" ? "active" : ""}`}
+                onClick={() => {
+                    setActiveTab("event-management");
+                    closeMobileSidebar();
+                }}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-calendar-week"></i>
+                    <span>Event Management</span>
+                </div>
+            </li>
 
-                                <li
-                                    className={`admin-dashboard-nav-item ${activeTab === "tickets" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("tickets")}
-                                >
-                                    <div className="nav-item-content">
-                                        <i className="bi bi-headset"></i>
-                                        <span>Support Tickets</span>
-                                    </div>
-                                </li>
+            <li
+                className={`admin-dashboard-nav-item ${activeTab === "users" ? "active" : ""}`}
+                onClick={() => {
+                    setActiveTab("users");
+                    closeMobileSidebar();
+                }}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-person-gear"></i>
+                    <span>User Administration</span>
+                </div>
+            </li>
 
-                                {/* Custom Plan Requests Tab with Message Badge */}
-                                <li
-                                    className={`admin-dashboard-nav-item ${(activeTab === "custom-plans" || activeTab === "requestDetails") ? "active" : ""}`}
-                                    onClick={() => {
-                                        setActiveTab("custom-plans");
-                                        fetchCustomPlanRequests('pending');
-                                    }}
-                                >
-                                    <div className="nav-item-content">
-                                        <i className="bi bi-file-text"></i>
-                                        <span>Custom Plan Requests</span>
-                                        {unreadMessageCount > 0 && (
-                                            <span className="message-badge">{unreadMessageCount}</span>
-                                        )}
-                                        {customPlanRequests.filter(r => r.status === 'pending').length > 0 && (
-                                            <span className="badge bg-danger ms-2">
-                                                {customPlanRequests.filter(r => r.status === 'pending').length}
-                                            </span>
-                                        )}
-                                    </div>
-                                </li>
-                            </ul>
-                        </nav>
-                    </aside>
+            <li
+                className={`admin-dashboard-nav-item ${activeTab === "invitations" ? "active" : ""}`}
+                onClick={() => {
+                    setActiveTab("invitations");
+                    closeMobileSidebar();
+                }}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-send-check"></i>
+                    <span>Invitation Analytics</span>
+                </div>
+            </li>
+
+            <li
+                className={`admin-dashboard-nav-item ${activeTab === "pricing" ? "active" : ""}`}
+                onClick={() => {
+                    setActiveTab("pricing");
+                    closeMobileSidebar();
+                }}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-graph-up"></i>
+                    <span>Revenue & Pricing</span>
+                </div>
+            </li>
+
+            <li
+                className={`admin-dashboard-nav-item ${activeTab === "tickets" ? "active" : ""}`}
+                onClick={() => {
+                    setActiveTab("tickets");
+                    closeMobileSidebar();
+                }}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-headset"></i>
+                    <span>Support Tickets</span>
+                </div>
+            </li>
+
+            {/* Custom Plan Requests Tab with Message Badge */}
+            <li
+                className={`admin-dashboard-nav-item ${(activeTab === "custom-plans" || activeTab === "requestDetails") ? "active" : ""}`}
+                onClick={() => {
+                    setActiveTab("custom-plans");
+                    fetchCustomPlanRequests('pending');
+                    closeMobileSidebar();
+                }}
+            >
+                <div className="nav-item-content">
+                    <i className="bi bi-file-text"></i>
+                    <span>Custom Plan Requests</span>
+                    {unreadMessageCount > 0 && (
+                        <span className="admin-dashboard-message-badge">{unreadMessageCount}</span>
+                    )}
+                    {customPlanRequests.filter(r => r.status === 'pending').length > 0 && (
+                        <span className="admin-dashboard-pending-badge">
+                            {customPlanRequests.filter(r => r.status === 'pending').length}
+                        </span>
+                    )}
+                </div>
+            </li>
+        </ul>
+    </nav>
+</aside>
 
                     {/* Main Content Area */}
                     <main className="admin-dashboard-main">

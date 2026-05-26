@@ -7660,7 +7660,6 @@ if ($fun === "getUserCustomPlanRequests") {
     exit;
 }
 
-// Get single custom plan request by ID
 if ($fun === "getCustomPlanRequestById") {
     $user_id = $_POST['user_id'] ?? '';
     $request_id = $_POST['request_id'] ?? '';
@@ -7671,43 +7670,18 @@ if ($fun === "getCustomPlanRequestById") {
     }
     
     try {
-        $stmt = $pdo->prepare("
-            SELECT 
-                request_id,
-                user_id,
-                business_name,
-                contact_name,
-                email,
-                phone,
-                event_type,
-                event_name,
-                event_description,
-                requested_guests,
-                requested_events,
-                approved_guests,      -- ADD THIS
-                approved_events,       -- ADD THIS
-                proposed_price,
-                final_price,           -- ADD THIS
-                desired_features,
-                custom_features,       -- ADD THIS
-                expected_attendees,
-                event_date,
-                special_requirements,
-                additional_notes,
-                status,
-                payment_status,
-                payment_id,
-                admin_notes,
-                created_at,
-                reviewed_at,
-                reviewed_by
-            FROM custom_plan_requests 
-            WHERE request_id = ? AND user_id = ?
-        ");
+        // Use SELECT * to avoid column name issues
+        $stmt = $pdo->prepare("SELECT * FROM custom_plan_requests WHERE request_id = ? AND user_id = ?");
         $stmt->execute([$request_id, $user_id]);
         $request = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($request) {
+            // Ensure these fields always exist even if not in database
+            $request['approved_guests'] = $request['approved_guests'] ?? null;
+            $request['approved_events'] = $request['approved_events'] ?? null;
+            $request['final_price'] = $request['final_price'] ?? null;
+            $request['custom_features'] = $request['custom_features'] ?? null;
+            
             echo json_encode(["success" => true, "request" => $request]);
         } else {
             echo json_encode(["success" => false, "message" => "Request not found"]);
@@ -7718,7 +7692,6 @@ if ($fun === "getCustomPlanRequestById") {
     }
     exit;
 }
-
 // Endpoint used by payment page to fetch price/details for a custom request
 if ($fun === "getCustomPlanForPayment") {
     $request_id = $_POST['request_id'] ?? '';

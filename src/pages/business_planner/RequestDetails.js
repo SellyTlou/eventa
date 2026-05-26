@@ -73,7 +73,7 @@ const RequestDetails = () => {
                 setRequest(data.request);
             } else {
                 showAlert('Request not found', 'error');
-                setTimeout(() => navigate('/my-requests'), 2000);
+                //setTimeout(() => navigate('/my-requests'), 2000);
             }
         } catch (error) {
             console.error('Error fetching request:', error);
