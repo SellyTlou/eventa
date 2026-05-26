@@ -1,6 +1,6 @@
 /* ============================================
-   ADMIN EVENT MANAGEMENT TAB STYLES
-   Event Management - Reported Events, All Events, Delete Modal
+   ADMIN EVENT MANAGEMENT TAB STYLES - MOBILE RESPONSIVE
+   Event Management - Reported Events, All Events
    ============================================ */
 
 /* Event Management Controls */
@@ -42,7 +42,6 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #666;
   cursor: pointer;
 }
 
@@ -105,6 +104,8 @@
 .reported-event-card .event-header h4 {
   margin: 0;
   color: #333;
+  font-size: 1rem;
+  word-break: break-word;
 }
 
 .event-meta {
@@ -116,7 +117,7 @@
 
 .report-date {
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 /* Event Details */
@@ -134,45 +135,32 @@
   font-weight: 600;
   min-width: 120px;
   color: #333;
+  font-size: 0.85rem;
 }
 
 .detail-row span {
   color: #666;
   flex: 1;
+  font-size: 0.85rem;
+  word-break: break-word;
 }
 
 /* Violation Types */
 .violation-type {
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   display: inline-block;
 }
 
-.violation-type.inappropriate_content {
+.violation-type.inappropriate_content,
+.violation-type.spam,
+.violation-type.copyright,
+.violation-type.harassment,
+.violation-type.illegal {
   background: #fff3cd;
   color: #856404;
-}
-
-.violation-type.spam {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.violation-type.copyright {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.violation-type.harassment {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.violation-type.illegal {
-  background: #f8d7da;
-  color: #721c24;
 }
 
 /* Event Preview Image */
@@ -184,6 +172,7 @@
   font-weight: 600;
   display: block;
   margin-bottom: 8px;
+  font-size: 0.85rem;
 }
 
 .event-image-preview {
@@ -202,21 +191,18 @@
 
 .action-buttons .btn {
   flex: 1;
-  min-width: 120px;
+  min-width: 100px;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   border: none;
+  font-size: 0.85rem;
 }
 
 .btn-danger {
   background: #dc3545;
   color: white;
-}
-
-.btn-danger:hover {
-  background: #c82333;
 }
 
 .btn-outline {
@@ -225,21 +211,16 @@
   border: 1px solid #6c757d;
 }
 
-.btn-outline:hover {
-  background: #6c757d;
-  color: white;
-}
-
 .btn-secondary {
   background: #6c757d;
   color: white;
 }
 
-/* All Events Table */
+/* All Events Table - Desktop */
 .events-table {
   background: white;
   border-radius: 8px;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -269,13 +250,14 @@
 .events-table .event-name {
   font-weight: 600;
   color: #333;
+  word-break: break-word;
 }
 
-/* Status Badges for Events */
+/* Status Badges */
 .status-badge {
   padding: 4px 8px;
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 500;
   display: inline-block;
 }
@@ -294,7 +276,7 @@
 .report-count {
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .report-count.warning {
@@ -308,22 +290,21 @@
   gap: 8px;
 }
 
-.events-table .btn-icon.view-btn {
-  background: #17a2b8;
-  color: white;
+.events-table .btn-icon {
   padding: 6px 10px;
   border-radius: 4px;
   border: none;
   cursor: pointer;
 }
 
+.events-table .btn-icon.view-btn {
+  background: #17a2b8;
+  color: white;
+}
+
 .events-table .btn-icon.delete-btn {
   background: #dc3545;
   color: white;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
 }
 
 /* Badge for reported events count */
@@ -334,59 +315,6 @@
   padding: 2px 8px;
   font-size: 0.7rem;
   margin-left: 8px;
-}
-
-/* Delete Modal Specific Styles */
-.delete-warning {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-  border-radius: 6px;
-  padding: 15px;
-  margin-bottom: 20px;
-}
-
-.warning-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.warning-header i {
-  color: #856404;
-  font-size: 1.2rem;
-}
-
-.warning-header h4 {
-  margin: 0;
-  color: #856404;
-}
-
-/* Unpublished Event Modal Styles */
-.unpublished-warning {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  padding: 20px;
-  background: #fff9e6;
-  border-radius: 8px;
-  border-left: 4px solid #ffc107;
-  margin-bottom: 20px;
-}
-
-.unpublished-warning .warning-icon {
-  font-size: 24px;
-  color: #ffc107;
-}
-
-.unpublished-warning .warning-content h4 {
-  margin: 0 0 10px 0;
-  color: #856404;
-}
-
-.unpublished-warning .warning-content p {
-  margin: 5px 0;
-  color: #666;
 }
 
 /* No Data State */
@@ -402,22 +330,82 @@
   color: #28a745;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ========== MOBILE RESPONSIVE ========== */
+
+/* Tablet Portrait */
+@media (max-width: 991px) {
   .reported-events-grid {
     grid-template-columns: 1fr;
+    gap: 15px;
   }
   
-  .events-table .table-header,
-  .events-table .table-row {
-    grid-template-columns: 2fr 1.5fr 1fr 1fr;
+  .reported-event-card {
+    padding: 15px;
+  }
+}
+
+/* Mobile Landscape */
+@media (max-width: 768px) {
+  .event-management-controls {
+    flex-direction: column;
+    align-items: stretch;
   }
   
-  .events-table .table-header span:nth-child(4),
-  .events-table .table-header span:nth-child(5),
-  .events-table .table-row div:nth-child(4),
-  .events-table .table-row div:nth-child(5) {
+  .search-box-compact {
+    width: 100%;
+    max-width: none;
+  }
+  
+  .filter-controls {
+    justify-content: space-between;
+  }
+  
+  /* Convert events table to cards */
+  .events-table {
+    overflow-x: visible;
+  }
+  
+  .events-table .table-header {
     display: none;
+  }
+  
+  .events-table .table-row {
+    display: block;
+    padding: 15px;
+    margin-bottom: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+  }
+  
+  .events-table .table-row > * {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #f0f0f0;
+  }
+  
+  .events-table .table-row > *:last-child {
+    border-bottom: none;
+  }
+  
+  .events-table .table-row > *::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #666;
+    font-size: 0.8rem;
+  }
+  
+  .events-table .actions {
+    justify-content: flex-end;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+  }
+  
+  .detail-row label {
+    margin-bottom: 4px;
   }
   
   .action-buttons {
@@ -427,12 +415,69 @@
   .action-buttons .btn {
     width: 100%;
   }
+}
+
+/* Small Mobile */
+@media (max-width: 576px) {
+  .reported-event-card {
+    padding: 12px;
+  }
   
-  .detail-row {
-    flex-direction: column;
+  .reported-event-card .event-header h4 {
+    font-size: 0.9rem;
+  }
+  
+  .event-meta {
+    font-size: 0.7rem;
+  }
+  
+  .detail-row label,
+  .detail-row span {
+    font-size: 0.8rem;
   }
   
   .detail-row label {
-    margin-bottom: 4px;
+    min-width: auto;
+  }
+  
+  .action-buttons .btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .filter-controls select,
+  .sort-btn {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+  }
+  
+  .badge {
+    font-size: 0.6rem;
+  }
+  
+  .events-table .table-row {
+    padding: 12px;
+  }
+  
+  .events-table .table-row > * {
+    font-size: 0.8rem;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 375px) {
+  .filter-controls select,
+  .sort-btn {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+  
+  .reported-event-card {
+    padding: 10px;
+  }
+  
+  .action-buttons .btn {
+    min-width: auto;
+    font-size: 0.75rem;
   }
 }

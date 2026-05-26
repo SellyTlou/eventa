@@ -1,5 +1,5 @@
 /* ============================================
-   ADMIN DASHBOARD TAB STYLES
+   ADMIN DASHBOARD TAB STYLES - MOBILE RESPONSIVE
    Dashboard Overview - Stats Cards, Recent Activity, Quick Actions
    ============================================ */
 
@@ -217,7 +217,24 @@
   cursor: not-allowed;
 }
 
-/* Responsive */
+/* ========== MOBILE RESPONSIVE ========== */
+
+/* Tablet Portrait */
+@media (max-width: 991px) {
+  .admin-dashboard-stats-grid {
+    gap: 1rem;
+  }
+  
+  .admin-dashboard-stat-card {
+    padding: 1rem;
+  }
+  
+  .admin-dashboard-stat-content p {
+    font-size: 1.5rem;
+  }
+}
+
+/* Mobile Landscape */
 @media (max-width: 768px) {
   .admin-dashboard-stats-grid {
     grid-template-columns: 1fr;
@@ -225,5 +242,78 @@
   
   .admin-dashboard-content-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .admin-dashboard-stat-card {
+    padding: 0.875rem;
+  }
+  
+  .admin-dashboard-stat-content p {
+    font-size: 1.3rem;
+  }
+  
+  .admin-dashboard-section-header h2 {
+    font-size: 1rem;
+  }
+  
+  .admin-dashboard-section-header {
+    margin-bottom: 1rem;
+  }
+  
+  .admin-dashboard-recent-activity,
+  .admin-dashboard-actions {
+    padding: 1rem;
+  }
+  
+  .admin-dashboard-activity-item {
+    padding: 0.75rem;
+  }
+  
+  .admin-dashboard-activity-content h4 {
+    font-size: 0.9rem;
+  }
+  
+  .admin-dashboard-activity-content p {
+    font-size: 0.75rem;
+  }
+  
+  .admin-dashboard-activity-icon {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+  
+  .admin-dashboard-action-btn {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 576px) {
+  .admin-dashboard-stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+  
+  .admin-dashboard-stat-content p {
+    font-size: 1.1rem;
+  }
+  
+  .admin-dashboard-stat-content h3 {
+    font-size: 0.75rem;
+  }
+  
+  .admin-dashboard-activity-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+    margin-right: 0.75rem;
+  }
+  
+  .admin-dashboard-view-all {
+    font-size: 0.8rem;
   }
 }

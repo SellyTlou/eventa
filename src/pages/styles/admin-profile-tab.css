@@ -1,6 +1,6 @@
 /* ============================================
-   ADMIN PROFILE TAB STYLES
-   My Profile - Avatar Upload, Form Grid, Password Change
+   ADMIN PROFILE TAB STYLES - MOBILE RESPONSIVE
+   My Profile - Avatar Upload, Form Grid
    ============================================ */
 
 /* Profile Content Layout */
@@ -30,6 +30,7 @@
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .avatar-image {
@@ -217,10 +218,25 @@
   color: #2c3e50;
 }
 
-/* Responsive */
+/* ========== MOBILE RESPONSIVE ========== */
+
+/* Tablet Portrait */
+@media (max-width: 991px) {
+  .profile-avatar-section,
+  .profile-form-section {
+    padding: 1.5rem;
+  }
+  
+  .avatar-preview {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* Mobile Landscape */
 @media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
+  .profile-content {
+    gap: 1rem;
   }
   
   .avatar-upload {
@@ -229,8 +245,104 @@
     text-align: center;
   }
   
+  .avatar-upload-info {
+    text-align: center;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
   .admin-content-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+  
+  .edit-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .password-field-with-button {
+    flex-direction: column;
+  }
+  
+  .password-field-with-button input {
+    width: 100%;
+  }
+  
+  .btn-change-password {
+    width: 100%;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 576px) {
+  .profile-avatar-section,
+  .profile-form-section {
+    padding: 1rem;
+  }
+  
+  .avatar-preview {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .avatar-placeholder-large {
+    font-size: 2rem;
+  }
+  
+  .avatar-upload-info h4 {
+    font-size: 1rem;
+  }
+  
+  .avatar-upload-info p {
+    font-size: 0.85rem;
+  }
+  
+  .upload-area {
+    padding: 1rem;
+  }
+  
+  .upload-label {
+    font-size: 0.85rem;
+  }
+  
+  .form-section h3 {
+    font-size: 1.1rem;
+  }
+  
+  .admin-content-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .btn-primary,
+  .btn-outline {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 375px) {
+  .profile-avatar-section,
+  .profile-form-section {
+    padding: 0.75rem;
+  }
+  
+  .avatar-preview {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .form-group label {
+    font-size: 0.8rem;
   }
 }

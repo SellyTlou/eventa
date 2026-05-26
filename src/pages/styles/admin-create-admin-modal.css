@@ -1,5 +1,5 @@
 /* ============================================
-   CREATE ADMIN MODAL STYLES
+   CREATE ADMIN MODAL STYLES - MOBILE RESPONSIVE
    Create New Admin User Modal
    ============================================ */
 
@@ -127,17 +127,111 @@
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
 }
 
-/* Responsive */
+/* ========== MOBILE RESPONSIVE ========== */
+
+/* Mobile Landscape */
 @media (max-width: 768px) {
+  .modal-overview-new {
+    padding: 15px;
+  }
+  
   .modal-content-new {
     width: 95%;
+    max-height: 85vh;
   }
   
   .modal-header-new {
     padding: 20px;
   }
   
+  .modal-header-new h2 {
+    font-size: 1.3rem;
+  }
+  
+  .close-btn-new {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9rem;
+  }
+  
   .modal-body-new {
     padding: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-control {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .btn-primary {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 576px) {
+  .modal-overview-new {
+    padding: 10px;
+  }
+  
+  .modal-header-new {
+    padding: 15px;
+  }
+  
+  .modal-header-new h2 {
+    font-size: 1.2rem;
+  }
+  
+  .close-btn-new {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .modal-body-new {
+    padding: 15px;
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+  }
+  
+  .form-control {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .btn-primary {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 375px) {
+  .modal-header-new h2 {
+    font-size: 1rem;
+  }
+  
+  .modal-body-new {
+    padding: 12px;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
+  
+  .form-group label {
+    font-size: 0.8rem;
+  }
+  
+  .form-control {
+    padding: 7px 8px;
+    font-size: 0.8rem;
   }
 }

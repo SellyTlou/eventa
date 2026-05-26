@@ -378,6 +378,7 @@ function AdminDashboard() {
     const [logsLoading, setLogsLoading] = useState(false);
     const [logsSearch, setLogsSearch] = useState("");
     const [logsFilter, setLogsFilter] = useState("all");
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [newAdminData, setNewAdminData] = useState({
@@ -442,6 +443,12 @@ const toggleMobileSidebar = () => {
 const closeMobileSidebar = () => {
     setIsMobileSidebarOpen(false);
 };
+
+const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+
+}
+
 
 // Add resize listener to detect mobile view
 useEffect(() => {
@@ -2479,6 +2486,9 @@ useEffect(() => {
                     {/* Main Content Area */}
                     <main className="admin-dashboard-main">
                         <header className="admin-dashboard-header">
+                            <button className="mobile-sidebar-toggle" onClick={toggleSidebar}>
+                                <i className="bi bi-list"></i>
+                            </button>
                             <h1>
                                 {activeTab === "dashboard" && "System Dashboard"}
                                 {activeTab === "invitations" && "Invitation Analytics"}
@@ -2518,6 +2528,8 @@ useEffect(() => {
                                 </div>
                             </div>
                         </header>
+
+                        <div className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={toggleSidebar}></div>
 
                         {renderContent()}
                     </main>

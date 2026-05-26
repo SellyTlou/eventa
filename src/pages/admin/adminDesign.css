@@ -1364,3 +1364,219 @@
         display: none !important;
     }
 }
+
+/* ============================================
+   ADD THESE TO YOUR EXISTING adminDesign.css
+   Mobile Responsive Styles for Sidebar & Layout
+   ============================================ */
+
+/* Mobile Sidebar Toggle Button */
+.mobile-sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1001;
+  background: #667eea;
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.mobile-sidebar-toggle:hover {
+  background: #5a67d8;
+  transform: scale(1.05);
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+  display: none;
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+/* Mobile Sidebar Styles */
+@media (max-width: 991px) {
+  .admin-dashboard-sidebar {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    transition: left 0.3s ease;
+    z-index: 999;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .admin-dashboard-sidebar.mobile-open {
+    left: 0;
+  }
+  
+  .mobile-sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .admin-dashboard-main {
+    width: 100%;
+    padding-top: 70px;
+  }
+  
+  .admin-dashboard-header {
+    padding-left: 60px;
+  }
+}
+
+/* Small Desktop / Tablet Landscape */
+@media (max-width: 1200px) {
+  .admin-dashboard-stats-grid {
+    gap: 1rem;
+  }
+  
+  .admin-dashboard-stat-card {
+    padding: 1rem;
+  }
+  
+  .admin-dashboard-stat-content p {
+    font-size: 1.5rem;
+  }
+}
+
+/* Tablet Portrait */
+@media (max-width: 991px) {
+  .admin-dashboard-container {
+    flex-direction: column;
+  }
+  
+  .admin-dashboard-main {
+    margin-left: 0;
+    padding: 20px 15px;
+  }
+  
+  .admin-dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .admin-dashboard-content-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Mobile Landscape */
+@media (max-width: 768px) {
+  .admin-dashboard-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-dashboard-stat-card {
+    padding: 0.875rem;
+  }
+  
+  .admin-dashboard-stat-content p {
+    font-size: 1.3rem;
+  }
+  
+  .admin-dashboard-section-header h2 {
+    font-size: 1rem;
+  }
+  
+  .admin-dashboard-activity-item {
+    padding: 0.75rem;
+  }
+  
+  .admin-dashboard-activity-content h4 {
+    font-size: 0.9rem;
+  }
+  
+  .admin-dashboard-activity-content p {
+    font-size: 0.75rem;
+  }
+  
+  .admin-dashboard-action-btn {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 576px) {
+  .admin-dashboard-main {
+    padding: 15px 10px;
+  }
+  
+  .admin-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .admin-dashboard-header h1 {
+    font-size: 1.2rem;
+  }
+  
+  .admin-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .profile-trigger {
+    padding: 6px 12px;
+  }
+  
+  .profile-name-sm {
+    display: none;
+  }
+  
+  .admin-dashboard-stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+  
+  .admin-dashboard-stat-content p {
+    font-size: 1.1rem;
+  }
+  
+  .admin-dashboard-stat-content h3 {
+    font-size: 0.75rem;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 375px) {
+  .admin-dashboard-main {
+    padding: 10px 8px;
+  }
+  
+  .mobile-sidebar-toggle {
+    width: 38px;
+    height: 38px;
+    font-size: 1.2rem;
+    top: 10px;
+    left: 10px;
+  }
+  
+  .admin-dashboard-header {
+    padding-left: 50px;
+  }
+  
+  .admin-dashboard-header h1 {
+    font-size: 1rem;
+  }
+}

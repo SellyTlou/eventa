@@ -1,6 +1,6 @@
 /* ============================================
-   ADMIN LOGS MODAL STYLES
-   System Activity Logs - Search, Filter, Table
+   ADMIN LOGS MODAL STYLES - MOBILE RESPONSIVE
+   System Activity Logs
    ============================================ */
 
 /* Logs Modal Container */
@@ -105,6 +105,7 @@
 .user-cell {
   font-weight: 500;
   color: #333;
+  word-break: break-word;
 }
 
 .description-cell {
@@ -115,14 +116,14 @@
 
 .date-cell {
   color: #888;
-  font-size: 0.9em;
+  font-size: 0.85em;
 }
 
 /* Action Badges */
 .action-badge {
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.8em;
+  font-size: 0.75em;
   font-weight: 500;
   text-transform: capitalize;
   display: inline-block;
@@ -156,11 +157,6 @@
 .action-badge.activated {
   background: #e8f5e8;
   color: #2e7d32;
-}
-
-.action-badge.package {
-  background: #e0f2f1;
-  color: #00695c;
 }
 
 .action-badge.default {
@@ -203,37 +199,128 @@
   padding: 12px 20px;
   background: #f8f9fa;
   border-top: 1px solid #e0e0e0;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #6c757d;
   text-align: center;
 }
 
-.treeset-info i {
-  margin-right: 5px;
-  color: #28a745;
-}
+/* ========== MOBILE RESPONSIVE ========== */
 
-/* Responsive */
-@media (max-width: 768px) {
-  .logs-table-container .table-header,
-  .logs-table-container .table-row {
-    grid-template-columns: 1fr 2fr;
+/* Tablet Portrait */
+@media (max-width: 991px) {
+  .logs-controls {
     gap: 10px;
   }
   
-  .logs-table-container .table-header div:nth-child(3),
-  .logs-table-container .table-header div:nth-child(4),
-  .logs-table-container .table-row div:nth-child(3),
-  .logs-table-container .table-row div:nth-child(4) {
-    display: none;
+  .logs-controls .filter-select {
+    min-width: 150px;
   }
-  
+}
+
+/* Mobile Landscape */
+@media (max-width: 768px) {
   .logs-controls {
     flex-direction: column;
     align-items: stretch;
   }
   
+  .logs-controls .search-box {
+    min-width: auto;
+  }
+  
+  .logs-controls .filter-select {
+    width: 100%;
+  }
+  
   .export-btn {
     justify-content: center;
+  }
+  
+  /* Convert logs table to cards */
+  .logs-table-container .table-header {
+    display: none;
+  }
+  
+  .logs-table-container .table-row {
+    display: block;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+  }
+  
+  .logs-table-container .table-row > * {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #f0f0f0;
+  }
+  
+  .logs-table-container .table-row > *:last-child {
+    border-bottom: none;
+  }
+  
+  .logs-table-container .table-row > *::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #666;
+    font-size: 0.8rem;
+  }
+  
+  .date-cell {
+    font-size: 0.8rem;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 576px) {
+  .logs-modal {
+    width: 98%;
+  }
+  
+  .logs-table-container .table-row {
+    padding: 12px;
+  }
+  
+  .logs-table-container .table-row > * {
+    font-size: 0.8rem;
+    padding: 6px 0;
+  }
+  
+  .action-badge {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+  
+  .export-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .logs-controls .search-input,
+  .logs-controls .filter-select {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .treeset-info {
+    font-size: 0.65rem;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 375px) {
+  .logs-table-container .table-row {
+    padding: 10px;
+  }
+  
+  .logs-table-container .table-row > * {
+    font-size: 0.75rem;
+  }
+  
+  .action-badge {
+    padding: 2px 6px;
+    font-size: 0.65rem;
   }
 }
