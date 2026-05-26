@@ -1,0 +1,438 @@
+/* ============================================
+   ADMIN EVENT MANAGEMENT TAB STYLES
+   Event Management - Reported Events, All Events, Delete Modal
+   ============================================ */
+
+/* Event Management Controls */
+.event-management-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-box-compact {
+  width: 50%;
+  max-width: 300px;
+  position: relative;
+}
+
+.compact-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 35px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  height: 36px;
+}
+
+.search-box-compact .bi-search {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.search-box-compact .clear-search {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+}
+
+/* Filter Controls */
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-controls select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.sort-btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.sort-btn.active {
+  background-color: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+/* Reported Events Grid */
+.reported-events-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+}
+
+.reported-event-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reported-event-card .event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.reported-event-card .event-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.event-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.report-date {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* Event Details */
+.event-details {
+  margin-bottom: 20px;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.detail-row label {
+  font-weight: 600;
+  min-width: 120px;
+  color: #333;
+}
+
+.detail-row span {
+  color: #666;
+  flex: 1;
+}
+
+/* Violation Types */
+.violation-type {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.violation-type.inappropriate_content {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.violation-type.spam {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.violation-type.copyright {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.violation-type.harassment {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.violation-type.illegal {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Event Preview Image */
+.event-preview {
+  margin: 15px 0;
+}
+
+.event-preview label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.event-image-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+/* Action Buttons on Cards */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.action-buttons .btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  border: none;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #6c757d;
+  border: 1px solid #6c757d;
+}
+
+.btn-outline:hover {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+/* All Events Table */
+.events-table {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.events-table .table-header {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr;
+  gap: 15px;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.events-table .table-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr;
+  gap: 15px;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+}
+
+.events-table .table-row:hover {
+  background: #f8f9fa;
+}
+
+.events-table .event-name {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Status Badges for Events */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.status-published {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-draft {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/* Report Count */
+.report-count {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.report-count.warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+/* Action Buttons in Table */
+.events-table .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.events-table .btn-icon.view-btn {
+  background: #17a2b8;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.events-table .btn-icon.delete-btn {
+  background: #dc3545;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+/* Badge for reported events count */
+.badge {
+  background: #dc3545;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  margin-left: 8px;
+}
+
+/* Delete Modal Specific Styles */
+.delete-warning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.warning-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.warning-header i {
+  color: #856404;
+  font-size: 1.2rem;
+}
+
+.warning-header h4 {
+  margin: 0;
+  color: #856404;
+}
+
+/* Unpublished Event Modal Styles */
+.unpublished-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 20px;
+  background: #fff9e6;
+  border-radius: 8px;
+  border-left: 4px solid #ffc107;
+  margin-bottom: 20px;
+}
+
+.unpublished-warning .warning-icon {
+  font-size: 24px;
+  color: #ffc107;
+}
+
+.unpublished-warning .warning-content h4 {
+  margin: 0 0 10px 0;
+  color: #856404;
+}
+
+.unpublished-warning .warning-content p {
+  margin: 5px 0;
+  color: #666;
+}
+
+/* No Data State */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.no-data i {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  color: #28a745;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .reported-events-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .events-table .table-header,
+  .events-table .table-row {
+    grid-template-columns: 2fr 1.5fr 1fr 1fr;
+  }
+  
+  .events-table .table-header span:nth-child(4),
+  .events-table .table-header span:nth-child(5),
+  .events-table .table-row div:nth-child(4),
+  .events-table .table-row div:nth-child(5) {
+    display: none;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-buttons .btn {
+    width: 100%;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+  }
+  
+  .detail-row label {
+    margin-bottom: 4px;
+  }
+}

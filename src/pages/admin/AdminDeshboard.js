@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-
 import "../../App.css";
 import "../../index.css";
 import "../../alert.css"
@@ -8,7 +7,18 @@ import AdminTicket from "../AdminTicket";
 import CustomPlanRequestsTab from './CustomPlanRequestsTab';
 import { logOut } from "../components";
 import "./adminDesign.css";
-import './custom-plan-request.css';
+import "./custom-plan-request.css";
+// ============ NEW TAB CSS IMPORTS ============
+import "../styles/admin-dashboard-tab.css";
+import "../styles/admin-invitations-tab.css";
+import "../styles/admin-pricing-tab.css";
+import "../styles/admin-users-tab.css";
+import "../styles/admin-profile-tab.css";
+import "../styles/admin-event-management-tab.css";
+import "../styles/admin-logs-modal.css";
+import "../styles/admin-create-admin-modal.css";
+// Note: admin-tickets-tab.css goes in your AdminTicket component, not here
+
 
 
 // ==================== PRODUCTION-READY TREE SET ====================
@@ -1163,7 +1173,7 @@ function AdminDashboard() {
             formData.append('email', newAdminData.email);
             formData.append('password', newAdminData.password);
 
-            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/admin.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -1358,7 +1368,7 @@ function AdminDashboard() {
             formData.append('function', 'getAdminProfile');
             formData.append('admin_user_id', adminUserId);
 
-            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/admin.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -2896,7 +2906,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
 
             console.log('Sending password change request for admin:', adminUserId);
 
-            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/admin.php`, {
                 method: 'POST',
                 body: formDataToSend
             });
@@ -3009,7 +3019,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
             formDataToSend.append('lastname', formData.lastname);
             formDataToSend.append('email', formData.email);
 
-            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/admin.php`, {
                 method: 'POST',
                 body: formDataToSend
             });
@@ -4241,7 +4251,7 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 formData.append('admin_user_id', adminUserId);
             }
 
-            const response = await fetch(`${API_BASE_URL}/api/packages.php`, {
+            const response = await fetch(`${API_BASE_URL}/packages.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -5543,7 +5553,7 @@ const EventManagementTabContent = ({
             formData.append('block_user', deleteForm.block_user ? '1' : '0');
             formData.append('violation_severity', deleteForm.violation_severity);
 
-            const response = await fetch(`${API_BASE_URL}/api/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/admin.php`, {
                 method: 'POST',
                 body: formData
             });
