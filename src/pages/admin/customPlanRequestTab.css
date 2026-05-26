@@ -1,0 +1,413 @@
+/* Custom Plan Requests Tab Styles */
+/* File: custom-plan-requests-tab.css */
+
+/* Container Styles */
+.custom-requests-tab {
+    padding: 20px;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+/* Header Section */
+.custom-requests-tab .admin-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.custom-requests-tab .admin-content-header h2 {
+    font-size: 24px;
+    color: #333;
+    margin: 0;
+    font-weight: 600;
+}
+
+.custom-requests-tab .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Filter Controls */
+.custom-requests-tab .filter-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.custom-requests-tab .status-filter {
+    padding: 8px 15px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.custom-requests-tab .status-filter:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.custom-requests-tab .refresh-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1px solid #667eea;
+    background: white;
+    color: #667eea;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.custom-requests-tab .refresh-btn:hover:not(:disabled) {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.custom-requests-tab .refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Loading State */
+.custom-requests-tab .loading-container {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.custom-requests-tab .spinner-border {
+    width: 40px;
+    height: 40px;
+    border-width: 3px;
+}
+
+.custom-requests-tab .loading-text {
+    margin-top: 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Table Container */
+.custom-requests-tab .requests-table-container {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-top: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Table Header */
+.custom-requests-tab .requests-table {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.custom-requests-tab .table-header {
+    display: grid;
+    grid-template-columns: 120px 1.5fr 1.5fr 1.5fr 100px 100px 100px 80px;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-weight: 600;
+    color: white;
+    border-bottom: none;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.custom-requests-tab .table-header span {
+    display: flex;
+    align-items: center;
+}
+
+/* Table Body */
+.custom-requests-tab .table-body {
+    background: white;
+}
+
+.custom-requests-tab .table-row {
+    display: grid;
+    grid-template-columns: 120px 1.5fr 1.5fr 1.5fr 100px 100px 100px 80px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    align-items: center;
+    transition: background 0.3s;
+}
+
+.custom-requests-tab .table-row:hover {
+    background: #f8f9fa;
+}
+
+/* Date Cell */
+.custom-requests-tab .date-cell {
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+}
+
+/* Business Info */
+.custom-requests-tab .business-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.custom-requests-tab .business-name small {
+    font-size: 11px;
+    color: #999;
+}
+
+/* Contact Info */
+.custom-requests-tab .contact-email {
+    font-size: 13px;
+    color: #333;
+}
+
+.custom-requests-tab .contact-phone {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+/* Event Info */
+.custom-requests-tab .event-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.custom-requests-tab .event-type {
+    font-size: 11px;
+    color: #999;
+}
+
+/* Attendees Cell */
+.custom-requests-tab .attendees-cell {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 16px;
+}
+
+/* Status Badge */
+.custom-requests-tab .status-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+    text-align: center;
+    min-width: 80px;
+}
+
+.custom-requests-tab .status-pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.custom-requests-tab .status-review {
+    background: #cce5ff;
+    color: #004085;
+    border: 1px solid #007bff;
+}
+
+.custom-requests-tab .status-approved {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #28a745;
+}
+
+.custom-requests-tab .status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #dc3545;
+}
+
+.custom-requests-tab .status-completed {
+    background: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #20c997;
+}
+
+/* Payment Status */
+.custom-requests-tab .payment-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+    text-align: center;
+    min-width: 80px;
+}
+
+.custom-requests-tab .payment-completed {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #28a745;
+}
+
+.custom-requests-tab .payment-pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.custom-requests-tab .payment-failed {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #dc3545;
+}
+
+.custom-requests-tab .payment-na {
+    background: #e2e3e5;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+
+/* Action Buttons */
+.custom-requests-tab .action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.custom-requests-tab .view-btn {
+    background: none;
+    border: none;
+    color: #667eea;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 5px;
+    border-radius: 6px;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-requests-tab .view-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.1);
+}
+
+.custom-requests-tab .view-btn i {
+    font-size: 18px;
+}
+
+/* No Data State */
+.custom-requests-tab .no-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.custom-requests-tab .no-data i {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 15px;
+    color: #ccc;
+}
+
+.custom-requests-tab .no-data p:first-of-type {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #666;
+}
+
+.custom-requests-tab .no-data p:last-of-type {
+    font-size: 14px;
+}
+
+/* Search Results Info */
+.custom-requests-tab .search-results-info {
+    font-size: 13px;
+    color: #666;
+    margin-left: 15px;
+    padding: 5px 12px;
+    background: #e8f0fe;
+    border-radius: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+    .custom-requests-tab .table-header,
+    .custom-requests-tab .table-row {
+        grid-template-columns: 100px 1fr 1.2fr 1.2fr 80px 90px 90px 70px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .custom-requests-tab .requests-table {
+        overflow-x: auto;
+    }
+    
+    .custom-requests-tab .table-header,
+    .custom-requests-tab .table-row {
+        min-width: 1000px;
+    }
+}
+
+@media (max-width: 768px) {
+    .custom-requests-tab .admin-content-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .custom-requests-tab .filter-controls {
+        width: 100%;
+    }
+    
+    .custom-requests-tab .status-filter {
+        flex: 1;
+    }
+}
+
+/* Animation for new rows */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.custom-requests-tab .table-row {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Scrollbar Styling for table */
+.custom-requests-tab .requests-table::-webkit-scrollbar {
+    height: 8px;
+}
+
+.custom-requests-tab .requests-table::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.custom-requests-tab .requests-table::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+.custom-requests-tab .requests-table::-webkit-scrollbar-thumb:hover {
+    background: #5a67d8;
+}

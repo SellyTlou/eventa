@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import "./adminDesign.css";
+
 import "../../App.css";
 import "../../index.css";
 import "../../alert.css"
@@ -7,6 +7,8 @@ import activityQueue from "../activityQueue";
 import AdminTicket from "../AdminTicket";
 import CustomPlanRequestsTab from './CustomPlanRequestsTab';
 import { logOut } from "../components";
+import "./adminDesign.css";
+import './custom-plan-request.css';
 
 
 // ==================== PRODUCTION-READY TREE SET ====================
@@ -567,382 +569,382 @@ function AdminDashboard() {
 
     // Renders the request details UI; used both in modal and full-page view
     const renderRequestDetailsContent = () => {
-        if (!selectedRequest) return null;
-        const isPage = activeTab === 'requestDetails';
-        return (
-            <div className={isPage ? "request-details-page" : "modal-content-new request-details-modal"} onClick={isPage ? undefined : (e) => e.stopPropagation()}>
-                <div className="modal-header-new">
-                    <div className="modal-title-section">
-                        <div className="modal-icon-large">
-                            <i className="bi bi-file-text"></i>
-                        </div>
-                        <div className="modal-title">
-                            <h2>Custom Plan Request Details</h2>
-                            <p>Request ID: {selectedRequest.request_id}</p>
+    if (!selectedRequest) return null;
+    const isPage = activeTab === 'requestDetails';
+    return (
+        <div className={isPage ? "custom-plan-request-page" : "custom-plan-request-modal"} onClick={isPage ? undefined : (e) => e.stopPropagation()}>
+            <div className="request-page-header">
+                <div className="request-page-title-section">
+                    <div className="request-page-icon">
+                        <i className="bi bi-file-text"></i>
+                    </div>
+                    <div className="request-page-title">
+                        <h2>Custom Plan Request Details</h2>
+                        <p>Request ID: {selectedRequest.request_id}</p>
+                    </div>
+                </div>
+                {activeTab !== 'requestDetails' && (
+                    <button
+                        className="request-page-close-btn"
+                        onClick={() => setActiveTab('custom-plans')}
+                    >
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                )}
+            </div>
+
+            <div className="request-page-body">
+                <div className="request-details-container">
+                    {/* Business Information Section */}
+                    <div className="info-section">
+                        <h3 className="section-header">
+                            <i className="bi bi-building"></i> Business Information
+                        </h3>
+                        <div className="info-grid">
+                            <div className="info-item">
+                                <label>Business Name:</label>
+                                <span>{selectedRequest.business_name}</span>
+                            </div>
+                            <div className="info-item">
+                                <label>Contact Person:</label>
+                                <span>{selectedRequest.contact_name}</span>
+                            </div>
+                            <div className="info-item">
+                                <label>Email:</label>
+                                <span>{selectedRequest.email}</span>
+                            </div>
+                            <div className="info-item">
+                                <label>Phone:</label>
+                                <span>{selectedRequest.phone}</span>
+                            </div>
                         </div>
                     </div>
-                    {activeTab !== 'requestDetails' && (
-                        <button
-                            className="close-btn-new"
-                            onClick={() => setActiveTab('custom-plans')}
-                        >
-                            <i className="bi bi-x-lg"></i>
-                        </button>
+
+                    {/* Event Details Section */}
+                    <div className="info-section">
+                        <h3 className="section-header">
+                            <i className="bi bi-calendar-event"></i> Event Details
+                        </h3>
+                        <div className="info-grid">
+                            <div className="info-item">
+                                <label>Event Type:</label>
+                                <span>{selectedRequest.event_type}</span>
+                            </div>
+                            <div className="info-item">
+                                <label>Event Name:</label>
+                                <span>{selectedRequest.event_name}</span>
+                            </div>
+                            <div className="info-item full-width">
+                                <label>Event Description:</label>
+                                <p className="event-description-text">{selectedRequest.event_description || 'No description provided'}</p>
+                            </div>
+                            <div className="info-item">
+                                <label>Requested Attendees:</label>
+                                <span className="highlight-number">{selectedRequest.requested_guests || selectedRequest.expected_attendees}</span>
+                            </div>
+                            <div className="info-item">
+                                <label>Requested Events:</label>
+                                <span className="highlight-number">{selectedRequest.requested_events || 'N/A'}</span>
+                            </div>
+                            <div className="info-item">
+                                <label>Proposed Price:</label>
+                                <span className="highlight-number">R{selectedRequest.proposed_price || '0'}</span>
+                            </div>
+                            <div className="info-item">
+                                <label>Event Date:</label>
+                                <span>{selectedRequest.event_date ? new Date(selectedRequest.event_date).toLocaleDateString() : 'Not specified'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Special Requirements */}
+                    {(selectedRequest.special_requirements || selectedRequest.additional_notes) && (
+                        <div className="info-section">
+                            <h3 className="section-header">
+                                <i className="bi bi-pencil"></i> Additional Information
+                            </h3>
+                            <div className="info-grid">
+                                {selectedRequest.special_requirements && (
+                                    <div className="info-item full-width">
+                                        <label>Special Requirements:</label>
+                                        <p>{selectedRequest.special_requirements}</p>
+                                    </div>
+                                )}
+                                {selectedRequest.additional_notes && (
+                                    <div className="info-item full-width">
+                                        <label>Additional Notes:</label>
+                                        <p>{selectedRequest.additional_notes}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
+
+                    {/* Custom Plan Configuration Section */}
+                    <div className="config-section">
+                        <h3 className="section-header">
+                            <i className="bi bi-gear"></i> Configure Custom Plan
+                        </h3>
+                        
+                        <div className="config-form">
+                            <div className="form-row-group">
+                                <div className="form-field">
+                                    <label>Base Package (Template)</label>
+                                    <select
+                                        className="form-control-select"
+                                        value={requestBasePackage}
+                                        onChange={(e) => setRequestBasePackage(e.target.value)}
+                                    >
+                                        <option value="">Select a base package</option>
+                                        <option value="1">Starter Plan (200 guests, R649)</option>
+                                        <option value="2">Intermediate Plan (750 guests, R2149)</option>
+                                        <option value="3">Advance Plan (2000 guests, R6999)</option>
+                                    </select>
+                                    <small className="field-help">Optional - Select which package to base this on</small>
+                                </div>
+                            </div>
+
+                            <div className="form-row-group">
+                                <div className="form-field">
+                                    <label>Approved Guest Limit *</label>
+                                    <input
+                                        type="number"
+                                        className="form-control-input"
+                                        value={approvedGuests}
+                                        onChange={(e) => setApprovedGuests(e.target.value)}
+                                        min="1"
+                                        placeholder="Enter approved guest limit"
+                                    />
+                                    <small>Requested: {selectedRequest.requested_guests || selectedRequest.expected_attendees}</small>
+                                </div>
+                                
+                                <div className="form-field">
+                                    <label>Approved Event Limit *</label>
+                                    <input
+                                        type="number"
+                                        className="form-control-input"
+                                        value={approvedEvents}
+                                        onChange={(e) => setApprovedEvents(e.target.value)}
+                                        min="1"
+                                        placeholder="Enter approved event limit"
+                                    />
+                                    <small>Requested: {selectedRequest.requested_events || 'N/A'}</small>
+                                </div>
+                            </div>
+
+                            <div className="form-row-group">
+                                <div className="form-field">
+                                    <label>Final Price (R) *</label>
+                                    <input
+                                        type="number"
+                                        className="form-control-input"
+                                        value={customPrice}
+                                        onChange={(e) => setCustomPrice(e.target.value)}
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="Enter final price"
+                                    />
+                                    <small>Proposed: R{selectedRequest.proposed_price || '0'}</small>
+                                </div>
+                                
+                                <div className="form-field">
+                                    <label>Billing Cycle</label>
+                                    <select
+                                        className="form-control-select"
+                                        value={billingCycle}
+                                        onChange={(e) => setBillingCycle(e.target.value)}
+                                    >
+                                        <option value="monthly">Monthly</option>
+                                        <option value="yearly">Yearly (10% discount)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-field full-width">
+                                <label>Additional Features (JSON)</label>
+                                <textarea
+                                    className="form-control-textarea"
+                                    rows="3"
+                                    value={customFeatures}
+                                    onChange={(e) => setCustomFeatures(e.target.value)}
+                                    placeholder='["api_access", "custom_branding", "dedicated_support"]'
+                                />
+                                {selectedRequest.desired_features && (
+                                    <small className="field-help">Client requested: {selectedRequest.desired_features}</small>
+                                )}
+                            </div>
+
+                            <div className="form-field full-width">
+                                <label>Admin Notes</label>
+                                <textarea
+                                    className="form-control-textarea"
+                                    rows="3"
+                                    value={adminNotes}
+                                    onChange={(e) => setAdminNotes(e.target.value)}
+                                    placeholder="Add internal notes about this custom plan..."
+                                />
+                            </div>
+
+                            <div className="config-summary-box">
+                                <h4>Configuration Summary</h4>
+                                <div className="summary-row">
+                                    <span>Base Package:</span>
+                                    <strong>{requestBasePackage ? getPackageName(requestBasePackage) : 'Custom'}</strong>
+                                </div>
+                                <div className="summary-row">
+                                    <span>Guest Limit:</span>
+                                    <strong>{approvedGuests || selectedRequest?.requested_guests}</strong>
+                                </div>
+                                <div className="summary-row">
+                                    <span>Event Limit:</span>
+                                    <strong>{approvedEvents || 'Unlimited'}</strong>
+                                </div>
+                                <div className="summary-row">
+                                    <span>Price:</span>
+                                    <strong>R{parseFloat(customPrice || 0).toFixed(2)}/month</strong>
+                                </div>
+                                {customFeatures && customFeatures !== '[]' && (
+                                    <div className="summary-row">
+                                        <span>Features:</span>
+                                        <div className="feature-tags-wrapper">
+                                            {JSON.parse(customFeatures || '[]').map((f, i) => (
+                                                <span key={i} className="feature-tag-item">{f}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="request-meta-info">
+                                <small>
+                                    <strong>Submitted:</strong> {formatDate(selectedRequest.created_at)}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Message Thread Section */}
+                    <div className="messages-section">
+                        <h3 className="section-header">
+                            <i className="bi bi-chat-dots"></i> 
+                            Conversation with Client
+                            {requestMessages.filter(m => m.sender_type === 'business' && !m.is_read).length > 0 && (
+                                <span className="unread-messages-badge">
+                                    {requestMessages.filter(m => m.sender_type === 'business' && !m.is_read).length} new
+                                </span>
+                            )}
+                        </h3>
+                        
+                        <div className="messages-thread">
+                            {loadingMessages ? (
+                                <div className="messages-loading">
+                                    <div className="spinner-border spinner-border-sm" role="status"></div>
+                                    Loading messages...
+                                </div>
+                            ) : requestMessages.length === 0 ? (
+                                <div className="no-messages-placeholder">
+                                    <i className="bi bi-chat-dots"></i>
+                                    <p>No messages yet. Start the conversation with the client.</p>
+                                </div>
+                            ) : (
+                                <div className="messages-list">
+                                    {requestMessages.map((msg, index) => (
+                                        <div 
+                                            key={msg.id || index} 
+                                            className={`message-bubble ${msg.sender_type === 'admin' ? 'admin-bubble' : 'client-bubble'}`}
+                                        >
+                                            <div className="message-bubble-header">
+                                                <span className="sender-name">
+                                                    {msg.sender_type === 'admin' ? 'You' : msg.sender_name}
+                                                </span>
+                                                <span className="message-time">
+                                                    {new Date(msg.created_at).toLocaleString()}
+                                                    {msg.sender_type === 'business' && !msg.is_read && (
+                                                        <span className="unread-indicator" title="Unread">●</span>
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="message-bubble-body">
+                                                {msg.message}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            
+                            {/* Message Input */}
+                            <div className="message-input-wrapper">
+                                <textarea
+                                    className="message-text-input"
+                                    rows="3"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    placeholder="Type your message to the client..."
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            sendAdminMessage();
+                                        }
+                                    }}
+                                />
+                                <button 
+                                    className="send-message-button"
+                                    onClick={sendAdminMessage}
+                                    disabled={sendingMessage || !newMessage.trim()}
+                                >
+                                    {sendingMessage ? (
+                                        <>
+                                            <div className="spinner-border spinner-border-sm" role="status"></div>
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-send"></i>
+                                            Send Message
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="modal-body-new">
-                    <div className="request-details-grid">
-                        {/* Business Information Section */}
-                        <div className="details-section">
-                            <h3 className="section-title">
-                                <i className="bi bi-building"></i> Business Information
-                            </h3>
-                            <div className="details-row">
-                                <div className="detail-item">
-                                    <label>Business Name:</label>
-                                    <span>{selectedRequest.business_name}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Contact Person:</label>
-                                    <span>{selectedRequest.contact_name}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Email:</label>
-                                    <span>{selectedRequest.email}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Phone:</label>
-                                    <span>{selectedRequest.phone}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Event Details Section */}
-                        <div className="details-section">
-                            <h3 className="section-title">
-                                <i className="bi bi-calendar-event"></i> Event Details
-                            </h3>
-                            <div className="details-row">
-                                <div className="detail-item">
-                                    <label>Event Type:</label>
-                                    <span>{selectedRequest.event_type}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Event Name:</label>
-                                    <span>{selectedRequest.event_name}</span>
-                                </div>
-                                <div className="detail-item full-width">
-                                    <label>Event Description:</label>
-                                    <p className="event-description">{selectedRequest.event_description || 'No description provided'}</p>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Requested Attendees:</label>
-                                    <span className="attendees-number">{selectedRequest.requested_guests || selectedRequest.expected_attendees}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Requested Events:</label>
-                                    <span className="attendees-number">{selectedRequest.requested_events || 'N/A'}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Proposed Price:</label>
-                                    <span className="attendees-number">R{selectedRequest.proposed_price || '0'}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Event Date:</label>
-                                    <span>{selectedRequest.event_date ? new Date(selectedRequest.event_date).toLocaleDateString() : 'Not specified'}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Special Requirements */}
-                        {(selectedRequest.special_requirements || selectedRequest.additional_notes) && (
-                            <div className="details-section">
-                                <h3 className="section-title">
-                                    <i className="bi bi-pencil"></i> Additional Information
-                                </h3>
-                                <div className="details-row">
-                                    {selectedRequest.special_requirements && (
-                                        <div className="detail-item full-width">
-                                            <label>Special Requirements:</label>
-                                            <p>{selectedRequest.special_requirements}</p>
-                                        </div>
-                                    )}
-                                    {selectedRequest.additional_notes && (
-                                        <div className="detail-item full-width">
-                                            <label>Additional Notes:</label>
-                                            <p>{selectedRequest.additional_notes}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Custom Plan Configuration Section */}
-                        <div className="details-section highlight-section">
-                            <h3 className="section-title">
-                                <i className="bi bi-gear"></i> Configure Custom Plan
-                            </h3>
-                            
-                            <div className="custom-config-form">
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Base Package (Template)</label>
-                                        <select
-                                            className="form-select"
-                                            value={requestBasePackage}
-                                            onChange={(e) => setRequestBasePackage(e.target.value)}
-                                        >
-                                            <option value="">Select a base package</option>
-                                            <option value="1">Starter Plan (200 guests, R649)</option>
-                                            <option value="2">Intermediate Plan (750 guests, R2149)</option>
-                                            <option value="3">Advance Plan (2000 guests, R6999)</option>
-                                        </select>
-                                        <small className="form-help">Optional - Select which package to base this on</small>
-                                    </div>
-                                </div>
-
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Approved Guest Limit *</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            value={approvedGuests}
-                                            onChange={(e) => setApprovedGuests(e.target.value)}
-                                            min="1"
-                                            placeholder="Enter approved guest limit"
-                                        />
-                                        <small>Requested: {selectedRequest.requested_guests || selectedRequest.expected_attendees}</small>
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                        <label>Approved Event Limit *</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            value={approvedEvents}
-                                            onChange={(e) => setApprovedEvents(e.target.value)}
-                                            min="1"
-                                            placeholder="Enter approved event limit"
-                                        />
-                                        <small>Requested: {selectedRequest.requested_events || 'N/A'}</small>
-                                    </div>
-                                </div>
-
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Final Price (R) *</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            value={customPrice}
-                                            onChange={(e) => setCustomPrice(e.target.value)}
-                                            min="0"
-                                            step="0.01"
-                                            placeholder="Enter final price"
-                                        />
-                                        <small>Proposed: R{selectedRequest.proposed_price || '0'}</small>
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                        <label>Billing Cycle</label>
-                                        <select
-                                            className="form-select"
-                                            value={billingCycle}
-                                            onChange={(e) => setBillingCycle(e.target.value)}
-                                        >
-                                            <option value="monthly">Monthly</option>
-                                            <option value="yearly">Yearly (10% discount)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="form-group full-width">
-                                    <label>Additional Features (JSON)</label>
-                                    <textarea
-                                        className="form-textarea"
-                                        rows="3"
-                                        value={customFeatures}
-                                        onChange={(e) => setCustomFeatures(e.target.value)}
-                                        placeholder='["api_access", "custom_branding", "dedicated_support"]'
-                                    />
-                                    {selectedRequest.desired_features && (
-                                        <small className="form-help">Client requested: {selectedRequest.desired_features}</small>
-                                    )}
-                                </div>
-
-                                <div className="form-group full-width">
-                                    <label>Admin Notes</label>
-                                    <textarea
-                                        className="form-textarea"
-                                        rows="3"
-                                        value={adminNotes}
-                                        onChange={(e) => setAdminNotes(e.target.value)}
-                                        placeholder="Add internal notes about this custom plan..."
-                                    />
-                                </div>
-
-                                <div className="config-summary">
-                                    <h4>Configuration Summary</h4>
-                                    <div className="summary-item">
-                                        <span>Base Package:</span>
-                                        <strong>{requestBasePackage ? getPackageName(requestBasePackage) : 'Custom'}</strong>
-                                    </div>
-                                    <div className="summary-item">
-                                        <span>Guest Limit:</span>
-                                        <strong>{approvedGuests || selectedRequest?.requested_guests}</strong>
-                                    </div>
-                                    <div className="summary-item">
-                                        <span>Event Limit:</span>
-                                        <strong>{approvedEvents || 'Unlimited'}</strong>
-                                    </div>
-                                    <div className="summary-item">
-                                        <span>Price:</span>
-                                        <strong>R{parseFloat(customPrice || 0).toFixed(2)}/month</strong>
-                                    </div>
-                                    {customFeatures && customFeatures !== '[]' && (
-                                        <div className="summary-item">
-                                            <span>Features:</span>
-                                            <div className="feature-tags">
-                                                {JSON.parse(customFeatures || '[]').map((f, i) => (
-                                                    <span key={i} className="feature-tag">{f}</span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="request-metadata">
-                                    <small>
-                                        <strong>Submitted:</strong> {formatDate(selectedRequest.created_at)}
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Message Thread Section - NEW */}
-                        <div className="details-section message-section">
-                            <h3 className="section-title">
-                                <i className="bi bi-chat-dots"></i> 
-                                Conversation with Client
-                                {requestMessages.filter(m => m.sender_type === 'business' && !m.is_read).length > 0 && (
-                                    <span className="unread-badge">
-                                        {requestMessages.filter(m => m.sender_type === 'business' && !m.is_read).length} new
-                                    </span>
-                                )}
-                            </h3>
-                            
-                            <div className="message-thread">
-                                {loadingMessages ? (
-                                    <div className="loading-messages">
-                                        <div className="spinner-border spinner-border-sm" role="status"></div>
-                                        Loading messages...
-                                    </div>
-                                ) : requestMessages.length === 0 ? (
-                                    <div className="no-messages">
-                                        <i className="bi bi-chat-dots"></i>
-                                        <p>No messages yet. Start the conversation with the client.</p>
-                                    </div>
-                                ) : (
-                                    <div className="message-list">
-                                        {requestMessages.map((msg, index) => (
-                                            <div 
-                                                key={msg.id || index} 
-                                                className={`message-item ${msg.sender_type === 'admin' ? 'admin-message' : 'client-message'}`}
-                                            >
-                                                <div className="message-header">
-                                                    <span className="sender">
-                                                        {msg.sender_type === 'admin' ? 'You' : msg.sender_name}
-                                                    </span>
-                                                    <span className="time">
-                                                        {new Date(msg.created_at).toLocaleString()}
-                                                        {msg.sender_type === 'business' && !msg.is_read && (
-                                                            <span className="unread-dot" title="Unread">●</span>
-                                                        )}
-                                                    </span>
-                                                </div>
-                                                <div className="message-body">
-                                                    {msg.message}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                
-                                {/* Message Input */}
-                                <div className="message-input-container">
-                                    <textarea
-                                        className="message-input"
-                                        rows="3"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        placeholder="Type your message to the client..."
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                sendAdminMessage();
-                                            }
-                                        }}
-                                    />
-                                    <button 
-                                        className="send-message-btn"
-                                        onClick={sendAdminMessage}
-                                        disabled={sendingMessage || !newMessage.trim()}
-                                    >
-                                        {sendingMessage ? (
-                                            <>
-                                                <div className="spinner-border spinner-border-sm" role="status"></div>
-                                                Sending...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <i className="bi bi-send"></i>
-                                                Send Message
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="modal-actions-new">
-                        <button
-                            className="action-btn-new primary"
-                            onClick={approveCustomPlan}
-                            disabled={!approvedGuests || !approvedEvents || !customPrice}
-                        >
-                            <i className="bi bi-check-circle"></i>
-                            Approve & Activate Now
-                        </button>
-                        <button
-                            className="action-btn-new warning"
-                            onClick={sendCounterOffer}
-                            disabled={!approvedGuests || !approvedEvents || !customPrice}
-                        >
-                            <i className="bi bi-send"></i>
-                            Send Counter-Offer
-                        </button>
-                        <button
-                            className="action-btn-new secondary"
-                            onClick={rejectCustomPlan}
-                        >
-                            <i className="bi bi-x-circle"></i>
-                            Reject Request
-                        </button>
-                        <button
-                            className="action-btn-new secondary"
-                            onClick={() => setActiveTab('custom-plans')}
-                        >
-                            <i className="bi bi-arrow-left"></i>
-                            Back
-                        </button>
-                    </div>
+                <div className="request-page-actions">
+                    <button
+                        className="action-button primary-button"
+                        onClick={approveCustomPlan}
+                        disabled={!approvedGuests || !approvedEvents || !customPrice}
+                    >
+                        <i className="bi bi-check-circle"></i>
+                        Approve & Activate Now
+                    </button>
+                    <button
+                        className="action-button warning-button"
+                        onClick={sendCounterOffer}
+                        disabled={!approvedGuests || !approvedEvents || !customPrice}
+                    >
+                        <i className="bi bi-send"></i>
+                        Send Counter-Offer
+                    </button>
+                    <button
+                        className="action-button secondary-button"
+                        onClick={rejectCustomPlan}
+                    >
+                        <i className="bi bi-x-circle"></i>
+                        Reject Request
+                    </button>
+                    <button
+                        className="action-button secondary-button"
+                        onClick={() => setActiveTab('custom-plans')}
+                    >
+                        <i className="bi bi-arrow-left"></i>
+                        Back
+                    </button>
                 </div>
             </div>
-        );
-    };
+        </div>
+    );
+};
 
     const sendAdminMessage = async () => {
         if (!newMessage.trim() || !selectedRequest) return;

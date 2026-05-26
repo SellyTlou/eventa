@@ -5711,23 +5711,71 @@ if ($fun === "getReportedEvents") {
     }
 
     try {
-        $stmt = $pdo->prepare("
+        // Query for reported regular events
+        $regularReportedQuery = "
             SELECT
-                ev.*,
+                ev.id,
+                ev.event_id,
+                ev.violation_type,
+                ev.description as violation_description,
+                ev.reported_by,
+                ev.status as report_status,
+                ev.created_at as reported_at,
                 e.event_name,
                 e.user_id as event_owner_id,
                 e.user_name as event_owner_name,
                 e.event_image,
+                e.event_start_date,
+                e.event_location,
+                e.published,
+                e.status as event_status,
                 e.created_at as event_created_at,
-                e.design_data,
                 u.name as reporter_name,
-                u.email as reporter_email
+                u.email as reporter_email,
+                0 as has_tickets,
+                'regular' as event_category
             FROM event_violations ev
-            JOIN events e ON ev.event_id = e.event_id
-            LEFT JOIN users u ON ev.reported_by_user_id = u.user_id
+            INNER JOIN events e ON ev.event_id = e.event_id
+            LEFT JOIN users u ON ev.reported_by = u.user_id
             WHERE ev.status = 'pending'
-            ORDER BY ev.reported_at DESC
-        ");
+        ";
+
+        // Query for reported ticket events
+        $ticketReportedQuery = "
+            SELECT
+                ev.id,
+                ev.event_id,
+                ev.violation_type,
+                ev.description as violation_description,
+                ev.reported_by,
+                ev.status as report_status,
+                ev.created_at as reported_at,
+                te.event_name,
+                te.user_id as event_owner_id,
+                te.user_name as event_owner_name,
+                te.event_image,
+                te.event_start_date,
+                te.address as event_location,
+                te.status as published,
+                te.status as event_status,
+                te.created_at as event_created_at,
+                u.name as reporter_name,
+                u.email as reporter_email,
+                1 as has_tickets,
+                'ticket' as event_category
+            FROM event_violations ev
+            INNER JOIN ticket_events te ON ev.event_id = te.event_id
+            LEFT JOIN users u ON ev.reported_by = u.user_id
+            WHERE ev.status = 'pending'
+        ";
+
+        // Combine both queries with UNION
+        $combinedQuery = "($regularReportedQuery) UNION ALL ($ticketReportedQuery)";
+        
+        // Wrap in subquery for final ordering
+        $finalQuery = "SELECT * FROM ($combinedQuery) AS reported_events ORDER BY reported_at DESC";
+        
+        $stmt = $pdo->prepare($finalQuery);
         $stmt->execute();
         $reportedEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -5755,19 +5803,40 @@ if ($fun === "adminDeleteEvent") {
     try {
         $pdo->beginTransaction();
 
-        // Get event owner details - join with users table to get email
+        // First check if event exists in regular events table
         $eventStmt = $pdo->prepare("
             SELECT
                 e.user_id,
                 e.user_name,
                 u.email as user_email,
-                e.event_name
+                e.event_name,
+                'regular' as event_type
             FROM events e
             LEFT JOIN users u ON e.user_id = u.user_id
-            WHERE e.event_id = ?
+            WHERE e.event_id = ? AND (e.is_deleted = 0 OR e.is_deleted IS NULL)
         ");
         $eventStmt->execute([$event_id]);
         $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
+        
+        $isTicketEvent = false;
+        
+        // If not found in regular events, check ticket events
+        if (!$event) {
+            $ticketStmt = $pdo->prepare("
+                SELECT
+                    te.user_id,
+                    te.user_name,
+                    u.email as user_email,
+                    te.event_name,
+                    'ticket' as event_type
+                FROM ticket_events te
+                LEFT JOIN users u ON te.user_id = u.user_id
+                WHERE te.event_id = ? AND (te.status != 'deleted' OR te.status IS NULL)
+            ");
+            $ticketStmt->execute([$event_id]);
+            $event = $ticketStmt->fetch(PDO::FETCH_ASSOC);
+            $isTicketEvent = true;
+        }
 
         if (!$event) {
             throw new Exception("Event not found");
@@ -5778,31 +5847,63 @@ if ($fun === "adminDeleteEvent") {
         $eventName = $event['event_name'];
         $final_reason = $reason === 'other' ? $custom_reason : $reason;
 
-        // Soft delete the event
-        $deleteStmt = $pdo->prepare("UPDATE events SET is_deleted = TRUE, deleted_by_admin_id = ?, deletion_reason = ?, deleted_at = NOW() WHERE event_id = ?");
-        $deleteStmt->execute([$adminUserId, $final_reason, $event_id]);
+        // Soft delete the event based on type
+        if ($isTicketEvent) {
+            $deleteStmt = $pdo->prepare("
+                UPDATE ticket_events SET 
+                    status = 'deleted',
+                    deleted_by_admin_id = ?, 
+                    deletion_reason = ?, 
+                    deleted_at = NOW() 
+                WHERE event_id = ?
+            ");
+            $deleteStmt->execute([$adminUserId, $final_reason, $event_id]);
+        } else {
+            $deleteStmt = $pdo->prepare("
+                UPDATE events SET 
+                    is_deleted = 1, 
+                    deleted_by_admin_id = ?, 
+                    deletion_reason = ?, 
+                    deleted_at = NOW() 
+                WHERE event_id = ?
+            ");
+            $deleteStmt->execute([$adminUserId, $final_reason, $event_id]);
+        }
 
         // Record user violation
-        $violationStmt = $pdo->prepare("INSERT INTO user_violations (user_id, event_id, violation_type, severity, reported_by, description, status) VALUES (?, ?, ?, ?, ?, ?, 'verified')");
+        $violationStmt = $pdo->prepare("
+            INSERT INTO user_violations (user_id, event_id, violation_type, severity, reported_by, description, status) 
+            VALUES (?, ?, ?, ?, ?, ?, 'verified')
+        ");
         $violationStmt->execute([$event_owner_id, $event_id, $reason, $violation_severity, $adminUserId, "Event deleted by admin: {$final_reason}"]);
 
         // Log admin action
-        $logStmt = $pdo->prepare("INSERT INTO admin_action_logs (admin_user_id, action_type, target_type, target_id, reason, details) VALUES (?, 'event_deleted', 'event', ?, ?, ?)");
+        $logStmt = $pdo->prepare("
+            INSERT INTO admin_action_logs (admin_user_id, action_type, target_type, target_id, reason, details) 
+            VALUES (?, 'event_deleted', 'event', ?, ?, ?)
+        ");
         $logStmt->execute([$adminUserId, $event_id, $final_reason, "Event deleted for violation: {$final_reason}"]);
 
         // Update violation reports status
-        $updateReportStmt = $pdo->prepare("UPDATE event_violations SET status = 'action_taken', reviewed_by_admin_id = ?, reviewed_at = NOW() WHERE event_id = ? AND status = 'pending'");
+        $updateReportStmt = $pdo->prepare("
+            UPDATE event_violations SET 
+                status = 'action_taken', 
+                reviewed_by_admin_id = ?, 
+                reviewed_at = NOW() 
+            WHERE event_id = ? AND status = 'pending'
+        ");
         $updateReportStmt->execute([$adminUserId, $event_id]);
 
         // Send notification email to event planner
         if ($event_owner_email) {
+            $eventTypeLabel = $isTicketEvent ? 'Ticket Event' : 'RSVP Event';
             $emailContent = "
             <html>
             <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;'>
                 <div style='background: #fff; padding: 30px; border-radius: 12px;'>
                     <h2 style='color: #dc3545;'>Event Removal Notice</h2>
                     <p>Dear Event Planner,</p>
-                    <p>Your event <strong>{$eventName}</strong> has been removed from our platform.</p>
+                    <p>Your <strong>{$eventTypeLabel}</strong> <strong>{$eventName}</strong> has been removed from our platform.</p>
                     <div style='background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;'>
                         <p><strong>Reason for removal:</strong> {$final_reason}</p>
                     </div>
@@ -5813,7 +5914,7 @@ if ($fun === "adminDeleteEvent") {
             </body>
             </html>";
 
-            // Send email using your existing email system
+            // Send email via SendGrid
             $emailData = [
                 "personalizations" => [
                     [
@@ -5830,7 +5931,6 @@ if ($fun === "adminDeleteEvent") {
                 ],
             ];
 
-            // Send email via SendGrid
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, "https://api.sendgrid.com/v3/mail/send");
             curl_setopt($ch, CURLOPT_POST, true);
@@ -5845,15 +5945,30 @@ if ($fun === "adminDeleteEvent") {
         }
 
         // Check if user should be blocked
-        if ($block_user) {
-            $blockStmt = $pdo->prepare("UPDATE users SET status = 'inactive' WHERE user_id = ?");
-            $blockStmt->execute([$event_owner_id]);
+        if ($block_user == '1' || $block_user === true) {
+            $blockStmt = $pdo->prepare("UPDATE users SET status = 'inactive', is_blocked = 1, blocked_at = NOW(), blocked_by = ?, block_reason = ? WHERE user_id = ?");
+            $blockStmt->execute([$adminUserId, $final_reason, $event_owner_id]);
 
-            $blockLogStmt = $pdo->prepare("INSERT INTO admin_action_logs (admin_user_id, action_type, target_type, target_id, reason, details) VALUES (?, 'user_blocked', 'user', ?, ?, ?)");
+            $blockLogStmt = $pdo->prepare("
+                INSERT INTO admin_action_logs (admin_user_id, action_type, target_type, target_id, reason, details) 
+                VALUES (?, 'user_blocked', 'user', ?, ?, ?)
+            ");
             $blockLogStmt->execute([$adminUserId, $event_owner_id, $final_reason, "User blocked due to event deletion: {$final_reason}"]);
         } else {
             // Check automatic blocking rules
-            $violationCountStmt = $pdo->prepare("SELECT COUNT(*) as violation_count, SUM(points) as total_points FROM user_violations WHERE user_id = ? AND status = 'verified'");
+            $violationCountStmt = $pdo->prepare("
+                SELECT COUNT(*) as violation_count, COALESCE(SUM(
+                    CASE severity
+                        WHEN 'low' THEN 2
+                        WHEN 'medium' THEN 4
+                        WHEN 'high' THEN 7
+                        WHEN 'critical' THEN 10
+                        ELSE 3
+                    END
+                ), 0) as total_points 
+                FROM user_violations 
+                WHERE user_id = ? AND status = 'verified'
+            ");
             $violationCountStmt->execute([$event_owner_id]);
             $violationStats = $violationCountStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -5862,17 +5977,24 @@ if ($fun === "adminDeleteEvent") {
 
             // Automatic blocking rules: 10 points OR 3 violations
             if ($total_points >= 10 || $violation_count >= 3) {
-                $autoBlockStmt = $pdo->prepare("UPDATE users SET status = 'inactive' WHERE user_id = ?");
+                $autoBlockStmt = $pdo->prepare("UPDATE users SET status = 'inactive', is_blocked = 1, blocked_at = NOW(), block_reason = 'Auto-blocked due to violation threshold' WHERE user_id = ?");
                 $autoBlockStmt->execute([$event_owner_id]);
 
-                $autoBlockLogStmt = $pdo->prepare("INSERT INTO admin_action_logs (admin_user_id, action_type, target_type, target_id, reason, details) VALUES (?, 'user_blocked', 'user', ?, 'auto_block', ?)");
+                $autoBlockLogStmt = $pdo->prepare("
+                    INSERT INTO admin_action_logs (admin_user_id, action_type, target_type, target_id, reason, details) 
+                    VALUES (?, 'user_blocked', 'user', ?, 'auto_block', ?)
+                ");
                 $autoBlockLogStmt->execute([$adminUserId, $event_owner_id, "User automatically blocked due to violation threshold: {$violation_count} violations, {$total_points} points"]);
             }
         }
 
         $pdo->commit();
 
-        echo json_encode(["success" => true, "message" => "Event deleted successfully" . ($block_user ? " and user blocked" : "")]);
+        echo json_encode([
+            "success" => true, 
+            "message" => "Event deleted successfully" . ($block_user == '1' || $block_user === true ? " and user blocked" : ""),
+            "event_type" => $isTicketEvent ? 'ticket' : 'regular'
+        ]);
 
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -5915,21 +6037,89 @@ if ($fun === "getAllEvents") {
     }
 
     try {
-        $stmt = $pdo->prepare("
+        // Query for regular events
+        $regularEventsQuery = "
             SELECT
-                e.*,
-                u.name as user_name,
+                e.event_id,
+                e.user_id,
+                e.user_name,
+                e.event_name,
+                e.event_start_date,
+                e.event_start_time,
+                e.event_end_date,
+                e.event_end_time,
+                e.event_location,
+                e.event_image,
+                e.published,
+                e.guest_limit,
+                e.created_at,
+                e.updated_at,
+                e.deleted_by_admin_id,
+                e.deletion_reason,
+                e.deleted_at,
+                e.is_deleted,
+                e.status,
+                e.event_info,
+                e.event_type,
+                e.province,
+                e.city,
+                u.name as user_full_name,
                 u.email as user_email,
+                0 as has_tickets,
+                'regular' as event_category,
                 (SELECT COUNT(*) FROM event_violations ev WHERE ev.event_id = e.event_id AND ev.status = 'pending') as report_count
             FROM events e
             LEFT JOIN users u ON e.user_id = u.user_id
-            WHERE (e.is_deleted = 0 OR e.is_deleted IS NULL)  -- EXCLUDE DELETED EVENTS
-            ORDER BY e.created_at DESC
-        ");
+            WHERE (e.is_deleted = 0 OR e.is_deleted IS NULL)
+        ";
+
+        // Query for ticket events
+        $ticketEventsQuery = "
+            SELECT
+                te.event_id,
+                te.user_id,
+                te.user_name,
+                te.event_name,
+                te.event_start_date,
+                te.event_start_time,
+                te.event_end_date,
+                te.event_end_time,
+                te.address as event_location,
+                te.event_image,
+                te.status as published,
+                te.guest_limit,
+                te.created_at,
+                te.updated_at,
+                NULL as deleted_by_admin_id,
+                NULL as deletion_reason,
+                NULL as deleted_at,
+                0 as is_deleted,
+                te.status,
+                te.more_info as event_info,
+                te.event_type,
+                te.province,
+                te.city,
+                u.name as user_full_name,
+                u.email as user_email,
+                1 as has_tickets,
+                'ticket' as event_category,
+                (SELECT COUNT(*) FROM event_violations ev WHERE ev.event_id = te.event_id AND ev.status = 'pending') as report_count
+            FROM ticket_events te
+            LEFT JOIN users u ON te.user_id = u.user_id
+            WHERE (te.status != 'deleted' OR te.status IS NULL)
+        ";
+
+        // Combine both queries with UNION
+        $combinedQuery = "($regularEventsQuery) UNION ALL ($ticketEventsQuery)";
+        
+        // Wrap in subquery for final ordering
+        $finalQuery = "SELECT * FROM ($combinedQuery) AS all_events ORDER BY created_at DESC";
+        
+        $stmt = $pdo->prepare($finalQuery);
         $stmt->execute();
         $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        echo json_encode(["success" => true, "events" => $events]);
+        echo json_encode(["success" => true, "events" => $events, "total" => count($events)]);
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
     }

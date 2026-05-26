@@ -4,6 +4,7 @@ import "../App.css";
 import "../../src/pages/planner/main.css";
 import "../responce.css";
 import { Navbar, Footer, Login, NewEventPopupBtn } from "./components";
+import { copySelection } from "@testing-library/user-event/dist/cjs/document/copySelection.js";
 
 function Index() {
     const navigate = useNavigate();
@@ -24,6 +25,28 @@ function Index() {
         { id: 3, title: "Music Concert", img: "/images/popular events/concert.png", description: "Seamless concert planning from soundtrack to spotlight." },
         { id: 4, title: "Baby Shower", img: "images/popular events/baby shower.png", description: "Creating unforgattable baby shower memories" },
     ];
+
+    useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    console.log("Checking user role on homepage load:", storedUser);
+    
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            const userRole = user.role;
+            
+            console.log("User role:", userRole);
+            
+            if (userRole === "admin") {
+                navigate("/adminDashboard");
+            } else {
+                navigate("/index");
+            }
+        } catch (error) {
+            console.error("Error parsing user data:", error);
+        }
+    }
+}, [navigate]);
 
     // Helper function to check if event has passed
     const isEventExpired = (event) => {
@@ -221,6 +244,7 @@ function Index() {
 
     // Auto-slide for trending events
     useEffect(() => {
+
         resetSliderInterval();
         return () => {
             if (sliderIntervalRef.current) {
