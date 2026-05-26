@@ -40,7 +40,7 @@ function Index() {
             if (userRole === "admin") {
                 navigate("/adminDashboard");
             } else {
-                navigate("/index");
+               
             }
         } catch (error) {
             console.error("Error parsing user data:", error);

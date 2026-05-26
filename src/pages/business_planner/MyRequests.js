@@ -44,6 +44,7 @@ const MyRequests = () => {
             });
 
             const data = await response.json();
+            console.log('Fetched requests:', data);
             if (data.success) {
                 setRequests(data.requests);
             } else {
@@ -99,7 +100,7 @@ const MyRequests = () => {
     };
 
     const handleViewDetails = (requestId) => {
-        navigate(`/request/${requestId}`);
+        navigate(`/request-details/${requestId}`);
     };
 
     const handleNewRequest = () => {

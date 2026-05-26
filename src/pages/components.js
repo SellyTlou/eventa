@@ -278,7 +278,7 @@ export function SessionHandler() {
                 <Route path="/my-requests" element={<MyRequests />} />
                 <Route path="/request-details/:requestId" element={<RequestDetails />} />
                 <Route path="/custom-plan-request" element={<CustomPlanRequestPage />} />
-                <Route path="/request/:requestId" element={<RequestDetails />} />
+                {/* <Route path="/request/:requestId" element={<RequestDetails />} /> */}
                 <Route path="/paymentCancel" element={<PaymentCancel />} />
                 <Route path="/paymentSuccess" element={<PaymentSuccess />} />
                 <Route path="/businessPaymentCancel" element={<BusinessPaymentCancel />} />
