@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import "./customPlanRequestTab.css";
 const CustomPlanRequestsTab = ({ 
     requests, 
@@ -37,6 +37,12 @@ const CustomPlanRequestsTab = ({
         return types[type] || type;
     };
 
+    useEffect(() => {
+        if (!statusFilter && typeof onStatusFilterChange === 'function') {
+            onStatusFilterChange('all');
+        }
+    }, []);
+
   return (
     <div className="custom-requests-tab">
         <div className="admin-content-header">
@@ -44,7 +50,7 @@ const CustomPlanRequestsTab = ({
             <div className="header-actions">
                 <div className="filter-controls">
                     <select 
-                        value={statusFilter} 
+                        value={statusFilter || 'all'} 
                         onChange={(e) => onStatusFilterChange(e.target.value)}
                         className="status-filter"
                     >

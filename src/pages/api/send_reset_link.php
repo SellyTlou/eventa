@@ -42,17 +42,14 @@ try {
     $forgotLink = "$API_URL/forgot_password?email=" . urlencode($email);
 
     /* ---------- BREVO CONFIG ---------- */
-    // <<<---  REPLACE THIS WITH YOUR NEW v3 KEY  --->>>
-    $BREVO_API_KEY = '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';
-    // <<<----------------------------------------->>>
-
-    $fromEmail = "ananiasndou0@gmail.com"; // must be verified in Brevo
-    $fromName  = "Eventa Support";
+$BREVO_API_KEY = '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';
+$fromEmail     = "support@evendi.co.za"; // verified in Brevo
+$fromName      = "Evendi (no-reply)";
 
     $payload = [
         "sender"      => ["email" => $fromEmail, "name" => $fromName],
         "to"          => [["email" => $email, "name" => $user['name']]],
-        "subject"     => "Reset Your Eventa Password",
+        "subject"     => "Reset Your Evendi Password",
         "htmlContent" => "
             <html>
                 <body style='font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; margin: 0;'>
@@ -66,7 +63,7 @@ try {
 
                         <p style='color: #555; font-size: 16px; line-height: 1.5;'>Hi <strong>{$user['name']}</strong>,</p>
 
-                        <p style='color: #555; font-size: 16px; line-height: 1.5;'>We received a request to reset your Eventa account password.</p>
+                        <p style='color: #555; font-size: 16px; line-height: 1.5;'>We received a request to reset your Evendi account password.</p>
 
                         <p style='color: #555; font-size: 16px; line-height: 1.5;'>Click the button below to securely reset your password:</p>
 
@@ -92,7 +89,7 @@ try {
             </html>",
         "textContent" => "Hi {$user['name']},
 
-We received a request to reset your Eventa account password.
+We received a request to reset your Evendi account password.
 
 Click here to reset your password: {$forgotLink}
 
@@ -101,7 +98,7 @@ If you didn't request this password reset, please ignore this email.
 This link will expire in 24 hours for security reasons.
 
 Thank you,
-Eventa Support Team",
+Evendi Support Team",
     ];
 
     $ch = curl_init("https://api.brevo.com/v3/smtp/email");

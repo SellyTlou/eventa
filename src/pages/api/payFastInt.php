@@ -23,8 +23,7 @@ require_once "dbConnection.php";
 
 class PayFastITN {
     private $pdo;
-    private $BREVO_API_KEY = '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';
-    
+private $BREVO_API_KEY = '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';    
     public function __construct($pdo) {
         $this->pdo = $pdo;
     }
@@ -548,7 +547,7 @@ private function localSignatureGenerator($data, $passphrase = null)
                     </div>
                     
                     <p style='font-size:12px;color:#888;text-align:center'>
-                        &copy; " . date('Y') . " Eventa. All rights reserved.
+                        &copy; " . date('Y') . " Evendi. All rights reserved.
                     </p>
                 </div>
             </body>
@@ -563,13 +562,13 @@ private function localSignatureGenerator($data, $passphrase = null)
                            "Package: {$package_name}\n" .
                            "Date: {$formattedDate}\n\n" .
                            "Visit your dashboard: {$APP_URL}/eventsDashboard\n\n" .
-                           "— Eventa Team";
+                           "— Evendi Team";
 
             // Brevo payload
             $payload = [
                 "sender" => [
-                    "email" => "ananiasndou0@gmail.com",
-                    "name" => "Eventa Support"
+                    "email" => "support@evendi.co.za",
+                    "name" => "Evendi (no-reply)"
                 ],
                 "to" => [
                     [
@@ -577,7 +576,7 @@ private function localSignatureGenerator($data, $passphrase = null)
                         "name" => $user['name']
                     ]
                 ],
-                "subject" => "Payment Confirmation - Eventa",
+                "subject" => "Payment Confirmation - Evendi",
                 "htmlContent" => $htmlContent,
                 "textContent" => $textContent
             ];

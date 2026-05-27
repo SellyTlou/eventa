@@ -2140,7 +2140,7 @@ export default function PostcardEditor() {
                 console.log(pair[0] + ': ' + (pair[0] === 'eventUrlImage' ? '[IMAGE DATA]' : pair[1]));
             }
 
-            const response = await fetch(`${API_URL}/api/events.php`, {
+            const response = await fetch(`${API_URL}/query.php`, {
                 method: "POST",
                 body: formData,
             });

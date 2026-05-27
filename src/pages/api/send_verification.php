@@ -44,11 +44,11 @@ try {
     $verifyLink = "$API_URL/email_verify?email=" . urlencode($email);
 
     // Brevo Email
-    $BREVO_API_KEY = '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';
+    $BREVO_API_KEY = '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';
     $payload       = [
-        "sender"      => ["email" => "ananiasndou0@gmail.com", "name" => "Eventa Support"],
+        "sender"      => ["email" => "support@evendi.co.za", "name" => "Evendi (no-reply)"],
         "to"          => [["email" => $email, "name" => $user['name']]],
-        "subject"     => "Verify Your Eventa Email",
+        "subject"     => "Verify Your Evendi Email",
         "htmlContent" => "
             <html>
             <body style='font-family:Arial;background:#f9f9f9;padding:20px'>
@@ -65,7 +65,7 @@ try {
                 </div>
             </body>
             </html>",
-        "textContent" => "Hi {$user['name']},\n\nVerify: $verifyLink\n\n— Eventa Team",
+        "textContent" => "Hi {$user['name']},\n\nVerify: $verifyLink\n\n— Evendi Team",
     ];
 
     $ch = curl_init("https://api.brevo.com/v3/smtp/email");

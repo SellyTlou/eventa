@@ -475,7 +475,7 @@ try {
     }
 
     // -------------------- SEND EMAIL VIA BREVO --------------------
-    $BREVO_API_KEY = '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';
+    $BREVO_API_KEY = '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';
 
     $htmlContent = '<!DOCTYPE html>
     <html>
@@ -620,8 +620,8 @@ try {
 
     $payload = [
         "sender" => [
-            "email" => "ananiasndou0@gmail.com",
-            "name" => "Eventa Tickets"
+            "email" => "support@evendi.co.za",
+            "name" => "Evenndi (no-reply)"
         ],
         "to" => [[
             "email" => $email,

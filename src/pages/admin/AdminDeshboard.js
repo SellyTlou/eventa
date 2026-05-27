@@ -391,7 +391,7 @@ function AdminDashboard() {
     // ==================== NEW STATES FOR CUSTOM PLAN REQUESTS ====================
     const [customPlanRequests, setCustomPlanRequests] = useState([]);
     const [requestsLoading, setRequestsLoading] = useState(false);
-    const [requestStatusFilter, setRequestStatusFilter] = useState('pending');
+    const [requestStatusFilter, setRequestStatusFilter] = useState('all');
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [requestStatus, setRequestStatus] = useState('pending');
     const [adminNotes, setAdminNotes] = useState('');
@@ -549,7 +549,7 @@ function AdminDashboard() {
     }, [activeTab]);
 
     // ==================== CUSTOM PLAN REQUESTS FUNCTIONS ====================
-    const fetchCustomPlanRequests = async (status = 'pending') => {
+    const fetchCustomPlanRequests = async (status = 'all') => {
         if (!adminUserId) return;
 
         setRequestsLoading(true);
@@ -1217,7 +1217,7 @@ function AdminDashboard() {
             formData.append('email', newAdminData.email);
             formData.append('password', newAdminData.password);
 
-            const response = await fetch(`${API_BASE_URL}/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
@@ -1389,7 +1389,7 @@ function AdminDashboard() {
         fetchPricingPlans();
         fetchInvitationAnalytics();
         fetchRevenueData();
-        fetchCustomPlanRequests('pending');
+        fetchCustomPlanRequests('all');
 
         // Log admin dashboard access
         logActivity('Admin Dashboard Accessed', 'Administrator accessed the system dashboard');
@@ -1991,7 +1991,7 @@ function AdminDashboard() {
 
     // Profile dropdown component
     const ProfileDropdown = () => {
-        if (!adminProfile) return null;
+        //if (!adminProfile) return null;
 
         const handleLogout = async () => {
             try {
@@ -2105,44 +2105,58 @@ function AdminDashboard() {
         logActivity('Logs Exported', 'System activity logs exported to CSV file');
     };
 
-    // Format dashboard stats for display
-    const dashboardStats = useMemo(() => [
-        {
-            id: 1,
-            title: "Total Users",
-            value: dashboardData.total_users.toString(),
-            icon: "bi bi-people",
-            color: "blue"
-        },
-        {
-            id: 2,
-            title: "Active Events",
-            value: dashboardData.active_events.toString(),
-            icon: "bi bi-calendar-event",
-            color: "green"
-        },
-        {
-            id: 3,
-            title: "Response Rate",
-            value: `${dashboardData.response_rate}%`,
-            icon: "bi bi-graph-up",
-            color: "purple"
-        },
-        {
-            id: 4,
-            title: "Active Users",
-            value: dashboardData.active_users.toString(),
-            icon: "bi bi-check-circle",
-            color: "green"
-        },
-        {
-            id: 5,
-            title: "Inactive Users",
-            value: dashboardData.inactive_users.toString(),
-            icon: "bi bi-x-circle",
-            color: "red"
-        }
-    ], [dashboardData]);
+// Format dashboard stats for display
+const dashboardStats = useMemo(() => [
+    {
+        id: 1,
+        title: "Total Users",
+        value: dashboardData.total_users?.toString() || "0",
+        icon: "bi bi-people",
+        color: "blue"
+    },
+    {
+        id: 2,
+        title: "Active Users",
+        value: dashboardData.active_users?.toString() || "0",
+        icon: "bi bi-check-circle",
+        color: "green"
+    },
+    {
+        id: 3,
+        title: "Inactive Users",
+        value: dashboardData.inactive_users?.toString() || "0",
+        icon: "bi bi-x-circle",
+        color: "red"
+    },
+    {
+        id: 4,
+        title: "Active RSVP Events",
+        value: dashboardData.active_rsvp_events?.toString() || "0",
+        icon: "bi bi-envelope-paper",
+        color: "teal"
+    },
+    {
+        id: 5,
+        title: "Active Ticket Events",
+        value: dashboardData.active_ticket_events?.toString() || "0",
+        icon: "bi bi-ticket-perforated",
+        color: "purple"
+    },
+    {
+        id: 6,
+        title: "Total Active Events",
+        value: dashboardData.active_events?.toString() || "0",
+        icon: "bi bi-calendar-event",
+        color: "orange"
+    },
+    {
+        id: 7,
+        title: "Response Rate",
+        value: `${dashboardData.response_rate || 0}%`,
+        icon: "bi bi-graph-up",
+        color: "indigo"
+    }
+], [dashboardData]);
 
     const quickActions = useMemo(() => [
         {
@@ -2456,7 +2470,7 @@ function AdminDashboard() {
                                     className={`admin-dashboard-nav-item ${(activeTab === "custom-plans" || activeTab === "requestDetails") ? "active" : ""}`}
                                     onClick={() => {
                                         setActiveTab("custom-plans");
-                                        fetchCustomPlanRequests('pending');
+                                        fetchCustomPlanRequests('all');
                                         closeMobileSidebar();
                                     }}
                                 >
@@ -4351,13 +4365,13 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
                 formData.append('admin_user_id', adminUserId);
             }
 
-            const response = await fetch(`${API_BASE_URL}/packages.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
 
             const data = await response.json();
-
+console.log('Package update response:', data);
             if (data.success) {
                 if (isBusinessPackage) {
                     setBusinessPlans(prevPlans =>
@@ -4452,36 +4466,117 @@ const PricingTabContent = ({ plans, adminUserId, logActivity, printAlert }) => {
         }
     };
 
-    const updatePaymentStatus = async (paymentId, status, paymentType) => {
-        try {
-            const formData = new FormData();
-            formData.append('function', 'updatePaymentStatus');
-            formData.append('admin_user_id', adminUserId);
-            formData.append('payment_id', paymentId);
-            formData.append('status', status);
-            formData.append('payment_type', paymentType);
+const updatePaymentStatus = async (paymentId, status, paymentType) => {
+    try {
+        const formData = new FormData();
+        formData.append('function', 'updatePaymentStatus');
+        formData.append('admin_user_id', adminUserId);
+        formData.append('payment_id', paymentId);
+        formData.append('status', status);
+        formData.append('payment_type', paymentType);
 
-            const response = await fetch(`${API_BASE_URL}/query.php`, {
-                method: 'POST',
-                body: formData
-            });
+        const response = await fetch(`${API_BASE_URL}/query.php`, {
+            method: 'POST',
+            body: formData
+        });
 
-            const data = await response.json();
-            if (data.success) {
-                logActivity('Payment Status Updated', `Payment ${paymentId} status changed to ${status}`);
-                printAlert('Payment status updated successfully!', 'success');
-                fetchPaymentHistory();
-                fetchRevenueAnalytics();
-            } else {
-                printAlert('Error updating status: ' + data.message, 'error');
-                logActivity('Payment Status Update Failed', `Failed to update payment status: ${data.message}`);
+        const data = await response.json();
+
+        if (data.success) {
+            logActivity('Payment Status Updated', `Payment ${paymentId} status changed to ${status}`);
+            printAlert('Payment status updated successfully!', 'success');
+
+            fetchPaymentHistory();
+            fetchRevenueAnalytics();
+
+            // ==============================
+            // SEND EMAIL AFTER SUCCESS
+            // ==============================
+            if (status === 'completed') {
+                // Prepare payment object for email
+                const paymentObj = {
+                    id: paymentId,
+                    user_id: data.user_id, // This should be returned from your update function
+                    payment_type: paymentType
+                };
+                
+                await sendUpdatePaymentStatusEmail(paymentObj, status);
             }
-        } catch (error) {
-            console.error('Error updating payment status:', error);
-            printAlert('Error updating payment status', 'error');
-            logActivity('Payment Status Update Error', `Payment status update error: ${error.message}`);
+
+        } else {
+            printAlert('Error updating status: ' + data.message, 'error');
+            logActivity('Payment Status Update Failed', `Failed to update payment status: ${data.message}`);
         }
-    };
+
+    } catch (error) {
+        console.error('Error updating payment status:', error);
+        printAlert('Error updating payment status', 'error');
+        logActivity('Payment Status Update Error', `Payment status update error: ${error.message}`);
+    }
+};
+
+const sendUpdatePaymentStatusEmail = async (payment, newStatus) => {
+    try {
+        // Validate required data
+        if (!payment || !payment.id) {
+            console.error('Missing payment ID');
+            return;
+        }
+
+        if (!newStatus) {
+            console.error('Missing new status');
+            return;
+        }
+
+        if (!payment.payment_type) {
+            console.error('Missing payment type');
+            return;
+        }
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append('payment_id', payment.id);
+        formData.append('user_id', payment.user_id || '');
+        formData.append('new_status', newStatus);
+        formData.append('payment_type', payment.payment_type);
+
+        // Make the request to the separate file
+        const response = await fetch(`${API_BASE_URL}/sendUpdatePaymentStatusEmail.php`, {
+            method: 'POST',
+            body: formData
+        });
+
+        // Check if response is ok
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Parse the response
+        const text = await response.text();
+        
+        // Try to parse JSON (handle potential HTML errors)
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Invalid JSON response:', text.substring(0, 200));
+            throw new Error('Server returned invalid JSON. Check PHP error logs.');
+        }
+
+        // Log result
+        if (data.success) {
+            console.log('Email sent successfully:', data.message);
+        } else {
+            console.error('Email error:', data.message);
+            if (data.response) {
+                console.error('Brevo response:', data.response);
+            }
+        }
+
+    } catch (error) {
+        console.error('Email request error:', error);
+    }
+};
 
     const formatPlanName = (packageType, paymentType = 'personal') => {
         if (!packageType) return 'Enterprise';

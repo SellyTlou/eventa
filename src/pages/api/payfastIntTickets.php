@@ -37,8 +37,7 @@ require_once "dbConnection.php";
 class TicketPayFastITN
 {
     private $pdo;
-    private $BREVO_API_KEY = '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';
-
+private $BREVO_API_KEY = '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';
     private $PAYFAST_PASSPHRASE = '';
 
     public function __construct($pdo)
@@ -552,7 +551,7 @@ private function deductQty($eventID, $ticketType, $qty)
             
             $payload = [
                 "sender" => [
-                    "email" => "ananiasndou0@gmail.com",
+                    "email" => "support@evendi.co.za",
                     "name" => "Evendi Support"
                 ],
                 "to" => [

@@ -37,9 +37,9 @@ if (strpos($API_URL, 'localhost') !== false) {
 $messageLink = "$API_URL/guestMessageView?event_id=" . urlencode($event_id);
 
 /* ---------- BREVO CONFIG ---------- */
-$BREVO_API_KEY = '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';
-$fromEmail     = "ananiasndou0@gmail.com"; // verified in Brevo
-$fromName      = "Eventa (no-reply)";
+$BREVO_API_KEY = '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';
+$fromEmail     = "support@evendi.co.za"; // verified in Brevo
+$fromName      = "Evendi (no-reply)";
 
 try {
     /* ---------- PREPARE GUESTS ---------- */
@@ -175,7 +175,7 @@ try {
                         <p class='event-info'>This message was sent regarding <strong>{$eventName}</strong>.</p>
                         <div class='footer'>
                             <p>If you have any questions, please contact the event organizer.</p>
-                            <p>© " . date('Y') . " Eventa. All rights reserved.</p>
+                            <p>© " . date('Y') . " Evendi. All rights reserved.</p>
                         </div>
                     </div>
                 </body></html>",

@@ -93,7 +93,7 @@ if ($fun === "updatePackage") {
         exit;
     }
 
-    error_log("[updatePackage] ✅ All fields present");
+    error_log("[updatePackage] ✅ All fields present"); 
 
     try {
         error_log("[updatePackage] Executing UPDATE query...");

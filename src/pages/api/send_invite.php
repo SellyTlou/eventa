@@ -12,14 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once "dbConnection.php";
 
 try {
-    $db  = new Database();
+    $db = new Database();
     $pdo = $db->getConnection();
 
     /* ---------- INPUT ---------- */
     $guestEmail = $_POST['email'] ?? '';
-    $guestName  = $_POST['name'] ?? '';
-    $eventId    = $_POST['event'] ?? '';
-    $API_URL    = $_POST['API_URL'] ?? '';
+    $guestName = $_POST['name'] ?? '';
+    $eventId = $_POST['event'] ?? '';
+    $API_URL = $_POST['API_URL'] ?? '';
     $user_email = $_POST['user_email'] ?? '';
 
     if (empty($guestEmail) || empty($eventId) || empty($API_URL) || empty($user_email)) {
@@ -38,26 +38,26 @@ try {
     $stmt->execute([$eventId]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (! $event) {
+    if (!$event) {
         echo json_encode(["success" => false, "message" => "Event not found"]);
         exit;
     }
 
-    $eventName     = $event['event_name'];
-    $eventDate     = $event['event_start_date'];
+    $eventName = $event['event_name'];
+    $eventDate = $event['event_start_date'];
     $eventLocation = $event['event_location'];
 
-    $rsvpLink    = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email=" . urlencode($user_email);
+    $rsvpLink = "$API_URL/rsvpForm?event_id=" . urlencode($eventId) . "&user_email=" . urlencode($user_email);
     $messageLink = "$API_URL/guestMessageView?event_id=" . urlencode($eventId);
-    $reportLink  = "$API_URL/report-event?event_id=" . urlencode($eventId);
+    $reportLink = "$API_URL/report-event?event_id=" . urlencode($eventId);
 
     /* ---------- BREVO – EXACT COPY OF YOUR VERIFICATION SCRIPT ---------- */
-    $BREVO_API_KEY = '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';
+    $BREVO_API_KEY = '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';
 
     $payload = [
-        "sender"      => ["email" => "ananiasndou0@gmail.com", "name" => "Eventa Support"],
-        "to"          => [["email" => $guestEmail, "name" => $guestName]],
-        "subject"     => "Invitation to $eventName",
+        "sender" => ["email" => "support@evendi.co.za", "name" => "Eventa Support"],
+        "to" => [["email" => $guestEmail, "name" => $guestName]],
+        "subject" => "Invitation to $eventName",
         "htmlContent" => "
             <html>
             <body style='font-family:Arial;background:#f9f9f9;padding:20px'>
@@ -87,40 +87,40 @@ try {
             </body>
             </html>",
         "textContent" => "Hi {$guestName},\n\nYou're invited to {$eventName} on " .
-        date('F j, Y', strtotime($eventDate)) .
-        " at {$eventLocation}.\n\nMessage: {$messageLink}\nRSVP: {$rsvpLink}\nReport: {$reportLink}\n\n— Eventa Team",
+            date('F j, Y', strtotime($eventDate)) .
+            " at {$eventLocation}.\n\nMessage: {$messageLink}\nRSVP: {$rsvpLink}\nReport: {$reportLink}\n\n— Eventa Team",
     ];
 
     /* ---------- cURL – IDENTICAL TO VERIFICATION SCRIPT ---------- */
     $ch = curl_init("https://api.brevo.com/v3/smtp/email");
     curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_HTTPHEADER     => [
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
             "api-key: $BREVO_API_KEY",
             "Content-Type: application/json",
             "Accept: application/json",
         ],
-        CURLOPT_POSTFIELDS     => json_encode($payload),
+        CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 30,
+        CURLOPT_TIMEOUT => 30,
     ]);
 
     $response = curl_exec($ch);
-    $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
     /* ---------- RESPONSE – SAME FORMAT AS VERIFICATION ---------- */
     if ($status === 201) {
         echo json_encode([
-            "success"  => true,
-            "message"  => "Invitation sent successfully!",
+            "success" => true,
+            "message" => "Invitation sent successfully!",
             "rsvpLink" => $rsvpLink,
         ]);
     } else {
         echo json_encode([
             "success" => false,
             "message" => "Failed to send invitation.",
-            "debug"   => $response,
+            "debug" => $response,
         ]);
     }
 

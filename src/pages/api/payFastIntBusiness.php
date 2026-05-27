@@ -13,8 +13,7 @@ require_once "dbConnection.php";
 class BusinessPayFastITN
 {
     private $pdo;
-    private $BREVO_API_KEY = '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';
-
+private $BREVO_API_KEY = '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';
     // 🔥 LIVE PayFast credentials
     private $PAYFAST_MERCHANT_ID = '33426571';
     private $PAYFAST_MERCHANT_KEY = 'lkqoiy0ftb9yc';
@@ -500,7 +499,7 @@ private function sendPaymentConfirmationEmail($user_id, $package_id, $amount, $t
                 </div>
                 
                 <p style='font-size:12px;color:#888;text-align:center'>
-                    &copy; " . date('Y') . " Eventa. All rights reserved.
+                    &copy; " . date('Y') . " Evendi. All rights reserved.
                 </p>
             </div>
         </body>
@@ -517,13 +516,13 @@ private function sendPaymentConfirmationEmail($user_id, $package_id, $amount, $t
             (!empty($expiry_date) ? "Valid Until: {$expiry_date}\n" : "") .
             "Payment Date: {$formattedDate}\n\n" .
             "Visit your business dashboard: {$APP_URL}/businessdashboard\n\n" .
-            "— Eventa Team";
+            "— Evendi Team";
 
         // Send email via Brevo (same as before)
         $payload = [
             "sender" => [
-                "email" => "ananiasndou0@gmail.com",
-                "name" => "Eventa Support"
+                "email" => "support@evendi.co.za",
+                "name" => "Evendi Support"
             ],
             "to" => [
                 [
@@ -531,7 +530,7 @@ private function sendPaymentConfirmationEmail($user_id, $package_id, $amount, $t
                     "name" => $user_name
                 ]
             ],
-            "subject" => "Business Package Payment Confirmation - Eventa",
+            "subject" => "Business Package Payment Confirmation - Evendi",
             "htmlContent" => $htmlContent,
             "textContent" => $textContent
         ];

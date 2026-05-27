@@ -127,7 +127,7 @@ try {
     $reportLink = "$API_URL/report-event?event_id=" . urlencode($eventId);
 
     /* ---------- BREVO API ---------- */
-    $BREVO_API_KEY = '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';
+$BREVO_API_KEY = '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';
 
     // Prepare HTML content with event image if available
     $imageHtml = '';
@@ -171,7 +171,7 @@ try {
     }
 
     $payload = [
-        "sender" => ["email" => "ananiasndou0@gmail.com", "name" => "Eventa Support"],
+        "sender" => ["email" => "support@evendi.co.za", "name" => "Evendi (no-reply)"],
         "to" => [["email" => $guestEmail, "name" => $guestName]],
         "subject" => "🎟️ You're Invited to Purchase Tickets for $eventName",
         "htmlContent" => "
@@ -279,7 +279,7 @@ Contact the event organizer at: {$user_email}
 REPORT INAPPROPRIATE CONTENT:
 {$reportLink}
 
-— Eventa Team
+— Evendi Team
 ================================"
     ];
 
