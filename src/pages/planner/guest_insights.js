@@ -1,11 +1,11 @@
-// GuestInsights.js (CORRECTED VERSION)
+// GuestInsights.js (UPDATED VERSION)
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { logOut, DashboardHeader, DashboardSidebar, DashboardTicketSidebar } from "../components";
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import './main.css';    
 import './guest_insights.css';
+import './main.css';    
 import '../../alert.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -24,6 +24,8 @@ const GuestInsights = () => {
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, guest: null });
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isTicketEvent, setIsTicketEvent] = useState(false);
+    const [userPackage, setUserPackage] = useState(null); // Add package state
+    
     // Modal
     const [modalOpen, setModalOpen] = useState(false);
     const [modalGuest, setModalGuest] = useState(null);
@@ -41,53 +43,87 @@ const GuestInsights = () => {
 
     const toggleDropdown = () => setDropdownOpen(prev => !prev);
 
-    
-    useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (!storedUser) {
-            printAlert("Session expired. Please log in again.", "error");
-            logOut();
-            navigate("/");
-            return;
-        } 
-        setUser(JSON.parse(storedUser));
+    // Fetch user package - same method as TicketEventManage
+    const fetchUserPackage = async () => {
+        try {
+            const API_URL = process.env.REACT_APP_API_URL;
+            const userData = JSON.parse(localStorage.getItem("user"));
+            
+            // Get account type from user data
+            const accountType = userData.account_type || userData.accountType || 'personal';
+            
+            const formData = new FormData();
+            formData.append("function", "getUserPackage");
+            formData.append("user_id", userData.user_id);
+            formData.append("account_type", accountType); 
 
-        const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-                setDropdownOpen(false);
+            const response = await fetch(`${API_URL}/query.php`, {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+            
+            console.log("User package response:", data);
+
+            if (data.success && data.userPackage) {
+                setUserPackage(data.userPackage);
+            } else {
+                console.log("No package found:", data.message);
+                setUserPackage({ package_type: "basic" });
             }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    
-    useEffect(() => {
-        const eventId = localStorage.getItem("selectedEventId");
-        if (!eventId) {
-            printAlert("No event selected", "warning");
-            const storedUser = localStorage.getItem('user');
-            const user = storedUser ? JSON.parse(storedUser) : null;
-            const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
-            navigate(dashPath);
-            return;
+        } catch (error) {
+            console.error("Error fetching user package:", error);
+            setUserPackage({ package_type: "basic" });
         }
-        fetchEventData(eventId);
-        fetchEventStatusByID(eventId);
-        fetchGuestInsights(eventId);
-    }, [navigate]);
-
-   
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    // Get package display name - same method as TicketEventManage
+    const getPackageDisplayName = () => {
+        if (!userPackage) return "No Package";
 
-    const fetchEventStatusByID = async (eventId) => {
+        if (userPackage.package_name) {
+            return userPackage.package_name;
+        }
+
+        const packageType = userPackage.package_type;
+        if (!packageType) return "Basic";
+
+        return packageType.charAt(0).toUpperCase() + packageType.slice(1);
+    };
+
+    // Get package color - same method as TicketEventManage
+    const getPackageColor = () => {
+        const packageType = userPackage?.package_type?.toLowerCase();
+
+        switch (packageType) {
+            case "basic":
+            case "free":
+                return "#6c757d";
+            case "premium":
+                return "#007bff";
+            case "advanced":
+            case "enterprise":
+                return "#28a745";
+            case "professional":
+                return "#6610f2";
+            default:
+                return "#6c757d";
+        }
+    };
+
+    // Fetch event status - updated to handle both ticket and regular events
+    const fetchEventStatusByID = async (eventId, isTicketEvent) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
             const formData = new FormData();
-            formData.append("function", "getEventStatusByID");
+            
+            // Use different functions based on event type - same as TicketEventManage
+            if (isTicketEvent) {
+                formData.append("function", "getTicketEventStatusByID");
+            } else {
+                formData.append("function", "getEventStatusByID");
+            }
+            
             formData.append("event_id", eventId);
 
             const response = await fetch(`${API_URL}/query.php`, {
@@ -97,17 +133,34 @@ const GuestInsights = () => {
             if (!response.ok) throw new Error("Network response was not ok");
             const data = await response.json();
             console.log("Event Status data:", data);
+            
             if (data.success && data.status) {
-                setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+                if (isTicketEvent) {
+                    const statusValue = data.status.status;
+                    if (statusValue === 'published') {
+                        setEventStatus("Published");
+                    } else if (statusValue === 'pending') {
+                        setEventStatus("Pending");
+                    } else if (statusValue === 'cancelled') {
+                        setEventStatus("Cancelled");
+                    } else if (statusValue === 'completed') {
+                        setEventStatus("Completed");
+                    } else {
+                        setEventStatus("Unknown");
+                    }
+                } else {
+                    setEventStatus(data.status.published == 1 ? "Published" : "Unpublished");
+                }
             } else {
                 setEventStatus("Unknown");
             }
         } catch (err) {
             console.error("Failed to fetch event status:", err);
-            return "unknown";
+            setEventStatus("Unknown");
         }
-    }
+    };
 
+    // Fetch event data - updated to properly detect ticket events
     const fetchEventData = async (eventId) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -120,9 +173,13 @@ const GuestInsights = () => {
                 // Check the correct data structure - it might be data.events[0] or data.event
                 const event = data.events?.[0] || data.event;
                 if (event) {
+                    // Check for ticket event - same logic as TicketEventManage
                     const hasTickets = event.has_tickets === 1 || event.has_tickets === true || event.has_tickets === "1";
                     setIsTicketEvent(hasTickets);
                     setEventData(event);
+                    
+                    // Also fetch event status with the correct type
+                    await fetchEventStatusByID(eventId, hasTickets);
                 }
             } 
         } catch (err) { 
@@ -130,6 +187,45 @@ const GuestInsights = () => {
         }
     };
 
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (!storedUser) {
+            printAlert("Session expired. Please log in again.", "error");
+            logOut();
+            navigate("/");
+            return;
+        } 
+        setUser(JSON.parse(storedUser));
+        
+        // Fetch user package - same as TicketEventManage
+        fetchUserPackage();
+
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        const eventId = localStorage.getItem("selectedEventId");
+        if (!eventId) {
+            printAlert("No event selected", "warning");
+            const storedUser = localStorage.getItem('user');
+            const user = storedUser ? JSON.parse(storedUser) : null;
+            const dashPath = user?.account_type === 'business' ? '/businessdashboard' : '/eventsDashboard';
+            navigate(dashPath);
+            return;
+        }
+        fetchEventData(eventId);
+        fetchGuestInsights(eventId);
+    }, [navigate]);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
     const fetchGuestInsights = async (eventId) => {
         try {
@@ -197,7 +293,6 @@ const GuestInsights = () => {
         }
     };
 
-
     const sendReply = async () => {
         if (!replyText.trim() || !modalGuest?.msg_id) return;
 
@@ -245,7 +340,6 @@ const GuestInsights = () => {
         }
     };
 
-
     const deleteGuest = async (guestId) => {
         try {
             const API_URL = process.env.REACT_APP_API_URL;
@@ -268,11 +362,13 @@ const GuestInsights = () => {
             const updated = messageQueue.filter(g => g.guest_id !== deleteConfirm.guest.guest_id);
             setMessageQueue(updated);
             setGuests(updated);
+            printAlert("Guest deleted successfully", "success");
+        } else {
+            printAlert("Failed to delete guest", "error");
         }
         setDeleteConfirm({ show: false, guest: null });
     };
 
-  
     const handleBulkDelete = async () => {
         if (!window.confirm(`Delete ${selectedGuests.length} guest(s)?`)) return;
         const formData = new FormData();
@@ -283,7 +379,7 @@ const GuestInsights = () => {
             const res = await fetch(`${process.env.REACT_APP_API_URL}/query.php`, { method: "POST", body: formData });
             const result = await res.json();
             if (result.success) {
-                printAlert(`Deleted ${result.deleted_count}`, "success");
+                printAlert(`Deleted ${result.deleted_count} guests`, "success");
                 const updated = messageQueue.filter(g => !selectedGuests.includes(g.guest_id));
                 setMessageQueue(updated);
                 setGuests(updated);
@@ -295,7 +391,6 @@ const GuestInsights = () => {
             printAlert("Network error", "error");
         }
     };
-
 
     const openModal = (guest) => {
         setModalGuest(guest);
@@ -352,6 +447,7 @@ const GuestInsights = () => {
             prev.includes(guestId) ? prev.filter(x => x !== guestId) : [...prev, guestId]
         );
     };
+    
     const selectAll = () => {
         if (selectedGuests.length === filteredGuests.length) {
             setSelectedGuests([]);
@@ -367,7 +463,6 @@ const GuestInsights = () => {
     const closeSidebar = () => {
         setSidebarOpen(false);
     };
-   
 
     if (loading) {
         return (
@@ -380,7 +475,6 @@ const GuestInsights = () => {
         );
     }
 
-  
     return (
         <div className="dashboard-container">
             {alert.show && (
@@ -390,31 +484,39 @@ const GuestInsights = () => {
                 </div>
             )}
 
-            {/* HEADER */}
-            <DashboardHeader
-                user={user}
-                eventStatus={eventStatus}
-                onToggleSidebar={toggleSidebar}
-            />
-
-            {/* CONDITIONAL SIDEBAR */}
-            {isTicketEvent ? (
-                <DashboardTicketSidebar
-                    isOpen={sidebarOpen}
-                    onClose={closeSidebar}
-                />
-            ) : (
-                <DashboardSidebar
-                    isOpen={sidebarOpen}
-                    onClose={closeSidebar}
-                />
-            )}
-
-            {/* MAIN CONTENT - Added event-type class */}
+               {/* HEADER */}
+                        <DashboardHeader
+                            user={user}
+                            eventStatus={eventStatus}
+                            onToggleSidebar={toggleSidebar}
+                        />
+            
+                        {/* SIDEBAR */}
+                        {isTicketEvent ? (
+                            <DashboardTicketSidebar
+                                isMobileOpen={sidebarOpen}
+                                onClose={closeSidebar}
+                            />
+                        ) : (
+                            <DashboardSidebar
+                                isMobileOpen={sidebarOpen}
+                                onClose={closeSidebar}
+                            />
+                        )}
+            {/* MAIN CONTENT - Added event-type class and package badge */}
             <div className={`guest-insights-content ${isTicketEvent ? 'ticket-event' : 'rsvp-event'}`}>
                 <div className="content-header">
                     <h1>Guest Insights</h1>
                     <p>View guest questions, respond, and manage engagement</p>
+                    {/* Package badge - same as TicketEventManage */}
+                    {userPackage && (
+                        <span
+                            className="package-badge"
+                            style={{ backgroundColor: getPackageColor(), marginLeft: '1rem' }}
+                        >
+                            <i className="bi bi-shield-check"></i> {getPackageDisplayName()} Package
+                        </span>
+                    )}
                 </div>
 
                 <div className="insights-summary">

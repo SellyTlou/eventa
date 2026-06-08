@@ -160,16 +160,7 @@ function requireAuth()
     return $_SESSION['user_id'];
 }
 
-// Admin auth check
-function requireAdminAuth($pdo)
-{
-    $userId = requireAuth();
-    if (!verifyAdminAccess($pdo, $userId)) {
-        echo json_encode(["success" => false, "message" => "Admin access required"]);
-        exit;
-    }
-    return $userId;
-}
+
 
 function generateUserID($pdo)
 {
@@ -3405,7 +3396,6 @@ if ($fun === "getRevenueData") {
 }
 
 if ($fun === "updateAdminProfile") {
-    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
     $name = $_POST['name'] ?? '';
     $lastname = $_POST['lastname'] ?? '';
@@ -3459,7 +3449,6 @@ if ($fun === "updateAdminProfile") {
 }
 
 if ($fun === "getAdminProfile") {
-    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
 
     try {
@@ -5623,7 +5612,6 @@ if ($fun === "addManualPayment") {
 }
 
 if ($fun === "changeAdminPassword") {
-    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
     $currentPassword = $_POST['current_password'] ?? '';
     $newPassword = $_POST['new_password'] ?? '';
@@ -5801,7 +5789,6 @@ if ($fun === "getReportedEvents") {
 }
 
 if ($fun === "adminDeleteEvent") {
-    requireAdminAuth($pdo);
     $adminUserId = $_POST['admin_user_id'] ?? '';
     $event_id = $_POST['event_id'] ?? '';
     $reason = $_POST['reason'] ?? '';

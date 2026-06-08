@@ -413,6 +413,7 @@ private function localSignatureGenerator($data, $passphrase = null)
                         SET
                             package_id = ?,
                             event_limit = ?,
+                            event_used = 0,
                             updated_at = NOW()
                         WHERE user_id = ?
                     ");

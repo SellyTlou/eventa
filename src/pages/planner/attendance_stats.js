@@ -760,26 +760,24 @@ const AttendanceStats = () => {
                 </div>
             )}
 
-            {/* HEADER */}
-            <DashboardHeader
-                user={user}
-                eventStatus={eventStatus}
-                onToggleSidebar={toggleSidebar}
-                userPackage={activePackage}
-            />
-
-            {/* CONDITIONAL SIDEBAR */}
-            {isTicketEvent ? (
-                <DashboardTicketSidebar
-                    isOpen={sidebarOpen}
-                    onClose={closeSidebar}
-                />
-            ) : (
-                <DashboardSidebar
-                    isOpen={sidebarOpen}
-                    onClose={closeSidebar}
-                />
-            )}
+               <DashboardHeader
+                                    user={user}
+                                    eventStatus={eventStatus}
+                                    onToggleSidebar={toggleSidebar}
+                                />
+                    
+                                {/* SIDEBAR */}
+                                {isTicketEvent ? (
+                                    <DashboardTicketSidebar
+                                        isMobileOpen={sidebarOpen}
+                                        onClose={closeSidebar}
+                                    />
+                                ) : (
+                                    <DashboardSidebar
+                                        isMobileOpen={sidebarOpen}
+                                        onClose={closeSidebar}
+                                    />
+                                )}
 
             {/* MAIN CONTENT */}
             <div className={`attendance-content ${isTicketEvent ? 'ticket-event' : 'rsvp-event'}`}>

@@ -146,7 +146,7 @@ useEffect(() => {
         getBookingDetails(eventData.eventId);
         fetchUserPackage();
     } 
-    
+     
     if (!savedData) {
         // Check account type before navigating to dashboard
         const storedUser = localStorage.getItem("user");

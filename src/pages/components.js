@@ -31,7 +31,7 @@ import BusinessPackagePayment from '../pages/business_planner/business-package-p
 import Support from '../pages/support';
 import AttendanceStats from './planner/attendance_stats';
 import SecurityQuestionsModal from './SecurityQuestionsModal';
-import GuestInsights from './planner/guest_insights';
+import GuestInsights from '../pages/planner/guest_insights';
 import GuestMessageView from './guestMessageView';
 import ReportEvent from './ReportEvent';
 import AdminTicket from './AdminTicket';
@@ -243,28 +243,28 @@ export function SessionHandler() {
                 <Route path="/" element={<Index />} />
                 <Route path="/feature" element={<Features />} />
                 <Route path="/pricing" element={<Pricing />} />
-                <Route path="/createEvent" element={<PrivateRoute><CreateEvent /></PrivateRoute>} />
-                <Route path="/sales" element={<PrivateRoute><Sales /></PrivateRoute>} />
+                <Route path="/createEvent" element={<CreateEvent />} />
+                <Route path="/sales" element={<Sales />} />
                 <Route path="/admindashboard" element={<PrivateRoute adminOnly={true}><AdminDashboard /></PrivateRoute>} />
-                <Route path="/eventTheme" element={<PrivateRoute><EventTheme /></PrivateRoute>} />
-                <Route path="/postcardEditor" element={<PrivateRoute><PostcardEditor /></PrivateRoute>} />
-                <Route path="/activeEventDetails" element={<PrivateRoute><ActiveEventDetails /></PrivateRoute>} />
-                <Route path="/eventsDashboard" element={<PrivateRoute><EventsDashboard /></PrivateRoute>} />
-                <Route path="/eventManagement" element={<PrivateRoute><EventManagement /></PrivateRoute>} />
-                <Route path="/invitationPage" element={<PrivateRoute><InvitationPage /></PrivateRoute>} />
-                <Route path="/rsvpForm" element={<PrivateRoute><RsvpForm /></PrivateRoute>} />
-                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-                <Route path="/Manage_my_event" element={<PrivateRoute><ManageEyEvent /></PrivateRoute>} />
-                <Route path="/packagepayment" element={<PrivateRoute><PackagePayment /></PrivateRoute>} />
+                <Route path="/eventTheme" element={<EventTheme />} />
+                <Route path="/postcardEditor" element={<PostcardEditor />} />
+                <Route path="/activeEventDetails" element={<ActiveEventDetails />} />
+                <Route path="/eventsDashboard" element={<EventsDashboard />} />
+                <Route path="/eventManagement" element={<EventManagement />} />
+                <Route path="/invitationPage" element={<InvitationPage />} />
+                <Route path="/rsvpForm" element={<RsvpForm />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/Manage_my_event" element={<ManageEyEvent />} />
+                <Route path="/packagepayment" element={<PackagePayment />} />
                 <Route path="/forgot_password" element={<ForgotPassword />} />
                 <Route path="/email_verify" element={<EmailVerify />} />
-                <Route path="/upgrade_package" element={<PrivateRoute><UpgradePackage /></PrivateRoute>} />
-                <Route path="/upgrade_business_package" element={<PrivateRoute><UpgradeBusinessPackage /></PrivateRoute>} />
-                <Route path="/business-package-payment" element={<PrivateRoute><BusinessPackagePayment /></PrivateRoute>} />
+                <Route path="/upgrade_package" element={<UpgradePackage />} />
+                <Route path="/upgrade_business_package" element={<UpgradeBusinessPackage />} />
+                <Route path="/business-package-payment" element={<BusinessPackagePayment />} />
                 <Route path="/support" element={<Support />} />
-                <Route path="/attendance_stats" element={<PrivateRoute><AttendanceStats /></PrivateRoute>} />
-                <Route path="/guest_insights" element={<PrivateRoute><GuestInsights /></PrivateRoute>} />
-                <Route path="/guestMessageView" element={<PrivateRoute><GuestMessageView /></PrivateRoute>} />
+                <Route path="/attendance_stats" element={<AttendanceStats />} />
+                <Route path="/guest_insights" element={<GuestInsights />} />
+                <Route path="/guestMessageView" element={<GuestMessageView />} />
                 <Route path="/report-event" element={<ReportEvent />} />
                 <Route path="/security-questions" element={<SecurityQuestionsModal />} />
                 <Route path="/admin-ticket" element={<AdminTicket />} />
@@ -278,7 +278,6 @@ export function SessionHandler() {
                 <Route path="/my-requests" element={<MyRequests />} />
                 <Route path="/request-details/:requestId" element={<RequestDetails />} />
                 <Route path="/custom-plan-request" element={<CustomPlanRequestPage />} />
-                {/* <Route path="/request/:requestId" element={<RequestDetails />} /> */}
                 <Route path="/paymentCancel" element={<PaymentCancel />} />
                 <Route path="/paymentSuccess" element={<PaymentSuccess />} />
                 <Route path="/businessPaymentCancel" element={<BusinessPaymentCancel />} />
@@ -289,23 +288,23 @@ export function SessionHandler() {
                 <Route path="/ticketCancel" element={<TicketCancel />} />
                 <Route path="/ticketSuccess" element={<TicketSuccess />} />
                 <Route path="/admin-ticket" element={<PrivateRoute adminOnly={true}><AdminTicket /></PrivateRoute>} />
-                <Route path="/ticket-selection" element={<PrivateRoute><TicketSelection /></PrivateRoute>} />
-                <Route path="/support-ticket" element={<PrivateRoute><SupportTicket /></PrivateRoute>} />
-                <Route path="/ticket_sales" element={<PrivateRoute><Ticket_Sale /></PrivateRoute>} />
-                <Route path="/ticketEvent_details" element={<PrivateRoute><TicketEvent_details /></PrivateRoute>} />
-                <Route path="/ticket_payment" element={<PrivateRoute><Ticket_payment /></PrivateRoute>} />
-                <Route path="/businessdashboard" element={<PrivateRoute><BusinessDashboard /></PrivateRoute>} />
-                <Route path="/event_ticket_manage" element={<PrivateRoute><TicketEventManage /></PrivateRoute>} />
-                <Route path="/my-requests" element={<PrivateRoute><MyRequests /></PrivateRoute>} />
-                <Route path="/request-details/:requestId" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
-                <Route path="/custom-plan-request" element={<PrivateRoute><CustomPlanRequestPage /></PrivateRoute>} />
-                <Route path="/request/:requestId" element={<PrivateRoute><RequestDetails /></PrivateRoute>} />
-                <Route path="/paymentCancel" element={<PrivateRoute><PaymentCancel /></PrivateRoute>} />
-                <Route path="/paymentSuccess" element={<PrivateRoute><PaymentSuccess /></PrivateRoute>} />
-                <Route path="/createTicketEvent" element={<PrivateRoute><CreateTicketEvent /></PrivateRoute>} />
-                <Route path="/event-checklist" element={<PrivateRoute><EventChecklist /></PrivateRoute>} />
-                <Route path="/event-checkin" element={<PrivateRoute><EventCheckin /></PrivateRoute>} />
-                <Route path="/form-builder" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
+                <Route path="/ticket-selection" element={<TicketSelection />} />
+                <Route path="/support-ticket" element={<SupportTicket />} />
+                <Route path="/ticket_sales" element={<Ticket_Sale />} />
+                <Route path="/ticketEvent_details" element={<TicketEvent_details />} />
+                <Route path="/ticket_payment" element={<Ticket_payment />} />
+                <Route path="/businessdashboard" element={<BusinessDashboard />} />
+                <Route path="/event_ticket_manage" element={<TicketEventManage />} />
+                <Route path="/my-requests" element={<MyRequests />} />
+                <Route path="/request-details/:requestId" element={<RequestDetails />} />
+                <Route path="/custom-plan-request" element={<CustomPlanRequestPage />} />
+                <Route path="/request/:requestId" element={<RequestDetails />} />
+                <Route path="/paymentCancel" element={<PaymentCancel />} />
+                <Route path="/paymentSuccess" element={<PaymentSuccess />} />
+                <Route path="/createTicketEvent" element={<CreateTicketEvent />} />
+                <Route path="/event-checklist" element={<EventChecklist />} />
+                <Route path="/event-checkin" element={<EventCheckin />} />
+                <Route path="/form-builder" element={<FormBuilder />} />
             </Routes>
 
             <SessionWarningModal
@@ -1986,14 +1985,14 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/invitationPage");
         onClose?.();
     };
-    const goToAttendanceStats = () => {
-        navigate("/attendance_stats");
-        onClose?.();
-    };
-    const goToGuest = () => {
-        navigate("/guest_insights");
-        onClose?.();
-    };
+    // const goToAttendanceStats = () => {
+    //     navigate("/attendance_stats");
+    //     onClose?.();
+    // };
+    // const goToGuest = () => {
+    //     navigate("/guest_insights");
+    //     onClose?.();
+    // };
     const goToBookings = () => {
         navigate("/event_ticket_manage");
         onClose?.();
@@ -2016,13 +2015,13 @@ export function DashboardTicketSidebar({ isMobileOpen, onClose, userPackage }) {
                 { path: '/event_ticket_manage', icon: 'bi-book', label: 'Bookings', onClick: goToBookings }
             ]
         },
-        {
-            section: 'Event Analytics',
-            items: [
-                { path: '/attendance_stats', icon: 'bi-graph-up', label: 'Attendance Stats', onClick: goToAttendanceStats, disabled: !canViewAttendance },
-                { path: '/guest_insights', icon: 'bi-people', label: 'Guest Insights', onClick: goToGuest }
-            ]
-        }
+       // {
+        //     section: 'Event Analytics',
+        //     items: [
+        //         { path: '/attendance_stats', icon: 'bi-graph-up', label: 'Attendance Stats', onClick: goToAttendanceStats, disabled: !canViewAttendance },
+        //         { path: '/guest_insights', icon: 'bi-people', label: 'Guest Insights', onClick: goToGuest }
+        //     ]
+        // }
     ];
 
     const isActive = (path) => location.pathname === path;

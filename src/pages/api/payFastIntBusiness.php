@@ -314,6 +314,7 @@ private function processSuccessfulPayment($data)
                         SET business_package_id = ?, 
                             event_limit = ?, 
                             status = 'active',
+                            event_used = 0,
                             purchase_date = NOW(),
                             expiry_date = ?,
                             auto_renew = 1,

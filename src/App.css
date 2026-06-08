@@ -11988,6 +11988,7 @@ create ticket popup
     flex: 1;
     overflow-y: auto;
     height: 100vh;
+    margin-top: 60px;
 }
 
 /* Fix for header positioning */

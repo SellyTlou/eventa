@@ -1223,7 +1223,7 @@ function AdminDashboard() {
             });
 
             const data = await response.json();
-
+console.log('Create admin response:', data);
             if (data.success) {
                 printAlert('Admin user created successfully!', 'success');
                 setShowCreateAdminModal(false);
@@ -3020,7 +3020,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
 
             console.log('Sending password change request for admin:', adminUserId);
 
-            const response = await fetch(`${API_BASE_URL}/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formDataToSend
             });
@@ -3133,7 +3133,7 @@ const ProfileTabContent = ({ adminProfile, adminUserId, profileImage, onImageUpl
             formDataToSend.append('lastname', formData.lastname);
             formDataToSend.append('email', formData.email);
 
-            const response = await fetch(`${API_BASE_URL}/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formDataToSend
             });
@@ -5748,7 +5748,7 @@ const EventManagementTabContent = ({
             formData.append('block_user', deleteForm.block_user ? '1' : '0');
             formData.append('violation_severity', deleteForm.violation_severity);
 
-            const response = await fetch(`${API_BASE_URL}/admin.php`, {
+            const response = await fetch(`${API_BASE_URL}/query.php`, {
                 method: 'POST',
                 body: formData
             });
