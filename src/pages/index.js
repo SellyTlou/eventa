@@ -564,10 +564,9 @@ function Index() {
                                 <div className="row">
                                     <div className="col-lg-8 mx-auto text-center text-content">
                                         <span className="slide-tag">Beautiful Designs</span>
-                                        <h1 className="slide-title">Create Stunning Invitations in Minutes</h1>
+                                        <h1 className="slide-title"> Create Magic. Collect Memories.</h1>
                                         <p className="slide-description">
-                                            Choose from hundreds of elegant templates. Customize colors, fonts, and animations.
-                                            Send via Email, WhatsApp, SMS, or QR code — all with one click.
+                                            Stunning invitations that make your event unforgettable.
                                         </p>
                                         <div className="btn-container">
                                             <button className="btn btn-primary btn-lg" onClick={() => window.location.href = "/createevent"}>
@@ -589,10 +588,9 @@ function Index() {
                                 <div className="row">
                                     <div className="col-lg-8 mx-auto text-center text-content">
                                         <span className="slide-tag">Smart Management</span>
-                                        <h1 className="slide-title">Never Chase RSVPs Again</h1>
+                                        <h1 className="slide-title"> Create Stunning Invitations in Minutes</h1>
                                         <p className="slide-description">
-                                            Real-time tracking, automated reminders, guest insights, seating charts —
-                                            everything you need to stay organized and stress-free.
+                                           Beautiful designs, instant sharing, and seamless RSVP tracking — all in one powerful app.
                                         </p>
                                         <div className="btn-container">
                                             <button className="btn btn-primary btn-lg" onClick={() => window.location.href = "/createevent"}>

@@ -334,7 +334,7 @@ function Support() {
                                         </div>
                                         <div className="contact-item-details">
                                             <h4>Phone</h4>
-                                            <p><a href="tel:+27111234567">+27 11 123 4567</a></p>
+                                            <p><a href="tel:+27681420803">+276 8142 0803</a></p>
                                             <small>Mon-Fri, 8AM - 6PM</small>
                                         </div>
                                     </div>
@@ -345,7 +345,7 @@ function Support() {
                                         </div>
                                         <div className="contact-item-details">
                                             <h4>WhatsApp</h4>
-                                            <p><a href="https://wa.me/27821234567">+27 82 123 4567</a></p>
+                                            <p><a href="https://wa.me/0681420803">+276 8142 0803</a></p>
                                             <small>24/7 urgent support</small>
                                         </div>
                                     </div>
@@ -392,7 +392,7 @@ function Support() {
                                     Got It
                                 </button>
                                 <a
-                                    href="tel:+27111234567"
+                                    href="tel:+0681420803"
                                     className="action-btn-new secondary"
                                 >
                                     <i className="bi bi-telephone"></i>

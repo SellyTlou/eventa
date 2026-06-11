@@ -718,8 +718,8 @@ export function Footer() {
                     <div className="col-lg-3">
                         <h5>Contact Us</h5>
                         <div className="contact-item">
-                            <a href="https://wa.me/1234567890" target="_blank" rel="noopener noreferrer">
-                                <i className="bi bi-whatsapp"></i> 123 456 7890
+                            <a href="https://wa.me/0681420803" target="_blank" rel="noopener noreferrer">
+                                <i className="bi bi-whatsapp"></i> 068 142 0803
                             </a>
                         </div>
                         <div className="contact-item">
@@ -728,8 +728,8 @@ export function Footer() {
                             </a>
                         </div>
                         <div className="contact-item">
-                            <a href="tel:1234567890">
-                                <i className="bi bi-phone"></i> 123 456 7890
+                            <a href="tel:0681420803">
+                                <i className="bi bi-phone"></i> 068 142 0803
                             </a>
                         </div>
                     </div>
@@ -1092,7 +1092,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
         try {
             let apiUrl = process.env.REACT_APP_API_URL;
             if (!apiUrl) {
-                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
+                apiUrl = `${window.location.origin}/eventa/src/pages/api`;
             }
 
             if (apiUrl === "/api") {
@@ -1124,7 +1124,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             let apiUrl = process.env.REACT_APP_API_URL;
             if (!apiUrl) {
                 console.warn('REACT_APP_API_URL not set, using fallback relative path');
-                apiUrl = `${window.location.origin}/eventa/src/pages/php`;
+                apiUrl = `${window.location.origin}/eventa/src/pages/api`;
             }
 
             const formData = new FormData();
@@ -1137,7 +1137,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             formData.append("question3", "What is your mother's maiden name?");
             formData.append("answer3", answers.answer3);
 
-            const url = `${apiUrl}/api/users.php`;
+            const url = `${apiUrl}/query.php`;
 
             const response = await fetchWithTimeout(url, {
                 method: "POST",
@@ -1261,7 +1261,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
 
                     onClose();
                 } else {
-                    // For registration, save security questions if answers were provided
+                    
                     if (answers && result.user && result.user.user_id) {
                         const securityResult = await saveSecurityQuestions(result.user.user_id, answers);
                         if (!securityResult.success) {
@@ -1336,22 +1336,28 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
         }));
     };
 
-    const handleSubmit = async (e) => {
-        setLoading(true);
-        e.preventDefault();
+const handleSubmit = async (e) => {
+    setLoading(true);
+    e.preventDefault();
 
-        if (isLogin) {
-            await completeRegistration();
-        } else {
-            // For registration, show security questions modal first
-            if (formData.password !== formData.confirmPassword) {
-                printAlert("Passwords don't match!", 'error');
-                setLoading(false);
-                return;
-            }
-            setShowSecurityModal(true);
+    if (isLogin) {
+        await completeRegistration();
+    } else {
+        // Check if account type is selected
+        if (!accountType) {
+            printAlert("Please select an account type (Personal or Business)", 'error');
+            setLoading(false);
+            return;
         }
-    };
+        
+        if (formData.password !== formData.confirmPassword) {
+            printAlert("Passwords don't match!", 'error');
+            setLoading(false);
+            return;
+        }
+        setShowSecurityModal(true);
+    }
+};
 
     const handleResendVerification = async () => {
         setLoading(true);
@@ -1416,33 +1422,37 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
         }
     };
 
-    const switchMode = () => {
-        setIsLogin(!isLogin);
+const switchMode = () => {
+    setIsLogin(!isLogin);
+    if (!isLogin) {
         setAccountType(defaultAccountType || "personal");
-        setFormData({
-            name: '',
-            email: '',
-            lastname: '',
-            password: '',
-            confirmPassword: '',
-            businessName: '',
-            businessType: '',
-            phone: '',
-            address: ''
-        });
-        setNeedsVerification(false);
-        setUnverifiedEmail('');
-        setSecurityAnswers(null);
-    };
+    } else {
+        setAccountType(""); 
+    }
+    setFormData({
+        name: '',
+        email: '',
+        lastname: '',
+        password: '',
+        confirmPassword: '',
+        businessName: '',
+        businessType: '',
+        phone: '',
+        address: ''
+    });
+    setNeedsVerification(false);
+    setUnverifiedEmail('');
+    setSecurityAnswers(null);
+};
 
     const closeAlert = () => {
         setAlert({ show: false, message: '', type: '' });
     };
 
-    // Handle business account type change
-    const handleAccountTypeChange = (type) => {
-        setAccountType(type);
-        // Clear form data when switching account types
+   const handleAccountTypeChange = (type) => {
+    setAccountType(type);
+    // Clear form data when switching account types during registration
+    if (!isLogin) {
         setFormData(prev => ({
             ...prev,
             name: type === 'personal' ? prev.name : '',
@@ -1452,7 +1462,8 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             phone: type === 'business' ? prev.phone : '',
             address: type === 'business' ? prev.address : ''
         }));
-    };
+    }
+};
 
     if (loading && !showSecurityModal) {
         return (
@@ -1500,6 +1511,27 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
                 </div>
 
                 <form onSubmit={handleSubmit} className="login-form">
+
+                    {!isLogin && (
+    <div className="account-type-selector">
+        <button
+            type="button"
+            className={`account-type-btn ${accountType === 'personal' ? 'active' : ''}`}
+            onClick={() => handleAccountTypeChange('personal')}
+        >
+            <i className="bi bi-person"></i>
+            Personal Account
+        </button>
+        <button
+            type="button"
+            className={`account-type-btn ${accountType === 'business' ? 'active' : ''}`}
+            onClick={() => handleAccountTypeChange('business')}
+        >
+            <i className="bi bi-building"></i>
+            Business Account
+        </button>
+    </div>
+)}
                     {!isLogin && accountType === "personal" && (
                         <>
                             <div className="form-group">
