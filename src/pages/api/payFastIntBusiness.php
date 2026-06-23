@@ -440,7 +440,7 @@ private function sendPaymentConfirmationEmail($user_id, $package_id, $amount, $t
         $payment_date = date('Y-m-d H:i:s');
         $formattedDate = date('F j, Y H:i:s', strtotime($payment_date));
         
-        $APP_URL = "https://evenditest.evendi.co.za";
+        $APP_URL = "https://evendi.co.za";
 
         $htmlContent = "
         <html>

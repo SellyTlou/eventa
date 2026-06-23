@@ -1096,7 +1096,7 @@ export function Login({ isOpen, onClose, defaultMode = "login", defaultAccountTy
             }
 
             if (apiUrl === "/api") {
-                apiUrl = "https://evenditest.evendi.co.za/api";
+                apiUrl = "https://evendi.co.za/api";
             }
 
             const formDataToSend = new FormData();

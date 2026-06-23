@@ -438,159 +438,175 @@ private function deductQty($eventID, $ticketType, $qty)
         }
     }
 
-    private function sendTicketConfirmationEmail($booking, $paymentData)
-    {
-        try {
-            $bookingId = $booking['bookingId'];
-            $customerEmail = $booking['customer_email'];
-            $customerName = $booking['customer_first_name'] . ' ' . $booking['customer_last_name'];
-            
-            // Get event details from the booking (already joined)
-            $eventName = $booking['event_name'] ?? 'Event';
-            $eventDate = $booking['event_start_date'] ? date('F j, Y', strtotime($booking['event_start_date'])) : 'Date TBA';
-            $eventTime = $booking['event_start_time'] ?? 'TBA';
-            
-            // Build full location from address, city, province
-            $locationParts = array_filter([
-                $booking['address'] ?? '',
-                $booking['city'] ?? '',
-                $booking['province'] ?? ''
-            ]);
-            $eventLocation = !empty($locationParts) ? implode(', ', $locationParts) : ($booking['address'] ?? 'Location TBA');
-            
-            $ticketType = ucfirst(str_replace('_', ' ', $booking['ticket_type_label'] ?? $booking['ticket_type']));
-            $quantity = $booking['quantity'];
-            $unitPrice = number_format($booking['unit_price'], 2);
-            $totalAmount = number_format($booking['total_amount'], 2);
-            $transactionId = $paymentData['pf_payment_id'] ?? $bookingId;
-            
-            $this->logData('📧 Preparing email', [
-                'to' => $customerEmail,
-                'bookingId' => $bookingId,
-                'eventName' => $eventName
-            ]);
-            
-            // Generate QR code data
-            $qrData = base64_encode(json_encode([
-                'booking_id' => $bookingId,
-                'event_id' => $booking['event_id'],
-                'ticket_type' => $booking['ticket_type'],
-                'quantity' => $quantity
-            ])); 
-            
-            $customData = json_decode($paymentData['custom_str4'] ?? '{}', true);
-         $APP_URL = $customData['base_url'] ?? '';
-            
-            $htmlContent = "
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { text-align: center; background: #4caf50; color: white; padding: 20px; border-radius: 10px 10px 0 0; }
-                    .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }
-                    .event-details { background: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
-                    .ticket-details { background: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
-                    .qr-code { text-align: center; margin: 20px 0; }
-                    .footer { text-align: center; font-size: 12px; color: #888; margin-top: 20px; }
-                </style>
-            </head>
-            <body>
-                <div class='container'>
-                    <div class='header'>
-                        <h2>🎟️ Your Tickets Are Ready!</h2>
-                    </div>
-                    <div class='content'>
-                        <p>Dear <strong>{$customerName}</strong>,</p>
-                        <p>Thank you for your purchase! Your ticket booking has been confirmed.</p>
-                        
-                        <div class='event-details'>
-                            <h3>📅 Event Details</h3>
-                            <p><strong>Event:</strong> {$eventName}<br>
+  private function sendTicketConfirmationEmail($booking, $paymentData)
+{
+    try {
+        $bookingId = $booking['bookingId'];
+        $customerEmail = $booking['customer_email'];
+        $customerName = $booking['customer_first_name'] . ' ' . $booking['customer_last_name'];
+
+        $eventName = $booking['event_name'] ?? 'Event';
+        $eventDate = $booking['event_start_date'] 
+            ? date('F j, Y', strtotime($booking['event_start_date'])) 
+            : 'Date TBA';
+
+        $eventTime = $booking['event_start_time'] ?? 'TBA';
+
+        $locationParts = array_filter([
+            $booking['address'] ?? '',
+            $booking['city'] ?? '',
+            $booking['province'] ?? ''
+        ]);
+
+        $eventLocation = !empty($locationParts) 
+            ? implode(', ', $locationParts) 
+            : ($booking['address'] ?? 'Location TBA');
+
+        $ticketType = ucfirst(str_replace('_', ' ', $booking['ticket_type_label'] ?? $booking['ticket_type']));
+        $quantity = $booking['quantity'];
+        $unitPrice = number_format($booking['unit_price'], 2);
+        $totalAmount = number_format($booking['total_amount'], 2);
+        $transactionId = $paymentData['pf_payment_id'] ?? $bookingId;
+
+        $this->logData('📧 Preparing email', [
+            'to' => $customerEmail,
+            'bookingId' => $bookingId,
+            'eventName' => $eventName
+        ]);
+
+        // 🔥 GET BASE URL SAFELY
+        $customData = json_decode($paymentData['custom_str4'] ?? '{}', true);
+        $APP_URL = rtrim($customData['base_url'] ?? '', '/');
+
+        if (empty($APP_URL)) {
+            $APP_URL = "https://your-domain.co.za"; // fallback (IMPORTANT)
+        }
+
+        // ✅ FINAL QR URL (THIS IS THE KEY FIX)
+        $qrUrl = $APP_URL . "/ticket.php?booking_id=" . urlencode($bookingId);
+
+        $htmlContent = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { text-align: center; background: #4caf50; color: white; padding: 20px; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }
+                .event-details, .ticket-details {
+                    background: white;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin: 15px 0;
+                }
+                .qr-code { text-align: center; margin: 20px 0; }
+                .footer { text-align: center; font-size: 12px; color: #888; margin-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+
+                <div class='header'>
+                    <h2>🎟️ Your Tickets Are Ready!</h2>
+                </div>
+
+                <div class='content'>
+
+                    <p>Dear <strong>{$customerName}</strong>,</p>
+                    <p>Your booking is confirmed. Please find your ticket below.</p>
+
+                    <div class='event-details'>
+                        <h3>📅 Event Details</h3>
+                        <p>
+                            <strong>Event:</strong> {$eventName}<br>
                             <strong>Date:</strong> {$eventDate}<br>
                             <strong>Time:</strong> {$eventTime}<br>
-                            <strong>Venue:</strong> {$eventLocation}</p>
-                        </div>
-                        
-                        <div class='ticket-details'>
-                            <h3>🎫 Ticket Information</h3>
-                            <p><strong>Ticket Type:</strong> {$ticketType}<br>
+                            <strong>Venue:</strong> {$eventLocation}
+                        </p>
+                    </div>
+
+                    <div class='ticket-details'>
+                        <h3>🎫 Ticket Information</h3>
+                        <p>
+                            <strong>Type:</strong> {$ticketType}<br>
                             <strong>Quantity:</strong> {$quantity}<br>
-                            <strong>Unit Price:</strong> R{$unitPrice}<br>
                             <strong>Total Paid:</strong> R{$totalAmount}<br>
                             <strong>Booking ID:</strong> {$bookingId}<br>
-                            <strong>Transaction ID:</strong> {$transactionId}</p>
-                        </div>
-                        
-                        <div class='qr-code'>
-                            <img src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={$qrData}' alt='QR Code' />
-                            <p><small>Scan this QR code at the entrance</small></p>
-                        </div>
-                        
-                        <p><strong>Important:</strong> Please present this email (digital or printed) at the event entrance.</p>
+                            <strong>Transaction ID:</strong> {$transactionId}
+                        </p>
                     </div>
-                    <div class='footer'>
-                        <p>Need help? Contact us at support@evendi.co.za</p>
-                        <p>&copy; " . date('Y') . " Evendi. All rights reserved.</p>
+
+                    <div class='qr-code'>
+                        <img src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" . urlencode($qrUrl) . "' alt='QR Code' />
+                        <p><small>Scan at the entrance</small></p>
                     </div>
+
+                    <p><strong>Important:</strong> Keep this QR code safe. It will be scanned at entry.</p>
+
                 </div>
-            </body>
-            </html>
-            ";
-            
-            $textContent = "Your Tickets Are Ready!\n\n" .
-                          "Event: {$eventName}\n" .
-                          "Date: {$eventDate}\n" .
-                          "Time: {$eventTime}\n" .
-                          "Venue: {$eventLocation}\n\n" .
-                          "Ticket Type: {$ticketType}\n" .
-                          "Quantity: {$quantity}\n" .
-                          "Total Paid: R{$totalAmount}\n" .
-                          "Booking ID: {$bookingId}\n\n" .
-                          "Thank you for your purchase!";
-            
-            $payload = [
-                "sender" => [
-                    "email" => "support@evendi.co.za",
-                    "name" => "Evendi Support"
-                ],
-                "to" => [
-                    [
-                        "email" => $customerEmail,
-                        "name" => $customerName
-                    ]
-                ],
-                "subject" => "Your Tickets for {$eventName}",
-                "htmlContent" => $htmlContent,
-                "textContent" => $textContent
-            ];
-            
-            $ch = curl_init("https://api.brevo.com/v3/smtp/email");
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_HTTPHEADER => [
-                    "api-key: {$this->BREVO_API_KEY}",
-                    "Content-Type: application/json",
-                ],
-                CURLOPT_POSTFIELDS => json_encode($payload),
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 30,
-            ]);
-            
-            $response = curl_exec($ch);
-            $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            
-            if ($status === 201) {
-                $this->logData("✅ Email sent successfully", ["email" => $customerEmail]);
-            } else {
-                $this->logData("❌ Email failed", ["status" => $status, "response" => $response]);
-            }
-            
-        } catch (Exception $e) {
-            $this->logData("❌ Email error", ["error" => $e->getMessage()]);
+
+                <div class='footer'>
+                    <p>Need help? Contact support@evendi.co.za</p>
+                    <p>&copy; " . date('Y') . " Evendi</p>
+                </div>
+
+            </div>
+        </body>
+        </html>
+        ";
+
+        $textContent =
+            "Your Ticket is Ready!\n\n" .
+            "Event: {$eventName}\n" .
+            "Date: {$eventDate}\n" .
+            "Time: {$eventTime}\n" .
+            "Venue: {$eventLocation}\n\n" .
+            "Booking ID: {$bookingId}\n" .
+            "Total Paid: R{$totalAmount}\n\n" .
+            "View Ticket: {$qrUrl}";
+
+        $payload = [
+            "sender" => [
+                "email" => "support@evendi.co.za",
+                "name" => "Evendi Support"
+            ],
+            "to" => [
+                [
+                    "email" => $customerEmail,
+                    "name" => $customerName
+                ]
+            ],
+            "subject" => "Your Tickets for {$eventName}",
+            "htmlContent" => $htmlContent,
+            "textContent" => $textContent
+        ];
+
+        $ch = curl_init("https://api.brevo.com/v3/smtp/email");
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                "api-key: {$this->BREVO_API_KEY}",
+                "Content-Type: application/json",
+            ],
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+        ]);
+
+        $response = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($status === 201) {
+            $this->logData("✅ Email sent successfully", ["email" => $customerEmail]);
+        } else {
+            $this->logData("❌ Email failed", ["status" => $status, "response" => $response]);
         }
+
+    } catch (Exception $e) {
+        $this->logData("❌ Email error", ["error" => $e->getMessage()]);
     }
+}
 
     private function logData($title, $data)
     {

@@ -714,7 +714,7 @@ function CreateTicketEvent() {
                                         <div className="ticket-type-fields">
                                             <div className="form-row">
                                                 <div className="form-group-event half">
-                                                    <label htmlFor="generalPrice">PRICE (R) - Optional</label>
+                                                    <label htmlFor="generalPrice">PRICE (R) </label>
                                                     <input
                                                         type="number"
                                                         className="form-control-event"
@@ -727,7 +727,7 @@ function CreateTicketEvent() {
                                                     />
                                                 </div>
                                                 <div className="form-group-event half">
-                                                    <label htmlFor="generalQuantity">QUANTITY - Optional</label>
+                                                    <label htmlFor="generalQuantity">QUANTITY </label>
                                                     <input
                                                         type="number"
                                                         className="form-control-event"
@@ -751,7 +751,7 @@ function CreateTicketEvent() {
                                         <div className="ticket-type-fields">
                                             <div className="form-row">
                                                 <div className="form-group-event half">
-                                                    <label htmlFor="earlybirdPrice">PRICE (R) - Optional</label>
+                                                    <label htmlFor="earlybirdPrice">PRICE (R) </label>
                                                     <input
                                                         type="number"
                                                         className="form-control-event"
@@ -764,7 +764,7 @@ function CreateTicketEvent() {
                                                     />
                                                 </div>
                                                 <div className="form-group-event half">
-                                                    <label htmlFor="earlybirdQuantity">QUANTITY - Optional</label>
+                                                    <label htmlFor="earlybirdQuantity">QUANTITY </label>
                                                     <input
                                                         type="number"
                                                         className="form-control-event"
@@ -788,7 +788,7 @@ function CreateTicketEvent() {
                                         <div className="ticket-type-fields">
                                             <div className="form-row">
                                                 <div className="form-group-event half">
-                                                    <label htmlFor="vipPrice">PRICE (R) - Optional</label>
+                                                    <label htmlFor="vipPrice">PRICE (R) </label>
                                                     <input
                                                         type="number"
                                                         className="form-control-event"
@@ -801,7 +801,7 @@ function CreateTicketEvent() {
                                                     />
                                                 </div>
                                                 <div className="form-group-event half">
-                                                    <label htmlFor="vipQuantity">QUANTITY - Optional</label>
+                                                    <label htmlFor="vipQuantity">QUANTITY </label>
                                                     <input
                                                         type="number"
                                                         className="form-control-event"
