@@ -8965,4 +8965,149 @@ if ($fun === "guestRsvp") {
     exit;
 }
 
+if ($fun === "verify_ticket") {
+    // Get the ticket ID and user ID from the request
+    $ticketId = $_POST['ticket_id'] ?? '';
+    $userId = $_POST['user_id'] ?? '';
+    
+    if (empty($ticketId) || empty($userId)) {
+        echo json_encode(["success" => false, "message" => "Missing ticket ID or user ID"]);
+        exit;
+    }
+    
+    try {
+        // First, verify that the user (event planner) owns this event
+        $stmt = $pdo->prepare("
+            SELECT 
+                b.*,
+                te.event_name,
+                te.event_start_date,
+                te.event_start_time,
+                te.address,
+                te.city,
+                te.province,
+                te.user_id as event_owner_id
+            FROM bookings b
+            LEFT JOIN ticket_events te ON b.event_id = te.event_id
+            WHERE b.bookingId = :ticket_id
+        ");
+        $stmt->execute([":ticket_id" => $ticketId]);
+        $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$ticket) {
+            echo json_encode(["success" => false, "message" => "Ticket not found"]);
+            exit;
+        }
+        
+        // Check if the user is the event owner
+        if ($ticket['event_owner_id'] != $userId) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "You don't have permission to verify this ticket. Only the event organizer can scan tickets."
+            ]);
+            exit;
+        }
+        
+        // Check if the ticket has already been used
+        if ($ticket['is_used'] == 1) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "This ticket has already been used",
+                "used_at" => $ticket['used_at']
+            ]);
+            exit;
+        }
+        
+        // Check if the ticket payment is completed
+        if ($ticket['payment_status'] !== 'completed') {
+            $statusMsg = ucfirst($ticket['payment_status'] ?? 'unknown');
+            echo json_encode([
+                "success" => false, 
+                "message" => "This ticket has not been paid for. Status: {$statusMsg}",
+                "payment_status" => $ticket['payment_status']
+            ]);
+            exit;
+        }
+        
+        // Check if the event has passed
+        $eventDateTime = $ticket['event_start_date'] . ' ' . ($ticket['event_start_time'] ?? '00:00:00');
+        if (strtotime($eventDateTime) < time()) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "This event has already passed",
+                "event_date" => $ticket['event_start_date']
+            ]);
+            exit;
+        }
+        
+        // All validations passed - show ticket details
+        echo json_encode([
+            "success" => true,
+            "message" => "Valid ticket!",
+            "ticket" => [
+                "booking_id" => $ticket['bookingId'],
+                "event_name" => $ticket['event_name'],
+                "customer_name" => $ticket['customer_first_name'] . ' ' . $ticket['customer_last_name'],
+                "customer_email" => $ticket['customer_email'],
+                "ticket_type" => $ticket['ticket_type_label'] ?? $ticket['ticket_type'],
+                "quantity" => $ticket['quantity'],
+                "event_date" => date('F j, Y', strtotime($ticket['event_start_date'])),
+                "event_time" => $ticket['event_start_time'],
+                "location" => $ticket['address'] . ', ' . $ticket['city'] . ', ' . $ticket['province'],
+                "payment_status" => $ticket['payment_status']
+            ]
+        ]);
+        
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+}
+
+if ($fun === "use_ticket") {
+    $ticketId = $_POST['ticket_id'] ?? '';
+    $userId = $_POST['user_id'] ?? '';
+    
+    if (empty($ticketId) || empty($userId)) {
+        echo json_encode(["success" => false, "message" => "Missing ticket ID or user ID"]);
+        exit;
+    }
+    
+    try {
+        // Verify ownership
+        $stmt = $pdo->prepare("
+            SELECT b.bookingId, te.user_id as event_owner_id
+            FROM bookings b
+            LEFT JOIN ticket_events te ON b.event_id = te.event_id
+            WHERE b.bookingId = :ticket_id
+        ");
+        $stmt->execute([":ticket_id" => $ticketId]);
+        $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$ticket) {
+            echo json_encode(["success" => false, "message" => "Ticket not found"]);
+            exit;
+        }
+        
+        if ($ticket['event_owner_id'] != $userId) {
+            echo json_encode(["success" => false, "message" => "Permission denied"]);
+            exit;
+        }
+        
+        // Mark ticket as used
+        $update = $pdo->prepare("
+            UPDATE bookings 
+            SET is_used = 1, used_at = NOW() 
+            WHERE bookingId = :ticket_id AND is_used = 0
+        ");
+        $update->execute([":ticket_id" => $ticketId]);
+        
+        if ($update->rowCount() > 0) {
+            echo json_encode(["success" => true, "message" => "Ticket marked as used"]);
+        } else {
+            echo json_encode(["success" => false, "message" => "Ticket already used or not found"]);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+    }
+}
 ?>

@@ -195,6 +195,8 @@ useEffect(() => {
     
     // ... rest of your useEffect code
 }, [navigate, fetchAvailablePackages]);
+
+
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
             if (isDragging) {

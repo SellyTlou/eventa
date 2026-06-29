@@ -438,7 +438,7 @@ private function deductQty($eventID, $ticketType, $qty)
         }
     }
 
-  private function sendTicketConfirmationEmail($booking, $paymentData)
+private function sendTicketConfirmationEmail($booking, $paymentData)
 {
     try {
         $bookingId = $booking['bookingId'];
@@ -474,16 +474,26 @@ private function deductQty($eventID, $ticketType, $qty)
             'eventName' => $eventName
         ]);
 
-        // 🔥 GET BASE URL SAFELY
+        // GET BASE URL SAFELY
         $customData = json_decode($paymentData['custom_str4'] ?? '{}', true);
         $APP_URL = rtrim($customData['base_url'] ?? '', '/');
 
         if (empty($APP_URL)) {
-            $APP_URL = "https://your-domain.co.za"; // fallback (IMPORTANT)
+            $APP_URL = "https://evendi.co.za/api";
         }
 
-        // ✅ FINAL QR URL (THIS IS THE KEY FIX)
-        $qrUrl = $APP_URL . "/ticket.php?booking_id=" . urlencode($bookingId);
+        // ✅ ENCODE THE BOOKING ID AND EVENT ID IN THE QR CODE
+        // The QR code will contain the ticket ID only, not a URL
+        $qrData = json_encode([
+            'ticket_id' => $bookingId,
+            'event_id' => $booking['event_id']
+        ]);
+        
+        // Or if you want to keep it simple with just the booking ID:
+        $qrData = $bookingId;
+
+        // Generate QR code with the encoded data
+        $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" . urlencode($qrData);
 
         $htmlContent = "
         <html>
@@ -501,6 +511,7 @@ private function deductQty($eventID, $ticketType, $qty)
                 }
                 .qr-code { text-align: center; margin: 20px 0; }
                 .footer { text-align: center; font-size: 12px; color: #888; margin-top: 20px; }
+                .important { background: #fff3cd; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107; }
             </style>
         </head>
         <body>
@@ -537,11 +548,14 @@ private function deductQty($eventID, $ticketType, $qty)
                     </div>
 
                     <div class='qr-code'>
-                        <img src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" . urlencode($qrUrl) . "' alt='QR Code' />
+                        <img src='{$qrUrl}' alt='QR Code' />
                         <p><small>Scan at the entrance</small></p>
                     </div>
 
-                    <p><strong>Important:</strong> Keep this QR code safe. It will be scanned at entry.</p>
+                    <div class='important'>
+                        <p><strong>⚠️ Important:</strong> This QR code will be scanned at the entrance. 
+                        Please keep it safe and don't share it with anyone.</p>
+                    </div>
 
                 </div>
 
@@ -563,7 +577,7 @@ private function deductQty($eventID, $ticketType, $qty)
             "Venue: {$eventLocation}\n\n" .
             "Booking ID: {$bookingId}\n" .
             "Total Paid: R{$totalAmount}\n\n" .
-            "View Ticket: {$qrUrl}";
+            "Please present this QR code at the entrance.";
 
         $payload = [
             "sender" => [

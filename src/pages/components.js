@@ -55,6 +55,7 @@ import TicketCancel from './ticketCancel';
 import TicketSuccess from './ticketSuccess';
 import BusinessPaymentSuccess from './business_planner/business-payment-success';
 import BusinessPaymentCancel from './business_planner/business-payment-cancel';
+import TicketScanner from './planner/ticket-scanner';
 
 const clearAllLocalStorage = () => {
     localStorage.removeItem("user");
@@ -305,6 +306,9 @@ export function SessionHandler() {
                 <Route path="/event-checklist" element={<EventChecklist />} />
                 <Route path="/event-checkin" element={<EventCheckin />} />
                 <Route path="/form-builder" element={<FormBuilder />} />
+                <Route path="/ticketCancel" element={<TicketCancel />} />
+                <Route path="/ticketSuccess" element={<TicketSuccess />} />
+                <Route path="/ticket-scanner" element={<TicketScanner />} />
             </Routes>
 
             <SessionWarningModal
@@ -839,6 +843,12 @@ export function LoginNav() {
         handler(e);
     };
 
+    const goToScan = (e) => {
+        if (e) e.stopPropagation();
+        navigate('/ticket-scanner');
+        setDropdownOpen(false);
+    };
+
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
@@ -890,6 +900,7 @@ export function LoginNav() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+
     // Prevent body scroll when mobile menu is open
     useEffect(() => {
         if (isMobileMenuOpen) {
@@ -923,7 +934,9 @@ export function LoginNav() {
                                 <button className="btn dashboard-btn me-2" onClick={goToDashboard}>
                                     <i className="bi bi-grid-fill me-1"></i> Dashboard
                                 </button>
-                              
+                                <button className="btn dashboard-btn me-2" onClick={goToScan}>
+                                    <i className="bi bi-upc-scan me-1"></i> Ticket Scanner
+                                </button>
                                 <div
                                     ref={dropdownRef}
                                     className={`profile-container ${dropdownOpen ? "open" : ""}`}
@@ -938,7 +951,9 @@ export function LoginNav() {
                                             <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)} className="dropdown-item">
                                                 <i className="bi bi-grid-fill me-2"></i> Dashboard
                                             </button>
-                                          
+                                            <button onClick={(e) => handleDropdownItemClick(goToScan, e)} className="dropdown-item">
+                                                <i className="bi bi-upc-scan me-2"></i> Ticket Scanner
+                                            </button>
                                             <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
                                                 <i className="bi bi-person me-2"></i> Profile
                                             </button>
@@ -1017,7 +1032,10 @@ export function LoginNav() {
                                 <i className="bi bi-person"></i>
                                 <span>Profile</span>
                             </button>
-
+                            <button className="mobile-menu-item" onClick={goToScan}>
+                                <i className="bi bi-qr-code"></i>
+                                <span>Ticket Scanner</span>
+                            </button>
                             <div className="mobile-menu-divider"></div>
 
                             <button className="mobile-menu-item logout-item" onClick={logOut}>
@@ -1815,6 +1833,11 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
         if (e) e.stopPropagation();
         handler(e);
     };
+    
+    const goToScan=()=>{
+        navigate('/ticket-scanner');
+         setDropdownOpen(false);
+    }
 
     const goToDashboard = (e) => {
         if (e) e.stopPropagation();
@@ -1884,6 +1907,9 @@ export function DashboardHeader({ user, eventStatus, onToggleSidebar }) {
                             <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
                                 <i className="bi bi-person me-2"></i> Profile
                             </button>
+                            <button onClick={(e) => handleDropdownItemClick(goToScan, e)} className="dropdown-item">
+                                <i className="bi bi-upc-scan me-2"></i> Ticket Scanner
+                            </button>
                             <div className="dropdown-divider"></div>
                             <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
                                 <i className="bi bi-box-arrow-right me-2"></i> Logout
@@ -1932,6 +1958,8 @@ export function DashboardSidebar({ isMobileOpen, onClose, userPackage }) {
         navigate("/event-checklist");
         onClose?.();
     };
+    
+    
 
     const canViewAttendance = userPackage ? canUseFeature(userPackage, "attendanceStats") : true;
 
