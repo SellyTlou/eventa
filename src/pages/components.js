@@ -463,6 +463,13 @@ export function Navbar({ onLoginClick, onSignupClick }) {
         navigate("/");
     };
 
+     const goToScan = (e) => {
+        if (e) e.stopPropagation();
+        navigate('/ticket-scanner');
+        setDropdownOpen(false);
+    };
+
+
     const closeAllMenus = () => {
         setDropdownOpen(false);
         setIsMobileMenuOpen(false);
@@ -545,6 +552,9 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                                 <button onClick={(e) => handleDropdownItemClick(goToProfile, e)} className="dropdown-item">
                                                     <i className="bi bi-person me-2"></i> Profile
                                                 </button>
+                                                <button onClick={(e) => handleDropdownItemClick(goToScan, e)} className="dropdown-item">
+                                                    <i className="bi bi-camera me-2"></i> Ticket Scanner
+                                                </button>
                                                 <div className="dropdown-divider"></div>
                                                 <button className="dropdown-item" onClick={(e) => handleDropdownItemClick(logOut, e)}>
                                                     <i className="bi bi-box-arrow-right me-2"></i> Logout
@@ -606,10 +616,10 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                             className="mobile-dropdown-menu"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <button onClick={goToDashboard}>Dashboard</button>
-                                        
-                                            <button onClick={goToProfile}>Profile</button>
-                                            <button onClick={logOut}>Logout</button>
+                                            <button onClick={(e) => handleDropdownItemClick(goToDashboard, e)}>Dashboard</button>
+                                            <button onClick={(e) => handleDropdownItemClick(goToScan, e)}>Ticket Scanner</button>
+                                            <button onClick={(e) => handleDropdownItemClick(goToProfile, e)}>Profile</button>
+                                            <button onClick={(e) => handleDropdownItemClick(logOut, e)}>Logout</button>
                                         </div>
                                     )}
                                 </div>
@@ -667,19 +677,19 @@ export function Navbar({ onLoginClick, onSignupClick }) {
                                             <div className="mobile-auth-dropdown">
                                                 <button 
                                                     className="mobile-dropdown-item" 
-                                                    onClick={() => {
+                                                    onClick={(e) => handleDropdownItemClick(() => {
                                                         handleSignupClick('personal');
                                                         closeAllMenus();
-                                                    }}
+                                                    }, e)   }
                                                 >
                                                     <i className="bi bi-person me-2"></i> Personal
                                                 </button>
                                                 <button 
                                                     className="mobile-dropdown-item" 
-                                                    onClick={() => {
+                                                    onClick={(e) => handleDropdownItemClick(() => {
                                                         handleSignupClick('business');
                                                         closeAllMenus();
-                                                    }}
+                                                    }, e)}
                                                 >
                                                     <i className="bi bi-building me-2"></i> Business
                                                 </button>
