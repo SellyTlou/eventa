@@ -42,36 +42,19 @@ function Ticket_payment() {
   };
 
   // // ============ PAYFAST CONFIGURATION for testing ============
-  //   const PAYFAST_CONFIG = {
-  //       MERCHANT_ID: "10039229",
-  //       MERCHANT_KEY: "1ogl07vai6oig",
-  //       ITN_URL: "https://dc86-197-185-137-11.ngrok-free.app/eventa/src/pages/api/payfastIntTickets.php",
-  //       PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
-  //       RETURN_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentSuccess",
-  //       CANCEL_URL: "https://105c-197-185-137-11.ngrok-free.app/paymentCancel",
-  //       EMAIL_CONFIRMATION: true,
-  //       CONFIRMATION_EMAIL: "",
-  //       PAYMENT_METHOD: "cc", 
-  //   };
-
    const PAYFAST_CONFIG = {
-
-        MERCHANT_ID: "33426571",
-        MERCHANT_KEY: "lkqoiy0ftb9yc",
-        PAYFAST_URL: "https://www.payfast.co.za/eng/process",
-
-        ITN_URL: `${API_URL}/payfastIntTickets.php`,
-
-        RETURN_URL: `${BASE_URL}/paymentSuccess`,
-
-        CANCEL_URL: `${BASE_URL}/paymentCancel`,
-
+        MERCHANT_ID: "10039229",
+        MERCHANT_KEY: "1ogl07vai6oig",
+        ITN_URL: "https://your ngrok link/api/payfastIntTickets.php",
+        PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
+        RETURN_URL: "https://your ngrok link/paymentSuccess",
+        CANCEL_URL: "https://your ngrok link/paymentCancel",
         EMAIL_CONFIRMATION: true,
-
         CONFIRMATION_EMAIL: "",
-
-        PAYMENT_METHOD: ""
+        PAYMENT_METHOD: "cc", 
     };
+
+
 const generateTransactionId = () => {
 
     const timestamp = Date.now();

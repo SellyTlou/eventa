@@ -38,7 +38,7 @@ class TicketPayFastITN
 {
     private $pdo;
 private $BREVO_API_KEY = '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';
-    private $PAYFAST_PASSPHRASE = '';
+
 
     public function __construct($pdo)
     {

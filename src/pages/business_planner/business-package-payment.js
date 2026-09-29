@@ -29,39 +29,19 @@ const BusinessPackagePayment = () => {
     const API_URL = process.env.REACT_APP_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
-    // ============ PAYFAST CONFIGURATION for LIVE ============
-    const PAYFAST_CONFIG = {
+ 
 
-        MERCHANT_ID: "33426571",
-        MERCHANT_KEY: "lkqoiy0ftb9yc",
-        PAYFAST_URL: "https://www.payfast.co.za/eng/process",
-
-        ITN_URL: `${API_URL}/payFastIntBusiness.php`,
-
-        RETURN_URL: `${BASE_URL}/business-payment-success`,
-
-        CANCEL_URL: `${BASE_URL}/business-payment-cancel`,
-
+   const PAYFAST_CONFIG = {
+        MERCHANT_ID: "10039229",
+        MERCHANT_KEY: "1ogl07vai6oig",
+        ITN_URL: "https://your ngrok link/api/payfastIntTickets.php",
+        PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
+        RETURN_URL: "https://your ngrok link/paymentSuccess",
+        CANCEL_URL: "https://your ngrok link/paymentCancel",
         EMAIL_CONFIRMATION: true,
-
         CONFIRMATION_EMAIL: "",
-
-        PAYMENT_METHOD: ""
+        PAYMENT_METHOD: "cc", 
     };
-
-
-    // ============ PAYFAST CONFIGURATION for testing ============
-    // const PAYFAST_CONFIG = {
-    //     MERCHANT_ID: "10039229",
-    //     MERCHANT_KEY: "1ogl07vai6oig",
-    //     ITN_URL: "https://yen-rigging-timid.ngrok-free.dev/eventa/src/pages/api/payfastIntBusiness.php",
-    //     PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
-    //     RETURN_URL: "https://yen-rigging-timid.ngrok-free.dev/eventa/src/pages/planner/paymentSuccess",
-    //     CANCEL_URL: "https://yen-rigging-timid.ngrok-free.dev/eventa/src/pages/business_planner/paymentCancel",
-    //     EMAIL_CONFIRMATION: true,
-    //     CONFIRMATION_EMAIL: "",
-    //     PAYMENT_METHOD: "cc",
-    // };
 
     const printAlert = (message, type = "info") => {
         setAlert({ show: true, message, type });

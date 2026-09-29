@@ -128,8 +128,6 @@ private function localSignatureGenerator($data, $passphrase = null)
 
     foreach ($data as $key => $val) {
 
-        // IMPORTANT:
-        // INCLUDE EMPTY VALUES FOR ITN
         $val = (string)$val;
 
         $pfOutput .= $key . '=' . urlencode(trim($val)) . '&';

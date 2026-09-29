@@ -14,10 +14,7 @@ class BusinessPayFastITN
 {
     private $pdo;
 private $BREVO_API_KEY = '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';
-    // 🔥 LIVE PayFast credentials
-    private $PAYFAST_MERCHANT_ID = '33426571';
-    private $PAYFAST_MERCHANT_KEY = 'lkqoiy0ftb9yc';
-    private $PAYFAST_PASSPHRASE = '';
+  
 
     public function __construct($pdo)
     {

@@ -1,28 +1,13 @@
 <?php
 class Database
 {
-      // PRODUCTION DATABASE (Webway Host)
-   /* private $host   = "localhost";
-    private $user   = "evendico_evendi";
-    private $pass   = "eHznbUVDEEna8GU8gDbW";
-    private $dbname = "evendico_evendi";
-    private $port   = 3306;
-    private $pdo;*/
-
-    // LOCALHOST DATABASE
+  
    private $host   = "localhost";
     private $user   = "root";
     private $pass   = "";
     private $dbname = "eventa";
     private $port   = 3306;
     private $pdo;
-
-// private $host   = "sql305.infinityfree.com";  
-// private $user   = "if0_41794889";              
-// private $pass   = "evendi012";              
-// private $dbname = "if0_41794889_evendi";      
-// private $port   = 3306;
-// private $pdo;
 
     
 

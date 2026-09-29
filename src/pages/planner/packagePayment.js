@@ -29,23 +29,16 @@ const PackagePayment = () => {
     const API_URL = process.env.REACT_APP_API_URL;
     const BASE_URL = API_URL.replace('/api', '');
 
-    const PAYFAST_CONFIG = {
-
-        MERCHANT_ID: "33426571",
-        MERCHANT_KEY: "lkqoiy0ftb9yc",
-        PAYFAST_URL: "https://www.payfast.co.za/eng/process",
-
-        ITN_URL: `${API_URL}/payFastInt.php`,
-
-        RETURN_URL: `${BASE_URL}/paymentSuccess`,
-
-        CANCEL_URL: `${BASE_URL}/paymentCancel`,
-
+   const PAYFAST_CONFIG = {
+        MERCHANT_ID: "10039229",
+        MERCHANT_KEY: "1ogl07vai6oig",
+        ITN_URL: "https://your ngrok link/api/payfastIntTickets.php",
+        PAYFAST_URL: "https://sandbox.payfast.co.za/eng/process",
+        RETURN_URL: "https://your ngrok link/paymentSuccess",
+        CANCEL_URL: "https://your ngrok link/paymentCancel",
         EMAIL_CONFIRMATION: true,
-
         CONFIRMATION_EMAIL: "",
-
-        PAYMENT_METHOD: ""
+        PAYMENT_METHOD: "cc", 
     };
 
     const printAlert = (message, type = "info") => {
