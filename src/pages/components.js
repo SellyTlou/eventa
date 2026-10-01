@@ -1436,7 +1436,7 @@ const handleSubmit = async (e) => {
             });
 
             const data = await resp.json();
-
+            console.log("Forgot Password Response:", data);
             if (data.success) {
                 printAlert(data.message, 'success');
             } else {

@@ -5,13 +5,13 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
 require_once "dbConnection.php";
+$config = require_once __DIR__ . "/config.local.php";
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-/* ---------- INPUT ---------- */
 $email   = $_POST['email'] ?? '';
 $API_URL = $_POST['API_URL'] ?? '';
 
@@ -42,9 +42,9 @@ try {
     $forgotLink = "$API_URL/forgot_password?email=" . urlencode($email);
 
     /* ---------- BREVO CONFIG ---------- */
-$BREVO_API_KEY = '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';
-$fromEmail     = "support@evendi.co.za"; // verified in Brevo
-$fromName      = "Evendi (no-reply)";
+$BREVO_API_KEY = $config['brevo_api_key'] ?? '';
+$fromEmail     = $config['brevo_sender_email'] ?? 'testmyself012@gmail.com';
+$fromName      = $config['brevo_sender_name'] ?? 'Evendi (no-reply)';
 
     $payload = [
         "sender"      => ["email" => $fromEmail, "name" => $fromName],

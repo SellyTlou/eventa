@@ -7,6 +7,8 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
+$config = require_once __DIR__ . "/config.local.php";
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -475,7 +477,9 @@ try {
     }
 
     // -------------------- SEND EMAIL VIA BREVO --------------------
-    $BREVO_API_KEY = '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';
+    $BREVO_API_KEY = $config['brevo_api_key'] ?? '';
+    $fromEmail = $config['brevo_sender_email'] ?? 'testmyself012@gmail.com';
+    $fromName = $config['brevo_sender_name'] ?? 'Evendi (no-reply)';
 
     $htmlContent = '<!DOCTYPE html>
     <html>
@@ -620,7 +624,7 @@ try {
 
     $payload = [
         "sender" => [
-            "email" => "support@evendi.co.za",
+            "email" => "testmyself012@gmail.com",
             "name" => "Evenndi (no-reply)"
         ],
         "to" => [[

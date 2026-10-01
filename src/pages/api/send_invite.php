@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once "dbConnection.php";
-
+$config = require_once __DIR__ . "/config.local.php";
 try {
     $db = new Database();
     $pdo = $db->getConnection();
@@ -52,10 +52,12 @@ try {
     $reportLink = "$API_URL/report-event?event_id=" . urlencode($eventId);
 
     /* ---------- BREVO – EXACT COPY OF YOUR VERIFICATION SCRIPT ---------- */
-    $BREVO_API_KEY = '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';
+    $BREVO_API_KEY = $config['brevo_api_key'] ?? '';
+    $fromEmail = $config['brevo_sender_email'] ?? 'testmyself012@gmail.com';
+    $fromName = $config['brevo_sender_name'] ?? 'Evendi Support';
 
     $payload = [
-        "sender" => ["email" => "support@evendi.co.za", "name" => "Eventa Support"],
+        "sender" => ["email" => $fromEmail, "name" => $fromName],
         "to" => [["email" => $guestEmail, "name" => $guestName]],
         "subject" => "Invitation to $eventName",
         "htmlContent" => "

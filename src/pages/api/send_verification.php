@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once "dbConnection.php";
-
+$config = require_once __DIR__ . "/config.local.php";
 
 try {
     $db  = new Database();
@@ -18,6 +18,7 @@ try {
 
     $email   = $_POST['email'] ?? '';
     $API_URL = $_POST['API_URL'] ?? '';
+    $BREVO_API_KEY = $config['brevo_api_key'] ?? '';
 
     if (empty($email) || empty($API_URL)) {
         echo json_encode(["success" => false, "message" => "Missing email or API_URL"]);
@@ -44,9 +45,11 @@ try {
     $verifyLink = "$API_URL/email_verify?email=" . urlencode($email);
 
     // Brevo Email
-    $BREVO_API_KEY = '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';
+    $BREVO_API_KEY = $config['brevo_api_key'] ?? '';
+    $fromEmail = $config['brevo_sender_email'] ?? 'testmyself012@gmail.com';
+    $fromName = $config['brevo_sender_name'] ?? 'Evendi (no-reply)';
     $payload       = [
-        "sender"      => ["email" => "support@evendi.co.za", "name" => "Evendi (no-reply)"],
+        "sender"      => ["email" => $fromEmail, "name" => $fromName],
         "to"          => [["email" => $email, "name" => $user['name']]],
         "subject"     => "Verify Your Evendi Email",
         "htmlContent" => "

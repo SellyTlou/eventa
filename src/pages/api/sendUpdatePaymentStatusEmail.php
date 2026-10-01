@@ -8,16 +8,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
+$config = require_once __DIR__ . "/config.local.php";
+$BREVO_API_KEY = $config['brevo_api_key'] ?? '';
 require_once "dbConnection.php";
-
 class PaymentEmailService {
 
     private $pdo;
-    private $BREVO_API_KEY = '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';
-    private $SENDER_EMAIL = 'support@evendi.co.za';
-    private $SENDER_NAME = 'Eventa Support';
-
+  
     public function __construct($pdo) {
         $this->pdo = $pdo;
     }
@@ -130,8 +127,8 @@ class PaymentEmailService {
 
         $payload = [
             "sender" => [
-                "email" => $this->SENDER_EMAIL,
-                "name" => $this->SENDER_NAME
+                "email" => $config['brevo_sender_email'] ?? 'testmyself012@gmail.com',
+                "name" => $config['brevo_sender_name'] ?? 'Evendi Support'
             ],
             "to" => [
                 [

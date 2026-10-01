@@ -11,6 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once "dbConnection.php";
 
+$config = require_once __DIR__ . "/config.local.php";
+
 try {
     $db  = new Database();
     $pdo = $db->getConnection();
@@ -127,7 +129,9 @@ try {
     $reportLink = "$API_URL/report-event?event_id=" . urlencode($eventId);
 
     /* ---------- BREVO API ---------- */
-$BREVO_API_KEY = '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';
+$BREVO_API_KEY = $config['brevo_api_key'] ?? '';
+$fromEmail = $config['brevo_sender_email'] ?? 'testmyself012@gmail.com';
+$fromName = $config['brevo_sender_name'] ?? 'Evendi (no-reply)';
 
     // Prepare HTML content with event image if available
     $imageHtml = '';
@@ -171,7 +175,7 @@ $BREVO_API_KEY = 'xkeysib-2b043f5cdc005cfe5818e01166ddd0bb126b328c1db9f29abbc62f
     }
 
     $payload = [
-        "sender" => ["email" => "support@evendi.co.za", "name" => "Evendi (no-reply)"],
+        "sender" => ["email" => $fromEmail, "name" => $fromName],
         "to" => [["email" => $guestEmail, "name" => $guestName]],
         "subject" => "🎟️ You're Invited to Purchase Tickets for $eventName",
         "htmlContent" => "
